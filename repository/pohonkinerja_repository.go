@@ -59,4 +59,8 @@ type PohonKinerjaRepository interface {
 
 	//pokin for tujuan and sasaran pemda
 	FindPokinWithPeriode(ctx context.Context, tx *sql.Tx, pokinId int, jenisPeriode string) (domain.PohonKinerja, domain.Periode, error)
+
+	//tematik aktif/nonaktif
+	UpdateTematikStatus(ctx context.Context, tx *sql.Tx, id int, isActive bool) error
+	GetChildrenAndClones(ctx context.Context, tx *sql.Tx, parentId int, isActivating bool) ([]int, error)
 }

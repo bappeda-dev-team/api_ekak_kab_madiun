@@ -17,6 +17,7 @@ func BuildTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, temati
 		LevelPohon:  tematik.LevelPohon,
 		Keterangan:  tematik.Keterangan,
 		CountReview: tematik.CountReview,
+		IsActive:    tematik.IsActive,
 		Indikators:  ConvertToIndikatorResponses(tematik.Indikator),
 	}
 
@@ -51,6 +52,7 @@ func BuildSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, sub
 		LevelPohon:  subTematik.LevelPohon,
 		Keterangan:  subTematik.Keterangan,
 		CountReview: subTematik.CountReview,
+		IsActive:    subTematik.IsActive,
 		Indikators:  ConvertToIndikatorResponses(subTematik.Indikator),
 	}
 
@@ -85,6 +87,7 @@ func BuildSubSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, 
 		LevelPohon:  subSubTematik.LevelPohon,
 		Keterangan:  subSubTematik.Keterangan,
 		CountReview: subSubTematik.CountReview,
+		IsActive:    subSubTematik.IsActive,
 		Indikators:  ConvertToIndikatorResponses(subSubTematik.Indikator),
 	}
 
@@ -184,6 +187,7 @@ func BuildStrategicResponse(pohonMap map[int]map[int][]domain.PohonKinerja, stra
 		Status:      strategic.Status,
 		Indikators:  uniqueIndikators,
 		CountReview: strategic.CountReview,
+		IsActive:    strategic.IsActive,
 		KodeOpd: &opdmaster.OpdResponseForAll{
 			KodeOpd: strategic.KodeOpd,
 			NamaOpd: strategic.NamaOpd,
@@ -256,6 +260,7 @@ func BuildTacticalResponse(pohonMap map[int]map[int][]domain.PohonKinerja, tacti
 		Status:      tactical.Status,
 		Indikators:  uniqueIndikators,
 		CountReview: tactical.CountReview,
+		IsActive:    tactical.IsActive,
 		Pelaksana:   ConvertToPelaksanaResponses(tactical.Pelaksana),
 	}
 
@@ -327,6 +332,7 @@ func BuildOperationalResponse(pohonMap map[int]map[int][]domain.PohonKinerja, op
 		Status:      operational.Status,
 		Indikators:  uniqueIndikators,
 		CountReview: operational.CountReview,
+		IsActive:    operational.IsActive,
 		Pelaksana:   ConvertToPelaksanaResponses(operational.Pelaksana),
 	}
 
@@ -404,6 +410,7 @@ func BuildOperationalNResponse(pohonMap map[int]map[int][]domain.PohonKinerja, o
 		Status:      operationalN.Status,
 		Indikators:  uniqueIndikators,
 		CountReview: operationalN.CountReview,
+		IsActive:    operationalN.IsActive,
 		Pelaksana:   ConvertToPelaksanaResponses(operationalN.Pelaksana),
 	}
 
@@ -443,6 +450,7 @@ func BuildSubTematikResponseLimited(pohonMap map[int]map[int][]domain.PohonKiner
 		LevelPohon:  subTematik.LevelPohon,
 		Keterangan:  subTematik.Keterangan,
 		CountReview: subTematik.CountReview,
+		IsActive:    subTematik.IsActive,
 		Indikators:  ConvertToIndikatorResponses(subTematik.Indikator),
 	}
 
