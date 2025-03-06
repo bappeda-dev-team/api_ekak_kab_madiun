@@ -1,1 +1,1 @@
-DROP TABLE misi_pemda;
+DROP TABLE tb_misi_pemda;
