@@ -315,9 +315,12 @@ func (repository *TujuanPemdaRepositoryImpl) FindAll(ctx context.Context, tx *sq
         FROM 
             tb_tujuan_pemda tp
             INNER JOIN tb_periode p ON tp.periode_id = p.id
+            INNER JOIN tb_pohon_kinerja pk ON tp.tematik_id = pk.id
         WHERE 
             CAST(? AS SIGNED) BETWEEN CAST(p.tahun_awal AS SIGNED) AND CAST(p.tahun_akhir AS SIGNED)
             AND p.jenis_periode = ?
+            AND pk.is_active = true
+            AND pk.level_pohon = 0
         ORDER BY 
             tp.id`
 
@@ -440,6 +443,7 @@ func (repository *TujuanPemdaRepositoryImpl) FindAllWithPokin(ctx context.Contex
         pk.nama_pohon,
         pk.jenis_pohon,
         pk.level_pohon,
+		pk.is_active,
         pk.kode_opd,
         pk.keterangan,
         pk.tahun as tahun_pokin,
@@ -493,6 +497,7 @@ func (repository *TujuanPemdaRepositoryImpl) FindAllWithPokin(ctx context.Contex
 			pokinId                                                int
 			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin string
 			levelPohon                                             int
+			is_active                                              bool
 			tujuanId                                               sql.NullInt64
 			tujuanPemda                                            sql.NullString
 			idVisi, idMisi                                         sql.NullInt64
@@ -507,6 +512,7 @@ func (repository *TujuanPemdaRepositoryImpl) FindAllWithPokin(ctx context.Contex
 			&namaPohon,
 			&jenisPohon,
 			&levelPohon,
+			&is_active,
 			&kodeOpd,
 			&keterangan,
 			&tahunPokin,
@@ -538,6 +544,7 @@ func (repository *TujuanPemdaRepositoryImpl) FindAllWithPokin(ctx context.Contex
 				NamaPohon:   namaPohon,
 				JenisPohon:  jenisPohon,
 				LevelPohon:  levelPohon,
+				IsActive:    is_active,
 				KodeOpd:     kodeOpd,
 				Keterangan:  keterangan,
 				TahunPokin:  tahunPokin,
@@ -561,6 +568,7 @@ func (repository *TujuanPemdaRepositoryImpl) FindAllWithPokin(ctx context.Contex
 					Id:          int(tujuanId.Int64),
 					TujuanPemda: tujuanPemda.String,
 					TematikId:   pokinId,
+					IsActive:    is_active,
 					IdVisi:      int(idVisi.Int64),
 					IdMisi:      int(idMisi.Int64),
 					Indikator:   []domain.Indikator{},

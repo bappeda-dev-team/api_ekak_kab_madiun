@@ -6,6 +6,7 @@ type TujuanPemda struct {
 	NamaTematik string
 	TujuanPemda string
 	JenisPohon  string
+	IsActive    bool
 	// TujuanPemdaId    int
 	// NamaTujuanPemda  string
 	PeriodeId         int
@@ -25,6 +26,7 @@ type TujuanPemdaWithPokin struct {
 	NamaPohon   string `json:"nama_pohon"`
 	JenisPohon  string `json:"jenis_pohon"`
 	LevelPohon  int    `json:"level_pohon"`
+	IsActive    bool
 	KodeOpd     string `json:"kode_opd"`
 	Keterangan  string `json:"keterangan"`
 	IdVisi      int

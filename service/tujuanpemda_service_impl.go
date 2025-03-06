@@ -606,6 +606,7 @@ func (service *TujuanPemdaServiceImpl) FindAllWithPokin(ctx context.Context, tah
 				LevelPohon:  item.LevelPohon,
 				Keterangan:  item.Keterangan,
 				TahunPokin:  item.TahunPokin,
+				IsActive:    item.IsActive,
 				TujuanPemda: make([]tujuanpemda.TujuanPemdaResponse, 0),
 			}
 		}
@@ -678,7 +679,7 @@ func (service *TujuanPemdaServiceImpl) FindAllWithPokin(ctx context.Context, tah
 
 			tujuanPemdaResponse := tujuanpemda.TujuanPemdaResponse{
 				Id:          tujuanPemda.Id,
-				IdVisi:      visiPemda.Id, // Tambahkan ID Visi
+				IdVisi:      visiPemda.Id,
 				Visi:        visiPemda.Visi,
 				IdMisi:      misiPemda.Id,
 				Misi:        misiPemda.Misi,
