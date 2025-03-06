@@ -50,6 +50,7 @@ func (service *IkuServiceImpl) FindAll(ctx context.Context, tahunAwal string, ta
 		responses = append(responses, iku.IkuResponse{
 			IndikatorId:      item.Id,
 			Sumber:           item.Sumber,
+			IsActive:         item.IsActive,
 			Indikator:        item.Indikator,
 			RumusPerhitungan: item.RumusPerhitungan.String,
 			SumberData:       item.SumberData.String,

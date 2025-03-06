@@ -32,4 +32,5 @@ type Indikator struct {
 	RencanaKinerja   RencanaKinerja
 	RumusPerhitungan sql.NullString
 	SumberData       sql.NullString
+	IsActive         bool
 }
