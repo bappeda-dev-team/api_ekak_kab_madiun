@@ -15,6 +15,7 @@ type SubtematikWithSasaran struct {
 	JenisPohon       string
 	LevelPohon       int
 	Keterangan       string
+	IsActive         bool
 	SasaranPemdaList []SasaranPemdaDetail
 }
 

@@ -70,6 +70,7 @@ type SubtematikResponse struct {
 	NamaSubtematik string                          `json:"nama_subtematik"`
 	JenisPohon     string                          `json:"jenis_pohon"`
 	LevelPohon     int                             `json:"level_pohon"`
+	IsActive       bool                            `json:"is_active"`
 	SasaranPemda   []SasaranPemdaWithpokinResponse `json:"sasaran_pemda"`
 }
 

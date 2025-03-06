@@ -567,71 +567,87 @@ func (repository *SasaranPemdaRepositoryImpl) UpdatePeriode(ctx context.Context,
 
 func (repository *SasaranPemdaRepositoryImpl) FindAllWithPokin(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.PohonKinerjaWithSasaran, error) {
 	query := `
-WITH RECURSIVE pohon_hierarchy AS (
-    SELECT 
-        pk.id,
-        pk.nama_pohon,
-        pk.parent,
-        pk.level_pohon,
+	WITH RECURSIVE pohon_hierarchy AS (
+        SELECT 
+            pk.id,
+            pk.nama_pohon,
+            pk.parent,
+            pk.level_pohon,
+            pk.jenis_pohon,
+            pk.keterangan,
+            pk.is_active,
+            pk.tahun,
+            CAST(pk.id AS CHAR(50)) as path,
+            pk.id as root_id,
+            pk.nama_pohon as root_nama
+        FROM tb_pohon_kinerja pk
+        WHERE pk.level_pohon = 0
+        AND CAST(pk.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)
+
+        UNION ALL
+
+        SELECT 
+            c.id,
+            c.nama_pohon,
+            c.parent,
+            c.level_pohon,
+            c.jenis_pohon,
+            c.keterangan,
+            c.is_active,
+            c.tahun,
+            CONCAT(ph.path, ',', c.id),
+            ph.root_id,
+            ph.root_nama
+        FROM tb_pohon_kinerja c
+        JOIN pohon_hierarchy ph ON c.parent = ph.id
+        WHERE CAST(c.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)
+    )
+    SELECT DISTINCT
+        pk.id as subtematik_id,
+        pk.nama_pohon as nama_subtematik,
         pk.jenis_pohon,
+        pk.level_pohon,
         pk.keterangan,
-        pk.tahun,
-        CAST(pk.id AS CHAR(50)) as path,
-        pk.id as root_id,
-        pk.nama_pohon as root_nama
-    FROM tb_pohon_kinerja pk
-    WHERE pk.level_pohon = 0
-    AND CAST(pk.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)
-
-    UNION ALL
-
-    SELECT 
-        c.id,
-        c.nama_pohon,
-        c.parent,
-        c.level_pohon,
-        c.jenis_pohon,
-        c.keterangan,
-        c.tahun,
-        CONCAT(ph.path, ',', c.id),
-        ph.root_id,
-        ph.root_nama
-    FROM tb_pohon_kinerja c
-    JOIN pohon_hierarchy ph ON c.parent = ph.id
-    WHERE CAST(c.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)
-)
-SELECT DISTINCT
-    pk.id as subtematik_id,
-    pk.nama_pohon as nama_subtematik,
-    pk.jenis_pohon,
-    pk.level_pohon,
-    pk.keterangan,
-    pk.tahun as pohon_tahun,
-    pk.root_id as tematik_id,
-    pk.root_nama as nama_tematik,
-    sp.id as id_sasaran_pemda,
-    sp.sasaran_pemda,
-    sp.tahun_awal,
-    sp.tahun_akhir,
-    sp.jenis_periode,
-    i.id as indikator_id,
-    i.indikator,
-    i.rumus_perhitungan,
-    i.sumber_data,
-    t.id as target_id,
-    t.target,
-    t.satuan,
-    t.tahun as target_tahun
-FROM pohon_hierarchy pk
-LEFT JOIN tb_sasaran_pemda sp ON pk.id = sp.subtema_id
-    AND sp.tahun_awal = ? 
-    AND sp.tahun_akhir = ?
-    AND sp.jenis_periode = ?
-LEFT JOIN tb_indikator i ON sp.id = i.sasaran_pemda_id
-LEFT JOIN tb_target t ON i.id = t.indikator_id
-    AND CAST(t.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)
-WHERE pk.level_pohon BETWEEN 1 AND 3
-ORDER BY pk.root_id, pk.id, sp.id, i.id, CAST(t.tahun AS SIGNED)`
+        -- Logika untuk menentukan status aktif final
+        CASE 
+            WHEN sp.id IS NULL THEN 
+                -- Jika tidak terhubung dengan sasaran pemda, cek is_active subtematik saja
+                pk.is_active
+            ELSE 
+                -- Jika terhubung dengan sasaran pemda, cek is_active subtematik dan tematik
+                CASE 
+                    WHEN pk.is_active = true AND tematik.is_active = true THEN true
+                    ELSE false
+                END
+        END as is_active,
+        pk.tahun as pohon_tahun,
+        pk.root_id as tematik_id,
+        pk.root_nama as nama_tematik,
+        sp.id as id_sasaran_pemda,
+        sp.sasaran_pemda,
+        sp.tahun_awal,
+        sp.tahun_akhir,
+        sp.jenis_periode,
+        i.id as indikator_id,
+        i.indikator,
+        i.rumus_perhitungan,
+        i.sumber_data,
+        t.id as target_id,
+        t.target,
+        t.satuan,
+        t.tahun as target_tahun
+    FROM pohon_hierarchy pk
+    LEFT JOIN tb_sasaran_pemda sp ON pk.id = sp.subtema_id
+        AND sp.tahun_awal = ? 
+        AND sp.tahun_akhir = ?
+        AND sp.jenis_periode = ?
+    LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
+    LEFT JOIN tb_pohon_kinerja tematik ON tp.tematik_id = tematik.id
+    LEFT JOIN tb_indikator i ON sp.id = i.sasaran_pemda_id
+    LEFT JOIN tb_target t ON i.id = t.indikator_id
+        AND CAST(t.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)
+    WHERE pk.level_pohon BETWEEN 1 AND 3
+    ORDER BY pk.root_id, pk.id, sp.id, i.id, CAST(t.tahun AS SIGNED)`
 
 	rows, err := tx.QueryContext(ctx, query,
 		tahunAwal, tahunAkhir,
@@ -650,33 +666,34 @@ ORDER BY pk.root_id, pk.id, sp.id, i.id, CAST(t.tahun AS SIGNED)`
 			subtematikId                           int
 			namaSubtematik, jenisPohon, keterangan string
 			levelPohon                             int
+			is_active                              bool
 			pohonTahun                             string
 			tematikId                              int
 			namaTematik                            string
 			idSasaranPemda                         sql.NullInt64
 			sasaranPemda                           sql.NullString
-			tahunAwalSasaran                       sql.NullString // tambahan
-			tahunAkhirSasaran                      sql.NullString // tambahan
-			jenisPeriodeSasaran                    sql.NullString // tambahan
+			tahunAwalSasaran                       sql.NullString
+			tahunAkhirSasaran                      sql.NullString
+			jenisPeriodeSasaran                    sql.NullString
 			indikatorId, indikator                 sql.NullString
 			rumusPerhitungan, sumberData           sql.NullString
 			targetId, target, satuan, targetTahun  sql.NullString
 		)
-
 		err := rows.Scan(
 			&subtematikId,
 			&namaSubtematik,
 			&jenisPohon,
 			&levelPohon,
 			&keterangan,
+			&is_active,
 			&pohonTahun,
 			&tematikId,
 			&namaTematik,
 			&idSasaranPemda,
 			&sasaranPemda,
-			&tahunAwalSasaran,    // tambahan
-			&tahunAkhirSasaran,   // tambahan
-			&jenisPeriodeSasaran, // tambahan
+			&tahunAwalSasaran,
+			&tahunAkhirSasaran,
+			&jenisPeriodeSasaran,
 			&indikatorId,
 			&indikator,
 			&rumusPerhitungan,
@@ -717,6 +734,7 @@ ORDER BY pk.root_id, pk.id, sp.id, i.id, CAST(t.tahun AS SIGNED)`
 				NamaSubtematik:   namaSubtematik,
 				JenisPohon:       jenisPohon,
 				LevelPohon:       levelPohon,
+				IsActive:         is_active,
 				SasaranPemdaList: []domain.SasaranPemdaDetail{},
 			}
 			tematik.Subtematik = append(tematik.Subtematik, newSubtematik)
