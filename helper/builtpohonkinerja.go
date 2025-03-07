@@ -122,6 +122,7 @@ func BuildSuperSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja
 		LevelPohon:  superSubTematik.LevelPohon,
 		Keterangan:  superSubTematik.Keterangan,
 		CountReview: superSubTematik.CountReview,
+		IsActive:    superSubTematik.IsActive,
 		Indikators:  ConvertToIndikatorResponses(superSubTematik.Indikator),
 	}
 
