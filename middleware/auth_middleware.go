@@ -17,9 +17,16 @@ func NewAuthMiddleware(handler http.Handler) *AuthMiddleware {
 }
 
 func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if request.URL.Path == "/user/login" {
-		middleware.Handler.ServeHTTP(writer, request)
-		return
+	publicPaths := []string{
+		"/user/login",
+	}
+
+	currentPath := request.URL.Path
+	for _, path := range publicPaths {
+		if currentPath == path {
+			middleware.Handler.ServeHTTP(writer, request)
+			return
+		}
 	}
 
 	tokenString := request.Header.Get("Authorization")
