@@ -19,6 +19,7 @@ type PohonKinerjaAdminService interface {
 	CrosscuttingOpd(ctx context.Context, request pohonkinerja.PohonKinerjaAdminStrategicCreateRequest) (pohonkinerja.PohonKinerjaAdminResponseData, error)
 	TolakCrosscutting(ctx context.Context, request pohonkinerja.PohonKinerjaAdminTolakRequest) error
 	SetujuiCrosscutting(ctx context.Context, request pohonkinerja.PohonKinerjaAdminTolakRequest) error
+	AktiforNonAktifTematik(ctx context.Context, request pohonkinerja.TematikStatusRequest) (string, error)
 
 	//find pokin for dropdown
 	FindPokinByTematik(ctx context.Context, tahun string) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)

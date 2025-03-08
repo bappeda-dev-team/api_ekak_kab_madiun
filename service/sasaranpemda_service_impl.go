@@ -510,6 +510,7 @@ func (service *SasaranPemdaServiceImpl) FindAllWithPokin(ctx context.Context, ta
 				NamaSubtematik: subtematik.NamaSubtematik,
 				JenisPohon:     subtematik.JenisPohon,
 				LevelPohon:     subtematik.LevelPohon,
+				IsActive:       subtematik.IsActive,
 				SasaranPemda:   []sasaranpemda.SasaranPemdaWithpokinResponse{},
 			}
 
@@ -519,9 +520,9 @@ func (service *SasaranPemdaServiceImpl) FindAllWithPokin(ctx context.Context, ta
 					IdSasaranPemda: sasaran.Id,
 					SasaranPemda:   sasaran.SasaranPemda,
 					Periode: sasaranpemda.PeriodeResponse{
-						TahunAwal:    tahunAwal,    // Gunakan tahun dari parameter
-						TahunAkhir:   tahunAkhir,   // Gunakan tahun dari parameter
-						JenisPeriode: jenisPeriode, // Gunakan jenis periode dari parameter
+						TahunAwal:    tahunAwal,
+						TahunAkhir:   tahunAkhir,
+						JenisPeriode: jenisPeriode,
 					},
 					Indikator: []sasaranpemda.IndikatorSubtematikResponse{},
 				}
@@ -632,6 +633,7 @@ func (service *SasaranPemdaServiceImpl) FindAllWithPokin(ctx context.Context, ta
 
 	return result, nil
 }
+
 func convertToIndikatorUpdateResponses(indikators []domain.Indikator) []sasaranpemda.IndikatorResponse {
 	if len(indikators) == 0 {
 		return nil

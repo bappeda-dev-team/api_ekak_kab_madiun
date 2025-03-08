@@ -5,6 +5,7 @@ import "time"
 type IkuResponse struct {
 	IndikatorId      string           `json:"indikator_id"`
 	Sumber           string           `json:"asal_iku"`
+	IsActive         bool             `json:"is_active"`
 	Indikator        string           `json:"indikator"`
 	RumusPerhitungan string           `json:"rumus_perhitungan"`
 	SumberData       string           `json:"sumber_data"`

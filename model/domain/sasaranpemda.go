@@ -4,6 +4,7 @@ type SasaranPemda struct {
 	Id            int
 	TujuanPemdaId int
 	SubtemaId     int
+	IsActive      bool
 	NamaSubtema   string
 	SasaranPemda  string
 	JenisPohon    string
@@ -19,6 +20,7 @@ type SasaranPemdaWithPokin struct {
 	SubtematikId        int
 	JenisPohon          string
 	LevelPohon          int
+	IsActive            bool
 	TematikId           int
 	NamaTematik         string
 	NamaSubtematik      string

@@ -804,6 +804,7 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			JenisPohon: tematik[0].JenisPohon,
 			LevelPohon: tematik[0].LevelPohon,
 			Keterangan: tematik[0].Keterangan,
+			IsActive:   tematik[0].IsActive,
 			Indikators: uniqueIndikators,
 			Child:      childs,
 		}
@@ -1724,7 +1725,8 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinFromPemda(ctx context.Cont
 			Tahun:      pokin.Tahun,
 			Keterangan: pokin.Keterangan,
 			Status:     pokin.Status,
-			Indikators: indikatorResponses, // Menambahkan indikator ke response
+			IsActive:   pokin.IsActive,
+			Indikators: indikatorResponses,
 		})
 	}
 
@@ -1866,4 +1868,65 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinFromOpd(ctx context.Contex
 	}
 
 	return result, nil
+}
+
+func (service *PohonKinerjaAdminServiceImpl) AktiforNonAktifTematik(ctx context.Context, request pohonkinerja.TematikStatusRequest) (string, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		if request.IsActive {
+			return "gagal diaktifkan", err
+		}
+		return "gagal dinonaktifkan", err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Verifikasi bahwa pohon kinerja yang akan diubah adalah tematik (level 0)
+	pokin, err := service.pohonKinerjaRepository.FindById(ctx, tx, request.Id)
+	if err != nil {
+		if request.IsActive {
+			return "gagal diaktifkan", err
+		}
+		return "gagal dinonaktifkan", err
+	}
+
+	if pokin.LevelPohon != 0 {
+		if request.IsActive {
+			return "gagal diaktifkan", fmt.Errorf("pohon kinerja dengan id %d bukan merupakan tematik (level 0)", request.Id)
+		}
+		return "gagal dinonaktifkan", fmt.Errorf("pohon kinerja dengan id %d bukan merupakan tematik (level 0)", request.Id)
+	}
+
+	// Dapatkan semua children dan clone yang terkait
+	affectedIds, err := service.pohonKinerjaRepository.GetChildrenAndClones(ctx, tx, request.Id, request.IsActive)
+	if err != nil {
+		if request.IsActive {
+			return "gagal diaktifkan", err
+		}
+		return "gagal dinonaktifkan", err
+	}
+
+	// Update status tematik
+	err = service.pohonKinerjaRepository.UpdateTematikStatus(ctx, tx, request.Id, request.IsActive)
+	if err != nil {
+		if request.IsActive {
+			return "gagal diaktifkan", err
+		}
+		return "gagal dinonaktifkan", err
+	}
+
+	// Update status semua children dan clone
+	for _, id := range affectedIds {
+		err = service.pohonKinerjaRepository.UpdateTematikStatus(ctx, tx, id, request.IsActive)
+		if err != nil {
+			if request.IsActive {
+				return "gagal diaktifkan", err
+			}
+			return "gagal dinonaktifkan", err
+		}
+	}
+
+	if request.IsActive {
+		return "berhasil diaktifkan", nil
+	}
+	return "berhasil dinonaktifkan", nil
 }

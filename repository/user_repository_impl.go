@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"log"
+	"time"
 )
 
 type UserRepositoryImpl struct {
@@ -216,6 +218,9 @@ func (repository *UserRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id
 }
 
 func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *sql.Tx, username string) (domain.Users, error) {
+	startTime := time.Now()
+	log.Printf("Start finding user by email/NIP: %s", username)
+
 	script := `
 		SELECT u.id, u.nip, u.email, u.password, u.is_active, ur.role_id, r.role 
 		FROM tb_users u
@@ -226,6 +231,7 @@ func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *
 	`
 	rows, err := tx.QueryContext(ctx, script, username, username)
 	if err != nil {
+		log.Printf("Error querying user by email/NIP: %v", err)
 		return domain.Users{}, err
 	}
 	defer rows.Close()
@@ -248,6 +254,7 @@ func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *
 				&roleName,
 			)
 			if err != nil {
+				log.Printf("Error scanning first user row: %v", err)
 				return domain.Users{}, err
 			}
 			first = false
@@ -277,5 +284,6 @@ func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *
 		}
 	}
 
+	log.Printf("Successfully found user by email/NIP: %s, execution time: %v", username, time.Since(startTime))
 	return user, nil
 }

@@ -23,6 +23,7 @@ type PohonKinerja struct {
 	PegawaiAction          interface{}
 	CrosscuttingTo         int
 	CountReview            int
+	IsActive               bool
 }
 
 type PegawaiAction struct {

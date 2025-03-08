@@ -624,3 +624,33 @@ func (controller *PohonKinerjaAdminControllerImpl) FindPokinFromOpd(writer http.
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaAdminControllerImpl) AktiforNonAktifTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tematikRequest := pohonkinerja.TematikStatusRequest{}
+	helper.ReadFromRequestBody(request, &tematikRequest)
+
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	helper.PanicIfError(err)
+
+	tematikRequest.Id = id
+
+	message, err := controller.pohonKinerjaAdminService.AktiforNonAktifTematik(request.Context(), tematikRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   message,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   message,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

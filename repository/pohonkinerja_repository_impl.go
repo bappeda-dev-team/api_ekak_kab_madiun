@@ -281,7 +281,8 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
             COALESCE(keterangan, '') as keterangan,
             COALESCE(keterangan_crosscutting, '') as keterangan_crosscutting,
             COALESCE(tahun, '') as tahun,
-            COALESCE(status, '') as status
+            COALESCE(status, '') as status,
+			COALESCE(is_active) as is_active
         FROM tb_pohon_kinerja 
         WHERE kode_opd = ? 
 		AND tahun = ?
@@ -308,6 +309,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
 			&pokin.KeteranganCrosscutting,
 			&pokin.Tahun,
 			&pokin.Status,
+			&pokin.IsActive,
 		)
 		if err != nil {
 			return nil, err
@@ -1102,14 +1104,14 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 	script := `
         WITH RECURSIVE pohon_hierarki AS (
             -- Base case: pilih node yang diminta
-            SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status
+            SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, is_active
             FROM tb_pohon_kinerja 
             WHERE id = ?
             
             UNION ALL
             
             -- Recursive case: ambil semua child nodes
-            SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status
+            SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
             FROM tb_pohon_kinerja pk
             INNER JOIN pohon_hierarki ph ON pk.parent = ph.id
         )
@@ -1123,6 +1125,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
             ph.keterangan,
             ph.tahun,
             ph.status,
+			ph.is_active,
             i.id as indikator_id,
             i.indikator as nama_indikator,
             t.id as target_id,
@@ -1158,6 +1161,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 		var (
 			pokinId, parent, levelPohon                                    int
 			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin, status string
+			is_active                                                      bool
 			indikatorId, namaIndikator                                     sql.NullString
 			targetId, targetValue, targetSatuan                            sql.NullString
 			pelaksanaId, pegawaiId                                         sql.NullString
@@ -1165,7 +1169,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 
 		err := rows.Scan(
 			&pokinId, &namaPohon, &parent, &jenisPohon, &levelPohon,
-			&kodeOpd, &keterangan, &tahunPokin, &status,
+			&kodeOpd, &keterangan, &tahunPokin, &status, &is_active,
 			&indikatorId, &namaIndikator,
 			&targetId, &targetValue, &targetSatuan,
 			&pelaksanaId, &pegawaiId,
@@ -1187,6 +1191,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 				Keterangan: keterangan,
 				Tahun:      tahunPokin,
 				Status:     status,
+				IsActive:   is_active,
 			}
 		}
 
@@ -1528,7 +1533,7 @@ func (repository *PohonKinerjaRepositoryImpl) InsertClonedTarget(ctx context.Con
 }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.Context, tx *sql.Tx, jenisPohon string, levelPohon int, tahun string, kodeOpd string, status string) ([]domain.PohonKinerja, error) {
-	script := "SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status FROM tb_pohon_kinerja WHERE 1=1"
+	script := "SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active FROM tb_pohon_kinerja WHERE 1=1"
 	parameters := []interface{}{}
 	if jenisPohon != "" {
 		script += " AND jenis_pohon = ?"
@@ -1561,7 +1566,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.
 	var pokins []domain.PohonKinerja
 	for rows.Next() {
 		var pokin domain.PohonKinerja
-		err := rows.Scan(&pokin.Id, &pokin.NamaPohon, &pokin.JenisPohon, &pokin.LevelPohon, &pokin.KodeOpd, &pokin.Tahun, &pokin.Keterangan, &pokin.Status)
+		err := rows.Scan(&pokin.Id, &pokin.NamaPohon, &pokin.JenisPohon, &pokin.LevelPohon, &pokin.KodeOpd, &pokin.Tahun, &pokin.Keterangan, &pokin.Status, &pokin.IsActive)
 		if err != nil {
 			return nil, err
 		}
@@ -2335,4 +2340,72 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinWithPeriode(ctx context.C
 	}
 
 	return pokin, periode, nil
+}
+
+// aktif / nonaktif tematik
+func (repository *PohonKinerjaRepositoryImpl) UpdateTematikStatus(ctx context.Context, tx *sql.Tx, id int, isActive bool) error {
+	query := "UPDATE tb_pohon_kinerja SET is_active = ? WHERE id = ?"
+	_, err := tx.ExecContext(ctx, query, isActive, id)
+	return err
+}
+
+func (repository *PohonKinerjaRepositoryImpl) GetChildrenAndClones(ctx context.Context, tx *sql.Tx, parentId int, isActivating bool) ([]int, error) {
+	var query string
+
+	if isActivating {
+		// Query untuk mengaktifkan: ambil semua yang terhubung tanpa memandang status is_active
+		query = `
+            WITH RECURSIVE tree AS (
+                -- Base case: direct children and clones yang nonaktif
+                SELECT id, parent, clone_from, level_pohon
+                FROM tb_pohon_kinerja
+                WHERE (parent = ? OR clone_from = ?) 
+                AND is_active = false
+                
+                UNION ALL
+                
+                -- Recursive case: children dan clone yang nonaktif
+                SELECT pk.id, pk.parent, pk.clone_from, pk.level_pohon
+                FROM tb_pohon_kinerja pk
+                INNER JOIN tree t ON (pk.parent = t.id OR pk.clone_from = t.id)
+                WHERE pk.is_active = false
+            )
+            SELECT DISTINCT id FROM tree`
+	} else {
+		// Query untuk menonaktifkan: ambil semua yang terhubung dan masih aktif
+		query = `
+            WITH RECURSIVE tree AS (
+                -- Base case: direct children and clones yang aktif
+                SELECT id, parent, clone_from, level_pohon
+                FROM tb_pohon_kinerja
+                WHERE (parent = ? OR clone_from = ?)
+                AND is_active = true
+                
+                UNION ALL
+                
+                -- Recursive case: children dan clone yang aktif
+                SELECT pk.id, pk.parent, pk.clone_from, pk.level_pohon
+                FROM tb_pohon_kinerja pk
+                INNER JOIN tree t ON (pk.parent = t.id OR pk.clone_from = t.id)
+                WHERE pk.is_active = true
+            )
+            SELECT DISTINCT id FROM tree`
+	}
+
+	rows, err := tx.QueryContext(ctx, query, parentId, parentId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, rows.Err()
 }

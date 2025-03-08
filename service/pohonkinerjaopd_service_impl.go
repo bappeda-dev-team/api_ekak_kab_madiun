@@ -765,6 +765,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponse(ctx context
 		LevelPohon: operationalN.LevelPohon,
 		Keterangan: operationalN.Keterangan,
 		Status:     operationalN.Status,
+		IsActive:   operationalN.IsActive,
 		KodeOpd: opdmaster.OpdResponseForAll{
 			KodeOpd: operationalN.KodeOpd,
 			NamaOpd: operationalN.NamaOpd,
@@ -831,6 +832,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 		Keterangan:             strategic.Keterangan,
 		KeteranganCrosscutting: keteranganCrosscutting,
 		Status:                 strategic.Status,
+		IsActive:               strategic.IsActive,
 		KodeOpd: opdmaster.OpdResponseForAll{
 			KodeOpd: strategic.KodeOpd,
 			NamaOpd: strategic.NamaOpd,
@@ -898,6 +900,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 		Keterangan:             tactical.Keterangan,
 		KeteranganCrosscutting: keteranganCrosscutting,
 		Status:                 tactical.Status,
+		IsActive:               tactical.IsActive,
 		KodeOpd: opdmaster.OpdResponseForAll{
 			KodeOpd: tactical.KodeOpd,
 			NamaOpd: tactical.NamaOpd,
@@ -966,6 +969,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 		Keterangan:             operational.Keterangan,
 		KeteranganCrosscutting: keteranganCrosscutting,
 		Status:                 operational.Status,
+		IsActive:               operational.IsActive,
 		KodeOpd: opdmaster.OpdResponseForAll{
 			KodeOpd: operational.KodeOpd,
 			NamaOpd: operational.NamaOpd,

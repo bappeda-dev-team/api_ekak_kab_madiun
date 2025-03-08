@@ -36,10 +36,12 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
             tp.tujuan_pemda as parent_name,
             tp.tahun_awal_periode,
             tp.tahun_akhir_periode,
-            tp.jenis_periode
+            tp.jenis_periode,
+            pk_tematik.is_active as is_active
         FROM tb_indikator i
         INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
         LEFT JOIN tb_target t ON t.indikator_id = i.id
+        LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
         WHERE tp.tahun_awal_periode = ? 
         AND tp.tahun_akhir_periode = ?
         AND tp.jenis_periode = ?
@@ -60,10 +62,17 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
             sp.sasaran_pemda as parent_name,
             sp.tahun_awal,
             sp.tahun_akhir,
-            sp.jenis_periode
+            sp.jenis_periode,
+            CASE 
+                WHEN pk_subtematik.is_active = true AND pk_tematik.is_active = true THEN true
+                ELSE false
+            END as is_active
         FROM tb_indikator i
         INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
         LEFT JOIN tb_target t ON t.indikator_id = i.id
+        LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
+        LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
+        LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
         WHERE sp.tahun_awal = ? 
         AND sp.tahun_akhir = ?
         AND sp.jenis_periode = ?
@@ -105,6 +114,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			tahunAkhir         string
 			// periodeId          int
 			jenisPeriodeData string
+			isActive         bool
 		)
 
 		err := rows.Scan(
@@ -124,6 +134,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			&tahunAkhir,
 			// &periodeId,
 			&jenisPeriodeData,
+			&isActive,
 		)
 		if err != nil {
 			return nil, err
@@ -160,6 +171,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 				ParentId:         int(parentId.Int64),
 				ParentName:       parentName.String,
 				Target:           targets,
+				IsActive:         isActive,
 			}
 			indikatorMap[indikatorId.String] = item
 		}

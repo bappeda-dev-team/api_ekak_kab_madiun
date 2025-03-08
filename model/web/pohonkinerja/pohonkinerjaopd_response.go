@@ -39,6 +39,7 @@ type StrategicOpdResponse struct {
 	Status                 string                      `json:"status"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
+	IsActive               bool                        `json:"is_active"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
 	Tacticals              []TacticalOpdResponse       `json:"childs,omitempty"`
@@ -57,6 +58,7 @@ type TacticalOpdResponse struct {
 	Status                 string                      `json:"status"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
+	IsActive               bool                        `json:"is_active"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
 	Operationals           []OperationalOpdResponse    `json:"childs,omitempty"`
@@ -75,6 +77,7 @@ type OperationalOpdResponse struct {
 	Status                 string                      `json:"status"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
+	IsActive               bool                        `json:"is_active"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
 	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`
@@ -92,6 +95,7 @@ type OperationalNOpdResponse struct {
 	Status      string                      `json:"status"`
 	CountReview int                         `json:"jumlah_review"`
 	KodeOpd     opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
+	IsActive    bool                        `json:"is_active"`
 	Pelaksana   []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator   []IndikatorResponse         `json:"indikator"`
 	Childs      []OperationalNOpdResponse   `json:"childs,omitempty"`

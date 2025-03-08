@@ -40,6 +40,7 @@ type TujuanPemdaWithPokinResponse struct {
 	NamaPohon   string                `json:"nama_tematik"`
 	JenisPohon  string                `json:"jenis_pohon"`
 	LevelPohon  int                   `json:"level_pohon"`
+	IsActive    bool                  `json:"is_active"`
 	Keterangan  string                `json:"keterangan"`
 	TahunPokin  string                `json:"tahun_pokin"`
 	TujuanPemda []TujuanPemdaResponse `json:"tujuan_pemda"`

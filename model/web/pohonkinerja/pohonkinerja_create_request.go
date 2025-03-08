@@ -49,3 +49,8 @@ type TargetCreateRequest struct {
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
 }
+
+type TematikStatusRequest struct {
+	Id       int  `json:"id" validate:"required"`
+	IsActive bool `json:"is_active"`
+}
