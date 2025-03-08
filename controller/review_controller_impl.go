@@ -26,6 +26,11 @@ func (controller *ReviewControllerImpl) Create(writer http.ResponseWriter, reque
 	reviewCreateRequest := pohonkinerja.ReviewCreateRequest{}
 	helper.ReadFromRequestBody(request, &reviewCreateRequest)
 
+	idStr := params.ByName("pokinId")
+	id, err := strconv.Atoi(idStr)
+	helper.PanicIfError(err)
+	reviewCreateRequest.IdPohonKinerja = id
+
 	claims := request.Context().Value(helper.UserInfoKey).(web.JWTClaim)
 	ctx := context.WithValue(request.Context(), helper.UserInfoKey, claims)
 

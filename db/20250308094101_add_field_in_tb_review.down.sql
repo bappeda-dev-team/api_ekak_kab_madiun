@@ -1,0 +1,1 @@
+ALTER TABLE tb_review DROP jenis_pokin;

@@ -64,6 +64,7 @@ func (service *ReviewServiceImpl) Create(ctx context.Context, request pohonkiner
 		Review:         request.Review,
 		Keterangan:     request.Keterangan,
 		CreatedBy:      claims.Nip,
+		Jenis_pokin:    request.JenisPokin,
 	}
 
 	// Simpan ke database
@@ -84,6 +85,7 @@ func (service *ReviewServiceImpl) Create(ctx context.Context, request pohonkiner
 		Review:         result.Review,
 		Keterangan:     result.Keterangan,
 		CreatedBy:      result.CreatedBy,
+		JenisPokin:     result.Jenis_pokin,
 	}
 
 	return response, nil
@@ -175,6 +177,7 @@ func (service *ReviewServiceImpl) FindAll(ctx context.Context, idPohonKinerja in
 			Review:         review.Review,
 			Keterangan:     review.Keterangan,
 			// CreatedBy:      review.CreatedBy,
+			JenisPokin:  review.Jenis_pokin,
 			NamaPegawai: pegawai.NamaPegawai,
 		})
 	}
@@ -205,6 +208,7 @@ func (service *ReviewServiceImpl) FindById(ctx context.Context, id int) (pohonki
 		Review:         review.Review,
 		Keterangan:     review.Keterangan,
 		CreatedBy:      review.CreatedBy,
+		JenisPokin:     review.Jenis_pokin,
 	}
 
 	return response, nil
