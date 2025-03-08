@@ -8,6 +8,7 @@ type Review struct {
 	Review         string
 	Keterangan     string
 	CreatedBy      string
+	Jenis_pokin    string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

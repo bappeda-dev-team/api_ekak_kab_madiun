@@ -7,4 +7,5 @@ type ReviewResponse struct {
 	Keterangan     string `json:"keterangan"`
 	CreatedBy      string `json:"created_by,omitempty"`
 	NamaPegawai    string `json:"nama_pegawai,omitempty"`
+	JenisPokin     string `json:"jenis_pokin"`
 }

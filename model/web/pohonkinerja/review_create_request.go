@@ -6,4 +6,5 @@ type ReviewCreateRequest struct {
 	Review         string `json:"review"`
 	Keterangan     string `json:"keterangan"`
 	CreatedBy      string `json:"created_by"`
+	JenisPokin     string `json:"jenis_pokin"`
 }
