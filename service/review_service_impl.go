@@ -213,3 +213,46 @@ func (service *ReviewServiceImpl) FindById(ctx context.Context, id int) (pohonki
 
 	return response, nil
 }
+
+func (service *ReviewServiceImpl) FindAllReviewByTematik(ctx context.Context, tahun string) ([]pohonkinerja.ReviewTematikResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi tahun
+	if tahun == "" {
+		return nil, errors.New("tahun harus diisi")
+	}
+
+	reviews, err := service.ReviewRepository.FindAllReviewByTematik(ctx, tx, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	var response []pohonkinerja.ReviewTematikResponse
+	for _, tematik := range reviews {
+		var reviewDetails []pohonkinerja.ReviewDetailResponse
+		for _, review := range tematik.Review {
+			reviewDetails = append(reviewDetails, pohonkinerja.ReviewDetailResponse{
+				IdPohon:    review.IdPohon,
+				Parent:     review.Parent,
+				NamaPohon:  review.NamaPohon,
+				LevelPohon: review.LevelPohon,
+				JenisPohon: review.JenisPohon,
+				Review:     review.Review,
+				Keterangan: review.Keterangan,
+			})
+		}
+
+		response = append(response, pohonkinerja.ReviewTematikResponse{
+			IdTematik:  tematik.IdTematik,
+			NamaPohon:  tematik.NamaPohon,
+			LevelPohon: tematik.LevelPohon,
+			Review:     reviewDetails,
+		})
+	}
+
+	return response, nil
+}

@@ -12,3 +12,22 @@ type Review struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
+
+type ReviewTematik struct {
+	IdTematik  int
+	NamaPohon  string
+	LevelPohon int
+	Review     []ReviewDetail
+}
+
+type ReviewDetail struct {
+	IdPohon    int
+	Parent     int
+	NamaPohon  string
+	LevelPohon int
+	JenisPohon string
+	Review     string
+	Keterangan string
+	CreatedBy  string
+	JenisPokin string
+}
