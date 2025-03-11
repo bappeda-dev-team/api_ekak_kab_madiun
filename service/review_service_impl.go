@@ -235,16 +235,20 @@ func (service *ReviewServiceImpl) FindAllReviewByTematik(ctx context.Context, ta
 	for _, tematik := range reviews {
 		var reviewDetails []pohonkinerja.ReviewDetailResponse
 		for _, review := range tematik.Review {
+			pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy)
+			helper.PanicIfError(err)
+
 			reviewDetails = append(reviewDetails, pohonkinerja.ReviewDetailResponse{
-				IdPohon:    review.IdPohon,
-				Parent:     review.Parent,
-				NamaPohon:  review.NamaPohon,
-				LevelPohon: review.LevelPohon,
-				JenisPohon: review.JenisPohon,
-				Review:     review.Review,
-				Keterangan: review.Keterangan,
-				CreatedAt:  review.CreatedAt,
-				UpdatedAt:  review.UpdatedAt,
+				IdPohon:     review.IdPohon,
+				Parent:      review.Parent,
+				NamaPohon:   review.NamaPohon,
+				LevelPohon:  review.LevelPohon,
+				JenisPohon:  review.JenisPohon,
+				Review:      review.Review,
+				Keterangan:  review.Keterangan,
+				NamaPegawai: pegawai.NamaPegawai,
+				CreatedAt:   review.CreatedAt,
+				UpdatedAt:   review.UpdatedAt,
 			})
 		}
 

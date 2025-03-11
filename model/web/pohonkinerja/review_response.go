@@ -18,13 +18,14 @@ type ReviewTematikResponse struct {
 }
 
 type ReviewDetailResponse struct {
-	IdPohon    int    `json:"id_pohon"`
-	Parent     int    `json:"parent"`
-	NamaPohon  string `json:"nama_pohon"`
-	LevelPohon int    `json:"level_pohon"`
-	JenisPohon string `json:"jenis_pohon"`
-	Review     string `json:"review"`
-	Keterangan string `json:"keterangan"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
+	IdPohon     int    `json:"id_pohon"`
+	Parent      int    `json:"parent"`
+	NamaPohon   string `json:"nama_pohon"`
+	LevelPohon  int    `json:"level_pohon"`
+	JenisPohon  string `json:"jenis_pohon"`
+	Review      string `json:"review"`
+	Keterangan  string `json:"keterangan"`
+	NamaPegawai string `json:"created_by"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
