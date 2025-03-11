@@ -14,4 +14,5 @@ type ReviewRepository interface {
 	FindByPohonKinerja(ctx context.Context, tx *sql.Tx, idPohonKinerja int) ([]domain.Review, error)
 	CountReviewByPohonKinerja(ctx context.Context, tx *sql.Tx, idPohonKinerja int) (int, error)
 	FindAllReviewByTematik(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.ReviewTematik, error)
+	FindAllReviewOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.ReviewOpd, error)
 }

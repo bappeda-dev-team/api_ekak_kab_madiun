@@ -178,3 +178,23 @@ func (controller *ReviewControllerImpl) FindAllReviewByTematik(writer http.Respo
 		Data:   reviewResponse,
 	})
 }
+
+func (controller *ReviewControllerImpl) FindAllReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	reviewResponse, err := controller.ReviewService.FindAllReviewOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: fmt.Sprintf("success get review tematik tahun %v", tahun),
+		Data:   reviewResponse,
+	})
+}

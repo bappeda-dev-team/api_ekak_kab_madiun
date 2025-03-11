@@ -33,3 +33,16 @@ type ReviewDetail struct {
 	CreatedAt  string
 	UpdatedAt  string
 }
+
+type ReviewOpd struct {
+	IdPohon    int
+	Parent     int
+	NamaPohon  string
+	LevelPohon int
+	JenisPohon string
+	Review     string
+	Keterangan string
+	CreatedBy  string
+	CreatedAt  string
+	UpdatedAt  string
+}

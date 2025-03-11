@@ -220,3 +220,81 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 
 	return result, nil
 }
+
+func (repository *ReviewRepositoryImpl) FindAllReviewOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.ReviewOpd, error) {
+	query := `
+        SELECT 
+            pk.id as id_pohon,
+            COALESCE(pk.parent, 0) as parent,
+            COALESCE(pk.nama_pohon, '') as nama_pohon,
+            COALESCE(pk.level_pohon, 0) as level_pohon,
+            COALESCE(pk.jenis_pohon, '') as jenis_pohon,
+            COALESCE(r.review, '') as review,
+            COALESCE(r.keterangan, '') as keterangan,
+            COALESCE(r.created_by, '') as created_by,
+            COALESCE(r.created_at, CURRENT_TIMESTAMP) as created_at,
+            COALESCE(r.updated_at, CURRENT_TIMESTAMP) as updated_at
+        FROM tb_pohon_kinerja pk
+        INNER JOIN tb_review r ON r.id_pohon_kinerja = pk.id  -- Ganti LEFT JOIN menjadi INNER JOIN
+        WHERE pk.kode_opd = ?
+        AND pk.tahun = ?
+        AND pk.level_pohon >= 4
+        AND pk.status NOT IN (
+            'menunggu_disetujui', 
+            'tarik pokin opd', 
+            'disetujui', 
+            'ditolak', 
+            'crosscutting_menunggu', 
+            'crosscutting_ditolak'
+        )
+        AND r.review IS NOT NULL  -- Tambahan filter untuk memastikan ada review
+        AND r.review != ''        -- Tambahan filter untuk memastikan review tidak kosong
+        ORDER BY pk.level_pohon, pk.id ASC`
+
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reviews []domain.ReviewOpd
+	for rows.Next() {
+		var review domain.ReviewOpd
+		var createdAt, updatedAt sql.NullString
+
+		err := rows.Scan(
+			&review.IdPohon,
+			&review.Parent,
+			&review.NamaPohon,
+			&review.LevelPohon,
+			&review.JenisPohon,
+			&review.Review,
+			&review.Keterangan,
+			&review.CreatedBy,
+			&createdAt,
+			&updatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if createdAt.Valid {
+			review.CreatedAt = createdAt.String
+		}
+		if updatedAt.Valid {
+			review.UpdatedAt = updatedAt.String
+		}
+
+		reviews = append(reviews, review)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if reviews == nil {
+		reviews = make([]domain.ReviewOpd, 0)
+	}
+
+	return reviews, nil
+}

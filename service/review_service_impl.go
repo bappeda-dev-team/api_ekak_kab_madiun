@@ -235,8 +235,7 @@ func (service *ReviewServiceImpl) FindAllReviewByTematik(ctx context.Context, ta
 	for _, tematik := range reviews {
 		var reviewDetails []pohonkinerja.ReviewDetailResponse
 		for _, review := range tematik.Review {
-			pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy)
-			helper.PanicIfError(err)
+			pegawai, _ := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy)
 
 			reviewDetails = append(reviewDetails, pohonkinerja.ReviewDetailResponse{
 				IdPohon:     review.IdPohon,
@@ -261,4 +260,51 @@ func (service *ReviewServiceImpl) FindAllReviewByTematik(ctx context.Context, ta
 	}
 
 	return response, nil
+}
+
+func (service *ReviewServiceImpl) FindAllReviewOpd(ctx context.Context, kodeOpd, tahun string) ([]pohonkinerja.ReviewOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	if kodeOpd == "" {
+		return []pohonkinerja.ReviewOpdResponse{}, nil
+	}
+	if tahun == "" {
+		return []pohonkinerja.ReviewOpdResponse{}, nil
+	}
+
+	reviews, err := service.ReviewRepository.FindAllReviewOpd(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return []pohonkinerja.ReviewOpdResponse{}, nil
+		}
+		return nil, err
+	}
+
+	var reviewResponses []pohonkinerja.ReviewOpdResponse
+	for _, review := range reviews {
+		pegawai, _ := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy)
+
+		reviewResponses = append(reviewResponses, pohonkinerja.ReviewOpdResponse{
+			IdPohon:     review.IdPohon,
+			Parent:      review.Parent,
+			NamaPohon:   review.NamaPohon,
+			LevelPohon:  review.LevelPohon,
+			JenisPohon:  review.JenisPohon,
+			Review:      review.Review,
+			Keterangan:  review.Keterangan,
+			NamaPegawai: pegawai.NamaPegawai, // Akan kosong jika pegawai tidak ditemukan
+			CreatedAt:   review.CreatedAt,
+			UpdatedAt:   review.UpdatedAt,
+		})
+	}
+
+	if len(reviewResponses) == 0 {
+		return []pohonkinerja.ReviewOpdResponse{}, nil
+	}
+
+	return reviewResponses, nil
 }

@@ -13,4 +13,5 @@ type ReviewController interface {
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllReviewByTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
