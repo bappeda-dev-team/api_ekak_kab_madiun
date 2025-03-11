@@ -86,7 +86,7 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
         WITH RECURSIVE pohon_hierarchy AS (
             -- Base case: ambil semua tematik (level 0)
             SELECT 
-                id, nama_pohon, parent, level_pohon, jenis_pohon
+                id, nama_pohon, parent, level_pohon, jenis_pohon, created_at, updated_at
             FROM tb_pohon_kinerja
             WHERE level_pohon = 0
             AND tahun = ?
@@ -95,7 +95,7 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 
             -- Recursive case: ambil semua turunan
             SELECT 
-                c.id, c.nama_pohon, c.parent, c.level_pohon, c.jenis_pohon
+                c.id, c.nama_pohon, c.parent, c.level_pohon, c.jenis_pohon, c.created_at, c.updated_at
             FROM tb_pohon_kinerja c
             INNER JOIN pohon_hierarchy p ON c.parent = p.id
             WHERE c.tahun = ?
@@ -109,6 +109,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
             ph.nama_pohon,
             ph.level_pohon,
 			ph.jenis_pohon,
+			ph.created_at, 
+			ph.updated_at,
             r.review,
             r.keterangan,
             r.created_by,
@@ -155,6 +157,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 			keterangan   sql.NullString
 			createdBy    sql.NullString
 			jenisPokin   sql.NullString
+			created_at   sql.NullString
+			updated_at   sql.NullString
 		)
 
 		err := rows.Scan(
@@ -166,6 +170,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 			&namaPohon,
 			&levelPohon,
 			&jenispohon,
+			&created_at,
+			&updated_at,
 			&review,
 			&keterangan,
 			&createdBy,
@@ -200,6 +206,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 				Keterangan: keterangan.String,
 				CreatedBy:  createdBy.String,
 				JenisPokin: jenisPokin.String,
+				CreatedAt:  created_at.String,
+				UpdatedAt:  updated_at.String,
 			}
 			currentTematik.Review = append(currentTematik.Review, reviewDetail)
 		}

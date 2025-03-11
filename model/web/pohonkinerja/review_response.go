@@ -25,4 +25,6 @@ type ReviewDetailResponse struct {
 	JenisPohon string `json:"jenis_pohon"`
 	Review     string `json:"review"`
 	Keterangan string `json:"keterangan"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
 }

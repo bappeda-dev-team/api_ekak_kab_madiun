@@ -243,6 +243,8 @@ func (service *ReviewServiceImpl) FindAllReviewByTematik(ctx context.Context, ta
 				JenisPohon: review.JenisPohon,
 				Review:     review.Review,
 				Keterangan: review.Keterangan,
+				CreatedAt:  review.CreatedAt,
+				UpdatedAt:  review.UpdatedAt,
 			})
 		}
 

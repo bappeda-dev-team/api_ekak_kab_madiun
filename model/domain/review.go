@@ -30,4 +30,6 @@ type ReviewDetail struct {
 	Keterangan string
 	CreatedBy  string
 	JenisPokin string
+	CreatedAt  string
+	UpdatedAt  string
 }
