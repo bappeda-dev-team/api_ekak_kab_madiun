@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/service"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -155,6 +156,45 @@ func (controller *ReviewControllerImpl) FindById(writer http.ResponseWriter, req
 	helper.WriteToResponseBody(writer, web.WebResponse{
 		Code:   http.StatusOK,
 		Status: "success get review by id",
+		Data:   reviewResponse,
+	})
+}
+
+func (controller *ReviewControllerImpl) FindAllReviewByTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+
+	reviewResponse, err := controller.ReviewService.FindAllReviewByTematik(request.Context(), tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: fmt.Sprintf("success get review tematik tahun %v", tahun),
+		Data:   reviewResponse,
+	})
+}
+
+func (controller *ReviewControllerImpl) FindAllReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	reviewResponse, err := controller.ReviewService.FindAllReviewOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: fmt.Sprintf("success get review tematik tahun %v", tahun),
 		Data:   reviewResponse,
 	})
 }

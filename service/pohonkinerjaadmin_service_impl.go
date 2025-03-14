@@ -798,15 +798,16 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 		}
 
 		tematikResponse = pohonkinerja.TematikResponse{
-			Id:         tematik[0].Id,
-			Parent:     nil,
-			Tema:       tematik[0].NamaPohon,
-			JenisPohon: tematik[0].JenisPohon,
-			LevelPohon: tematik[0].LevelPohon,
-			Keterangan: tematik[0].Keterangan,
-			IsActive:   tematik[0].IsActive,
-			Indikators: uniqueIndikators,
-			Child:      childs,
+			Id:          tematik[0].Id,
+			Parent:      nil,
+			Tema:        tematik[0].NamaPohon,
+			JenisPohon:  tematik[0].JenisPohon,
+			LevelPohon:  tematik[0].LevelPohon,
+			Keterangan:  tematik[0].Keterangan,
+			IsActive:    tematik[0].IsActive,
+			CountReview: tematik[0].CountReview,
+			Indikators:  uniqueIndikators,
+			Child:       childs,
 		}
 	}
 
