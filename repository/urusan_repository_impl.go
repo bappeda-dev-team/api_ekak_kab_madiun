@@ -145,89 +145,77 @@ func (repository *UrusanRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *s
 }
 
 func (repository *UrusanRepositoryImpl) FindUrusanAndBidangByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domainmaster.Urusan, error) {
-	kodeUrusans := make([]string, 0)
-	kodeBidangUrusans := make([]string, 0)
-
 	parts := strings.Split(kodeOpd, ".")
-	if len(parts) >= 4 {
-		// Urusan dan Bidang Urusan pertama (1 dan 1.01)
-		if parts[0] != "0" {
-			kodeUrusans = append(kodeUrusans, parts[0])
-			kodeBidang := parts[0] + "." + parts[1]
-			if parts[1] != "00" {
-				kodeBidangUrusans = append(kodeBidangUrusans, kodeBidang)
-			}
-		}
+	var bidangUrusans []string
+	var currentUrusans []string
 
-		// Urusan dan Bidang Urusan kedua (2 dan 2.22)
-		if parts[2] != "0" {
-			kodeUrusans = append(kodeUrusans, parts[2])
-			kodeBidang := parts[2] + "." + parts[3]
-			if parts[3] != "00" {
-				kodeBidangUrusans = append(kodeBidangUrusans, kodeBidang)
-			}
-		}
+	fmt.Printf("Processing kode OPD: %s\n", kodeOpd)
+	fmt.Printf("Parts: %v\n", parts)
 
-		// Urusan ketiga jika ada
-		if len(parts) >= 5 && parts[4] != "0" {
-			kodeUrusans = append(kodeUrusans, parts[4])
-			if len(parts) >= 6 && parts[5] != "00" {
-				kodeBidang := parts[4] + "." + parts[5]
-				kodeBidangUrusans = append(kodeBidangUrusans, kodeBidang)
+	// Ekstrak urusan dan bidang urusan (maksimal 3)
+	bidangCount := 0
+	for i := 0; i < len(parts)-1 && bidangCount < 3; i += 2 {
+		urusan := parts[i]
+		if i+1 < len(parts) {
+			bidang := parts[i+1]
+
+			// Jika urusan dan bidang valid
+			if urusan != "0" && urusan != "00" && bidang != "00" {
+				// Tambahkan urusan ke daftar urusan jika belum ada
+				if !contains(currentUrusans, urusan) {
+					currentUrusans = append(currentUrusans, urusan)
+				}
+
+				// Buat kode bidang urusan
+				bidangUrusan := urusan + "." + bidang
+				if !contains(bidangUrusans, bidangUrusan) {
+					bidangUrusans = append(bidangUrusans, bidangUrusan)
+					fmt.Printf("Added bidang urusan: %s\n", bidangUrusan)
+					bidangCount++
+				}
 			}
 		}
 	}
 
-	// Debug: cetak kode yang ditemukan
-	fmt.Printf("Kode OPD: %s\n", kodeOpd)
-	fmt.Printf("Kode Urusan: %v\n", kodeUrusans)
-	fmt.Printf("Kode Bidang Urusan: %v\n", kodeBidangUrusans)
+	fmt.Printf("Extracted urusan: %v\n", currentUrusans)
+	fmt.Printf("Extracted bidang urusan (max 3): %v\n", bidangUrusans)
 
-	if len(kodeUrusans) == 0 {
+	if len(bidangUrusans) == 0 {
 		return []domainmaster.Urusan{}, nil
 	}
 
 	// Buat placeholders untuk IN clause
-	urusanPlaceholders := createPlaceholders(len(kodeUrusans))
-	bidangPlaceholders := createPlaceholders(len(kodeBidangUrusans))
-
-	// Coba query manual dulu untuk memastikan data ada
-	checkQuery := `
-        SELECT COUNT(*) 
-        FROM tb_bidang_urusan 
-        WHERE kode_bidang_urusan IN (` + createPlaceholders(len(kodeBidangUrusans)) + `)`
-
-	var count int
-	err := tx.QueryRowContext(ctx, checkQuery, interfaceSlice(kodeBidangUrusans)...).Scan(&count)
-	if err != nil {
-		return nil, fmt.Errorf("error checking bidang urusan: %v", err)
+	placeholders := make([]string, len(bidangUrusans))
+	for i := range bidangUrusans {
+		placeholders[i] = "?"
 	}
-	fmt.Printf("Jumlah bidang urusan ditemukan: %d\n", count)
 
-	// Query utama
+	// Query untuk MySQL dengan LIMIT 3
 	query := fmt.Sprintf(`
-	SELECT DISTINCT
-		u.id,
-		u.kode_urusan,
-		u.nama_urusan,
-		bu.kode_bidang_urusan,
-		bu.nama_bidang_urusan
-	FROM 
-		tb_urusan u
-		INNER JOIN tb_bidang_urusan bu ON u.kode_urusan = LEFT(bu.kode_bidang_urusan, 1)
-	WHERE 
-		u.kode_urusan IN (%s)
-		AND bu.kode_bidang_urusan IN (%s)
-	ORDER BY 
-		u.kode_urusan, bu.kode_bidang_urusan
-`, urusanPlaceholders, bidangPlaceholders)
+        SELECT DISTINCT
+            u.id,
+            u.kode_urusan,
+            u.nama_urusan,
+            bu.kode_bidang_urusan,
+            bu.nama_bidang_urusan
+        FROM 
+            tb_urusan u
+            INNER JOIN tb_bidang_urusan bu ON u.kode_urusan = LEFT(bu.kode_bidang_urusan, 1)
+        WHERE 
+            bu.kode_bidang_urusan IN (%s)
+        ORDER BY 
+            FIELD(bu.kode_bidang_urusan, %s)
+        LIMIT 3
+    `, strings.Join(placeholders, ","), strings.Join(placeholders, ","))
 
-	// Gabungkan parameter
-	params := make([]interface{}, 0)
-	params = append(params, interfaceSlice(kodeUrusans)...)
-	params = append(params, interfaceSlice(kodeBidangUrusans)...)
+	// Siapkan arguments untuk query (duplikat karena digunakan di dua tempat)
+	args := make([]interface{}, len(bidangUrusans)*2)
+	for i, v := range bidangUrusans {
+		args[i] = v
+		args[i+len(bidangUrusans)] = v
+	}
 
-	rows, err := tx.QueryContext(ctx, query, params...)
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %v", err)
 	}
@@ -247,16 +235,19 @@ func (repository *UrusanRepositoryImpl) FindUrusanAndBidangByKodeOpd(ctx context
 			return nil, fmt.Errorf("error scanning row: %v", err)
 		}
 
-		// Debug
-		fmt.Printf("Scanned data - urusan: %s, bidang: %s\n", kodeUrusan, kodeBidangUrusan)
+		fmt.Printf("Found row: urusan=%s, bidang=%s\n", kodeUrusan, kodeBidangUrusan)
 
 		// Cek apakah urusan sudah ada di map
 		if existingUrusan, exists := urusanMap[kodeUrusan]; exists {
-			// Tambahkan bidang urusan ke urusan yang sudah ada
-			existingUrusan.BidangUrusan = append(existingUrusan.BidangUrusan, domainmaster.BidangUrusan{
-				KodeBidangUrusan: kodeBidangUrusan,
-				NamaBidangUrusan: namaBidangUrusan,
-			})
+			// Tambahkan bidang urusan ke urusan yang sudah ada jika belum mencapai 3
+			if len(existingUrusan.BidangUrusan) < 3 {
+				existingUrusan.BidangUrusan = append(existingUrusan.BidangUrusan, domainmaster.BidangUrusan{
+					KodeBidangUrusan: kodeBidangUrusan,
+					NamaBidangUrusan: namaBidangUrusan,
+					Tahun:            "",
+				})
+				fmt.Printf("Added bidang %s to existing urusan %s\n", kodeBidangUrusan, kodeUrusan)
+			}
 		} else {
 			// Buat urusan baru
 			newUrusan := &domainmaster.Urusan{
@@ -267,47 +258,29 @@ func (repository *UrusanRepositoryImpl) FindUrusanAndBidangByKodeOpd(ctx context
 					{
 						KodeBidangUrusan: kodeBidangUrusan,
 						NamaBidangUrusan: namaBidangUrusan,
+						Tahun:            "",
 					},
 				},
 			}
 			urusanMap[kodeUrusan] = newUrusan
-			result = append(result, *newUrusan)
+			fmt.Printf("Created new urusan %s with bidang %s\n", kodeUrusan, kodeBidangUrusan)
 		}
-
-		// Debug
-		fmt.Printf("Current urusan %s has %d bidang\n",
-			kodeUrusan, len(urusanMap[kodeUrusan].BidangUrusan))
 	}
 
-	// Debug final result
-	for _, u := range result {
-		fmt.Printf("Final result - urusan %s has %d bidang\n",
-			u.KodeUrusan, len(u.BidangUrusan))
-		for _, b := range u.BidangUrusan {
-			fmt.Printf("  Bidang: %s - %s\n", b.KodeBidangUrusan, b.NamaBidangUrusan)
-		}
+	// Konversi map ke slice result
+	for _, urusan := range urusanMap {
+		result = append(result, *urusan)
 	}
 
 	return result, nil
 }
 
-// Helper function untuk membuat placeholder
-func createPlaceholders(n int) string {
-	if n <= 0 {
-		return ""
+// Helper function untuk mengecek apakah slice contains value
+func contains(slice []string, value string) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
 	}
-	placeholders := make([]string, n)
-	for i := range placeholders {
-		placeholders[i] = "?"
-	}
-	return strings.Join(placeholders, ",")
-}
-
-// Helper function untuk mengkonversi slice string ke slice interface
-func interfaceSlice(slice []string) []interface{} {
-	result := make([]interface{}, len(slice))
-	for i, v := range slice {
-		result[i] = v
-	}
-	return result
+	return false
 }
