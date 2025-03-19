@@ -15,8 +15,8 @@ func NewKegiatanRepositoryImpl() *KegiatanRepositoryImpl {
 }
 
 func (repository *KegiatanRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, kegiatan domainmaster.Kegiatan) (domainmaster.Kegiatan, error) {
-	scriptKegiatan := "INSERT INTO tb_master_kegiatan (id, nama_kegiatan, kode_kegiatan, kode_opd) VALUES (?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, scriptKegiatan, kegiatan.Id, kegiatan.NamaKegiatan, kegiatan.KodeKegiatan, kegiatan.KodeOPD)
+	scriptKegiatan := "INSERT INTO tb_master_kegiatan (id, nama_kegiatan, kode_kegiatan) VALUES (?, ?, ?)"
+	_, err := tx.ExecContext(ctx, scriptKegiatan, kegiatan.Id, kegiatan.NamaKegiatan, kegiatan.KodeKegiatan)
 	if err != nil {
 		return domainmaster.Kegiatan{}, err
 	}
@@ -41,8 +41,8 @@ func (repository *KegiatanRepositoryImpl) Create(ctx context.Context, tx *sql.Tx
 }
 
 func (repository *KegiatanRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, kegiatan domainmaster.Kegiatan) (domainmaster.Kegiatan, error) {
-	scriptKegiatan := "UPDATE tb_master_kegiatan SET nama_kegiatan = ?, kode_kegiatan = ?, kode_opd = ? WHERE id = ?"
-	_, err := tx.ExecContext(ctx, scriptKegiatan, kegiatan.NamaKegiatan, kegiatan.KodeKegiatan, kegiatan.KodeOPD, kegiatan.Id)
+	scriptKegiatan := "UPDATE tb_master_kegiatan SET nama_kegiatan = ?, kode_kegiatan = ? WHERE id = ?"
+	_, err := tx.ExecContext(ctx, scriptKegiatan, kegiatan.NamaKegiatan, kegiatan.KodeKegiatan, kegiatan.Id)
 	if err != nil {
 		return domainmaster.Kegiatan{}, err
 	}
@@ -92,10 +92,10 @@ func (repository *KegiatanRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx
 }
 
 func (repository *KegiatanRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string) (domainmaster.Kegiatan, error) {
-	scriptKegiatan := "SELECT id, nama_kegiatan, kode_kegiatan, kode_opd FROM tb_master_kegiatan WHERE id = ?"
+	scriptKegiatan := "SELECT id, nama_kegiatan, kode_kegiatan FROM tb_master_kegiatan WHERE id = ?"
 	row := tx.QueryRowContext(ctx, scriptKegiatan, id)
 	var kegiatan domainmaster.Kegiatan
-	err := row.Scan(&kegiatan.Id, &kegiatan.NamaKegiatan, &kegiatan.KodeKegiatan, &kegiatan.KodeOPD)
+	err := row.Scan(&kegiatan.Id, &kegiatan.NamaKegiatan, &kegiatan.KodeKegiatan)
 	if err != nil {
 		return domainmaster.Kegiatan{}, err
 	}
@@ -103,7 +103,7 @@ func (repository *KegiatanRepositoryImpl) FindById(ctx context.Context, tx *sql.
 }
 
 func (repository *KegiatanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) ([]domainmaster.Kegiatan, error) {
-	scriptKegiatan := "SELECT id, nama_kegiatan, kode_kegiatan, kode_opd FROM tb_master_kegiatan"
+	scriptKegiatan := "SELECT id, nama_kegiatan, kode_kegiatan FROM tb_master_kegiatan"
 	rows, err := tx.QueryContext(ctx, scriptKegiatan)
 	if err != nil {
 		return []domainmaster.Kegiatan{}, err
@@ -112,7 +112,7 @@ func (repository *KegiatanRepositoryImpl) FindAll(ctx context.Context, tx *sql.T
 	var kegiatans []domainmaster.Kegiatan
 	for rows.Next() {
 		var kegiatan domainmaster.Kegiatan
-		rows.Scan(&kegiatan.Id, &kegiatan.NamaKegiatan, &kegiatan.KodeKegiatan, &kegiatan.KodeOPD)
+		rows.Scan(&kegiatan.Id, &kegiatan.NamaKegiatan, &kegiatan.KodeKegiatan)
 		kegiatans = append(kegiatans, kegiatan)
 	}
 	return kegiatans, nil

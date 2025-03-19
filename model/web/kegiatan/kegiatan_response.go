@@ -1,16 +1,14 @@
 package kegiatan
 
 import (
-	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"time"
 )
 
 type KegiatanResponse struct {
-	Id           string                      `json:"id"`
-	NamaKegiatan string                      `json:"nama_kegiatan"`
-	KodeKegiatan string                      `json:"kode_kegiatan"`
-	KodeOPD      opdmaster.OpdResponseForAll `json:"kode_opd"`
-	CreatedAt    time.Time                   `json:"created_at"`
+	Id           string    `json:"id"`
+	NamaKegiatan string    `json:"nama_kegiatan"`
+	KodeKegiatan string    `json:"kode_kegiatan"`
+	CreatedAt    time.Time `json:"created_at"`
 	Indikator    []IndikatorResponse
 }
 

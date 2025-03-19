@@ -1,15 +1,12 @@
 package programkegiatan
 
-import "ekak_kabupaten_madiun/model/web/opdmaster"
-
 type ProgramKegiatanResponse struct {
-	Id          string                      `json:"id"`
-	KodeProgram string                      `json:"kode_program"`
-	NamaProgram string                      `json:"nama_program"`
-	KodeOPD     opdmaster.OpdResponseForAll `json:"kode_opd"`
-	Tahun       string                      `json:"tahun"`
-	IsActive    bool                        `json:"is_active"`
-	Indikator   []IndikatorResponse         `json:"indikator"`
+	Id          string              `json:"id"`
+	KodeProgram string              `json:"kode_program"`
+	NamaProgram string              `json:"nama_program"`
+	Tahun       string              `json:"tahun"`
+	IsActive    bool                `json:"is_active"`
+	Indikator   []IndikatorResponse `json:"indikator"`
 }
 
 type IndikatorResponse struct {

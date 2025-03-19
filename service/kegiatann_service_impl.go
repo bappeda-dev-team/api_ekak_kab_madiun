@@ -7,7 +7,6 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"ekak_kabupaten_madiun/model/web/kegiatan"
-	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
 
@@ -16,14 +15,12 @@ import (
 
 type KegiatanServiceImpl struct {
 	KegiatanRepository repository.KegiatanRepository
-	opdRepository      repository.OpdRepository
 	DB                 *sql.DB
 }
 
-func NewKegiatanServiceImpl(kegiatanRepository repository.KegiatanRepository, opdRepository repository.OpdRepository, DB *sql.DB) *KegiatanServiceImpl {
+func NewKegiatanServiceImpl(kegiatanRepository repository.KegiatanRepository, DB *sql.DB) *KegiatanServiceImpl {
 	return &KegiatanServiceImpl{
 		KegiatanRepository: kegiatanRepository,
-		opdRepository:      opdRepository,
 		DB:                 DB,
 	}
 }
@@ -35,22 +32,12 @@ func (service *KegiatanServiceImpl) Create(ctx context.Context, request kegiatan
 	}
 	defer helper.CommitOrRollback(tx)
 
-	// Validasi OPD
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOPD)
-	if err != nil {
-		return kegiatan.KegiatanResponse{}, fmt.Errorf("kode OPD tidak valid: %v", err)
-	}
-	if opd.KodeOpd == "" {
-		return kegiatan.KegiatanResponse{}, fmt.Errorf("kode OPD tidak ditemukan")
-	}
-
 	uuidKegiatan := fmt.Sprintf("KGT-%s", uuid.New().String()[:5])
 
 	kegiatans := domainmaster.Kegiatan{
 		Id:           uuidKegiatan,
 		KodeKegiatan: request.KodeKegiatan,
 		NamaKegiatan: request.NamaKegiatan,
-		KodeOPD:      request.KodeOPD,
 	}
 
 	var indikators []domain.Indikator
@@ -112,11 +99,7 @@ func (service *KegiatanServiceImpl) Create(ctx context.Context, request kegiatan
 		Id:           result.Id,
 		KodeKegiatan: result.KodeKegiatan,
 		NamaKegiatan: result.NamaKegiatan,
-		KodeOPD: opdmaster.OpdResponseForAll{
-			KodeOpd: result.KodeOPD,
-			NamaOpd: opd.NamaOpd,
-		},
-		Indikator: indikatorResponses,
+		Indikator:    indikatorResponses,
 	}, nil
 }
 
@@ -133,22 +116,11 @@ func (service *KegiatanServiceImpl) Update(ctx context.Context, request kegiatan
 		return kegiatan.KegiatanResponse{}, fmt.Errorf("kegiatan tidak ditemukan: %v", err)
 	}
 
-	// Validasi OPD
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOPD)
-	if err != nil {
-		return kegiatan.KegiatanResponse{}, fmt.Errorf("kode OPD tidak valid: %v", err)
-	}
-
-	if opd.KodeOpd == "" {
-		return kegiatan.KegiatanResponse{}, fmt.Errorf("kode OPD tidak ditemukan")
-	}
-
 	// Update data kegiatan
 	kegiatans := domainmaster.Kegiatan{
 		Id:           request.Id,
 		KodeKegiatan: request.KodeKegiatan,
 		NamaKegiatan: request.NamaKegiatan,
-		KodeOPD:      request.KodeOPD,
 	}
 
 	var indikators []domain.Indikator
@@ -220,11 +192,7 @@ func (service *KegiatanServiceImpl) Update(ctx context.Context, request kegiatan
 		Id:           result.Id,
 		KodeKegiatan: result.KodeKegiatan,
 		NamaKegiatan: result.NamaKegiatan,
-		KodeOPD: opdmaster.OpdResponseForAll{
-			KodeOpd: result.KodeOPD,
-			NamaOpd: opd.NamaOpd,
-		},
-		Indikator: indikatorResponses,
+		Indikator:    indikatorResponses,
 	}, nil
 }
 
@@ -239,12 +207,6 @@ func (service *KegiatanServiceImpl) FindById(ctx context.Context, kegiatanId str
 	result, err := service.KegiatanRepository.FindById(ctx, tx, kegiatanId)
 	if err != nil {
 		return kegiatan.KegiatanResponse{}, fmt.Errorf("gagal mengambil data kegiatan: %v", err)
-	}
-
-	// Mengambil data OPD
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, result.KodeOPD)
-	if err != nil {
-		return kegiatan.KegiatanResponse{}, fmt.Errorf("gagal mengambil data OPD: %v", err)
 	}
 
 	// Mengambil semua indikator untuk kegiatan ini
@@ -287,11 +249,7 @@ func (service *KegiatanServiceImpl) FindById(ctx context.Context, kegiatanId str
 		Id:           result.Id,
 		KodeKegiatan: result.KodeKegiatan,
 		NamaKegiatan: result.NamaKegiatan,
-		KodeOPD: opdmaster.OpdResponseForAll{
-			KodeOpd: opd.KodeOpd,
-			NamaOpd: opd.NamaOpd,
-		},
-		Indikator: indikatorResponses,
+		Indikator:    indikatorResponses,
 	}, nil
 }
 
@@ -311,12 +269,6 @@ func (service *KegiatanServiceImpl) FindAll(ctx context.Context) ([]kegiatan.Keg
 	var kegiatanResponses []kegiatan.KegiatanResponse
 
 	for _, keg := range results {
-		// Mengambil data OPD
-		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, keg.KodeOPD)
-		if err != nil {
-			return nil, fmt.Errorf("gagal mengambil data OPD: %v", err)
-		}
-
 		// Mengambil semua indikator untuk kegiatan ini
 		indikators, err := service.KegiatanRepository.FindIndikatorByKegiatanId(ctx, tx, keg.Id)
 		if err != nil {
@@ -357,11 +309,7 @@ func (service *KegiatanServiceImpl) FindAll(ctx context.Context) ([]kegiatan.Keg
 			Id:           keg.Id,
 			KodeKegiatan: keg.KodeKegiatan,
 			NamaKegiatan: keg.NamaKegiatan,
-			KodeOPD: opdmaster.OpdResponseForAll{
-				KodeOpd: opd.KodeOpd,
-				NamaOpd: opd.NamaOpd,
-			},
-			Indikator: indikatorResponses,
+			Indikator:    indikatorResponses,
 		}
 		kegiatanResponses = append(kegiatanResponses, kegiatanResponse)
 	}
