@@ -8,7 +8,7 @@ import (
 
 type SubKegiatanRepository interface {
 	Create(ctx context.Context, tx *sql.Tx, subKegiatan domain.SubKegiatan) (domain.SubKegiatan, error)
-	FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string, status string) ([]domain.SubKegiatan, error)
+	FindAll(ctx context.Context, tx *sql.Tx) ([]domain.SubKegiatan, error)
 	Update(ctx context.Context, tx *sql.Tx, subKegiatan domain.SubKegiatan) (domain.SubKegiatan, error)
 	FindById(ctx context.Context, tx *sql.Tx, subKegiatanId string) (domain.SubKegiatan, error)
 	Delete(ctx context.Context, tx *sql.Tx, subKegiatanId string) error

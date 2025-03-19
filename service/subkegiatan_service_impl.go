@@ -100,9 +100,6 @@ func (service *SubKegiatanServiceImpl) Create(ctx context.Context, request subke
 	subKegiatan := domain.SubKegiatan{
 		Id:              uuId,
 		NamaSubKegiatan: request.NamaSubKegiatan,
-		KodeOpd:         request.KodeOpd,
-		Status:          "belum_diambil",
-		Tahun:           request.Tahun,
 		Indikator:       indikators,
 	}
 
@@ -179,8 +176,6 @@ func (service *SubKegiatanServiceImpl) Update(ctx context.Context, request subke
 	domainSubKegiatan := domain.SubKegiatan{
 		Id:              request.Id,
 		NamaSubKegiatan: request.NamaSubKegiatan,
-		KodeOpd:         request.KodeOpd,
-		Tahun:           request.Tahun,
 		Indikator:       indikators,
 	}
 
@@ -238,27 +233,13 @@ func (service *SubKegiatanServiceImpl) FindById(ctx context.Context, subKegiatan
 		indikators[i].Target = targets
 	}
 
-	// Ambil data OPD
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, subKegiatan.KodeOpd)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			log.Printf("OPD tidak ditemukan untuk kode: %s", subKegiatan.KodeOpd)
-			subKegiatan.NamaOpd = ""
-		} else {
-			log.Printf("Error saat mencari OPD dengan kode %s: %v", subKegiatan.KodeOpd, err)
-			return subkegiatan.SubKegiatanResponse{}, err
-		}
-	} else {
-		subKegiatan.NamaOpd = opd.NamaOpd
-	}
-
 	// Gabungkan data
 	subKegiatan.Indikator = indikators
 
 	return helper.ToSubKegiatanResponse(subKegiatan), nil
 }
 
-func (service *SubKegiatanServiceImpl) FindAll(ctx context.Context, kodeOpd, status string) ([]subkegiatan.SubKegiatanResponse, error) {
+func (service *SubKegiatanServiceImpl) FindAll(ctx context.Context) ([]subkegiatan.SubKegiatanResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		log.Println("Gagal memulai transaksi:", err)
@@ -267,7 +248,7 @@ func (service *SubKegiatanServiceImpl) FindAll(ctx context.Context, kodeOpd, sta
 	defer helper.CommitOrRollback(tx)
 
 	// Ambil data SubKegiatan
-	subKegiatans, err := service.subKegiatanRepository.FindAll(ctx, tx, kodeOpd, status)
+	subKegiatans, err := service.subKegiatanRepository.FindAll(ctx, tx)
 	if err != nil {
 		log.Println("Gagal mencari data sub kegiatan:", err)
 		return []subkegiatan.SubKegiatanResponse{}, err
@@ -275,23 +256,6 @@ func (service *SubKegiatanServiceImpl) FindAll(ctx context.Context, kodeOpd, sta
 
 	// Untuk setiap SubKegiatan, ambil data Indikator dan Target
 	for i, subKegiatan := range subKegiatans {
-		// Tambah log untuk debug
-		log.Printf("Mencari OPD dengan kode: %s", subKegiatan.KodeOpd)
-
-		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, subKegiatan.KodeOpd)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				log.Printf("OPD tidak ditemukan untuk kode: %s", subKegiatan.KodeOpd)
-				subKegiatans[i].NamaOpd = ""
-			} else {
-				log.Printf("Error saat mencari OPD dengan kode %s: %v", subKegiatan.KodeOpd, err)
-				return []subkegiatan.SubKegiatanResponse{}, err
-			}
-		} else {
-			log.Printf("OPD ditemukan: %+v", opd) // Log seluruh data OPD
-			subKegiatans[i].NamaOpd = opd.NamaOpd
-		}
-
 		// Ambil Indikator
 		indikators, err := service.subKegiatanRepository.FindIndikatorBySubKegiatanId(ctx, tx, subKegiatan.Id)
 		if err != nil {

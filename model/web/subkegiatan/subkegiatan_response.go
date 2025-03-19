@@ -3,7 +3,7 @@ package subkegiatan
 import "ekak_kabupaten_madiun/model/web"
 
 type SubKegiatanResponse struct {
-	SubKegiatanTerpilihId string                         `json:"subkegiatanterpilih_id"`
+	SubKegiatanTerpilihId string                         `json:"subkegiatanterpilih_id,omitempty"`
 	Id                    string                         `json:"id,omitempty"`
 	RekinId               string                         `json:"rekin_id,omitempty"`
 	Status                string                         `json:"status,omitempty"`

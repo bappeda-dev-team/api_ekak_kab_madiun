@@ -12,4 +12,9 @@ type SubKegiatanTerpilihController interface {
 	FindByKodeSubKegiatan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	CreateRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeleteSubKegiatanTerpilih(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CreateOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpdateOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	DeleteOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

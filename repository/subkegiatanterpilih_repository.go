@@ -13,4 +13,10 @@ type SubKegiatanTerpilihRepository interface {
 	CreateRekin(ctx context.Context, tx *sql.Tx, idSubKegiatan string, rekinId string) error
 	DeleteSubKegiatanTerpilih(ctx context.Context, tx *sql.Tx, idSubKegiatan string) error
 	FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.SubKegiatanTerpilih, error)
+	//subkegiatan opd
+	CreateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error)
+	UpdateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error)
+	FindallOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun *string) ([]domain.SubKegiatanOpd, error)
+	FindById(ctx context.Context, tx *sql.Tx, id int) (domain.SubKegiatanOpd, error)
+	DeleteSubOpd(ctx context.Context, tx *sql.Tx, id int) error
 }

@@ -1,0 +1,1 @@
+ALTER TABLE tb_subkegiatan MODIFY COLUMN nama_subkegiatan TEXT;

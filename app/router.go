@@ -367,5 +367,12 @@ func NewRouter(
 	router.GET("/misi_pemda/detail/:id", misiPemdaController.FindById)
 	router.GET("/misi_pemda/findbyvisi/:id_visi", misiPemdaController.FindByIdVisi)
 
+	//subkegiatan opd
+	router.POST("/subkegiatanodp/create", subKegiatanTerpilihController.CreateOpd)
+	router.DELETE("/subkegiatanodp/delete/:id", subKegiatanTerpilihController.DeleteOpd)
+	router.PUT("/subkegiatanodp/update/:id", subKegiatanTerpilihController.UpdateOpd)
+	router.GET("/subkegiatanodp/findall/:kode_opd/:tahun", subKegiatanTerpilihController.FindAllOpd)
+	router.GET("/subkegiatanodp/detail/:id", subKegiatanTerpilihController.FindById)
+
 	return router
 }

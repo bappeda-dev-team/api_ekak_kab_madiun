@@ -25,3 +25,9 @@ type SubKegiatanCreateRekinRequest struct {
 	IdSubKegiatan string `json:"id_subkegiatan" validate:"required"`
 	RekinId       string `json:"rekin_id" validate:"required"`
 }
+
+type SubKegiatanOpdCreateRequest struct {
+	KodeSubkegiatan string `json:"kode_subkegiatan" validate:"required"`
+	KodeOpd         string `json:"kode_opd" validate:"required"`
+	Tahun           string `json:"tahun" validate:"required"`
+}

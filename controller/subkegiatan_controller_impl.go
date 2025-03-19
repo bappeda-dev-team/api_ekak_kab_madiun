@@ -118,13 +118,7 @@ func (controller *SubKegiatanControllerImpl) FindById(writer http.ResponseWriter
 }
 
 func (controller *SubKegiatanControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// Ambil parameter query
-
-	kodeOpd := params.ByName("kode_opd")
-	status := request.URL.Query().Get("status")
-
-	// Panggil service untuk mendapatkan data sub kegiatan
-	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(request.Context(), kodeOpd, status)
+	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(request.Context())
 
 	if err != nil {
 		helper.WriteToResponseBody(writer, web.WebSubKegiatanResponse{
@@ -163,11 +157,8 @@ func (controller *SubKegiatanControllerImpl) Delete(writer http.ResponseWriter, 
 }
 
 func (controller *SubKegiatanControllerImpl) FindAllByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// Ambil parameter query
-	kodeOpd := params.ByName("kode_opd")
-	status := request.URL.Query().Get("status")
 	// Panggil service untuk mendapatkan data sub kegiatan
-	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(request.Context(), kodeOpd, status)
+	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(request.Context())
 
 	if err != nil {
 		helper.WriteToResponseBody(writer, web.WebSubKegiatanResponse{
