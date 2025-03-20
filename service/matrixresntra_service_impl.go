@@ -6,7 +6,6 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
-	"strconv"
 )
 
 type MatrixRenstraServiceImpl struct {
@@ -54,6 +53,32 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatan(ctx context.Contex
 func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKegiatanQuery, kodeOpd string, tahunAwal string, tahunAkhir string) []programkegiatan.UrusanDetailResponse {
 	urusanMap := make(map[string]*programkegiatan.UrusanDetailResponse)
 
+	// Helper function untuk membuat indikator
+	createIndikator := func(item domain.SubKegiatanQuery) programkegiatan.IndikatorResponse {
+		return programkegiatan.IndikatorResponse{
+			Id:        item.IndikatorId,
+			Kode:      item.IndikatorKode,
+			KodeOpd:   item.IndikatorKodeOpd,
+			Indikator: item.Indikator,
+			Tahun:     item.IndikatorTahun,
+			Target: []programkegiatan.TargetResponse{
+				{
+					Id:          item.TargetId,
+					IndikatorId: item.IndikatorId,
+					Target:      item.Target,
+					Satuan:      item.Satuan,
+				},
+			},
+		}
+	}
+
+	// Helper function untuk validasi indikator
+	shouldAddIndikator := func(item domain.SubKegiatanQuery, expectedKode string) bool {
+		return item.IndikatorId != "" &&
+			item.IndikatorKode == expectedKode &&
+			item.IndikatorKodeOpd == kodeOpd
+	}
+
 	for _, item := range data {
 		// Proses Urusan
 		urusan, exists := urusanMap[item.KodeUrusan]
@@ -65,11 +90,20 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				Urusan: programkegiatan.UrusanResponse{
 					Kode:         item.KodeUrusan,
 					Nama:         item.NamaUrusan,
+					Jenis:        "urusans",
 					Indikator:    []programkegiatan.IndikatorResponse{},
 					BidangUrusan: []programkegiatan.BidangUrusanResponse{},
 				},
 			}
 			urusanMap[item.KodeUrusan] = urusan
+		}
+
+		// Proses indikator urusan
+		if shouldAddIndikator(item, item.KodeUrusan) {
+			urusan.Urusan.Indikator = service.appendIndikator(
+				urusan.Urusan.Indikator,
+				createIndikator(item),
+			)
 		}
 
 		// Proses Bidang Urusan
@@ -84,10 +118,19 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 			urusan.Urusan.BidangUrusan = append(urusan.Urusan.BidangUrusan, programkegiatan.BidangUrusanResponse{
 				Kode:      item.KodeBidangUrusan,
 				Nama:      item.NamaBidangUrusan,
+				Jenis:     "bidang_urusans",
 				Indikator: []programkegiatan.IndikatorResponse{},
 				Program:   []programkegiatan.ProgramResponse{},
 			})
 			bidangUrusan = &urusan.Urusan.BidangUrusan[len(urusan.Urusan.BidangUrusan)-1]
+		}
+
+		// Proses indikator bidang urusan
+		if shouldAddIndikator(item, item.KodeBidangUrusan) {
+			bidangUrusan.Indikator = service.appendIndikator(
+				bidangUrusan.Indikator,
+				createIndikator(item),
+			)
 		}
 
 		// Proses Program
@@ -102,10 +145,19 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 			bidangUrusan.Program = append(bidangUrusan.Program, programkegiatan.ProgramResponse{
 				Kode:      item.KodeProgram,
 				Nama:      item.NamaProgram,
+				Jenis:     "programs",
 				Indikator: []programkegiatan.IndikatorResponse{},
 				Kegiatan:  []programkegiatan.KegiatanResponse{},
 			})
 			program = &bidangUrusan.Program[len(bidangUrusan.Program)-1]
+		}
+
+		// Proses indikator program
+		if shouldAddIndikator(item, item.KodeProgram) {
+			program.Indikator = service.appendIndikator(
+				program.Indikator,
+				createIndikator(item),
+			)
 		}
 
 		// Proses Kegiatan
@@ -121,78 +173,47 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				program.Kegiatan = append(program.Kegiatan, programkegiatan.KegiatanResponse{
 					Kode:        item.KodeKegiatan,
 					Nama:        item.NamaKegiatan,
+					Jenis:       "kegiatans",
 					Indikator:   []programkegiatan.IndikatorResponse{},
 					SubKegiatan: []programkegiatan.SubKegiatanResponse{},
 				})
 				kegiatan = &program.Kegiatan[len(program.Kegiatan)-1]
 			}
-		}
 
-		// Proses SubKegiatan
-		if kegiatan != nil && item.KodeSubKegiatan != "" {
-			var subKegiatan *programkegiatan.SubKegiatanResponse
-			for i := range kegiatan.SubKegiatan {
-				if kegiatan.SubKegiatan[i].Kode == item.KodeSubKegiatan {
-					subKegiatan = &kegiatan.SubKegiatan[i]
-					break
-				}
+			// Proses indikator kegiatan
+			if shouldAddIndikator(item, item.KodeKegiatan) {
+				kegiatan.Indikator = service.appendIndikator(
+					kegiatan.Indikator,
+					createIndikator(item),
+				)
 			}
-			if subKegiatan == nil {
-				kegiatan.SubKegiatan = append(kegiatan.SubKegiatan, programkegiatan.SubKegiatanResponse{
-					Kode:      item.KodeSubKegiatan,
-					Nama:      item.NamaSubKegiatan,
-					Tahun:     item.TahunSubKegiatan,
-					Indikator: []programkegiatan.IndikatorResponse{},
-				})
 
-			}
-		}
-
-		// Proses Indikator
-		if item.IndikatorId != "" && item.IndikatorKodeOpd == kodeOpd {
-			tahunIndikator, _ := strconv.Atoi(item.IndikatorTahun)
-			tahunAwalInt, _ := strconv.Atoi(tahunAwal)
-			tahunAkhirInt, _ := strconv.Atoi(tahunAkhir)
-
-			// Hanya proses indikator yang masuk dalam range tahun
-			if tahunIndikator >= tahunAwalInt && tahunIndikator <= tahunAkhirInt {
-				indikator := programkegiatan.IndikatorResponse{
-					Kode:      item.IndikatorKode,
-					KodeOpd:   item.IndikatorKodeOpd,
-					Indikator: item.Indikator,
-					Tahun:     item.IndikatorTahun,
-					Target:    []programkegiatan.TargetResponse{},
+			// Proses SubKegiatan
+			if item.KodeSubKegiatan != "" {
+				var subKegiatan *programkegiatan.SubKegiatanResponse
+				for i := range kegiatan.SubKegiatan {
+					if kegiatan.SubKegiatan[i].Kode == item.KodeSubKegiatan {
+						subKegiatan = &kegiatan.SubKegiatan[i]
+						break
+					}
 				}
-
-				// Tambahkan target jika ada
-				if item.Target != "" && item.Satuan != "" {
-					indikator.Target = append(indikator.Target, programkegiatan.TargetResponse{
-						Target: item.Target,
-						Satuan: item.Satuan,
+				if subKegiatan == nil {
+					kegiatan.SubKegiatan = append(kegiatan.SubKegiatan, programkegiatan.SubKegiatanResponse{
+						Kode:      item.KodeSubKegiatan,
+						Nama:      item.NamaSubKegiatan,
+						Jenis:     "subkegiatans",
+						Tahun:     item.TahunSubKegiatan,
+						Indikator: []programkegiatan.IndikatorResponse{},
 					})
+					subKegiatan = &kegiatan.SubKegiatan[len(kegiatan.SubKegiatan)-1]
 				}
 
-				// Tentukan level indikator dan tambahkan ke tempat yang sesuai
-				switch item.IndikatorKode {
-				case item.KodeUrusan:
-					urusan.Urusan.Indikator = service.appendIndikator(urusan.Urusan.Indikator, indikator)
-				case item.KodeBidangUrusan:
-					if bidangUrusan != nil {
-						bidangUrusan.Indikator = service.appendIndikator(bidangUrusan.Indikator, indikator)
-					}
-				case item.KodeProgram:
-					if program != nil {
-						program.Indikator = service.appendIndikator(program.Indikator, indikator)
-					}
-				case item.KodeKegiatan:
-					if kegiatan != nil {
-						kegiatan.Indikator = service.appendIndikator(kegiatan.Indikator, indikator)
-					}
-				case item.KodeSubKegiatan:
-					if kegiatan != nil && len(kegiatan.SubKegiatan) > 0 {
-						lastSubKegiatan := &kegiatan.SubKegiatan[len(kegiatan.SubKegiatan)-1]
-						lastSubKegiatan.Indikator = service.appendIndikator(lastSubKegiatan.Indikator, indikator)
-					}
+				// Proses indikator subkegiatan
+				if shouldAddIndikator(item, item.KodeSubKegiatan) {
+					subKegiatan.Indikator = service.appendIndikator(
+						subKegiatan.Indikator,
+						createIndikator(item),
+					)
 				}
 			}
 		}
@@ -203,22 +224,22 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 	for _, urusan := range urusanMap {
 		result = append(result, *urusan)
 	}
-
 	return result
 }
 
+// Helper function untuk menambahkan indikator
 func (service *MatrixRenstraServiceImpl) appendIndikator(existing []programkegiatan.IndikatorResponse, new programkegiatan.IndikatorResponse) []programkegiatan.IndikatorResponse {
 	// Cek apakah indikator dengan kode dan tahun yang sama sudah ada
-	indikatorExists := false
 	for i := range existing {
-		// Indikator dianggap sama jika kode dan tahun sama
-		if existing[i].Kode == new.Kode && existing[i].Tahun == new.Tahun {
-			indikatorExists = true
+		if existing[i].Kode == new.Kode &&
+			existing[i].Tahun == new.Tahun &&
+			existing[i].KodeOpd == new.KodeOpd {
 			// Update target jika ada target baru
 			if len(new.Target) > 0 {
 				targetExists := false
 				for _, existingTarget := range existing[i].Target {
-					if existingTarget.Target == new.Target[0].Target && existingTarget.Satuan == new.Target[0].Satuan {
+					if existingTarget.Target == new.Target[0].Target &&
+						existingTarget.Satuan == new.Target[0].Satuan {
 						targetExists = true
 						break
 					}
@@ -227,14 +248,10 @@ func (service *MatrixRenstraServiceImpl) appendIndikator(existing []programkegia
 					existing[i].Target = append(existing[i].Target, new.Target[0])
 				}
 			}
-			break
+			return existing
 		}
 	}
 
 	// Jika indikator belum ada, tambahkan sebagai indikator baru
-	if !indikatorExists {
-		return append(existing, new)
-	}
-
-	return existing
+	return append(existing, new)
 }

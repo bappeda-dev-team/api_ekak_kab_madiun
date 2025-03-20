@@ -11,9 +11,9 @@ type ProgramKegiatanResponse struct {
 
 type IndikatorResponse struct {
 	Id        string           `json:"id"`
-	Kode      string           `json:"kode"`
-	KodeOpd   string           `json:"kode_opd"`
-	ProgramId string           `json:"program_id"`
+	Kode      string           `json:"kode,omitempty"`
+	KodeOpd   string           `json:"kode_opd,omitempty"`
+	ProgramId string           `json:"program_id,omitempty"`
 	Indikator string           `json:"indikator"`
 	Tahun     string           `json:"tahun"`
 	Target    []TargetResponse `json:"target"`
@@ -37,6 +37,7 @@ type UrusanDetailResponse struct {
 type UrusanResponse struct {
 	Kode         string                 `json:"kode"`
 	Nama         string                 `json:"nama"`
+	Jenis        string                 `json:"jenis"`
 	Indikator    []IndikatorResponse    `json:"indikator"`
 	BidangUrusan []BidangUrusanResponse `json:"bidang_urusan"`
 }
@@ -44,6 +45,7 @@ type UrusanResponse struct {
 type BidangUrusanResponse struct {
 	Kode      string              `json:"kode"`
 	Nama      string              `json:"nama"`
+	Jenis     string              `json:"jenis"`
 	Indikator []IndikatorResponse `json:"indikator"`
 	Program   []ProgramResponse   `json:"program"`
 }
@@ -51,6 +53,7 @@ type BidangUrusanResponse struct {
 type ProgramResponse struct {
 	Kode      string              `json:"kode"`
 	Nama      string              `json:"nama"`
+	Jenis     string              `json:"jenis"`
 	Indikator []IndikatorResponse `json:"indikator"`
 	Kegiatan  []KegiatanResponse  `json:"kegiatan"`
 }
@@ -58,6 +61,7 @@ type ProgramResponse struct {
 type KegiatanResponse struct {
 	Kode        string                `json:"kode"`
 	Nama        string                `json:"nama"`
+	Jenis       string                `json:"jenis"`
 	Indikator   []IndikatorResponse   `json:"indikator"`
 	SubKegiatan []SubKegiatanResponse `json:"subkegiatan"`
 }
@@ -65,6 +69,7 @@ type KegiatanResponse struct {
 type SubKegiatanResponse struct {
 	Kode      string              `json:"kode"`
 	Nama      string              `json:"nama"`
+	Jenis     string              `json:"jenis"`
 	Tahun     string              `json:"tahun"`
 	Indikator []IndikatorResponse `json:"indikator"`
 }

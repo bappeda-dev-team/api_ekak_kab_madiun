@@ -14,7 +14,7 @@ func NewMatrixRenstraRepositoryImpl() *MatrixRenstraRepositoryImpl {
 
 func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.SubKegiatanQuery, error) {
 	query := `
-         WITH RECURSIVE hierarchy AS (
+        WITH RECURSIVE hierarchy AS (
             SELECT DISTINCT
                 u.kode_urusan,
                 u.nama_urusan,
@@ -35,22 +35,35 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
             JOIN tb_urusan u ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
             WHERE so.kode_opd = ?
         )
-        SELECT DISTINCT
-            h.*,
+        SELECT 
+            h.kode_urusan,
+            h.nama_urusan,
+            h.kode_bidang_urusan,
+            h.nama_bidang_urusan,
+            h.kode_program,
+            h.nama_program,
+            h.kode_kegiatan,
+            h.nama_kegiatan,
+            h.kode_subkegiatan,
+            h.nama_subkegiatan,
+            h.tahun_subkegiatan,
             i.id as indikator_id,
             i.kode as indikator_kode,
             i.indikator,
             i.tahun as indikator_tahun,
             i.kode_opd as indikator_kode_opd,
+            t.id,
             t.target,
             t.satuan
         FROM hierarchy h
         LEFT JOIN tb_indikator i ON 
-            (i.kode = h.kode_urusan OR 
-             i.kode = h.kode_bidang_urusan OR
-             i.kode = h.kode_program OR
-             i.kode = h.kode_kegiatan OR
-             i.kode = h.kode_subkegiatan)
+            (
+                i.kode = h.kode_urusan OR 
+                i.kode = h.kode_bidang_urusan OR
+                i.kode = h.kode_program OR
+                i.kode = h.kode_kegiatan OR
+                i.kode = h.kode_subkegiatan
+            )
             AND i.kode_opd = ?
             AND i.tahun BETWEEN ? AND ?
         LEFT JOIN tb_target t ON t.indikator_id = i.id
@@ -60,8 +73,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
             h.kode_program,
             h.kode_kegiatan,
             h.kode_subkegiatan,
-            i.tahun,
-            i.kode
+            i.tahun
     `
 
 	rows, err := tx.QueryContext(ctx, query, kodeOpd, kodeOpd, tahunAwal, tahunAkhir)
@@ -73,7 +85,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 	var result []domain.SubKegiatanQuery
 	for rows.Next() {
 		var data domain.SubKegiatanQuery
-		var indikatorId, indikatorKode, indikator, indikatorTahun, indikatorKodeOpd, target, satuan sql.NullString
+		var indikatorId, indikatorKode, indikator, indikatorTahun, indikatorKodeOpd, targetId, target, satuan sql.NullString
 
 		err := rows.Scan(
 			&data.KodeUrusan,
@@ -92,6 +104,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 			&indikator,
 			&indikatorTahun,
 			&indikatorKodeOpd,
+			&targetId,
 			&target,
 			&satuan,
 		)
@@ -108,6 +121,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 			data.IndikatorKodeOpd = indikatorKodeOpd.String
 		}
 		if target.Valid {
+			data.TargetId = targetId.String
 			data.Target = target.String
 			data.Satuan = satuan.String
 		}

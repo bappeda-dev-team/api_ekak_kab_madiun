@@ -50,4 +50,5 @@ type SubKegiatanQuery struct {
 	IndikatorKodeOpd string
 	Target           string
 	Satuan           string
+	TargetId         string
 }
