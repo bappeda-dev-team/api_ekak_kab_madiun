@@ -47,6 +47,7 @@ func NewRouter(
 	sasaranOpdController controller.SasaranOpdController,
 	visiPemdaController controller.VisiPemdaController,
 	misiPemdaController controller.MisiPemdaController,
+	matrixRenstraController controller.MatrixRenstraController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -373,6 +374,9 @@ func NewRouter(
 	router.PUT("/subkegiatanodp/update/:id", subKegiatanTerpilihController.UpdateOpd)
 	router.GET("/subkegiatanodp/findall/:kode_opd/:tahun", subKegiatanTerpilihController.FindAllOpd)
 	router.GET("/subkegiatanodp/detail/:id", subKegiatanTerpilihController.FindById)
+
+	//matrix renstra
+	router.GET("/matrix_renstra/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
 
 	return router
 }

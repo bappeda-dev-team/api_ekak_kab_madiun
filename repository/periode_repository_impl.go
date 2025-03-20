@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"errors"
+	"fmt"
 )
 
 type PeriodeRepositoryImpl struct {
@@ -211,4 +212,30 @@ func (repository *PeriodeRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx,
 
 	return nil
 
+}
+
+func (repository *PeriodeRepositoryImpl) FindRPJMDByTahun(ctx context.Context, tx *sql.Tx, tahun string) (domain.Periode, error) {
+	query := `
+        SELECT id, tahun_awal, tahun_akhir 
+        FROM tb_periode 
+        WHERE jenis_periode = 'RPJMD'
+        AND ? BETWEEN tahun_awal AND tahun_akhir
+    `
+
+	rows, err := tx.QueryContext(ctx, query, tahun)
+	if err != nil {
+		return domain.Periode{}, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var periode domain.Periode
+		err = rows.Scan(&periode.Id, &periode.TahunAwal, &periode.TahunAkhir)
+		if err != nil {
+			return domain.Periode{}, err
+		}
+		return periode, nil
+	}
+
+	return domain.Periode{}, fmt.Errorf("periode RPJMD tidak ditemukan")
 }

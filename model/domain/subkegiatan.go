@@ -30,3 +30,24 @@ type PaguSubKegiatan struct {
 	PaguAnggaran  int
 	Tahun         string
 }
+
+type SubKegiatanQuery struct {
+	KodeUrusan       string
+	NamaUrusan       string
+	KodeBidangUrusan string
+	NamaBidangUrusan string
+	KodeProgram      string
+	NamaProgram      string
+	KodeKegiatan     string
+	NamaKegiatan     string
+	KodeSubKegiatan  string
+	NamaSubKegiatan  string
+	TahunSubKegiatan string
+	IndikatorId      string
+	IndikatorKode    string
+	Indikator        string
+	IndikatorTahun   string
+	IndikatorKodeOpd string
+	Target           string
+	Satuan           string
+}
