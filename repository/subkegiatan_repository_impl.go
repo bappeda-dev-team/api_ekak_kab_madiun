@@ -61,7 +61,7 @@ func (repository *SubKegiatanRepositoryImpl) Create(ctx context.Context, tx *sql
 func (repository *SubKegiatanRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, subKegiatan domain.SubKegiatan) (domain.SubKegiatan, error) {
 	// Update SubKegiatan
 	scriptSubKegiatan := `UPDATE tb_subkegiatan 
-                         SET nama_subkegiatan = ?
+                         SET nama_subkegiatan = ?, kode_subkegiatan = ?
                          WHERE id = ?`
 
 	_, err := tx.ExecContext(ctx, scriptSubKegiatan,

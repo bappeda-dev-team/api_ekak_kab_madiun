@@ -2,6 +2,7 @@ package subkegiatan
 
 type SubKegiatanCreateRequest struct {
 	Status          string                   `json:"status"`
+	KodeSubkegiatan string                   `json:"kode_subkegiatan"`
 	NamaSubKegiatan string                   `json:"nama_subkegiatan" validate:"required"`
 	KodeOpd         string                   `json:"kode_opd" validate:"required"`
 	Tahun           string                   `json:"tahun" validate:"required"`

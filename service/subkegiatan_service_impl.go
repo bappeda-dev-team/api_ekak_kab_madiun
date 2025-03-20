@@ -99,6 +99,7 @@ func (service *SubKegiatanServiceImpl) Create(ctx context.Context, request subke
 
 	subKegiatan := domain.SubKegiatan{
 		Id:              uuId,
+		KodeSubKegiatan: request.KodeSubkegiatan,
 		NamaSubKegiatan: request.NamaSubKegiatan,
 		Indikator:       indikators,
 	}
@@ -175,6 +176,7 @@ func (service *SubKegiatanServiceImpl) Update(ctx context.Context, request subke
 
 	domainSubKegiatan := domain.SubKegiatan{
 		Id:              request.Id,
+		KodeSubKegiatan: request.KodeSubkegiatan,
 		NamaSubKegiatan: request.NamaSubKegiatan,
 		Indikator:       indikators,
 	}
