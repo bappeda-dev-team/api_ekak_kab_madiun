@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type SubKegiatan struct {
 	Id              string
@@ -51,4 +54,5 @@ type SubKegiatanQuery struct {
 	Target           string
 	Satuan           string
 	TargetId         string
+	PaguAnggaran     sql.NullInt64
 }

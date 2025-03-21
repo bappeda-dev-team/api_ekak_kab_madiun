@@ -10,13 +10,14 @@ type ProgramKegiatanResponse struct {
 }
 
 type IndikatorResponse struct {
-	Id        string           `json:"id"`
-	Kode      string           `json:"kode,omitempty"`
-	KodeOpd   string           `json:"kode_opd,omitempty"`
-	ProgramId string           `json:"program_id,omitempty"`
-	Indikator string           `json:"indikator"`
-	Tahun     string           `json:"tahun"`
-	Target    []TargetResponse `json:"target"`
+	Id           string           `json:"id"`
+	Kode         string           `json:"kode,omitempty"`
+	KodeOpd      string           `json:"kode_opd,omitempty"`
+	ProgramId    string           `json:"program_id,omitempty"`
+	Indikator    string           `json:"indikator"`
+	PaguAnggaran int64            `json:"pagu_anggaran"`
+	Tahun        string           `json:"tahun"`
+	Target       []TargetResponse `json:"target"`
 }
 
 type TargetResponse struct {
@@ -28,10 +29,11 @@ type TargetResponse struct {
 }
 
 type UrusanDetailResponse struct {
-	KodeOpd    string         `json:"kode_opd"`
-	TahunAwal  string         `json:"tahun_awal"`
-	TahunAkhir string         `json:"tahun_akhir"`
-	Urusan     UrusanResponse `json:"urusan"`
+	KodeOpd           string                      `json:"kode_opd"`
+	TahunAwal         string                      `json:"tahun_awal"`
+	TahunAkhir        string                      `json:"tahun_akhir"`
+	PaguAnggaranTotal []PaguAnggaranTotalResponse `json:"pagu_total"`
+	Urusan            UrusanResponse              `json:"urusan"`
 }
 
 type UrusanResponse struct {
@@ -72,4 +74,9 @@ type SubKegiatanResponse struct {
 	Jenis     string              `json:"jenis"`
 	Tahun     string              `json:"tahun"`
 	Indikator []IndikatorResponse `json:"indikator"`
+}
+
+type PaguAnggaranTotalResponse struct {
+	Tahun        string `json:"tahun"`
+	PaguAnggaran int64  `json:"pagu_indikatif"`
 }
