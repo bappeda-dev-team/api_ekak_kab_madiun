@@ -33,7 +33,7 @@ func (service *ProgramServiceImpl) Create(ctx context.Context, request programke
 
 	defer helper.CommitOrRollback(tx)
 
-	uuidPrgm := fmt.Sprintf("PRGM-KGT-%s", uuid.New().String()[:5])
+	uuidPrgm := fmt.Sprintf("PRGM-%s", request.KodeProgram)
 
 	program := domainmaster.ProgramKegiatan{
 		Id:          uuidPrgm,
@@ -45,7 +45,7 @@ func (service *ProgramServiceImpl) Create(ctx context.Context, request programke
 
 	var indikators []domain.Indikator
 	for _, indikatorRequest := range request.Indikator {
-		uuidIndikator := fmt.Sprintf("IND-KGT-%s", uuid.New().String()[:5])
+		uuidIndikator := fmt.Sprintf("IND-PRG-%s", uuid.New().String()[:5])
 		indikator := domain.Indikator{
 			Id:        uuidIndikator,
 			ProgramId: program.Id,
@@ -55,7 +55,7 @@ func (service *ProgramServiceImpl) Create(ctx context.Context, request programke
 
 		var targets []domain.Target
 		for _, targetRequest := range indikatorRequest.Target {
-			uuidTarget := fmt.Sprintf("TRGT-KGT-%s", uuid.New().String()[:5])
+			uuidTarget := fmt.Sprintf("TRGT-PRG-%s", uuid.New().String()[:5])
 			target := domain.Target{
 				Id:          uuidTarget,
 				IndikatorId: indikator.Id,

@@ -32,7 +32,7 @@ func (service *KegiatanServiceImpl) Create(ctx context.Context, request kegiatan
 	}
 	defer helper.CommitOrRollback(tx)
 
-	uuidKegiatan := fmt.Sprintf("KGT-%s", uuid.New().String()[:5])
+	uuidKegiatan := fmt.Sprintf("KGT-%s", request.KodeKegiatan)
 
 	kegiatans := domainmaster.Kegiatan{
 		Id:           uuidKegiatan,

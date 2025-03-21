@@ -9,8 +9,6 @@ import (
 	"ekak_kabupaten_madiun/model/web/urusanrespon"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
-
-	"github.com/google/uuid"
 )
 
 type UrusanServiceImpl struct {
@@ -32,8 +30,7 @@ func (service *UrusanServiceImpl) Create(ctx context.Context, request urusanresp
 	}
 	defer helper.CommitOrRollback(tx)
 
-	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
-	uuId := fmt.Sprintf("URU-%s", randomDigits)
+	uuId := fmt.Sprintf("URU-%s", request.KodeUrusan)
 
 	domainUrusan := domainmaster.Urusan{
 		Id:         uuId,

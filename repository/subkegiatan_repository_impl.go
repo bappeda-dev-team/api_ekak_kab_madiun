@@ -16,10 +16,11 @@ func NewSubKegiatanRepositoryImpl() *SubKegiatanRepositoryImpl {
 }
 
 func (repository *SubKegiatanRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, subKegiatan domain.SubKegiatan) (domain.SubKegiatan, error) {
-	scriptSubKegiatan := `INSERT INTO tb_subkegiatan (kode_subkegiatan, nama_subkegiatan) 
-                         VALUES (?, ?)`
+	scriptSubKegiatan := `INSERT INTO tb_subkegiatan (id, kode_subkegiatan, nama_subkegiatan) 
+                         VALUES (?, ?, ?)`
 
 	_, err := tx.ExecContext(ctx, scriptSubKegiatan,
+		subKegiatan.Id,
 		subKegiatan.KodeSubKegiatan,
 		subKegiatan.NamaSubKegiatan)
 	if err != nil {

@@ -47,8 +47,7 @@ func (service *SubKegiatanServiceImpl) Create(ctx context.Context, request subke
 	}
 	defer helper.CommitOrRollback(tx)
 
-	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
-	uuId := fmt.Sprintf("SUB-%s", randomDigits)
+	uuId := fmt.Sprintf("SUB-KEG-%s", request.KodeSubkegiatan)
 
 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOpd)
 	if err != nil {
