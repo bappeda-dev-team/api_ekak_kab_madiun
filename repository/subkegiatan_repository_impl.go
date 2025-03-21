@@ -66,7 +66,7 @@ func (repository *SubKegiatanRepositoryImpl) Update(ctx context.Context, tx *sql
                          WHERE id = ?`
 
 	_, err := tx.ExecContext(ctx, scriptSubKegiatan,
-		subKegiatan.NamaSubKegiatan,
+		subKegiatan.NamaSubKegiatan, subKegiatan.KodeSubKegiatan,
 		subKegiatan.Id)
 	if err != nil {
 		log.Printf("Error updating subkegiatan: %v", err)
