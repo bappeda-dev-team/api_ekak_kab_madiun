@@ -125,15 +125,6 @@ func (service *SubKegiatanServiceImpl) Update(ctx context.Context, request subke
 	}
 	defer helper.CommitOrRollback(tx)
 
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOpd)
-	if err != nil {
-		return subkegiatan.SubKegiatanResponse{}, fmt.Errorf("kode OPD tidak valid: %v", err)
-	}
-
-	if opd.KodeOpd == "" {
-		return subkegiatan.SubKegiatanResponse{}, fmt.Errorf("kode OPD tidak ditemukan")
-	}
-
 	var indikators []domain.Indikator
 
 	for _, indikatorReq := range request.Indikator {
