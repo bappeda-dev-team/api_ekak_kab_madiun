@@ -33,4 +33,7 @@ type Indikator struct {
 	RumusPerhitungan sql.NullString
 	SumberData       sql.NullString
 	IsActive         bool
+	Kode             string
+	KodeOpd          string
+	PaguAnggaran     int64
 }

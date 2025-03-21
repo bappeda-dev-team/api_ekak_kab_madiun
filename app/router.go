@@ -376,7 +376,11 @@ func NewRouter(
 	router.GET("/subkegiatanopd/detail/:id", subKegiatanTerpilihController.FindById)
 
 	//matrix renstra
-	router.GET("/matrix_renstra/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
+	router.GET("/matrix_renstra/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
+	router.GET("/matrix_renstra/indikator/detail/:id", matrixRenstraController.FindIndikatorById)
+	router.POST("/matrix_renstra/indikator/create_indikator", matrixRenstraController.CreateIndikator)
+	router.PUT("/matrix_renstra/indikator/update_indikator/:id", matrixRenstraController.UpdateIndikator)
+	router.DELETE("/matrix_renstra/indikator/delete/:id", matrixRenstraController.DeleteIndikator)
 
 	return router
 }

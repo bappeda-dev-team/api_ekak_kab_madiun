@@ -25,3 +25,13 @@ type TargetCreateRequest struct {
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
 }
+
+type IndikatorRenstraCreateRequest struct {
+	Kode         string `json:"kode"`
+	KodeOpd      string `json:"kode_opd"`
+	Indikator    string `json:"indikator"`
+	Tahun        string `json:"tahun"`
+	PaguAnggaran int64  `json:"pagu_anggaran"`
+	Target       string `json:"target"`
+	Satuan       string `json:"satuan"`
+}

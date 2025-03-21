@@ -153,3 +153,89 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 
 	return result, nil
 }
+
+func (repository *MatrixRenstraRepositoryImpl) SaveIndikator(ctx context.Context, tx *sql.Tx, indikator domain.Indikator) error {
+	query := `INSERT INTO tb_indikator (id, kode, kode_opd, indikator, tahun, pagu_anggaran) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err := tx.ExecContext(ctx, query, indikator.Id, indikator.Kode, indikator.KodeOpd, indikator.Indikator, indikator.Tahun, indikator.PaguAnggaran)
+	return err
+}
+
+func (repository *MatrixRenstraRepositoryImpl) SaveTarget(ctx context.Context, tx *sql.Tx, target domain.Target) error {
+	query := `INSERT INTO tb_target (id, indikator_id, target, satuan) VALUES (?, ?, ?, ?)`
+	_, err := tx.ExecContext(ctx, query, target.Id, target.IndikatorId, target.Target, target.Satuan)
+	return err
+}
+
+func (repository *MatrixRenstraRepositoryImpl) FindIndikatorById(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, error) {
+	query := `
+        SELECT 
+            i.id,
+            i.kode,
+            i.kode_opd,
+            i.indikator,
+            i.tahun,
+            i.pagu_anggaran,
+            t.id as target_id,
+            t.target,
+            t.satuan 
+        FROM tb_indikator i 
+        LEFT JOIN tb_target t ON t.indikator_id = i.id 
+        WHERE i.id = ?
+    `
+	var indikator domain.Indikator
+	var target domain.Target
+	// Gunakan NullString dan NullInt64 untuk handle nilai NULL
+	var targetId, targetValue, targetSatuan sql.NullString
+
+	err := tx.QueryRowContext(ctx, query, indikatorId).Scan(
+		&indikator.Id,
+		&indikator.Kode,
+		&indikator.KodeOpd,
+		&indikator.Indikator,
+		&indikator.Tahun,
+		&indikator.PaguAnggaran,
+		&targetId,
+		&targetValue,
+		&targetSatuan,
+	)
+	if err != nil {
+		return domain.Indikator{}, err
+	}
+
+	// Set target jika ada nilainya
+	if targetId.Valid {
+		target = domain.Target{
+			Id:     targetId.String,
+			Target: targetValue.String,
+			Satuan: targetSatuan.String,
+		}
+		indikator.Target = []domain.Target{target}
+	} else {
+		indikator.Target = []domain.Target{} // Set empty slice jika tidak ada target
+	}
+
+	return indikator, nil
+}
+func (repository *MatrixRenstraRepositoryImpl) UpdateIndikator(ctx context.Context, tx *sql.Tx, indikator domain.Indikator) error {
+	query := `UPDATE tb_indikator SET kode = ?, kode_opd = ?, indikator = ?, tahun = ?, pagu_anggaran = ? WHERE id = ?`
+	_, err := tx.ExecContext(ctx, query, indikator.Kode, indikator.KodeOpd, indikator.Indikator, indikator.Tahun, indikator.PaguAnggaran, indikator.Id)
+	return err
+}
+
+func (repository *MatrixRenstraRepositoryImpl) UpdateTarget(ctx context.Context, tx *sql.Tx, target domain.Target) error {
+	query := `UPDATE tb_target SET target = ?, satuan = ? WHERE id = ?`
+	_, err := tx.ExecContext(ctx, query, target.Target, target.Satuan, target.Id)
+	return err
+}
+
+func (repository *MatrixRenstraRepositoryImpl) DeleteIndikator(ctx context.Context, tx *sql.Tx, indikatorId string) error {
+	query := `DELETE FROM tb_indikator WHERE id = ?`
+	_, err := tx.ExecContext(ctx, query, indikatorId)
+	return err
+}
+
+func (repository *MatrixRenstraRepositoryImpl) DeleteTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error {
+	query := `DELETE FROM tb_target WHERE indikator_id = ?`
+	_, err := tx.ExecContext(ctx, query, indikatorId)
+	return err
+}

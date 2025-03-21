@@ -6,7 +6,10 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
+	"fmt"
 	"strconv"
+
+	"github.com/google/uuid"
 )
 
 type MatrixRenstraServiceImpl struct {
@@ -53,25 +56,27 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatan(ctx context.Contex
 
 func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKegiatanQuery, kodeOpd string, tahunAwal string, tahunAkhir string) []programkegiatan.UrusanDetailResponse {
 	// Helper function untuk membuat indikator
-	createIndikator := func(kode string, tahun string, pagu int64, item domain.SubKegiatanQuery) programkegiatan.IndikatorResponse {
-		// Cek apakah ada indikator untuk kode dan tahun ini
-		if item.IndikatorKode == kode &&
-			item.IndikatorKodeOpd == kodeOpd &&
-			item.IndikatorTahun == tahun {
-			return programkegiatan.IndikatorResponse{
-				Id:           item.IndikatorId,
-				Kode:         kode,
-				KodeOpd:      kodeOpd,
-				Indikator:    item.Indikator,
-				Tahun:        tahun,
-				PaguAnggaran: pagu, // Pagu akan dihitung dari subkegiatan
-				Target: []programkegiatan.TargetResponse{
-					{
-						Id:     item.TargetId,
-						Target: item.Target,
-						Satuan: item.Satuan,
+	createIndikator := func(kode string, tahun string, pagu int64, data []domain.SubKegiatanQuery) programkegiatan.IndikatorResponse {
+		// Cari indikator yang sesuai dengan kode dan tahun
+		for _, item := range data {
+			if item.IndikatorKode == kode &&
+				item.IndikatorKodeOpd == kodeOpd &&
+				item.IndikatorTahun == tahun {
+				return programkegiatan.IndikatorResponse{
+					Id:           item.IndikatorId,
+					Kode:         kode,
+					KodeOpd:      kodeOpd,
+					Indikator:    item.Indikator,
+					Tahun:        tahun,
+					PaguAnggaran: pagu,
+					Target: []programkegiatan.TargetResponse{
+						{
+							Id:     item.TargetId,
+							Target: item.Target,
+							Satuan: item.Satuan,
+						},
 					},
-				},
+				}
 			}
 		}
 
@@ -81,7 +86,7 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 			KodeOpd:      kodeOpd,
 			Indikator:    "",
 			Tahun:        tahun,
-			PaguAnggaran: pagu, // Pagu akan dihitung dari subkegiatan
+			PaguAnggaran: pagu,
 			Target: []programkegiatan.TargetResponse{
 				{
 					Target: "",
@@ -240,12 +245,13 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				}
 
 				// Set indikator kegiatan dengan pagu yang sudah dihitung
+				// Set indikator kegiatan dengan pagu yang sudah dihitung
 				for i, tahun := range tahunRange {
 					kegiatan.Indikator[i] = createIndikator(
 						item.KodeKegiatan,
 						tahun,
 						paguKegiatan[tahun],
-						item,
+						data, // Kirim seluruh data
 					)
 				}
 
@@ -267,7 +273,7 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				item.KodeProgram,
 				tahun,
 				paguProgram[tahun],
-				item,
+				data, // Kirim seluruh data
 			)
 		}
 	}
@@ -318,7 +324,7 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				item.KodeBidangUrusan,
 				tahun,
 				paguBidangUrusan[tahun],
-				item,
+				data, // Kirim seluruh data
 			)
 		}
 	}
@@ -375,14 +381,8 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				item.KodeUrusan,
 				tahun,
 				paguUrusan[tahun],
-				item,
+				data, // Kirim seluruh data
 			)
-
-			// Update pagu total
-			urusan.PaguAnggaranTotal[i] = programkegiatan.PaguAnggaranTotalResponse{
-				Tahun:        tahun,
-				PaguAnggaran: paguUrusan[tahun],
-			}
 		}
 	}
 
@@ -392,4 +392,195 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 		result = append(result, *urusan)
 	}
 	return result
+}
+
+// crud
+func (service *MatrixRenstraServiceImpl) CreateIndikator(ctx context.Context, request programkegiatan.IndikatorRenstraCreateRequest) (programkegiatan.IndikatorResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+	defer tx.Rollback()
+
+	// Generate ID dengan format IND-MTRX-uuid7
+
+	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
+	uuId := fmt.Sprintf("IND-RNST-%s", randomDigits)
+
+	// Simpan indikator
+	indikator := domain.Indikator{
+		Id:           uuId,
+		Kode:         request.Kode,
+		KodeOpd:      request.KodeOpd,
+		Indikator:    request.Indikator,
+		Tahun:        request.Tahun,
+		PaguAnggaran: request.PaguAnggaran,
+	}
+
+	err = service.MatrixRenstraRepository.SaveIndikator(ctx, tx, indikator)
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	// Simpan target
+	uuIdTarget := fmt.Sprintf("TRG-RNST-%s", randomDigits)
+
+	target := domain.Target{
+		Id:          uuIdTarget,
+		IndikatorId: indikator.Id,
+		Target:      request.Target,
+		Satuan:      request.Satuan,
+	}
+
+	err = service.MatrixRenstraRepository.SaveTarget(ctx, tx, target)
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	return programkegiatan.IndikatorResponse{
+		Id:           indikator.Id,
+		Kode:         request.Kode,
+		KodeOpd:      request.KodeOpd,
+		Indikator:    request.Indikator,
+		Tahun:        request.Tahun,
+		PaguAnggaran: request.PaguAnggaran,
+		Target: []programkegiatan.TargetResponse{
+			{
+				Id:     target.Id,
+				Target: request.Target,
+				Satuan: request.Satuan,
+			},
+		},
+	}, nil
+}
+
+func (service *MatrixRenstraServiceImpl) UpdateIndikator(ctx context.Context, request programkegiatan.UpdateIndikatorRequest) (programkegiatan.IndikatorResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+	defer tx.Rollback()
+
+	// Cek apakah indikator exists
+	existingIndikator, err := service.MatrixRenstraRepository.FindIndikatorById(ctx, tx, request.Id)
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	// Update indikator
+	indikator := domain.Indikator{
+		Id:           request.Id,
+		Kode:         request.Kode,
+		KodeOpd:      request.KodeOpd,
+		Indikator:    request.Indikator,
+		Tahun:        request.Tahun,
+		PaguAnggaran: request.PaguAnggaran,
+	}
+
+	err = service.MatrixRenstraRepository.UpdateIndikator(ctx, tx, indikator)
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	// Update target
+	target := domain.Target{
+		Id:          existingIndikator.Target[0].Id, // Ambil ID target yang sudah ada
+		IndikatorId: request.Id,
+		Target:      request.Target,
+		Satuan:      request.Satuan,
+	}
+
+	err = service.MatrixRenstraRepository.UpdateTarget(ctx, tx, target)
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	return programkegiatan.IndikatorResponse{
+		Id:           request.Id,
+		Kode:         request.Kode,
+		KodeOpd:      request.KodeOpd,
+		Indikator:    request.Indikator,
+		Tahun:        request.Tahun,
+		PaguAnggaran: request.PaguAnggaran,
+		Target: []programkegiatan.TargetResponse{
+			{
+				Id:     target.Id,
+				Target: request.Target,
+				Satuan: request.Satuan,
+			},
+		},
+	}, nil
+}
+
+func (service *MatrixRenstraServiceImpl) DeleteIndikator(ctx context.Context, indikatorId string) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Hapus target terlebih dahulu (karena foreign key)
+	err = service.MatrixRenstraRepository.DeleteTargetByIndikatorId(ctx, tx, indikatorId)
+	if err != nil {
+		return err
+	}
+
+	// Hapus indikator
+	err = service.MatrixRenstraRepository.DeleteIndikator(ctx, tx, indikatorId)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (service *MatrixRenstraServiceImpl) FindIndikatorById(ctx context.Context, indikatorId string) (programkegiatan.IndikatorResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+	defer tx.Rollback()
+
+	// Cari indikator berdasarkan ID
+	indikator, err := service.MatrixRenstraRepository.FindIndikatorById(ctx, tx, indikatorId)
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	// Transform ke response
+	response := programkegiatan.IndikatorResponse{
+		Id:           indikator.Id,
+		Kode:         indikator.Kode,
+		KodeOpd:      indikator.KodeOpd,
+		Indikator:    indikator.Indikator,
+		Tahun:        indikator.Tahun,
+		PaguAnggaran: indikator.PaguAnggaran,
+		Target:       make([]programkegiatan.TargetResponse, 0),
+	}
+
+	// Tambahkan target ke response
+	if len(indikator.Target) > 0 {
+		response.Target = append(response.Target, programkegiatan.TargetResponse{
+			Id:     indikator.Target[0].Id,
+			Target: indikator.Target[0].Target,
+			Satuan: indikator.Target[0].Satuan,
+		})
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return programkegiatan.IndikatorResponse{}, err
+	}
+
+	return response, nil
 }
