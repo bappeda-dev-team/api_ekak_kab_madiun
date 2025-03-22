@@ -329,6 +329,9 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 		}
 	}
 
+	// Buat map untuk menyimpan total pagu per tahun untuk semua urusan
+	totalPaguPerTahun := make(map[string]int64)
+
 	// 3.3 Kelompokkan bidang urusan ke urusan dan hitung pagu urusan
 	for _, item := range data {
 		if item.KodeUrusan == "" {
@@ -350,7 +353,8 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 					BidangUrusan: []programkegiatan.BidangUrusanResponse{},
 				},
 			}
-			// Inisialisasi pagu total untuk setiap tahun
+
+			// Inisialisasi pagu total
 			for i, tahun := range tahunRange {
 				urusan.PaguAnggaranTotal[i] = programkegiatan.PaguAnggaranTotalResponse{
 					Tahun:        tahun,
@@ -377,8 +381,16 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 		// Hitung total pagu urusan dari bidang urusan
 		paguUrusan := make(map[string]int64)
 		for _, bidangUrusan := range urusan.Urusan.BidangUrusan {
-			for _, ind := range bidangUrusan.Indikator {
-				paguUrusan[ind.Tahun] += ind.PaguAnggaran
+			for _, prog := range bidangUrusan.Program {
+				for _, keg := range prog.Kegiatan {
+					for _, subkeg := range keg.SubKegiatan {
+						for _, ind := range subkeg.Indikator {
+							paguUrusan[ind.Tahun] += ind.PaguAnggaran
+							// Update total pagu per tahun
+							totalPaguPerTahun[ind.Tahun] += ind.PaguAnggaran
+						}
+					}
+				}
 			}
 		}
 
@@ -388,15 +400,21 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				item.KodeUrusan,
 				tahun,
 				paguUrusan[tahun],
-				data, // Kirim seluruh data
+				data,
 			)
-			urusan.PaguAnggaranTotal[i].PaguAnggaran = paguUrusan[tahun]
 		}
 	}
 
 	// Convert map to slice untuk hasil akhir
 	var result []programkegiatan.UrusanDetailResponse
 	for _, urusan := range urusanMap {
+		// Set pagu total yang sudah dijumlahkan dari semua urusan
+		for i, tahun := range tahunRange {
+			urusan.PaguAnggaranTotal[i] = programkegiatan.PaguAnggaranTotalResponse{
+				Tahun:        tahun,
+				PaguAnggaran: totalPaguPerTahun[tahun],
+			}
+		}
 		result = append(result, *urusan)
 	}
 	return result
