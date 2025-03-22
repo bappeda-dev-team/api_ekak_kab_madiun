@@ -4,7 +4,6 @@ type KegiatanUpdateRequest struct {
 	Id           string `json:"id"`
 	NamaKegiatan string `json:"nama_kegiatan"`
 	KodeKegiatan string `json:"kode_kegiatan"`
-	KodeOPD      string `json:"kode_opd"`
 	Indikator    []IndikatorUpdateRequest
 }
 

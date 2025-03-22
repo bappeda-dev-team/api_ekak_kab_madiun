@@ -6,7 +6,6 @@ import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
-	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
@@ -16,14 +15,12 @@ import (
 
 type ProgramServiceImpl struct {
 	programRepository repository.ProgramRepository
-	opdRepository     repository.OpdRepository
 	DB                *sql.DB
 }
 
-func NewProgramServiceImpl(programRepository repository.ProgramRepository, opdRepository repository.OpdRepository, DB *sql.DB) *ProgramServiceImpl {
+func NewProgramServiceImpl(programRepository repository.ProgramRepository, DB *sql.DB) *ProgramServiceImpl {
 	return &ProgramServiceImpl{
 		programRepository: programRepository,
-		opdRepository:     opdRepository,
 		DB:                DB,
 	}
 }
@@ -35,31 +32,20 @@ func (service *ProgramServiceImpl) Create(ctx context.Context, request programke
 	}
 
 	defer helper.CommitOrRollback(tx)
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOPD)
-	if err != nil {
-		tx.Rollback()
-		return programkegiatan.ProgramKegiatanResponse{}, fmt.Errorf("kode OPD tidak valid: %v", err)
-	}
 
-	if opd.KodeOpd == "" {
-		tx.Rollback()
-		return programkegiatan.ProgramKegiatanResponse{}, fmt.Errorf("kode OPD tidak ditemukan")
-	}
-
-	uuidPrgm := fmt.Sprintf("PRGM-KGT-%s", uuid.New().String()[:5])
+	uuidPrgm := fmt.Sprintf("PRGM-%s", request.KodeProgram)
 
 	program := domainmaster.ProgramKegiatan{
 		Id:          uuidPrgm,
 		KodeProgram: request.KodeProgram,
 		NamaProgram: request.NamaProgram,
-		KodeOPD:     request.KodeOPD,
 		Tahun:       request.Tahun,
 		IsActive:    request.IsActive,
 	}
 
 	var indikators []domain.Indikator
 	for _, indikatorRequest := range request.Indikator {
-		uuidIndikator := fmt.Sprintf("IND-KGT-%s", uuid.New().String()[:5])
+		uuidIndikator := fmt.Sprintf("IND-PRG-%s", uuid.New().String()[:5])
 		indikator := domain.Indikator{
 			Id:        uuidIndikator,
 			ProgramId: program.Id,
@@ -69,7 +55,7 @@ func (service *ProgramServiceImpl) Create(ctx context.Context, request programke
 
 		var targets []domain.Target
 		for _, targetRequest := range indikatorRequest.Target {
-			uuidTarget := fmt.Sprintf("TRGT-KGT-%s", uuid.New().String()[:5])
+			uuidTarget := fmt.Sprintf("TRGT-PRG-%s", uuid.New().String()[:5])
 			target := domain.Target{
 				Id:          uuidTarget,
 				IndikatorId: indikator.Id,
@@ -122,13 +108,9 @@ func (service *ProgramServiceImpl) Create(ctx context.Context, request programke
 		Id:          result.Id,
 		KodeProgram: result.KodeProgram,
 		NamaProgram: result.NamaProgram,
-		KodeOPD: opdmaster.OpdResponseForAll{
-			KodeOpd: opd.KodeOpd,
-			NamaOpd: opd.NamaOpd,
-		},
-		Tahun:     result.Tahun,
-		IsActive:  result.IsActive,
-		Indikator: indikatorResponses,
+		Tahun:       result.Tahun,
+		IsActive:    result.IsActive,
+		Indikator:   indikatorResponses,
 	}, nil
 }
 
@@ -142,26 +124,10 @@ func (service *ProgramServiceImpl) Update(ctx context.Context, request programke
 	fmt.Printf("\n=== MULAI PROSES UPDATE ===\n")
 	fmt.Printf("Request ID Program: %s\n", request.Id)
 
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOPD)
-	if err != nil {
-		tx.Rollback()
-		fmt.Printf("ERROR: Gagal mencari OPD: %v\n", err)
-		return programkegiatan.ProgramKegiatanResponse{}, fmt.Errorf("kode OPD tidak valid: %v", err)
-	}
-
-	if opd.KodeOpd == "" {
-		tx.Rollback()
-		fmt.Printf("ERROR: OPD tidak ditemukan untuk kode: %s\n", request.KodeOPD)
-		return programkegiatan.ProgramKegiatanResponse{}, fmt.Errorf("kode OPD tidak ditemukan")
-	}
-
-	fmt.Printf("OPD ditemukan: %s - %s\n", opd.KodeOpd, opd.NamaOpd)
-
 	program := domainmaster.ProgramKegiatan{
 		Id:          request.Id,
 		KodeProgram: request.KodeProgram,
 		NamaProgram: request.NamaProgram,
-		KodeOPD:     request.KodeOPD,
 		Tahun:       request.Tahun,
 		IsActive:    request.IsActive,
 	}
@@ -260,10 +226,7 @@ func (service *ProgramServiceImpl) Update(ctx context.Context, request programke
 		Id:          result.Id,
 		KodeProgram: result.KodeProgram,
 		NamaProgram: result.NamaProgram,
-		KodeOPD: opdmaster.OpdResponseForAll{
-			KodeOpd: opd.KodeOpd,
-			NamaOpd: opd.NamaOpd,
-		},
+
 		Tahun:     result.Tahun,
 		IsActive:  result.IsActive,
 		Indikator: indikatorResponses,
@@ -301,12 +264,6 @@ func (service *ProgramServiceImpl) FindById(ctx context.Context, programId strin
 	result, err := service.programRepository.FindById(ctx, tx, programId)
 	if err != nil {
 		return programkegiatan.ProgramKegiatanResponse{}, fmt.Errorf("gagal mengambil data program: %v", err)
-	}
-
-	// Mengambil data OPD
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, result.KodeOPD)
-	if err != nil {
-		return programkegiatan.ProgramKegiatanResponse{}, fmt.Errorf("gagal mengambil data OPD: %v", err)
 	}
 
 	// Mengambil semua indikator untuk program ini
@@ -349,13 +306,9 @@ func (service *ProgramServiceImpl) FindById(ctx context.Context, programId strin
 		Id:          result.Id,
 		KodeProgram: result.KodeProgram,
 		NamaProgram: result.NamaProgram,
-		KodeOPD: opdmaster.OpdResponseForAll{
-			KodeOpd: opd.KodeOpd,
-			NamaOpd: opd.NamaOpd,
-		},
-		Tahun:     result.Tahun,
-		IsActive:  result.IsActive,
-		Indikator: indikatorResponses,
+		Tahun:       result.Tahun,
+		IsActive:    result.IsActive,
+		Indikator:   indikatorResponses,
 	}, nil
 }
 
@@ -375,11 +328,6 @@ func (service *ProgramServiceImpl) FindAll(ctx context.Context) ([]programkegiat
 	var programResponses []programkegiatan.ProgramKegiatanResponse
 
 	for _, program := range results {
-		// Mengambil data OPD dari cache atau database
-		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, program.KodeOPD)
-		if err != nil {
-			return nil, fmt.Errorf("gagal mengambil data OPD: %v", err)
-		}
 
 		// Mengambil semua indikator untuk program ini
 		indikators, err := service.programRepository.FindIndikatorByProgramId(ctx, tx, program.Id)
@@ -424,13 +372,9 @@ func (service *ProgramServiceImpl) FindAll(ctx context.Context) ([]programkegiat
 			Id:          program.Id,
 			KodeProgram: program.KodeProgram,
 			NamaProgram: program.NamaProgram,
-			KodeOPD: opdmaster.OpdResponseForAll{
-				KodeOpd: opd.KodeOpd,
-				NamaOpd: opd.NamaOpd,
-			},
-			Tahun:     program.Tahun,
-			IsActive:  program.IsActive,
-			Indikator: indikatorResponses,
+			Tahun:       program.Tahun,
+			IsActive:    program.IsActive,
+			Indikator:   indikatorResponses,
 		}
 		programResponses = append(programResponses, programResponse)
 	}

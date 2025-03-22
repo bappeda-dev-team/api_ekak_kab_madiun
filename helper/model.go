@@ -415,34 +415,14 @@ func ToSubKegiatanResponse(subKegiatan domain.SubKegiatan) subkegiatan.SubKegiat
 		})
 	}
 
-	// Set Action Buttons
-	host := os.Getenv("host")
-	port := os.Getenv("port")
-	buttonActions := []web.ActionButton{
-		{
-			NameAction: "Find By IdSubkegiatan",
-			Method:     "GET",
-			Url:        fmt.Sprintf("%s:%s/sub_kegiatan/detail/:idsubkegiatan", host, port),
-		},
-		{
-			NameAction: "Delete Subkegiatan",
-			Method:     "DELETE",
-			Url:        fmt.Sprintf("%s:%s/subkegiatanterpilih/delete/:subkegiatan_id", host, port),
-		},
-	}
-
 	return subkegiatan.SubKegiatanResponse{
 		Id:                   subKegiatan.Id,
 		RekinId:              subKegiatan.RekinId,
-		Status:               subKegiatan.Status,
+		KodeSubKegiatan:      subKegiatan.KodeSubKegiatan,
 		NamaSubKegiatan:      subKegiatan.NamaSubKegiatan,
-		KodeOpd:              subKegiatan.KodeOpd,
-		NamaOpd:              subKegiatan.NamaOpd,
-		Tahun:                subKegiatan.Tahun,
 		Indikator:            indikatorResponses,
 		IndikatorSubkegiatan: indikatorSubKegiatanResponses,
 		PaguSubKegiatan:      paguResponses,
-		Action:               buttonActions,
 	}
 }
 

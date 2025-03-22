@@ -1,0 +1,2 @@
+ALTER TABLE tb_master_program 
+MODIFY COLUMN tahun VARCHAR(10) NOT NULL DEFAULT '';

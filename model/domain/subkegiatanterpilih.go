@@ -6,3 +6,10 @@ type SubKegiatanTerpilih struct {
 	RekinId         string
 	SubkegiatanId   string
 }
+
+type SubKegiatanOpd struct {
+	Id              int
+	KodeSubKegiatan string
+	KodeOpd         string
+	Tahun           string
+}

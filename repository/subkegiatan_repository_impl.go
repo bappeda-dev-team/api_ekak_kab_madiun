@@ -16,16 +16,13 @@ func NewSubKegiatanRepositoryImpl() *SubKegiatanRepositoryImpl {
 }
 
 func (repository *SubKegiatanRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, subKegiatan domain.SubKegiatan) (domain.SubKegiatan, error) {
-	scriptSubKegiatan := `INSERT INTO tb_subkegiatan (id, kode_subkegiatan, nama_subkegiatan, kode_opd, tahun, status) 
-                         VALUES (?, ?, ?, ?, ?, ?)`
+	scriptSubKegiatan := `INSERT INTO tb_subkegiatan (id, kode_subkegiatan, nama_subkegiatan) 
+                         VALUES (?, ?, ?)`
 
 	_, err := tx.ExecContext(ctx, scriptSubKegiatan,
 		subKegiatan.Id,
 		subKegiatan.KodeSubKegiatan,
-		subKegiatan.NamaSubKegiatan,
-		subKegiatan.KodeOpd,
-		subKegiatan.Tahun,
-		subKegiatan.Status)
+		subKegiatan.NamaSubKegiatan)
 	if err != nil {
 		return domain.SubKegiatan{}, err
 	}
@@ -65,15 +62,11 @@ func (repository *SubKegiatanRepositoryImpl) Create(ctx context.Context, tx *sql
 func (repository *SubKegiatanRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, subKegiatan domain.SubKegiatan) (domain.SubKegiatan, error) {
 	// Update SubKegiatan
 	scriptSubKegiatan := `UPDATE tb_subkegiatan 
-                         SET nama_subkegiatan = ?, 
-                             kode_opd = ?, 
-                             tahun = ? 
+                         SET nama_subkegiatan = ?, kode_subkegiatan = ?
                          WHERE id = ?`
 
 	_, err := tx.ExecContext(ctx, scriptSubKegiatan,
-		subKegiatan.NamaSubKegiatan,
-		subKegiatan.KodeOpd,
-		subKegiatan.Tahun,
+		subKegiatan.NamaSubKegiatan, subKegiatan.KodeSubKegiatan,
 		subKegiatan.Id)
 	if err != nil {
 		log.Printf("Error updating subkegiatan: %v", err)
@@ -135,41 +128,33 @@ func (repository *SubKegiatanRepositoryImpl) Update(ctx context.Context, tx *sql
 	return subKegiatan, nil
 }
 
-func (repository *SubKegiatanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string, status string) ([]domain.SubKegiatan, error) {
-	script := `SELECT id, kode_subkegiatan, nama_subkegiatan, kode_opd, status, tahun, created_at FROM tb_subkegiatan WHERE 1=1`
-	var params []interface{}
+func (repository *SubKegiatanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) ([]domain.SubKegiatan, error) {
+	script := `SELECT id, kode_subkegiatan, nama_subkegiatan, created_at FROM tb_subkegiatan ORDER BY kode_subkegiatan ASC`
 
-	if kodeOpd != "" {
-		script += ` AND kode_opd = ?`
-		params = append(params, kodeOpd)
-	}
-	if status != "" {
-		script += ` AND status = ?`
-		params = append(params, status)
-	}
-	script += ` ORDER BY created_at ASC`
-
-	rows, err := tx.QueryContext(ctx, script, params...)
+	rows, err := tx.QueryContext(ctx, script)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var subKegiatans []domain.SubKegiatan
+	subKegiatans := make([]domain.SubKegiatan, 0) // Bisa tambahkan kapasitas awal jika ada perkiraan jumlah data
 	for rows.Next() {
-		subKegiatan := domain.SubKegiatan{}
-		err := rows.Scan(&subKegiatan.Id, &subKegiatan.KodeSubKegiatan, &subKegiatan.NamaSubKegiatan, &subKegiatan.KodeOpd, &subKegiatan.Status, &subKegiatan.Tahun, &subKegiatan.CreatedAt)
-		if err != nil {
+		var subKegiatan domain.SubKegiatan
+		if err := rows.Scan(&subKegiatan.Id, &subKegiatan.KodeSubKegiatan, &subKegiatan.NamaSubKegiatan, &subKegiatan.CreatedAt); err != nil {
 			return nil, err
 		}
 		subKegiatans = append(subKegiatans, subKegiatan)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return subKegiatans, nil
 }
 
 func (repository *SubKegiatanRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, subKegiatanId string) (domain.SubKegiatan, error) {
-	script := `SELECT id, kode_subkegiatan, nama_subkegiatan, kode_opd, status, tahun FROM tb_subkegiatan WHERE id = ?`
+	script := `SELECT id, kode_subkegiatan, nama_subkegiatan FROM tb_subkegiatan WHERE id = ?`
 
 	rows, err := tx.QueryContext(ctx, script, subKegiatanId)
 	if err != nil {
@@ -179,7 +164,7 @@ func (repository *SubKegiatanRepositoryImpl) FindById(ctx context.Context, tx *s
 
 	subKegiatan := domain.SubKegiatan{}
 	if rows.Next() {
-		err := rows.Scan(&subKegiatan.Id, &subKegiatan.KodeSubKegiatan, &subKegiatan.NamaSubKegiatan, &subKegiatan.KodeOpd, &subKegiatan.Status, &subKegiatan.Tahun)
+		err := rows.Scan(&subKegiatan.Id, &subKegiatan.KodeSubKegiatan, &subKegiatan.NamaSubKegiatan)
 		if err != nil {
 			return domain.SubKegiatan{}, err
 		}

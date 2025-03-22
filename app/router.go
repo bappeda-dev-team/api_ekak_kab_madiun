@@ -47,6 +47,7 @@ func NewRouter(
 	sasaranOpdController controller.SasaranOpdController,
 	visiPemdaController controller.VisiPemdaController,
 	misiPemdaController controller.MisiPemdaController,
+	matrixRenstraController controller.MatrixRenstraController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -366,6 +367,20 @@ func NewRouter(
 	router.GET("/misi_pemda/findall/tahun/:tahun_awal/jenisperiode/:jenis_periode", misiPemdaController.FindAll)
 	router.GET("/misi_pemda/detail/:id", misiPemdaController.FindById)
 	router.GET("/misi_pemda/findbyvisi/:id_visi", misiPemdaController.FindByIdVisi)
+
+	//subkegiatan opd
+	router.POST("/subkegiatanopd/create", subKegiatanTerpilihController.CreateOpd)
+	router.DELETE("/subkegiatanopd/delete/:id", subKegiatanTerpilihController.DeleteOpd)
+	router.PUT("/subkegiatanopd/update/:id", subKegiatanTerpilihController.UpdateOpd)
+	router.GET("/subkegiatanopd/findall/:kode_opd/:tahun", subKegiatanTerpilihController.FindAllOpd)
+	router.GET("/subkegiatanopd/detail/:id", subKegiatanTerpilihController.FindById)
+
+	//matrix renstra
+	router.GET("/matrix_renstra/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
+	router.GET("/matrix_renstra/indikator/detail/:id", matrixRenstraController.FindIndikatorById)
+	router.POST("/matrix_renstra/indikator/create_indikator", matrixRenstraController.CreateIndikator)
+	router.PUT("/matrix_renstra/indikator/update_indikator/:id", matrixRenstraController.UpdateIndikator)
+	router.DELETE("/matrix_renstra/indikator/delete/:id", matrixRenstraController.DeleteIndikator)
 
 	return router
 }

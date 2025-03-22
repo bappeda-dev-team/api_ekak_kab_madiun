@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/subkegiatan"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -134,6 +135,134 @@ func (controller *SubKegiatanTerpilihControllerImpl) DeleteSubKegiatanTerpilih(w
 	webResponse := web.WebSubKegiatanResponse{
 		Code:   http.StatusOK,
 		Status: "success delete subkegiatan terpilih",
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *SubKegiatanTerpilihControllerImpl) CreateOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	SubKegiatanOpdCreateRequest := subkegiatan.SubKegiatanOpdCreateRequest{}
+	helper.ReadFromRequestBody(request, &SubKegiatanOpdCreateRequest)
+
+	subKegiatanOpdResponse, err := controller.SubKegiatanTerpilihService.CreateOpd(request.Context(), SubKegiatanOpdCreateRequest)
+	if err != nil {
+		webResponse := web.WebUsulanInisiatifResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success create subkegiatan opd",
+		Data:   subKegiatanOpdResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *SubKegiatanTerpilihControllerImpl) UpdateOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	SubKegiatanOpdUpdateRequest := subkegiatan.SubKegiatanOpdUpdateRequest{}
+	helper.ReadFromRequestBody(request, &SubKegiatanOpdUpdateRequest)
+
+	idStr := params.ByName("id")
+	id, _ := strconv.Atoi(idStr)
+
+	SubKegiatanOpdUpdateRequest.Id = id
+
+	subKegiatanOpdResponse, err := controller.SubKegiatanTerpilihService.UpdateOpd(request.Context(), SubKegiatanOpdUpdateRequest)
+	if err != nil {
+		webResponse := web.WebUsulanInisiatifResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success create subkegiatan opd",
+		Data:   subKegiatanOpdResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *SubKegiatanTerpilihControllerImpl) FindAllOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	var kodeOpdPtr *string
+	if kodeOpd != "" {
+		kodeOpdPtr = &kodeOpd
+	}
+
+	var tahunPtr *string
+	if tahun != "" {
+		tahunPtr = &tahun
+	}
+
+	subkegiatanResponse, err := controller.SubKegiatanTerpilihService.FindAllOpd(request.Context(), kodeOpdPtr, tahunPtr)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success find all subkegiatan opd",
+		Data:   subkegiatanResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *SubKegiatanTerpilihControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idStr := params.ByName("id")
+	id, _ := strconv.Atoi(idStr)
+
+	subkegiatanResponse, err := controller.SubKegiatanTerpilihService.FindById(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebUsulanInisiatifResponse{
+		Code:   http.StatusOK,
+		Status: "success find by id subkegiatan opd",
+		Data:   subkegiatanResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *SubKegiatanTerpilihControllerImpl) DeleteOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idstr := params.ByName("id")
+	id, _ := strconv.Atoi(idstr)
+	err := controller.SubKegiatanTerpilihService.DeleteOpd(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebSubKegiatanTerpilihResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success delete subkegiatan opd",
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }

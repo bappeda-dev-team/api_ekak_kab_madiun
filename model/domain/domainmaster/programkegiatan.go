@@ -7,7 +7,7 @@ type ProgramKegiatan struct {
 	KodeProgram string
 	NamaProgram string
 	KodeOPD     string
-	IsActive    bool //default true
+	IsActive    bool
 	Tahun       string
 	Indikator   []domain.Indikator
 }

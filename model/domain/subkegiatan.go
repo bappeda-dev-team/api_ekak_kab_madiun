@@ -1,16 +1,19 @@
 package domain
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type SubKegiatan struct {
-	Id                   string
-	KodeSubKegiatan      string
-	NamaSubKegiatan      string
-	KodeOpd              string
-	NamaOpd              string
-	Tahun                string
-	RekinId              string
-	Status               string
+	Id              string
+	KodeSubKegiatan string
+	NamaSubKegiatan string
+	// KodeOpd              string
+	NamaOpd string
+	// Tahun                string
+	RekinId string
+	// Status               string
 	CreatedAt            time.Time
 	Indikator            []Indikator
 	IndikatorSubKegiatan []IndikatorSubKegiatan
@@ -29,4 +32,27 @@ type PaguSubKegiatan struct {
 	JenisPagu     string
 	PaguAnggaran  int
 	Tahun         string
+}
+
+type SubKegiatanQuery struct {
+	KodeUrusan       string
+	NamaUrusan       string
+	KodeBidangUrusan string
+	NamaBidangUrusan string
+	KodeProgram      string
+	NamaProgram      string
+	KodeKegiatan     string
+	NamaKegiatan     string
+	KodeSubKegiatan  string
+	NamaSubKegiatan  string
+	TahunSubKegiatan string
+	IndikatorId      string
+	IndikatorKode    string
+	Indikator        string
+	IndikatorTahun   string
+	IndikatorKodeOpd string
+	Target           string
+	Satuan           string
+	TargetId         string
+	PaguAnggaran     sql.NullInt64
 }

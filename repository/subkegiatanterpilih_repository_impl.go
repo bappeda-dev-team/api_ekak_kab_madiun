@@ -123,3 +123,83 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) FindAll(ctx context.Context
 
 	return result, nil
 }
+
+func (repository *SubKegiatanTerpilihRepositoryImpl) CreateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error) {
+	script := "INSERT INTO tb_subkegiatan_opd (id, kode_subkegiatan, kode_opd, tahun) VALUES (?,?,?,?)"
+	result, err := tx.ExecContext(ctx, script, subkegiatanOpd.Id, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun)
+	if err != nil {
+		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat memilih subkegiatan opd: %v", err)
+	}
+	lastInsertId, err := result.LastInsertId()
+	if err != nil {
+		return subkegiatanOpd, err
+	}
+	subkegiatanOpd.Id = int(lastInsertId)
+
+	return subkegiatanOpd, nil
+}
+
+func (repository *SubKegiatanTerpilihRepositoryImpl) UpdateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error) {
+	script := "UPDATE tb_subkegiatan_opd SET kode_subkegiatan = ?, kode_opd = ?, tahun = ? WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun, subkegiatanOpd.Id)
+	if err != nil {
+		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat mengupdate subkegiatan opd: %v", err)
+	}
+	return subkegiatanOpd, nil
+}
+
+func (repository *SubKegiatanTerpilihRepositoryImpl) FindallOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun *string) ([]domain.SubKegiatanOpd, error) {
+	script := "SELECT id, kode_subkegiatan, kode_opd, tahun FROM tb_subkegiatan_opd WHERE 1=1"
+	var params []interface{}
+
+	if kodeOpd != nil {
+		script += " AND kode_opd = ?"
+		params = append(params, *kodeOpd)
+	}
+
+	if tahun != nil {
+		script += " AND tahun = ?"
+		params = append(params, *tahun)
+	}
+	script += " order by kode_subkegiatan asc"
+
+	rows, err := tx.QueryContext(ctx, script, params...)
+	if err != nil {
+		return nil, fmt.Errorf("error saat mencari subkegiatan opd: %v", err)
+	}
+
+	defer rows.Close()
+
+	var subkegiatanOPD []domain.SubKegiatanOpd
+	for rows.Next() {
+		var sub domain.SubKegiatanOpd
+		err := rows.Scan(&sub.Id, &sub.KodeSubKegiatan, &sub.KodeOpd, &sub.Tahun)
+		if err != nil {
+			return nil, fmt.Errorf("error saat  mencari subkegiatan opd: %v", err)
+		}
+		subkegiatanOPD = append(subkegiatanOPD, sub)
+	}
+
+	return subkegiatanOPD, nil
+}
+
+func (repository *SubKegiatanTerpilihRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.SubKegiatanOpd, error) {
+	script := "SELECT id, kode_subkegiatan, kode_opd, tahun FROM tb_subkegiatan_opd WHERE id = ?"
+	row := tx.QueryRowContext(ctx, script, id)
+
+	var sub domain.SubKegiatanOpd
+	err := row.Scan(&sub.Id, &sub.KodeSubKegiatan, &sub.KodeOpd, &sub.Tahun)
+	if err != nil {
+		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat mencari usulan inovasi: %v", err)
+	}
+	return sub, nil
+}
+
+func (repository *SubKegiatanTerpilihRepositoryImpl) DeleteSubOpd(ctx context.Context, tx *sql.Tx, id int) error {
+	script := "DELETE FROM tb_subkegiatan_opd WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, id)
+	if err != nil {
+		return fmt.Errorf("error saat menghapus subkegiatan opd: %v", err)
+	}
+	return nil
+}

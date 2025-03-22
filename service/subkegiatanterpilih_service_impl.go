@@ -10,21 +10,27 @@ import (
 	"errors"
 	"fmt"
 	"log"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type SubKegiatanTerpilihServiceImpl struct {
 	RencanaKinerjaRepository      repository.RencanaKinerjaRepository
 	SubKegiatanRepository         repository.SubKegiatanRepository
 	SubKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository
+	opdRepository                 repository.OpdRepository
 	DB                            *sql.DB
+	Validate                      *validator.Validate
 }
 
-func NewSubKegiatanTerpilihServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, subKegiatanRepository repository.SubKegiatanRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, DB *sql.DB) *SubKegiatanTerpilihServiceImpl {
+func NewSubKegiatanTerpilihServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, subKegiatanRepository repository.SubKegiatanRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, opdRepository repository.OpdRepository, DB *sql.DB, Validate *validator.Validate) *SubKegiatanTerpilihServiceImpl {
 	return &SubKegiatanTerpilihServiceImpl{
 		RencanaKinerjaRepository:      rencanaKinerjaRepository,
 		SubKegiatanRepository:         subKegiatanRepository,
 		SubKegiatanTerpilihRepository: subKegiatanTerpilihRepository,
+		opdRepository:                 opdRepository,
 		DB:                            DB,
+		Validate:                      Validate,
 	}
 }
 
@@ -177,6 +183,173 @@ func (service *SubKegiatanTerpilihServiceImpl) DeleteSubKegiatanTerpilih(ctx con
 	err = service.SubKegiatanTerpilihRepository.DeleteSubKegiatanTerpilih(ctx, tx, idSubKegiatan)
 	if err != nil {
 		return fmt.Errorf("gagal menghapus subkegiatan terpilih: %v", err)
+	}
+
+	return nil
+}
+
+func (service *SubKegiatanTerpilihServiceImpl) CreateOpd(ctx context.Context, request subkegiatan.SubKegiatanOpdCreateRequest) (subkegiatan.SubKegiatanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return subkegiatan.SubKegiatanOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	//cek subkegiatan
+	kode, err := service.SubKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, request.KodeSubkegiatan)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("kode subkegiatan %s tidak ditemukan dalam database", request.KodeSubkegiatan)
+		}
+		return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("terjadi kesalahan saat mencari data kode subkegiatan: %v", err)
+	}
+
+	// Cek OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOpd)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("OPD dengan kode %s tidak ditemukan dalam database", request.KodeOpd)
+		}
+		return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("terjadi kesalahan saat mencari data OPD: %v", err)
+	}
+
+	domain := domain.SubKegiatanOpd{
+		KodeSubKegiatan: kode.KodeSubKegiatan,
+		KodeOpd:         opd.KodeOpd,
+		Tahun:           request.Tahun,
+	}
+
+	result, err := service.SubKegiatanTerpilihRepository.CreateOPD(ctx, tx, domain)
+	if err != nil {
+		return subkegiatan.SubKegiatanOpdResponse{}, err
+	}
+
+	response := subkegiatan.SubKegiatanOpdResponse{
+		Id:              result.Id,
+		KodeSubkegiatan: result.KodeSubKegiatan,
+		KodeOpd:         result.KodeOpd,
+		Tahun:           result.Tahun,
+	}
+
+	return response, nil
+}
+
+func (service *SubKegiatanTerpilihServiceImpl) UpdateOpd(ctx context.Context, request subkegiatan.SubKegiatanOpdUpdateRequest) (subkegiatan.SubKegiatanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return subkegiatan.SubKegiatanOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	//cek subkegiatan
+	kode, err := service.SubKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, request.KodeSubkegiatan)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("kode subkegiatan %s tidak ditemukan dalam database", request.KodeSubkegiatan)
+		}
+		return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("terjadi kesalahan saat mencari data kode subkegiatan: %v", err)
+	}
+
+	// Cek OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOpd)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("OPD dengan kode %s tidak ditemukan", request.KodeOpd)
+		}
+		return subkegiatan.SubKegiatanOpdResponse{}, err
+	}
+
+	domain := domain.SubKegiatanOpd{
+		Id:              request.Id,
+		KodeSubKegiatan: kode.KodeSubKegiatan,
+		KodeOpd:         opd.KodeOpd,
+		Tahun:           request.Tahun,
+	}
+
+	result, err := service.SubKegiatanTerpilihRepository.UpdateOPD(ctx, tx, domain)
+	if err != nil {
+		return subkegiatan.SubKegiatanOpdResponse{}, err
+	}
+
+	response := subkegiatan.SubKegiatanOpdResponse{
+		Id:              result.Id,
+		KodeSubkegiatan: result.KodeSubKegiatan,
+		KodeOpd:         result.KodeOpd,
+		Tahun:           result.Tahun,
+	}
+	return response, nil
+}
+
+func (service *SubKegiatanTerpilihServiceImpl) FindAllOpd(ctx context.Context, kodeOpd, tahun *string) ([]subkegiatan.SubKegiatanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	result, err := service.SubKegiatanTerpilihRepository.FindallOpd(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []subkegiatan.SubKegiatanOpdResponse
+	for _, sub := range result {
+		kode, _ := service.SubKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, sub.KodeSubKegiatan)
+		opd, _ := service.opdRepository.FindByKodeOpd(ctx, tx, sub.KodeOpd)
+
+		response := subkegiatan.SubKegiatanOpdResponse{
+			Id:              sub.Id,
+			KodeSubkegiatan: kode.KodeSubKegiatan,
+			NamaSubkegiatan: kode.NamaSubKegiatan,
+			KodeOpd:         opd.KodeOpd,
+			NamaOpd:         opd.NamaOpd,
+			Tahun:           sub.Tahun,
+		}
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+func (service *SubKegiatanTerpilihServiceImpl) FindById(ctx context.Context, id int) (subkegiatan.SubKegiatanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return subkegiatan.SubKegiatanOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	result, err := service.SubKegiatanTerpilihRepository.FindById(ctx, tx, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return subkegiatan.SubKegiatanOpdResponse{}, fmt.Errorf("subkegiatan dengan id %d tidak ditemukan", id)
+		}
+		return subkegiatan.SubKegiatanOpdResponse{}, err
+	}
+	kode, _ := service.SubKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, result.KodeSubKegiatan)
+	opd, _ := service.opdRepository.FindByKodeOpd(ctx, tx, result.KodeOpd)
+
+	response := subkegiatan.SubKegiatanOpdResponse{
+		Id:              result.Id,
+		KodeSubkegiatan: kode.KodeSubKegiatan,
+		NamaSubkegiatan: kode.NamaSubKegiatan,
+		KodeOpd:         result.KodeOpd,
+		NamaOpd:         opd.NamaOpd,
+		Tahun:           result.Tahun,
+	}
+
+	return response, nil
+}
+
+func (service *SubKegiatanTerpilihServiceImpl) DeleteOpd(ctx context.Context, id int) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	err = service.SubKegiatanTerpilihRepository.DeleteSubOpd(ctx, tx, id)
+	if err != nil {
+		return err
 	}
 
 	return nil

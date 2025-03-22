@@ -360,6 +360,15 @@ var misiPemdaSet = wire.NewSet(
 	wire.Bind(new(controller.MisiPemdaController), new(*controller.MisiPemdaControllerImpl)),
 )
 
+var matrixRenstraSet = wire.NewSet(
+	repository.NewMatrixRenstraRepositoryImpl,
+	wire.Bind(new(repository.MatrixRenstraRepository), new(*repository.MatrixRenstraRepositoryImpl)),
+	service.NewMatrixRenstraServiceImpl,
+	wire.Bind(new(service.MatrixRenstraService), new(*service.MatrixRenstraServiceImpl)),
+	controller.NewMatrixRenstraControllerImpl,
+	wire.Bind(new(controller.MatrixRenstraController), new(*controller.MatrixRenstraControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -403,6 +412,7 @@ func InitializeServer() *http.Server {
 		sasaranOpdSet,
 		visiPemdaSet,
 		misiPemdaSet,
+		matrixRenstraSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

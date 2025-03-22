@@ -1,0 +1,1 @@
+ALTER TABLE tb_master_kegiatan MODIFY COLUMN nama_kegiatan VARCHAR(255);

@@ -1,0 +1,4 @@
+ALTER TABLE tb_indikator 
+ADD COLUMN kode VARCHAR(255),
+ADD COLUMN kode_opd VARCHAR(255),
+ADD COLUMN pagu_anggaran BIGINT UNSIGNED;

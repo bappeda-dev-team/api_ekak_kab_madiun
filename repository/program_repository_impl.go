@@ -16,8 +16,8 @@ func NewProgramRepositoryImpl() *ProgramRepositoryImpl {
 }
 
 func (repository *ProgramRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, program domainmaster.ProgramKegiatan) (domainmaster.ProgramKegiatan, error) {
-	scriptProgram := "INSERT INTO tb_master_program (id, kode_program, nama_program, kode_opd, tahun, is_active) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, scriptProgram, program.Id, program.KodeProgram, program.NamaProgram, program.KodeOPD, program.Tahun, program.IsActive)
+	scriptProgram := "INSERT INTO tb_master_program (id, kode_program, nama_program, tahun, is_active) VALUES (?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, scriptProgram, program.Id, program.KodeProgram, program.NamaProgram, program.Tahun, program.IsActive)
 	if err != nil {
 		return domainmaster.ProgramKegiatan{}, err
 	}
@@ -40,8 +40,8 @@ func (repository *ProgramRepositoryImpl) Create(ctx context.Context, tx *sql.Tx,
 }
 
 func (repository *ProgramRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, program domainmaster.ProgramKegiatan) (domainmaster.ProgramKegiatan, error) {
-	scriptProgram := "UPDATE tb_master_program SET kode_program = ?, nama_program = ?, kode_opd = ?, tahun = ?, is_active = ? WHERE id = ?"
-	_, err := tx.ExecContext(ctx, scriptProgram, program.KodeProgram, program.NamaProgram, program.KodeOPD, program.Tahun, program.IsActive, program.Id)
+	scriptProgram := "UPDATE tb_master_program SET kode_program = ?, nama_program = ?, tahun = ?, is_active = ? WHERE id = ?"
+	_, err := tx.ExecContext(ctx, scriptProgram, program.KodeProgram, program.NamaProgram, program.Tahun, program.IsActive, program.Id)
 	if err != nil {
 		return domainmaster.ProgramKegiatan{}, err
 	}
@@ -125,7 +125,7 @@ func (repository *ProgramRepositoryImpl) FindTargetByIndikatorId(ctx context.Con
 
 func (repository *ProgramRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string) (domainmaster.ProgramKegiatan, error) {
 	// Query untuk mendapatkan data program
-	scriptProgram := "SELECT id, kode_program, nama_program, kode_opd, tahun, is_active FROM tb_master_program WHERE id = ?"
+	scriptProgram := "SELECT id, kode_program, nama_program, tahun, is_active FROM tb_master_program WHERE id = ?"
 	rows, err := tx.QueryContext(ctx, scriptProgram, id)
 	if err != nil {
 		return domainmaster.ProgramKegiatan{}, fmt.Errorf("gagal mengambil data program: %v", err)
@@ -142,7 +142,6 @@ func (repository *ProgramRepositoryImpl) FindById(ctx context.Context, tx *sql.T
 		&program.Id,
 		&program.KodeProgram,
 		&program.NamaProgram,
-		&program.KodeOPD,
 		&program.Tahun,
 		&program.IsActive,
 	)
@@ -170,7 +169,7 @@ func (repository *ProgramRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx,
 }
 
 func (repository *ProgramRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) ([]domainmaster.ProgramKegiatan, error) {
-	script := "SELECT id, kode_program, nama_program, kode_opd, tahun, is_active FROM tb_master_program ORDER BY id"
+	script := "SELECT id, kode_program, nama_program, tahun, is_active FROM tb_master_program ORDER BY id"
 
 	rows, err := tx.QueryContext(ctx, script)
 	if err != nil {
@@ -185,7 +184,6 @@ func (repository *ProgramRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 			&program.Id,
 			&program.KodeProgram,
 			&program.NamaProgram,
-			&program.KodeOPD,
 			&program.Tahun,
 			&program.IsActive,
 		)

@@ -1,0 +1,1 @@
+DROP TABLE tb_subkegiatan_opd;

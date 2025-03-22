@@ -38,6 +38,17 @@ ketikkan perintah:
 go run main.go
 ```
 
+untuk hot reload(only macOS/linux)
+
+install
+```sh
+go install github.com/cespare/reflex@latest
+```
+
+```sh
+reflex -s -r '\.go$$' go run .
+```
+
 untuk menjalankan seeder, ketikkan perintah:
 
 ```sh

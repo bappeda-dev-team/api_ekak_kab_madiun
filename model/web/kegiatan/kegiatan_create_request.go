@@ -3,7 +3,6 @@ package kegiatan
 type KegiatanCreateRequest struct {
 	NamaKegiatan string `json:"nama_kegiatan"`
 	KodeKegiatan string `json:"kode_kegiatan"`
-	KodeOPD      string `json:"kode_opd"`
 	Indikator    []IndikatorCreateRequest
 }
 
