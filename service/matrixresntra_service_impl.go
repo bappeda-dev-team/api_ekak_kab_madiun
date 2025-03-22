@@ -350,6 +350,13 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 					BidangUrusan: []programkegiatan.BidangUrusanResponse{},
 				},
 			}
+			// Inisialisasi pagu total untuk setiap tahun
+			for i, tahun := range tahunRange {
+				urusan.PaguAnggaranTotal[i] = programkegiatan.PaguAnggaranTotalResponse{
+					Tahun:        tahun,
+					PaguAnggaran: 0,
+				}
+			}
 			urusanMap[item.KodeUrusan] = urusan
 		}
 
@@ -383,6 +390,7 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 				paguUrusan[tahun],
 				data, // Kirim seluruh data
 			)
+			urusan.PaguAnggaranTotal[i].PaguAnggaran = paguUrusan[tahun]
 		}
 	}
 
