@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -202,4 +203,66 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) DeleteSubOpd(ctx context.Co
 		return fmt.Errorf("error saat menghapus subkegiatan opd: %v", err)
 	}
 	return nil
+}
+
+func (repository *SubKegiatanTerpilihRepositoryImpl) FindAllSubkegiatanByBidangUrusanOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.SubKegiatan, error) {
+	// Ekstrak kode bidang urusan dari kode OPD
+	var bidangUrusanCodes []string
+
+	// Split kode OPD untuk mendapatkan bidang urusan
+	// Format: 5.01.5.05.0.00.01.0000
+	parts := strings.Split(kodeOpd, ".")
+	if len(parts) >= 4 {
+		// Ambil bidang urusan pertama (5.01)
+		bidangUrusanCodes = append(bidangUrusanCodes, parts[0]+"."+parts[1])
+		// Ambil bidang urusan kedua (5.05)
+		bidangUrusanCodes = append(bidangUrusanCodes, parts[2]+"."+parts[3])
+		// Ambil bidang urusan ketiga (0.00)
+		bidangUrusanCodes = append(bidangUrusanCodes, parts[4]+"."+parts[5])
+	}
+
+	// Tambahkan kode X.XX yang harus ada di semua OPD
+	bidangUrusanCodes = append(bidangUrusanCodes, "X.XX")
+
+	// Buat query dengan UNION untuk menggabungkan hasil dari setiap bidang urusan
+	var queries []string
+	var params []interface{}
+
+	for _, bidangUrusan := range bidangUrusanCodes {
+		query := `
+            SELECT DISTINCT s.kode_subkegiatan, s.nama_subkegiatan
+            FROM tb_subkegiatan s
+            WHERE s.kode_subkegiatan LIKE ?
+        `
+		// Gunakan pattern matching untuk mencari subkegiatan dengan kode bidang urusan yang sesuai
+		// Contoh: untuk bidang urusan 5.01, cari subkegiatan yang dimulai dengan 5.01
+		params = append(params, bidangUrusan+"%")
+		queries = append(queries, query)
+	}
+
+	// Gabungkan semua query dengan UNION
+	finalQuery := strings.Join(queries, " UNION ")
+	finalQuery += " ORDER BY kode_subkegiatan ASC"
+
+	// Eksekusi query
+	rows, err := tx.QueryContext(ctx, finalQuery, params...)
+	if err != nil {
+		return nil, fmt.Errorf("error saat mengambil data subkegiatan: %v", err)
+	}
+	defer rows.Close()
+
+	var result []domain.SubKegiatan
+	for rows.Next() {
+		var subkegiatan domain.SubKegiatan
+		err := rows.Scan(
+			&subkegiatan.KodeSubKegiatan,
+			&subkegiatan.NamaSubKegiatan,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error saat scanning data subkegiatan: %v", err)
+		}
+		result = append(result, subkegiatan)
+	}
+
+	return result, nil
 }

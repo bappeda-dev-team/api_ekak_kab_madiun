@@ -16,4 +16,5 @@ type SubKegiatanTerpilihService interface {
 	FindAllOpd(ctx context.Context, kodeOpd, tahun *string) ([]subkegiatan.SubKegiatanOpdResponse, error)
 	FindById(ctx context.Context, id int) (subkegiatan.SubKegiatanOpdResponse, error)
 	DeleteOpd(ctx context.Context, id int) error
+	FindAllSubkegiatanByBidangUrusanOpd(ctx context.Context, kodeOpd string) ([]subkegiatan.SubKegiatanResponse, error)
 }

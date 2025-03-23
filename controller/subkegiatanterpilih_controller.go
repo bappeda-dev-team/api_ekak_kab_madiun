@@ -17,4 +17,5 @@ type SubKegiatanTerpilihController interface {
 	FindAllOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeleteOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllSubkegiatanByBidangUrusanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
