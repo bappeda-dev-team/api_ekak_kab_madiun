@@ -37,12 +37,6 @@ func GetConnection() *sql.DB {
 		connStr = dbUrl
 	}
 
-	// dbUrl := os.Getenv("DB_URL")
-
-	// if dbUrl != "" {
-	// 	connStr = dbUrl
-	// }
-
 	db, err := sql.Open("mysql", connStr)
 	if err != nil {
 		log.Fatalf("Error membuka koneksi database: %v", err)
