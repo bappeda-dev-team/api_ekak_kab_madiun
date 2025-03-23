@@ -19,4 +19,5 @@ type SubKegiatanTerpilihRepository interface {
 	FindallOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun *string) ([]domain.SubKegiatanOpd, error)
 	FindById(ctx context.Context, tx *sql.Tx, id int) (domain.SubKegiatanOpd, error)
 	DeleteSubOpd(ctx context.Context, tx *sql.Tx, id int) error
+	FindAllSubkegiatanByBidangUrusanOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.SubKegiatan, error)
 }

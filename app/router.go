@@ -374,6 +374,7 @@ func NewRouter(
 	router.PUT("/subkegiatanopd/update/:id", subKegiatanTerpilihController.UpdateOpd)
 	router.GET("/subkegiatanopd/findall/:kode_opd/:tahun", subKegiatanTerpilihController.FindAllOpd)
 	router.GET("/subkegiatanopd/detail/:id", subKegiatanTerpilihController.FindById)
+	router.GET("/subkegiatanopd/bidangurusan/:kode_opd", subKegiatanTerpilihController.FindAllSubkegiatanByBidangUrusanOpd)
 
 	//matrix renstra
 	router.GET("/matrix_renstra/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
