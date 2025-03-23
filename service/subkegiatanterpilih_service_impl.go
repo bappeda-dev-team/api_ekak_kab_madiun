@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -353,4 +354,48 @@ func (service *SubKegiatanTerpilihServiceImpl) DeleteOpd(ctx context.Context, id
 	}
 
 	return nil
+}
+
+func (service *SubKegiatanTerpilihServiceImpl) FindAllSubkegiatanByBidangUrusanOpd(ctx context.Context, kodeOpd string) ([]subkegiatan.SubKegiatanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi format kode OPD
+	if !isValidKodeOpd(kodeOpd) {
+		return nil, fmt.Errorf("format kode OPD tidak valid")
+	}
+
+	// Cek apakah OPD ada
+	_, err = service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("OPD dengan kode %s tidak ditemukan", kodeOpd)
+		}
+		return nil, err
+	}
+
+	result, err := service.SubKegiatanTerpilihRepository.FindAllSubkegiatanByBidangUrusanOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []subkegiatan.SubKegiatanResponse
+	for _, sub := range result {
+		response := subkegiatan.SubKegiatanResponse{
+			KodeSubKegiatan: sub.KodeSubKegiatan,
+			NamaSubKegiatan: sub.NamaSubKegiatan,
+		}
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+// Helper function untuk validasi format kode OPD
+func isValidKodeOpd(kodeOpd string) bool {
+	parts := strings.Split(kodeOpd, ".")
+	return len(parts) == 8 // Format: 5.01.5.05.0.00.01.0000
 }

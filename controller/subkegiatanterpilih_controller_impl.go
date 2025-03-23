@@ -266,3 +266,25 @@ func (controller *SubKegiatanTerpilihControllerImpl) DeleteOpd(writer http.Respo
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *SubKegiatanTerpilihControllerImpl) FindAllSubkegiatanByBidangUrusanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+
+	subkegiatanResponse, err := controller.SubKegiatanTerpilihService.FindAllSubkegiatanByBidangUrusanOpd(request.Context(), kodeOpd)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success find all subkegiatan by bidang urusan opd",
+		Data:   subkegiatanResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
