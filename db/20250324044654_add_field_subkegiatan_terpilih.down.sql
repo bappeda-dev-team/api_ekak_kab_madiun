@@ -1,0 +1,1 @@
+ALTER TABLE tb_subkegiatan_terpilih DROP COLUMN kode_subkegiatan;

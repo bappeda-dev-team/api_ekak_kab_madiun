@@ -713,13 +713,14 @@ func (service *RencanaKinerjaServiceImpl) FindAllRincianKak(ctx context.Context,
 		subKegiatanTerpilihList, err := service.SubKegiatanTerpilihRepository.FindAll(ctx, tx, rencanaKinerja.Id)
 		if err != nil {
 			log.Printf("Warning: gagal mengambil data subkegiatan terpilih: %v", err)
+			log.Printf("Kode subkegiatan: %v", subKegiatanTerpilihList)
 			return nil, fmt.Errorf("gagal mengambil data subkegiatan terpilih: %v", err)
 		}
 
 		var subKegiatanResponses []subkegiatan.SubKegiatanResponse
 		for _, st := range subKegiatanTerpilihList {
-			// Ambil detail subkegiatan menggunakan service
-			subKegiatanDetail, err := service.SubKegiatanService.FindById(ctx, st.SubkegiatanId)
+			// Menggunakan FindByKodeSubKegiatan alih-alih FindById
+			subKegiatanDetail, err := service.SubKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, st.KodeSubKegiatan)
 			if err != nil {
 				log.Printf("Warning: gagal mengambil detail subkegiatan: %v", err)
 				continue
@@ -732,27 +733,24 @@ func (service *RencanaKinerjaServiceImpl) FindAllRincianKak(ctx context.Context,
 					targetResponses = append(targetResponses, subkegiatan.TargetResponse{
 						Id:              target.Id,
 						IndikatorId:     target.IndikatorId,
-						TargetIndikator: target.TargetIndikator,
-						SatuanIndikator: target.SatuanIndikator,
+						TargetIndikator: target.Target,
+						SatuanIndikator: target.Satuan,
 					})
 				}
 
 				indikatorResponses = append(indikatorResponses, subkegiatan.IndikatorResponse{
 					Id:            indikator.Id,
-					NamaIndikator: indikator.NamaIndikator,
+					NamaIndikator: indikator.Indikator,
 					Target:        targetResponses,
 				})
 			}
 
 			subKegiatanResponses = append(subKegiatanResponses, subkegiatan.SubKegiatanResponse{
-				SubKegiatanTerpilihId: st.Id, // Tambahkan ini
+				SubKegiatanTerpilihId: st.Id,
 				Id:                    subKegiatanDetail.Id,
 				RekinId:               rencanaKinerja.Id,
-				Status:                subKegiatanDetail.Status,
 				KodeSubKegiatan:       subKegiatanDetail.KodeSubKegiatan,
 				NamaSubKegiatan:       subKegiatanDetail.NamaSubKegiatan,
-				KodeOpd:               subKegiatanDetail.KodeOpd,
-				Tahun:                 subKegiatanDetail.Tahun,
 				Indikator:             indikatorResponses,
 			})
 		}

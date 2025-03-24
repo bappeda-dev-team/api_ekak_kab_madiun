@@ -23,8 +23,8 @@ type TargetCreateRequest struct {
 }
 
 type SubKegiatanCreateRekinRequest struct {
-	IdSubKegiatan string `json:"id_subkegiatan" validate:"required"`
-	RekinId       string `json:"rekin_id" validate:"required"`
+	KodeSubKegiatan string `json:"kode_subkegiatan" validate:"required"`
+	RekinId         string `json:"rekin_id" validate:"required"`
 }
 
 type SubKegiatanOpdCreateRequest struct {

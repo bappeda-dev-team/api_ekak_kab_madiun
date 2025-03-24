@@ -1,0 +1,1 @@
+ALTER TABLE tb_subkegiatan_terpilih ADD COLUMN kode_subkegiatan VARCHAR(255);
