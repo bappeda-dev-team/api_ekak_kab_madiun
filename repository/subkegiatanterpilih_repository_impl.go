@@ -44,16 +44,16 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) FindByIdAndKodeSubKegiatan(
 	return subKegiatanTerpilih, err
 }
 
-func (repository *SubKegiatanTerpilihRepositoryImpl) CreateRekin(ctx context.Context, tx *sql.Tx, idSubKegiatan string, rekinId string) error {
+func (repository *SubKegiatanTerpilihRepositoryImpl) CreateRekin(ctx context.Context, tx *sql.Tx, idSubKegiatan string, rekinId string, kodeSubKegiatan string) error {
 	// Validasi keberadaan subkegiatan di tb_subkegiatan
-	checkSubkegiatanScript := "SELECT COUNT(*) FROM tb_subkegiatan WHERE id = ?"
+	checkSubkegiatanScript := "SELECT COUNT(*) FROM tb_subkegiatan_opd WHERE kode_subkegiatan = ?"
 	var subkegiatanCount int
-	err := tx.QueryRowContext(ctx, checkSubkegiatanScript, idSubKegiatan).Scan(&subkegiatanCount)
+	err := tx.QueryRowContext(ctx, checkSubkegiatanScript, kodeSubKegiatan).Scan(&subkegiatanCount)
 	if err != nil {
 		return fmt.Errorf("error saat memeriksa data subkegiatan: %v", err)
 	}
 	if subkegiatanCount == 0 {
-		return fmt.Errorf("subkegiatan dengan id %s tidak ditemukan di tb_subkegiatan", idSubKegiatan)
+		return fmt.Errorf("subkegiatan dengan kode %s belum dipilih opd", kodeSubKegiatan)
 	}
 
 	// Hapus data subkegiatan terpilih yang lama untuk rekin_id yang sama
@@ -67,8 +67,8 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) CreateRekin(ctx context.Con
 	newId := uuid.New().String()
 
 	// Insert data baru ke tb_subkegiatan_terpilih
-	script := "INSERT INTO tb_subkegiatan_terpilih (id, subkegiatan_id, rekin_id) VALUES (?, ?, ?)"
-	result, err := tx.ExecContext(ctx, script, newId, idSubKegiatan, rekinId)
+	script := "INSERT INTO tb_subkegiatan_terpilih (id, subkegiatan_id, rekin_id, kode_subkegiatan) VALUES (?, ?, ?, ?)"
+	result, err := tx.ExecContext(ctx, script, newId, idSubKegiatan, rekinId, kodeSubKegiatan)
 	if err != nil {
 		return fmt.Errorf("error saat menyimpan subkegiatan terpilih: %v", err)
 	}
@@ -105,7 +105,7 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) DeleteSubKegiatanTerpilih(c
 }
 
 func (repository *SubKegiatanTerpilihRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.SubKegiatanTerpilih, error) {
-	script := "SELECT id, subkegiatan_id, rekin_id FROM tb_subkegiatan_terpilih WHERE rekin_id = ?"
+	script := "SELECT id, subkegiatan_id, rekin_id, kode_subkegiatan FROM tb_subkegiatan_terpilih WHERE rekin_id = ?"
 	rows, err := tx.QueryContext(ctx, script, rekinId)
 	if err != nil {
 		return nil, fmt.Errorf("error saat mengambil data subkegiatan terpilih: %v", err)
@@ -115,7 +115,7 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) FindAll(ctx context.Context
 	var result []domain.SubKegiatanTerpilih
 	for rows.Next() {
 		var subKegiatanTerpilih domain.SubKegiatanTerpilih
-		err := rows.Scan(&subKegiatanTerpilih.Id, &subKegiatanTerpilih.SubkegiatanId, &subKegiatanTerpilih.RekinId)
+		err := rows.Scan(&subKegiatanTerpilih.Id, &subKegiatanTerpilih.SubkegiatanId, &subKegiatanTerpilih.RekinId, &subKegiatanTerpilih.KodeSubKegiatan)
 		if err != nil {
 			return nil, fmt.Errorf("error saat scanning data subkegiatan terpilih: %v", err)
 		}
@@ -126,11 +126,27 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) FindAll(ctx context.Context
 }
 
 func (repository *SubKegiatanTerpilihRepositoryImpl) CreateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error) {
+	// Cek apakah kombinasi kode_subkegiatan dan kode_opd sudah ada
+	checkScript := "SELECT COUNT(*) FROM tb_subkegiatan_opd WHERE kode_subkegiatan = ? AND kode_opd = ? AND tahun = ?"
+	var count int
+	err := tx.QueryRowContext(ctx, checkScript, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun).Scan(&count)
+	if err != nil {
+		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat memeriksa duplikasi: %v", err)
+	}
+
+	// Jika sudah ada kombinasi yang sama, kembalikan error
+	if count > 0 {
+		return domain.SubKegiatanOpd{}, fmt.Errorf("subkegiatan dengan kode %s sudah ada di OPD %s untuk tahun %s",
+			subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun)
+	}
+
+	// Jika belum ada, lanjutkan dengan insert
 	script := "INSERT INTO tb_subkegiatan_opd (id, kode_subkegiatan, kode_opd, tahun) VALUES (?,?,?,?)"
 	result, err := tx.ExecContext(ctx, script, subkegiatanOpd.Id, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun)
 	if err != nil {
 		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat memilih subkegiatan opd: %v", err)
 	}
+
 	lastInsertId, err := result.LastInsertId()
 	if err != nil {
 		return subkegiatanOpd, err
@@ -139,10 +155,22 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) CreateOPD(ctx context.Conte
 
 	return subkegiatanOpd, nil
 }
-
 func (repository *SubKegiatanTerpilihRepositoryImpl) UpdateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error) {
+	checkScript := "SELECT COUNT(*) FROM tb_subkegiatan_opd WHERE kode_subkegiatan = ? AND kode_opd = ? AND tahun = ?"
+	var count int
+	err := tx.QueryRowContext(ctx, checkScript, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun).Scan(&count)
+	if err != nil {
+		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat memeriksa duplikasi: %v", err)
+	}
+
+	// Jika sudah ada kombinasi yang sama, kembalikan error
+	if count > 0 {
+		return domain.SubKegiatanOpd{}, fmt.Errorf("subkegiatan dengan kode %s sudah ada di OPD %s untuk tahun %s",
+			subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun)
+	}
+
 	script := "UPDATE tb_subkegiatan_opd SET kode_subkegiatan = ?, kode_opd = ?, tahun = ? WHERE id = ?"
-	_, err := tx.ExecContext(ctx, script, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun, subkegiatanOpd.Id)
+	_, err = tx.ExecContext(ctx, script, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun, subkegiatanOpd.Id)
 	if err != nil {
 		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat mengupdate subkegiatan opd: %v", err)
 	}
@@ -265,4 +293,16 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) FindAllSubkegiatanByBidangU
 	}
 
 	return result, nil
+}
+
+func (repository *SubKegiatanTerpilihRepositoryImpl) FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domain.SubKegiatan, error) {
+	script := "SELECT id, kode_subkegiatan, nama_subkegiatan FROM tb_subkegiatan_opd WHERE kode_subkegiatan = ?"
+	row := tx.QueryRowContext(ctx, script, kodeSubKegiatan)
+
+	var sub domain.SubKegiatan
+	err := row.Scan(&sub.Id, &sub.KodeSubKegiatan, &sub.NamaSubKegiatan)
+	if err != nil {
+		return domain.SubKegiatan{}, fmt.Errorf("error saat mencari subkegiatan: %v", err)
+	}
+	return sub, nil
 }

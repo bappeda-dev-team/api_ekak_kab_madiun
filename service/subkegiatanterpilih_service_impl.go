@@ -125,7 +125,7 @@ func (service *SubKegiatanTerpilihServiceImpl) Delete(ctx context.Context, id st
 
 func (service *SubKegiatanTerpilihServiceImpl) CreateRekin(ctx context.Context, request subkegiatan.SubKegiatanCreateRekinRequest) ([]subkegiatan.SubKegiatanResponse, error) {
 	// Konversi single ID ke array
-	idSubKegiatanArray := []string{request.IdSubKegiatan}
+	kodeSubKegiatanArray := []string{request.KodeSubKegiatan}
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -141,27 +141,27 @@ func (service *SubKegiatanTerpilihServiceImpl) CreateRekin(ctx context.Context, 
 
 	var updatedSubKegiatans []domain.SubKegiatan
 
-	// Proses setiap ID usulan
-	for _, idSubKegiatan := range idSubKegiatanArray {
+	// Proses setiap kdde
+	for _, kodeSubKegiatan := range kodeSubKegiatanArray {
 		// Cek apakah usulan dengan ID yang diberikan ada
-		existingSubKegiatan, err := service.SubKegiatanRepository.FindById(ctx, tx, idSubKegiatan)
+		existingSubKegiatan, err := service.SubKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, kodeSubKegiatan)
 		if err != nil {
-			return nil, fmt.Errorf("subkegiatan dengan id %s tidak ditemukan: %v", idSubKegiatan, err)
+			return nil, fmt.Errorf("subkegiatan dengan kode %s tidak ditemukan: %v", kodeSubKegiatan, err)
 		}
 
 		// Cek apakah usulan sudah memiliki rekin_id
 		if existingSubKegiatan.RekinId != "" {
-			return nil, fmt.Errorf("subkegiatan dengan id %s sudah memiliki rencana kinerja", idSubKegiatan)
+			return nil, fmt.Errorf("subkegiatan dengan kode %s sudah memiliki rencana kinerja", kodeSubKegiatan)
 		}
 
 		// Update rekin_id dan status
-		err = service.SubKegiatanTerpilihRepository.CreateRekin(ctx, tx, idSubKegiatan, request.RekinId)
+		err = service.SubKegiatanTerpilihRepository.CreateRekin(ctx, tx, existingSubKegiatan.Id, request.RekinId, existingSubKegiatan.KodeSubKegiatan)
 		if err != nil {
-			return nil, fmt.Errorf("gagal mengupdate rekin untuk subkegiatan %s: %v", idSubKegiatan, err)
+			return nil, fmt.Errorf("gagal mengupdate rekin untuk subkegiatan %s: %v", existingSubKegiatan.KodeSubKegiatan, err)
 		}
 
 		// Ambil data usulan yang sudah diupdate
-		updatedSubKegiatan, err := service.SubKegiatanRepository.FindById(ctx, tx, idSubKegiatan)
+		updatedSubKegiatan, err := service.SubKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, kodeSubKegiatan)
 		if err != nil {
 			return nil, fmt.Errorf("gagal mengambil data subkegiatan yang diupdate: %v", err)
 		}

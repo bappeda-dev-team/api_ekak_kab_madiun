@@ -15,17 +15,20 @@ import (
 type MatrixRenstraServiceImpl struct {
 	MatrixRenstraRepository repository.MatrixRenstraRepository
 	PeriodeRepository       repository.PeriodeRepository
+	PegawaiRepository       repository.PegawaiRepository
 	DB                      *sql.DB
 }
 
 func NewMatrixRenstraServiceImpl(
 	matrixRenstraRepository repository.MatrixRenstraRepository,
 	periodeRepository repository.PeriodeRepository,
+	pegawaiRepository repository.PegawaiRepository,
 	db *sql.DB,
 ) *MatrixRenstraServiceImpl {
 	return &MatrixRenstraServiceImpl{
 		MatrixRenstraRepository: matrixRenstraRepository,
 		PeriodeRepository:       periodeRepository,
+		PegawaiRepository:       pegawaiRepository,
 		DB:                      db,
 	}
 }
@@ -43,8 +46,8 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatan(ctx context.Contex
 		return nil, err
 	}
 
-	// Transform data
-	result := service.transformToResponse(data, kodeOpd, tahunAwal, tahunAkhir)
+	// Transform data dengan mengirimkan ctx dan tx
+	result := service.transformToResponse(ctx, tx, data, kodeOpd, tahunAwal, tahunAkhir)
 
 	err = tx.Commit()
 	if err != nil {
@@ -56,7 +59,7 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatan(ctx context.Contex
 
 //perubahan
 
-func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKegiatanQuery, kodeOpd string, tahunAwal string, tahunAkhir string) []programkegiatan.UrusanDetailResponse {
+func (service *MatrixRenstraServiceImpl) transformToResponse(ctx context.Context, tx *sql.Tx, data []domain.SubKegiatanQuery, kodeOpd string, tahunAwal string, tahunAkhir string) []programkegiatan.UrusanDetailResponse {
 	// Helper function untuk membuat indikator
 	createIndikator := func(kode string, tahun string, pagu int64, data []domain.SubKegiatanQuery) programkegiatan.IndikatorResponse {
 		for _, item := range data {
@@ -171,12 +174,16 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(data []domain.SubKe
 			}
 		}
 
+		pegawai, _ := service.PegawaiRepository.FindByNip(ctx, tx, item.PegawaiId)
+
 		if subKegiatan == nil {
 			newSubKegiatan := programkegiatan.SubKegiatanResponse{
-				Kode:      item.KodeSubKegiatan,
-				Nama:      item.NamaSubKegiatan,
-				Jenis:     "subkegiatans",
-				Indikator: make([]programkegiatan.IndikatorResponse, len(tahunRange)),
+				Kode:        item.KodeSubKegiatan,
+				Nama:        item.NamaSubKegiatan,
+				Jenis:       "subkegiatans",
+				PegawaiId:   item.PegawaiId,
+				NamaPegawai: pegawai.NamaPegawai,
+				Indikator:   make([]programkegiatan.IndikatorResponse, len(tahunRange)),
 			}
 
 			// Inisialisasi indikator untuk setiap tahun

@@ -16,10 +16,11 @@ func NewMatrixRenstraRepositoryImpl() *MatrixRenstraRepositoryImpl {
 func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.SubKegiatanQuery, error) {
 	checkQuery := `
     SELECT COUNT(*) 
-    FROM tb_subkegiatan_opd 
-    WHERE kode_opd = ? 
-    AND tahun BETWEEN ? AND ?
-`
+    FROM tb_subkegiatan_terpilih st
+    JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+    WHERE rk.kode_opd = ? 
+    AND rk.tahun BETWEEN ? AND ?
+    `
 
 	var count int
 	err := tx.QueryRowContext(ctx, checkQuery, kodeOpd, tahunAwal, tahunAkhir).Scan(&count)
@@ -44,15 +45,17 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
             k.nama_kegiatan,
             s.kode_subkegiatan,
             s.nama_subkegiatan,
-            so.tahun as tahun_subkegiatan
-        FROM tb_subkegiatan_opd so
-        JOIN tb_subkegiatan s ON so.kode_subkegiatan = s.kode_subkegiatan
+            rk.tahun as tahun_subkegiatan,
+            rk.pegawai_id
+        FROM tb_subkegiatan_terpilih st
+        JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+        JOIN tb_subkegiatan s ON st.kode_subkegiatan = s.kode_subkegiatan
         JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
         JOIN tb_master_program p ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
         JOIN tb_bidang_urusan bu ON LEFT(p.kode_program, LENGTH(bu.kode_bidang_urusan)) = bu.kode_bidang_urusan
         JOIN tb_urusan u ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
-        WHERE so.kode_opd = ?
-        AND so.tahun BETWEEN ? AND ? -- Tambahan filter tahun disini
+        WHERE rk.kode_opd = ?
+        AND rk.tahun BETWEEN ? AND ?
     )
     SELECT 
         h.kode_urusan,
@@ -66,6 +69,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
         h.kode_subkegiatan,
         h.nama_subkegiatan,
         h.tahun_subkegiatan,
+        h.pegawai_id,
         i.id as indikator_id,
         i.kode as indikator_kode,
         i.indikator,
@@ -94,7 +98,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
         h.kode_kegiatan,
         h.kode_subkegiatan,
         i.tahun
-`
+    `
 
 	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahunAwal, tahunAkhir, kodeOpd, tahunAwal, tahunAkhir)
 	if err != nil {
@@ -120,6 +124,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 			&data.KodeSubKegiatan,
 			&data.NamaSubKegiatan,
 			&data.TahunSubKegiatan,
+			&data.PegawaiId,
 			&indikatorId,
 			&indikatorKode,
 			&indikator,
@@ -153,7 +158,6 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 
 	return result, nil
 }
-
 func (repository *MatrixRenstraRepositoryImpl) SaveIndikator(ctx context.Context, tx *sql.Tx, indikator domain.Indikator) error {
 	query := `INSERT INTO tb_indikator (id, kode, kode_opd, indikator, tahun, pagu_anggaran) VALUES (?, ?, ?, ?, ?, ?)`
 	_, err := tx.ExecContext(ctx, query, indikator.Id, indikator.Kode, indikator.KodeOpd, indikator.Indikator, indikator.Tahun, indikator.PaguAnggaran)

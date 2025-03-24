@@ -46,6 +46,7 @@ type SubKegiatanQuery struct {
 	KodeSubKegiatan  string
 	NamaSubKegiatan  string
 	TahunSubKegiatan string
+	PegawaiId        string
 	IndikatorId      string
 	IndikatorKode    string
 	Indikator        string
