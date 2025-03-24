@@ -69,11 +69,13 @@ type KegiatanResponse struct {
 }
 
 type SubKegiatanResponse struct {
-	Kode      string              `json:"kode"`
-	Nama      string              `json:"nama"`
-	Jenis     string              `json:"jenis"`
-	Tahun     string              `json:"tahun"`
-	Indikator []IndikatorResponse `json:"indikator"`
+	Kode        string              `json:"kode"`
+	Nama        string              `json:"nama"`
+	Jenis       string              `json:"jenis"`
+	Tahun       string              `json:"tahun,omitempty"`
+	PegawaiId   string              `json:"pegawai_id"`
+	NamaPegawai string              `json:"nama_pegawai"`
+	Indikator   []IndikatorResponse `json:"indikator"`
 }
 
 type PaguAnggaranTotalResponse struct {
