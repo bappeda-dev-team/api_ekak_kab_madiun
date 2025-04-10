@@ -555,9 +555,8 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalResponse
 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
 		for _, rk := range rencanaKinerjaList {
+			// Indikator rencana kinerja
 			var indikatorRekinResponses []pohonkinerja.IndikatorResponse
-
-			// Hanya ambil indikator jika rencana kinerja memiliki ID
 			if rk.Id != "" {
 				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
 				if err == nil {
@@ -584,28 +583,9 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 				}
 			}
 
-			if rk.KodeKegiatan != "" {
-				// Ambil indikator kegiatan
-				indikatorKegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
-					ctx,
-					tx,
-					rk.KodeKegiatan,
-					operational.KodeOpd,
-					operational.Tahun,
-				)
-				if err == nil {
-					for _, ind := range indikatorKegiatan {
-						indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							Kode:          ind.Kode,
-							NamaIndikator: ind.Indikator,
-						})
-					}
-				}
-			}
-
+			// Indikator subkegiatan
+			var indikatorSubkegiatanResponses []pohonkinerja.IndikatorResponse
 			if rk.KodeSubKegiatan != "" {
-				// Ambil indikator subkegiatan
 				indikatorSubkegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
 					ctx,
 					tx,
@@ -615,7 +595,28 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 				)
 				if err == nil {
 					for _, ind := range indikatorSubkegiatan {
-						indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
+						indikatorSubkegiatanResponses = append(indikatorSubkegiatanResponses, pohonkinerja.IndikatorResponse{
+							Id:            ind.Id,
+							Kode:          ind.Kode,
+							NamaIndikator: ind.Indikator,
+						})
+					}
+				}
+			}
+
+			// Indikator kegiatan
+			var indikatorKegiatanResponses []pohonkinerja.IndikatorResponse
+			if rk.KodeKegiatan != "" {
+				indikatorKegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+					ctx,
+					tx,
+					rk.KodeKegiatan,
+					operational.KodeOpd,
+					operational.Tahun,
+				)
+				if err == nil {
+					for _, ind := range indikatorKegiatan {
+						indikatorKegiatanResponses = append(indikatorKegiatanResponses, pohonkinerja.IndikatorResponse{
 							Id:            ind.Id,
 							Kode:          ind.Kode,
 							NamaIndikator: ind.Indikator,
@@ -625,18 +626,20 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 			}
 
 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalResponse{
-				Id:                 rk.Id,
-				IdPohon:            operational.Id,
-				NamaPohon:          operational.NamaPohon,
-				NamaRencanaKinerja: rk.NamaRencanaKinerja,
-				Tahun:              operational.Tahun,
-				PegawaiId:          rk.PegawaiId,
-				NamaPegawai:        rk.NamaPegawai,
-				KodeSubkegiatan:    rk.KodeSubKegiatan,
-				NamaSubkegiatan:    rk.NamaSubKegiatan,
-				KodeKegiatan:       rk.KodeKegiatan,
-				NamaKegiatan:       rk.NamaKegiatan,
-				Indikator:          indikatorRekinResponses,
+				Id:                   rk.Id,
+				IdPohon:              operational.Id,
+				NamaPohon:            operational.NamaPohon,
+				NamaRencanaKinerja:   rk.NamaRencanaKinerja,
+				Tahun:                operational.Tahun,
+				PegawaiId:            rk.PegawaiId,
+				NamaPegawai:          rk.NamaPegawai,
+				KodeSubkegiatan:      rk.KodeSubKegiatan,
+				NamaSubkegiatan:      rk.NamaSubKegiatan,
+				IndikatorSubkegiatan: indikatorSubkegiatanResponses, // Indikator subkegiatan dipisah
+				KodeKegiatan:         rk.KodeKegiatan,
+				NamaKegiatan:         rk.NamaKegiatan,
+				IndikatorKegiatan:    indikatorKegiatanResponses, // Indikator kegiatan dipisah
+				Indikator:            indikatorRekinResponses,    // Hanya indikator rencana kinerja
 			})
 		}
 	}
@@ -655,7 +658,7 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 		},
 		IsActive:       operational.IsActive,
 		RencanaKinerja: rencanaKinerjaResponses,
-		Indikator:      indikatorMap[operational.Id], // Indikator pohon kinerja
+		Indikator:      indikatorMap[operational.Id],
 	}
 
 	// Build operational N responses jika ada
