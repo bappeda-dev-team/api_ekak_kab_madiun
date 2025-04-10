@@ -338,14 +338,31 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 	// Convert program map ke slice dan sort
 	var programList []pohonkinerja.ProgramResponse
 	for kodeProgram, namaProgram := range programMap {
+		// Ambil indikator program
+		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+		indikatorProgram, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+			ctx,
+			tx,
+			kodeProgram,
+			strategic.KodeOpd,
+			strategic.Tahun,
+		)
+		if err == nil {
+			for _, ind := range indikatorProgram {
+				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+					Id:            ind.Id,
+					Kode:          ind.Kode,
+					NamaIndikator: ind.Indikator,
+				})
+			}
+		}
+
 		programList = append(programList, pohonkinerja.ProgramResponse{
 			KodeProgram: kodeProgram,
 			NamaProgram: namaProgram,
+			Indikator:   indikatorProgramResponses,
 		})
 	}
-	sort.Slice(programList, func(i, j int) bool {
-		return programList[i].KodeProgram < programList[j].KodeProgram
-	})
 
 	strategicResp := pohonkinerja.StrategicCascadingOpdResponse{
 		Id:         strategic.Id,
@@ -466,14 +483,31 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 	// Convert program map ke slice dan sort
 	var programList []pohonkinerja.ProgramResponse
 	for kodeProgram, namaProgram := range programMap {
+		// Ambil indikator program
+		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+		indikatorProgram, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+			ctx,
+			tx,
+			kodeProgram,
+			tactical.KodeOpd,
+			tactical.Tahun,
+		)
+		if err == nil {
+			for _, ind := range indikatorProgram {
+				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+					Id:            ind.Id,
+					Kode:          ind.Kode,
+					NamaIndikator: ind.Indikator,
+				})
+			}
+		}
+
 		programList = append(programList, pohonkinerja.ProgramResponse{
 			KodeProgram: kodeProgram,
 			NamaProgram: namaProgram,
+			Indikator:   indikatorProgramResponses,
 		})
 	}
-	sort.Slice(programList, func(i, j int) bool {
-		return programList[i].KodeProgram < programList[j].KodeProgram
-	})
 
 	tacticalResp := pohonkinerja.TacticalCascadingOpdResponse{
 		Id:         tactical.Id,
@@ -518,64 +552,6 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
 	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.OperationalCascadingOpdResponse {
 
-	// Konversi rencana kinerja ke response format
-	// var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalResponse
-	// if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
-	// 	for _, rk := range rencanaKinerjaList {
-	// 		// Validasi pegawai_id jika diperlukan
-	// 		if rk.PegawaiId != "" {
-	// 			pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, rk.PegawaiId)
-	// 			if err == nil && pegawai.Id != "" {
-	// 				rk.PegawaiId = pegawai.Id
-	// 				rk.NamaPegawai = pegawai.NamaPegawai
-	// 			}
-	// 		}
-
-	// 		// Ambil indikator rencana kinerja menggunakan repository yang sudah ada
-	// 		indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
-	// 		var indikatorRekinResponses []pohonkinerja.IndikatorResponse
-	// 		if err == nil {
-	// 			for _, ind := range indikatorRekin {
-	// 				// Ambil target untuk setiap indikator
-	// 				targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-	// 				var targetResponses []pohonkinerja.TargetResponse
-	// 				if err == nil {
-	// 					for _, target := range targets {
-	// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-	// 							Id:              target.Id,
-	// 							IndikatorId:     target.IndikatorId,
-	// 							TargetIndikator: target.Target,
-	// 							SatuanIndikator: target.Satuan,
-	// 						})
-	// 					}
-	// 				}
-
-	// 				indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
-	// 					Id:            ind.Id,
-	// 					IdRekin:       rk.Id,
-	// 					NamaIndikator: ind.Indikator,
-	// 					Target:        targetResponses,
-	// 				})
-	// 			}
-	// 		}
-
-	// 		rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalResponse{
-	// 			Id:                 rk.Id,
-	// 			IdPohon:            operational.Id,
-	// 			NamaPohon:          operational.NamaPohon,
-	// 			NamaRencanaKinerja: rk.NamaRencanaKinerja,
-	// 			Tahun:              operational.Tahun,
-	// 			PegawaiId:          rk.PegawaiId,
-	// 			NamaPegawai:        rk.NamaPegawai,
-	// 			KodeSubkegiatan:    rk.KodeSubKegiatan,
-	// 			NamaSubkegiatan:    rk.NamaSubKegiatan,
-	// 			KodeKegiatan:       rk.KodeKegiatan,
-	// 			NamaKegiatan:       rk.NamaKegiatan,
-	// 			Indikator:          indikatorRekinResponses, // Indikator rencana kinerja
-	// 		})
-	// 	}
-	// }
-
 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalResponse
 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
 		for _, rk := range rencanaKinerjaList {
@@ -603,6 +579,46 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 							IdRekin:       rk.Id,
 							NamaIndikator: ind.Indikator,
 							Target:        targetResponses,
+						})
+					}
+				}
+			}
+
+			if rk.KodeKegiatan != "" {
+				// Ambil indikator kegiatan
+				indikatorKegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+					ctx,
+					tx,
+					rk.KodeKegiatan,
+					operational.KodeOpd,
+					operational.Tahun,
+				)
+				if err == nil {
+					for _, ind := range indikatorKegiatan {
+						indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
+							Id:            ind.Id,
+							Kode:          ind.Kode,
+							NamaIndikator: ind.Indikator,
+						})
+					}
+				}
+			}
+
+			if rk.KodeSubKegiatan != "" {
+				// Ambil indikator subkegiatan
+				indikatorSubkegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+					ctx,
+					tx,
+					rk.KodeSubKegiatan,
+					operational.KodeOpd,
+					operational.Tahun,
+				)
+				if err == nil {
+					for _, ind := range indikatorSubkegiatan {
+						indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
+							Id:            ind.Id,
+							Kode:          ind.Kode,
+							NamaIndikator: ind.Indikator,
 						})
 					}
 				}

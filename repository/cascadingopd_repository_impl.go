@@ -127,3 +127,38 @@ func (repository *CascadingOpdRepositoryImpl) FindIndikatorByPokinId(ctx context
 
 	return result, nil
 }
+
+func (repository *CascadingOpdRepositoryImpl) FindByKodeAndOpdAndTahun(ctx context.Context, tx *sql.Tx, kode string, kodeOpd string, tahun string) ([]domain.Indikator, error) {
+	query := `
+        SELECT 
+            id,
+            kode,
+            indikator
+        FROM tb_indikator 
+        WHERE kode = ? 
+        AND kode_opd = ?
+        AND tahun = ?
+    `
+
+	rows, err := tx.QueryContext(ctx, query, kode, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var indikators []domain.Indikator
+	for rows.Next() {
+		var i domain.Indikator
+		err := rows.Scan(
+			&i.Id,
+			&i.Kode,
+			&i.Indikator,
+		)
+		if err != nil {
+			return nil, err
+		}
+		indikators = append(indikators, i)
+	}
+
+	return indikators, nil
+}

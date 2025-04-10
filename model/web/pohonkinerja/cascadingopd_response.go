@@ -5,12 +5,11 @@ import (
 )
 
 type CascadingOpdResponse struct {
-	KodeOpd      string                          `json:"kode_opd"`
-	NamaOpd      string                          `json:"nama_opd"`
-	Tahun        string                          `json:"tahun"`
-	TujuanOpd    []TujuanOpdCascadingResponse    `json:"tujuan_opd"`
-	BidangUrusan []BidangUrusanResponse          `json:"bidang_urusan"`
-	Strategics   []StrategicCascadingOpdResponse `json:"childs"`
+	KodeOpd    string                          `json:"kode_opd"`
+	NamaOpd    string                          `json:"nama_opd"`
+	Tahun      string                          `json:"tahun"`
+	TujuanOpd  []TujuanOpdCascadingResponse    `json:"tujuan_opd"`
+	Strategics []StrategicCascadingOpdResponse `json:"childs"`
 }
 
 type TujuanOpdCascadingResponse struct {
@@ -108,18 +107,20 @@ type RencanaKinerjaResponse struct {
 }
 
 type RencanaKinerjaOperationalResponse struct {
-	Id                 string              `json:"id_rencana_kinerja,omitempty"`
-	IdPohon            int                 `json:"id_pohon,omitempty"`
-	NamaPohon          string              `json:"nama_pohon,omitempty"`
-	NamaRencanaKinerja string              `json:"nama_rencana_kinerja,omitempty"`
-	Tahun              string              `json:"tahun,omitempty"`
-	PegawaiId          string              `json:"pegawai_id,omitempty"`
-	NamaPegawai        string              `json:"nama_pegawai,omitempty"`
-	KodeSubkegiatan    string              `json:"kode_subkegiatan"`
-	NamaSubkegiatan    string              `json:"nama_subkegiatan"`
-	Indikator          []IndikatorResponse `json:"indikator,omitempty"`
-	KodeKegiatan       string              `json:"kode_kegiatan"`
-	NamaKegiatan       string              `json:"nama_kegiatan"`
+	Id                   string              `json:"id_rencana_kinerja,omitempty"`
+	IdPohon              int                 `json:"id_pohon,omitempty"`
+	NamaPohon            string              `json:"nama_pohon,omitempty"`
+	NamaRencanaKinerja   string              `json:"nama_rencana_kinerja,omitempty"`
+	Tahun                string              `json:"tahun,omitempty"`
+	Indikator            []IndikatorResponse `json:"indikator,omitempty"`
+	PegawaiId            string              `json:"pegawai_id,omitempty"`
+	NamaPegawai          string              `json:"nama_pegawai,omitempty"`
+	KodeSubkegiatan      string              `json:"kode_subkegiatan"`
+	NamaSubkegiatan      string              `json:"nama_subkegiatan"`
+	IndikatorSubkegiatan []IndikatorResponse `json:"indikator_subkegiatan"`
+	KodeKegiatan         string              `json:"kode_kegiatan"`
+	NamaKegiatan         string              `json:"nama_kegiatan"`
+	IndikatorKegiatan    []IndikatorResponse `json:"indikator_kegiatan"`
 }
 
 type RencanaKinerjaOperationalNResponse struct {
@@ -135,12 +136,8 @@ type RencanaKinerjaOperationalNResponse struct {
 	Indikator          []IndikatorResponse `json:"indikator,omitempty"`
 }
 
-type BidangUrusanResponse struct {
-	KodeBidangUrusan string `json:"kode_bidang_urusan"`
-	NamaBidangUrusan string `json:"nama_bidang_urusan"`
-}
-
 type ProgramResponse struct {
-	KodeProgram string `json:"kode_program"`
-	NamaProgram string `json:"nama_program"`
+	KodeProgram string              `json:"kode_program"`
+	NamaProgram string              `json:"nama_program"`
+	Indikator   []IndikatorResponse `json:"indikator"`
 }
