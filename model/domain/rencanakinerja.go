@@ -22,5 +22,9 @@ type RencanaKinerja struct {
 	PeriodeId            int
 	CreatedAt            time.Time
 	Indikator            []Indikator
-	KodeSubKegiatan      string
+	//tambahan
+	KodeSubKegiatan string
+	NamaSubKegiatan string
+	KodeKegiatan    string
+	NamaKegiatan    string
 }

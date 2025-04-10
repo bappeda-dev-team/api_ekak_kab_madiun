@@ -494,3 +494,73 @@ func (repository *RencanaKinerjaRepositoryImpl) UpdateSasaranOpd(ctx context.Con
 
 	return rencanaKinerja, nil
 }
+
+func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error) {
+	SQL := `
+    SELECT 
+        rk.id,
+        rk.nama_rencana_kinerja,
+        rk.pegawai_id,
+        p.nama as nama_pegawai,
+        rk.id_pohon,
+        st.kode_subkegiatan,
+        sk.nama_subkegiatan,
+        -- Menggunakan SUBSTRING_INDEX untuk mengambil kode kegiatan dari kode_subkegiatan
+        SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5) as kode_kegiatan,
+        k.nama_kegiatan
+    FROM tb_rencana_kinerja rk
+    LEFT JOIN tb_pegawai p ON p.nip = rk.pegawai_id
+    LEFT JOIN tb_subkegiatan_terpilih st ON st.rekin_id = rk.id
+    LEFT JOIN tb_subkegiatan sk ON sk.kode_subkegiatan = st.kode_subkegiatan
+    LEFT JOIN tb_master_kegiatan k ON k.kode_kegiatan = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5)
+    WHERE rk.id_pohon = ?
+    ORDER BY rk.id ASC
+    `
+
+	rows, err := tx.QueryContext(ctx, SQL, pokinId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rencanaKinerjas []domain.RencanaKinerja
+	for rows.Next() {
+		var rk domain.RencanaKinerja
+		var namaPegawai, kodeSubkegiatan, namaSubkegiatan, kodeKegiatan, namaKegiatan sql.NullString
+		err := rows.Scan(
+			&rk.Id,
+			&rk.NamaRencanaKinerja,
+			&rk.PegawaiId,
+			&namaPegawai,
+			&rk.IdPohon,
+			&kodeSubkegiatan,
+			&namaSubkegiatan,
+			&kodeKegiatan,
+			&namaKegiatan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Handle null values
+		if namaPegawai.Valid {
+			rk.NamaPegawai = namaPegawai.String
+		}
+		if kodeSubkegiatan.Valid {
+			rk.KodeSubKegiatan = kodeSubkegiatan.String
+		}
+		if namaSubkegiatan.Valid {
+			rk.NamaSubKegiatan = namaSubkegiatan.String
+		}
+		if kodeKegiatan.Valid {
+			rk.KodeKegiatan = kodeKegiatan.String
+		}
+		if namaKegiatan.Valid {
+			rk.NamaKegiatan = namaKegiatan.String
+		}
+
+		rencanaKinerjas = append(rencanaKinerjas, rk)
+	}
+
+	return rencanaKinerjas, nil
+}

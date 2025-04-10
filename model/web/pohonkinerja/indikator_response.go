@@ -3,6 +3,7 @@ package pohonkinerja
 type IndikatorResponse struct {
 	Id            string           `json:"id_indikator"`
 	IdPokin       string           `json:"id_pokin,omitempty"`
+	IdRekin       string           `json:"id_rekin,omitempty"`
 	NamaIndikator string           `json:"nama_indikator"`
 	Target        []TargetResponse `json:"targets"`
 }
