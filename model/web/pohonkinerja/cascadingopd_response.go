@@ -36,8 +36,8 @@ type StrategicCascadingOpdResponse struct {
 	IsActive               bool                           `json:"is_active"`
 	RencanaKinerja         []RencanaKinerjaResponse       `json:"rencana_kinerja"`
 	Indikator              []IndikatorResponse            `json:"indikator"`
+	PaguAnggaran           int64                          `json:"pagu_anggaran"`
 	Tacticals              []TacticalCascadingOpdResponse `json:"childs,omitempty"`
-	Review                 []ReviewResponse               `json:"review,omitempty"`
 }
 
 type TacticalCascadingOpdResponse struct {
@@ -55,8 +55,8 @@ type TacticalCascadingOpdResponse struct {
 	IsActive               bool                              `json:"is_active"`
 	RencanaKinerja         []RencanaKinerjaResponse          `json:"rencana_kinerja"`
 	Indikator              []IndikatorResponse               `json:"indikator"`
+	PaguAnggaran           int64                             `json:"pagu_anggaran"`
 	Operationals           []OperationalCascadingOpdResponse `json:"childs,omitempty"`
-	Review                 []ReviewResponse                  `json:"review,omitempty"`
 }
 
 type OperationalCascadingOpdResponse struct {
@@ -73,8 +73,8 @@ type OperationalCascadingOpdResponse struct {
 	IsActive               bool                                `json:"is_active"`
 	RencanaKinerja         []RencanaKinerjaOperationalResponse `json:"rencana_kinerja"`
 	Indikator              []IndikatorResponse                 `json:"indikator"`
+	TotalAnggaran          int64                               `json:"total_anggaran"`
 	Childs                 []OperationalNOpdCascadingResponse  `json:"childs,omitempty"`
-	Review                 []ReviewResponse                    `json:"review,omitempty"`
 }
 
 type OperationalNOpdCascadingResponse struct {
@@ -91,7 +91,6 @@ type OperationalNOpdCascadingResponse struct {
 	RencanaKinerja []RencanaKinerjaOperationalNResponse `json:"rencana_kinerja"`
 	Indikator      []IndikatorResponse                  `json:"indikator"`
 	Childs         []OperationalNOpdCascadingResponse   `json:"childs,omitempty"`
-	Review         []ReviewResponse                     `json:"review,omitempty"`
 }
 
 type RencanaKinerjaResponse struct {
@@ -117,6 +116,7 @@ type RencanaKinerjaOperationalResponse struct {
 	NamaPegawai          string              `json:"nama_pegawai,omitempty"`
 	KodeSubkegiatan      string              `json:"kode_subkegiatan"`
 	NamaSubkegiatan      string              `json:"nama_subkegiatan"`
+	Anggaran             int64               `json:"anggaran"`
 	IndikatorSubkegiatan []IndikatorResponse `json:"indikator_subkegiatan"`
 	KodeKegiatan         string              `json:"kode_kegiatan"`
 	NamaKegiatan         string              `json:"nama_kegiatan"`

@@ -178,3 +178,34 @@ func (repository *RincianBelanjaRepositoryImpl) FindRincianBelanjaAsn(ctx contex
 
 	return result, nil
 }
+
+func (repository *RincianBelanjaRepositoryImpl) FindAnggaranByRenaksiId(ctx context.Context, tx *sql.Tx, renaksiId string) (domain.RincianBelanja, error) {
+	query := `
+        SELECT 
+            rb.id,
+            rb.renaksi_id,
+            rb.anggaran,
+            ra.nama_rencana_aksi
+        FROM tb_rincian_belanja rb
+        LEFT JOIN tb_rencana_aksi ra ON ra.id = rb.renaksi_id
+        WHERE rb.renaksi_id = ?
+    `
+
+	var result domain.RincianBelanja
+	row := tx.QueryRowContext(ctx, query, renaksiId)
+	err := row.Scan(
+		&result.Id,
+		&result.RenaksiId,
+		&result.Anggaran,
+		&result.Renaksi,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.RincianBelanja{}, nil // Return empty struct if not found
+		}
+		return domain.RincianBelanja{}, err
+	}
+
+	return result, nil
+}
