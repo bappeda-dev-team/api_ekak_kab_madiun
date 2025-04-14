@@ -418,3 +418,47 @@ func (service *UserServiceImpl) Login(ctx context.Context, request user.UserLogi
 
 	return response, nil
 }
+
+func (service *UserServiceImpl) FindByKodeOpdAndRole(ctx context.Context, kodeOpd string, roleName string) ([]user.UserResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi input
+	if kodeOpd == "" {
+		return nil, errors.New("kode opd harus diisi")
+	}
+	if roleName == "" {
+		return nil, errors.New("role harus diisi")
+	}
+
+	users, err := service.UserRepository.FindByKodeOpdAndRole(ctx, tx, kodeOpd, roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	var userResponses []user.UserResponse
+	for _, u := range users {
+		var roles []user.RoleResponse
+		for _, role := range u.Role {
+			roles = append(roles, user.RoleResponse{
+				Id:   role.Id,
+				Role: role.Role,
+			})
+		}
+
+		userResponse := user.UserResponse{
+			Id:        u.Id,
+			Nip:       u.Nip,
+			Email:     u.Email,
+			IsActive:  u.IsActive,
+			PegawaiId: u.PegawaiId,
+			Role:      roles,
+		}
+		userResponses = append(userResponses, userResponse)
+	}
+
+	return userResponses, nil
+}

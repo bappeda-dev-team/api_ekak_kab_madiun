@@ -186,3 +186,27 @@ func (controller *UserControllerImpl) Login(writer http.ResponseWriter, request 
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *UserControllerImpl) FindByKodeOpdAndRole(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := request.URL.Query().Get("kode_opd")
+	roleName := request.URL.Query().Get("role")
+
+	userResponses, err := controller.userService.FindByKodeOpdAndRole(request.Context(), kodeOpd, roleName)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "failed find by kode opd and role",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "success find by kode opd and role",
+		Data:   userResponses,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

@@ -12,4 +12,5 @@ type UserService interface {
 	FindAll(ctx context.Context, kodeOpd string) ([]user.UserResponse, error)
 	FindById(ctx context.Context, id int) (user.UserResponse, error)
 	Login(ctx context.Context, request user.UserLoginRequest) (user.UserLoginResponse, error)
+	FindByKodeOpdAndRole(ctx context.Context, kodeOpd string, roleName string) ([]user.UserResponse, error)
 }
