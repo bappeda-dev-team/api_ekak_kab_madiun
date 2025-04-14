@@ -378,6 +378,15 @@ var cascadingOpdSet = wire.NewSet(
 	wire.Bind(new(controller.CascadingOpdController), new(*controller.CascadingOpdControllerImpl)),
 )
 
+var rincianBelanjaSet = wire.NewSet(
+	repository.NewRincianBelanjaRepositoryImpl,
+	wire.Bind(new(repository.RincianBelanjaRepository), new(*repository.RincianBelanjaRepositoryImpl)),
+	service.NewRincianBelanjaServiceImpl,
+	wire.Bind(new(service.RincianBelanjaService), new(*service.RincianBelanjaServiceImpl)),
+	controller.NewRincianBelanjaControllerImpl,
+	wire.Bind(new(controller.RincianBelanjaController), new(*controller.RincianBelanjaControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -423,6 +432,7 @@ func InitializeServer() *http.Server {
 		misiPemdaSet,
 		matrixRenstraSet,
 		cascadingOpdSet,
+		rincianBelanjaSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

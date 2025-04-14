@@ -49,6 +49,7 @@ func NewRouter(
 	misiPemdaController controller.MisiPemdaController,
 	matrixRenstraController controller.MatrixRenstraController,
 	cascadingOpdController controller.CascadingOpdController,
+	rincianBelanjaController controller.RincianBelanjaController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -386,6 +387,11 @@ func NewRouter(
 
 	//cascading opd
 	router.GET("/cascading_opd/findall/:kode_opd/:tahun", cascadingOpdController.FindAll)
+
+	//rincian belanja
+	router.GET("/rincian_belanja/asn/:pegawai_id/:tahun", rincianBelanjaController.FindRincianBelanjaAsn)
+	router.POST("/rincian_belanja/create", rincianBelanjaController.Create)
+	router.PUT("/rincian_belanja/update/:renaksiId", rincianBelanjaController.Update)
 
 	return router
 }
