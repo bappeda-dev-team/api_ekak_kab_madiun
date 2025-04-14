@@ -349,10 +349,25 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 		)
 		if err == nil {
 			for _, ind := range indikatorProgram {
+				// Ambil target untuk indikator program
+				targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+				var targetResponses []pohonkinerja.TargetResponse
+				if err == nil {
+					for _, target := range targets {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
+						})
+					}
+				}
+
 				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
 					Id:            ind.Id,
 					Kode:          ind.Kode,
 					NamaIndikator: ind.Indikator,
+					Target:        targetResponses, // Menambahkan target ke indikator program
 				})
 			}
 		}
@@ -494,10 +509,25 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 		)
 		if err == nil {
 			for _, ind := range indikatorProgram {
+				// Ambil target untuk indikator program
+				targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+				var targetResponses []pohonkinerja.TargetResponse
+				if err == nil {
+					for _, target := range targets {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
+						})
+					}
+				}
+
 				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
 					Id:            ind.Id,
 					Kode:          ind.Kode,
 					NamaIndikator: ind.Indikator,
+					Target:        targetResponses,
 				})
 			}
 		}
@@ -595,10 +625,25 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 				)
 				if err == nil {
 					for _, ind := range indikatorSubkegiatan {
+						// Ambil target untuk indikator
+						targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+						var targetResponses []pohonkinerja.TargetResponse
+						if err == nil {
+							for _, target := range targets {
+								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+									Id:              target.Id,
+									IndikatorId:     target.IndikatorId,
+									TargetIndikator: target.Target,
+									SatuanIndikator: target.Satuan,
+								})
+							}
+						}
+
 						indikatorSubkegiatanResponses = append(indikatorSubkegiatanResponses, pohonkinerja.IndikatorResponse{
 							Id:            ind.Id,
 							Kode:          ind.Kode,
 							NamaIndikator: ind.Indikator,
+							Target:        targetResponses,
 						})
 					}
 				}
@@ -616,15 +661,29 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 				)
 				if err == nil {
 					for _, ind := range indikatorKegiatan {
+						// Ambil target untuk indikator
+						targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+						var targetResponses []pohonkinerja.TargetResponse
+						if err == nil {
+							for _, target := range targets {
+								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+									Id:              target.Id,
+									IndikatorId:     target.IndikatorId,
+									TargetIndikator: target.Target,
+									SatuanIndikator: target.Satuan,
+								})
+							}
+						}
+
 						indikatorKegiatanResponses = append(indikatorKegiatanResponses, pohonkinerja.IndikatorResponse{
 							Id:            ind.Id,
 							Kode:          ind.Kode,
 							NamaIndikator: ind.Indikator,
+							Target:        targetResponses,
 						})
 					}
 				}
 			}
-
 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalResponse{
 				Id:                   rk.Id,
 				IdPohon:              operational.Id,
