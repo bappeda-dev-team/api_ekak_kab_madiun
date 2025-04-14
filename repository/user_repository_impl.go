@@ -287,3 +287,72 @@ func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *
 	log.Printf("Successfully found user by email/NIP: %s, execution time: %v", username, time.Since(startTime))
 	return user, nil
 }
+
+func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, tx *sql.Tx, kodeOpd string, roleName string) ([]domain.Users, error) {
+	script := `
+        SELECT DISTINCT u.id, u.nip, u.email, u.is_active, ur.role_id, r.role, p.id as pegawai_id
+        FROM tb_users u
+        LEFT JOIN tb_user_role ur ON u.id = ur.user_id
+        LEFT JOIN tb_role r ON ur.role_id = r.id
+        INNER JOIN tb_pegawai p ON u.nip = p.nip
+        WHERE p.kode_opd = ? AND r.role = ?
+        ORDER BY u.id, ur.role_id
+    `
+
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, roleName)
+	if err != nil {
+		return []domain.Users{}, err
+	}
+	defer rows.Close()
+
+	var users []domain.Users
+	userMap := make(map[int]*domain.Users)
+
+	for rows.Next() {
+		var userId int
+		var nip, email string
+		var isActive bool
+		var roleId sql.NullInt64
+		var roleName sql.NullString
+		var pegawaiId string
+
+		err := rows.Scan(
+			&userId,
+			&nip,
+			&email,
+			&isActive,
+			&roleId,
+			&roleName,
+			&pegawaiId,
+		)
+		if err != nil {
+			return []domain.Users{}, err
+		}
+
+		user, exists := userMap[userId]
+		if !exists {
+			user = &domain.Users{
+				Id:        userId,
+				Nip:       nip,
+				Email:     email,
+				IsActive:  isActive,
+				PegawaiId: pegawaiId,
+				Role:      []domain.Roles{},
+			}
+			userMap[userId] = user
+		}
+
+		if roleId.Valid && roleName.Valid {
+			user.Role = append(user.Role, domain.Roles{
+				Id:   int(roleId.Int64),
+				Role: roleName.String,
+			})
+		}
+	}
+
+	for _, user := range userMap {
+		users = append(users, *user)
+	}
+
+	return users, nil
+}

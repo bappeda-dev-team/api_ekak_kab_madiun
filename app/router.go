@@ -275,6 +275,7 @@ func NewRouter(
 	router.DELETE("/user/delete/:id", userController.Delete)
 	router.GET("/user/findall", userController.FindAll)
 	router.POST("/user/login", userController.Login)
+	router.GET("/user/findbykodeopdandrole", userController.FindByKodeOpdAndRole)
 
 	//tujuan opd
 	router.POST("/tujuan_opd/create", tujuanOpdController.Create)
