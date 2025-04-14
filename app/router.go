@@ -48,6 +48,8 @@ func NewRouter(
 	visiPemdaController controller.VisiPemdaController,
 	misiPemdaController controller.MisiPemdaController,
 	matrixRenstraController controller.MatrixRenstraController,
+	cascadingOpdController controller.CascadingOpdController,
+	rincianBelanjaController controller.RincianBelanjaController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -382,6 +384,14 @@ func NewRouter(
 	router.POST("/matrix_renstra/indikator/create_indikator", matrixRenstraController.CreateIndikator)
 	router.PUT("/matrix_renstra/indikator/update_indikator/:id", matrixRenstraController.UpdateIndikator)
 	router.DELETE("/matrix_renstra/indikator/delete/:id", matrixRenstraController.DeleteIndikator)
+
+	//cascading opd
+	router.GET("/cascading_opd/findall/:kode_opd/:tahun", cascadingOpdController.FindAll)
+
+	//rincian belanja
+	router.GET("/rincian_belanja/asn/:pegawai_id/:tahun", rincianBelanjaController.FindRincianBelanjaAsn)
+	router.POST("/rincian_belanja/create", rincianBelanjaController.Create)
+	router.PUT("/rincian_belanja/update/:renaksiId", rincianBelanjaController.Update)
 
 	return router
 }

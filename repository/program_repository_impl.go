@@ -195,3 +195,24 @@ func (repository *ProgramRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 
 	return programs, nil
 }
+
+func (repository *ProgramRepositoryImpl) FindByKodeProgram(ctx context.Context, tx *sql.Tx, kodeProgram string) (domainmaster.ProgramKegiatan, error) {
+	SQL := `
+    SELECT 
+        kode_program,
+        nama_program
+    FROM tb_master_program
+    WHERE kode_program = ?
+    `
+
+	var program domainmaster.ProgramKegiatan
+	err := tx.QueryRowContext(ctx, SQL, kodeProgram).Scan(
+		&program.KodeProgram,
+		&program.NamaProgram,
+	)
+	if err != nil {
+		return domainmaster.ProgramKegiatan{}, err
+	}
+
+	return program, nil
+}
