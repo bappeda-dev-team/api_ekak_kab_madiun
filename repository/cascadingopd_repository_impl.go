@@ -162,3 +162,27 @@ func (repository *CascadingOpdRepositoryImpl) FindByKodeAndOpdAndTahun(ctx conte
 
 	return indikators, nil
 }
+
+func (repository *CascadingOpdRepositoryImpl) FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error) {
+	script := "SELECT id, indikator_id, target, satuan FROM tb_target WHERE indikator_id = ?"
+	params := []interface{}{indikatorId}
+
+	rows, err := tx.QueryContext(ctx, script, params...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var targets []domain.Target
+
+	for rows.Next() {
+		var target domain.Target
+		err := rows.Scan(&target.Id, &target.IndikatorId, &target.Target, &target.Satuan)
+		if err != nil {
+			return nil, err
+		}
+		targets = append(targets, target)
+	}
+
+	return targets, nil
+}
