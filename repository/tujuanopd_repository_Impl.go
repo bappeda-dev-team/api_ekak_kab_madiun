@@ -668,85 +668,73 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdId(ctx contex
 	return indikators, nil
 }
 
-// func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.TujuanOpd, error) {
-// 	script := `
-//         SELECT
-//             t.id,
-//             t.kode_opd,
-//             COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
-//             t.tujuan,
-//             p.id as periode_id,
-//             p.tahun_awal,
-//             p.tahun_akhir
-//         FROM tb_tujuan_opd t
-//         INNER JOIN tb_periode p ON t.periode_id = p.id
-//         WHERE t.kode_opd = ?
-//         AND ? BETWEEN p.tahun_awal AND p.tahun_akhir
-//         ORDER BY t.id ASC
-//     `
+func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdForCascadingOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error) {
+	script := `
+        SELECT
+            t.id,
+            t.kode_opd,
+            t.tujuan,
+            t.tahun_awal,
+            t.tahun_akhir,
+            t.jenis_periode,
+            t.kode_bidang_urusan
+        FROM tb_tujuan_opd t
+        WHERE t.kode_opd = ?
+        AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
+        AND t.jenis_periode = ?
+        ORDER BY t.id ASC
+    `
 
-// 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer rows.Close()
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-// 	var tujuanOpds []domain.TujuanOpd
-// 	for rows.Next() {
-// 		var tujuanOpd domain.TujuanOpd
-// 		err := rows.Scan(
-// 			&tujuanOpd.Id,
-// 			&tujuanOpd.KodeOpd,
-// 			&tujuanOpd.KodeBidangUrusan,
-// 			&tujuanOpd.Tujuan,
-// 			&tujuanOpd.PeriodeId.Id,
-// 			&tujuanOpd.PeriodeId.TahunAwal,
-// 			&tujuanOpd.PeriodeId.TahunAkhir,
-// 		)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		tujuanOpds = append(tujuanOpds, tujuanOpd)
-// 	}
+	var tujuanOpds []domain.TujuanOpd
+	for rows.Next() {
+		var tujuanOpd domain.TujuanOpd
+		err := rows.Scan(
+			&tujuanOpd.Id,
+			&tujuanOpd.KodeOpd,
+			&tujuanOpd.Tujuan,
+			&tujuanOpd.TahunAwal,
+			&tujuanOpd.TahunAkhir,
+			&tujuanOpd.JenisPeriode,
+			&tujuanOpd.KodeBidangUrusan,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tujuanOpds = append(tujuanOpds, tujuanOpd)
+	}
 
-// 	return tujuanOpds, nil
-// }
+	// Untuk setiap tujuan OPD, ambil indikatornya
+	for i := range tujuanOpds {
+		indikators, err := repository.FindIndikatorByTujuanOpdId(ctx, tx, tujuanOpds[i].Id)
+		if err != nil {
+			return nil, err
+		}
+		tujuanOpds[i].Indikator = indikators
 
-// Fungsi khusus untuk pohon kinerja
-// func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdId(ctx context.Context, tx *sql.Tx, tujuanOpdId int) ([]domain.Indikator, error) {
-// 	script := `
-//         SELECT
-//             i.id,
-//             i.tujuan_opd_id,
-//             i.indikator,
-// 			i.rumus_perhitungan,
-// 			i.sumber_data
-//         FROM tb_indikator i
-//         WHERE i.tujuan_opd_id = ?
-//         ORDER BY i.id ASC
-//     `
+		// Generate target untuk setiap indikator
+		for j := range tujuanOpds[i].Indikator {
+			tahunAwalInt, _ := strconv.Atoi(tujuanOpds[i].TahunAwal)
+			tahunAkhirInt, _ := strconv.Atoi(tujuanOpds[i].TahunAkhir)
 
-// 	rows, err := tx.QueryContext(ctx, script, tujuanOpdId)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer rows.Close()
+			var targets []domain.Target
+			for tahun := tahunAwalInt; tahun <= tahunAkhirInt; tahun++ {
+				targets = append(targets, domain.Target{
+					Id:          "",
+					IndikatorId: tujuanOpds[i].Indikator[j].Id,
+					Target:      "",
+					Satuan:      "",
+					Tahun:       strconv.Itoa(tahun),
+				})
+			}
+			tujuanOpds[i].Indikator[j].Target = targets
+		}
+	}
 
-// 	var indikators []domain.Indikator
-// 	for rows.Next() {
-// 		var indikator domain.Indikator
-// 		err := rows.Scan(
-// 			&indikator.Id,
-// 			&indikator.TujuanOpdId,
-// 			&indikator.Indikator,
-// 			&indikator.RumusPerhitungan,
-// 			&indikator.SumberData,
-// 		)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		indikators = append(indikators, indikator)
-// 	}
-
-// 	return indikators, nil
-// }
+	return tujuanOpds, nil
+}

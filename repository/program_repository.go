@@ -16,4 +16,5 @@ type ProgramRepository interface {
 	FindAll(ctx context.Context, tx *sql.Tx) ([]domainmaster.ProgramKegiatan, error)
 	FindIndikatorByProgramId(ctx context.Context, tx *sql.Tx, programId string) ([]domain.Indikator, error)
 	FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error)
+	FindByKodeProgram(ctx context.Context, tx *sql.Tx, kodeProgram string) (domainmaster.ProgramKegiatan, error)
 }

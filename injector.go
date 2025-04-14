@@ -369,6 +369,15 @@ var matrixRenstraSet = wire.NewSet(
 	wire.Bind(new(controller.MatrixRenstraController), new(*controller.MatrixRenstraControllerImpl)),
 )
 
+var cascadingOpdSet = wire.NewSet(
+	repository.NewCascadingOpdRepositoryImpl,
+	wire.Bind(new(repository.CascadingOpdRepository), new(*repository.CascadingOpdRepositoryImpl)),
+	service.NewCascadingOpdServiceImpl,
+	wire.Bind(new(service.CascadingOpdService), new(*service.CascadingOpdServiceImpl)),
+	controller.NewCascadingOpdControllerImpl,
+	wire.Bind(new(controller.CascadingOpdController), new(*controller.CascadingOpdControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -413,6 +422,7 @@ func InitializeServer() *http.Server {
 		visiPemdaSet,
 		misiPemdaSet,
 		matrixRenstraSet,
+		cascadingOpdSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,
