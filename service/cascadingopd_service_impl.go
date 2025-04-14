@@ -26,6 +26,8 @@ type CascadingOpdServiceImpl struct {
 	programRepository        repository.ProgramRepository
 	cascadingOpdRepository   repository.CascadingOpdRepository
 	bidangUrusanRepository   repository.BidangUrusanRepository
+	rincianBelanjaRepository repository.RincianBelanjaRepository
+	rencanaAksiRepository    repository.RencanaAksiRepository
 }
 
 func NewCascadingOpdServiceImpl(
@@ -34,7 +36,11 @@ func NewCascadingOpdServiceImpl(
 	pegawaiRepository repository.PegawaiRepository,
 	tujuanOpdRepository repository.TujuanOpdRepository,
 	rencanaKinerjaRepository repository.RencanaKinerjaRepository,
-	DB *sql.DB, programRepository repository.ProgramRepository, cascadingOpdRepository repository.CascadingOpdRepository, bidangUrusanRepository repository.BidangUrusanRepository) *CascadingOpdServiceImpl {
+	DB *sql.DB, programRepository repository.ProgramRepository,
+	cascadingOpdRepository repository.CascadingOpdRepository,
+	bidangUrusanRepository repository.BidangUrusanRepository,
+	rincianBelanjaRepository repository.RincianBelanjaRepository,
+	rencanaAksiRepository repository.RencanaAksiRepository) *CascadingOpdServiceImpl {
 	return &CascadingOpdServiceImpl{
 		pohonKinerjaRepository:   pohonKinerjaRepository,
 		opdRepository:            opdRepository,
@@ -45,6 +51,8 @@ func NewCascadingOpdServiceImpl(
 		programRepository:        programRepository,
 		cascadingOpdRepository:   cascadingOpdRepository,
 		bidangUrusanRepository:   bidangUrusanRepository,
+		rincianBelanjaRepository: rincianBelanjaRepository,
+		rencanaAksiRepository:    rencanaAksiRepository,
 	}
 }
 
@@ -397,7 +405,8 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 		Indikator:      indikatorMap[strategic.Id],
 	}
 
-	// Build tactical responses
+	// Build tactical responses dan hitung total pagu anggaran
+	var totalPaguAnggaran int64 = 0
 	if tacticalList := pohonMap[5][strategic.Id]; len(tacticalList) > 0 {
 		var tacticals []pohonkinerja.TacticalCascadingOpdResponse
 		sort.Slice(tacticalList, func(i, j int) bool {
@@ -407,9 +416,14 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 		for _, tactical := range tacticalList {
 			tacticalResp := service.buildTacticalCascadingResponse(ctx, tx, pohonMap, tactical, indikatorMap, rencanaKinerjaMap)
 			tacticals = append(tacticals, tacticalResp)
+			// Tambahkan pagu anggaran dari setiap tactical
+			totalPaguAnggaran += tacticalResp.PaguAnggaran
 		}
 		strategicResp.Tacticals = tacticals
 	}
+
+	// Set pagu anggaran dari total pagu anggaran tactical
+	strategicResp.PaguAnggaran = totalPaguAnggaran
 
 	return strategicResp
 }
@@ -557,7 +571,8 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 		Indikator:      indikatorMap[tactical.Id],
 	}
 
-	// Build operational responses
+	// Build operational responses dan hitung total pagu anggaran
+	var totalPaguAnggaran int64 = 0
 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
 		var operationals []pohonkinerja.OperationalCascadingOpdResponse
 		sort.Slice(operationalList, func(i, j int) bool {
@@ -567,9 +582,14 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 		for _, operational := range operationalList {
 			operationalResp := service.buildOperationalCascadingResponse(ctx, tx, pohonMap, operational, indikatorMap, rencanaKinerjaMap)
 			operationals = append(operationals, operationalResp)
+			// Tambahkan total anggaran dari setiap operational
+			totalPaguAnggaran += operationalResp.TotalAnggaran
 		}
 		tacticalResp.Operationals = operationals
 	}
+
+	// Set pagu anggaran dari total anggaran operational
+	tacticalResp.PaguAnggaran = totalPaguAnggaran
 
 	return tacticalResp
 }
@@ -583,8 +603,26 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.OperationalCascadingOpdResponse {
 
 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalResponse
+	var totalAnggaranOperational int64 = 0
 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
 		for _, rk := range rencanaKinerjaList {
+			var totalAnggaranRenkin int64 = 0
+			if rk.Id != "" {
+				// Ambil semua rencana aksi untuk rencana kinerja ini
+				rencanaAksiList, err := service.rencanaAksiRepository.FindAll(ctx, tx, rk.Id)
+				if err == nil {
+					for _, ra := range rencanaAksiList {
+						// Ambil anggaran untuk setiap rencana aksi
+						rincianBelanja, err := service.rincianBelanjaRepository.FindAnggaranByRenaksiId(ctx, tx, ra.Id)
+						if err == nil {
+							totalAnggaranRenkin += rincianBelanja.Anggaran
+						}
+					}
+				}
+			}
+
+			totalAnggaranOperational += totalAnggaranRenkin
+
 			// Indikator rencana kinerja
 			var indikatorRekinResponses []pohonkinerja.IndikatorResponse
 			if rk.Id != "" {
@@ -694,11 +732,12 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 				NamaPegawai:          rk.NamaPegawai,
 				KodeSubkegiatan:      rk.KodeSubKegiatan,
 				NamaSubkegiatan:      rk.NamaSubKegiatan,
-				IndikatorSubkegiatan: indikatorSubkegiatanResponses, // Indikator subkegiatan dipisah
+				Anggaran:             totalAnggaranRenkin,
+				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
 				KodeKegiatan:         rk.KodeKegiatan,
 				NamaKegiatan:         rk.NamaKegiatan,
-				IndikatorKegiatan:    indikatorKegiatanResponses, // Indikator kegiatan dipisah
-				Indikator:            indikatorRekinResponses,    // Hanya indikator rencana kinerja
+				IndikatorKegiatan:    indikatorKegiatanResponses,
+				Indikator:            indikatorRekinResponses,
 			})
 		}
 	}
@@ -718,6 +757,7 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 		IsActive:       operational.IsActive,
 		RencanaKinerja: rencanaKinerjaResponses,
 		Indikator:      indikatorMap[operational.Id],
+		TotalAnggaran:  totalAnggaranOperational,
 	}
 
 	// Build operational N responses jika ada

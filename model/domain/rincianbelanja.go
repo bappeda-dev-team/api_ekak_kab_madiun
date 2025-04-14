@@ -5,13 +5,16 @@ type RincianBelanjaAsn struct {
 	NamaPegawai     string
 	KodeSubkegiatan string
 	NamaSubkegiatan string
+	Indikator       []Indikator
 	TotalAnggaran   int
 	RencanaKinerja  []RencanaKinerjaAsn
 }
 
 type RencanaKinerjaAsn struct {
-	RencanaKinerja string
-	RencanaAksi    []RincianBelanja
+	RencanaKinerjaId string
+	RencanaKinerja   string
+	Indikator        []Indikator
+	RencanaAksi      []RincianBelanja
 }
 
 type RincianBelanja struct {

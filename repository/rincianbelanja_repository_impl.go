@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 )
@@ -149,8 +150,9 @@ func (repository *RincianBelanjaRepositoryImpl) FindRincianBelanjaAsn(ctx contex
 		// Jika rencana kinerja baru dalam subkegiatan yang sama
 		if currentRencanaKinerja == nil || currentRencanaKinerja.RencanaKinerja != namaRencanaKinerja {
 			currentRencanaKinerja = &domain.RencanaKinerjaAsn{
-				RencanaKinerja: namaRencanaKinerja,
-				RencanaAksi:    make([]domain.RincianBelanja, 0),
+				RencanaKinerjaId: rekinId,
+				RencanaKinerja:   namaRencanaKinerja,
+				RencanaAksi:      make([]domain.RincianBelanja, 0),
 			}
 			currentSubkegiatan.RencanaKinerja = append(currentSubkegiatan.RencanaKinerja, *currentRencanaKinerja)
 		}
@@ -174,6 +176,194 @@ func (repository *RincianBelanjaRepositoryImpl) FindRincianBelanjaAsn(ctx contex
 	// Tambahkan subkegiatan terakhir jika ada
 	if currentSubkegiatan != nil {
 		result = append(result, *currentSubkegiatan)
+	}
+
+	return result, nil
+}
+
+func (repository *RincianBelanjaRepositoryImpl) FindIndikatorByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error) {
+	script := `
+        SELECT 
+            i.id,
+            i.rencana_kinerja_id,
+            i.indikator,
+            t.id as target_id,
+            t.indikator_id,
+            COALESCE(t.target, '') as target,
+            COALESCE(t.satuan, '') as satuan
+        FROM tb_indikator i
+        LEFT JOIN tb_target t ON i.id = t.indikator_id
+        WHERE i.rencana_kinerja_id = ?
+        ORDER BY i.id`
+
+	rows, err := tx.QueryContext(ctx, script, rekinId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	indikatorMap := make(map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId, rekinId, indikator             string
+			targetId, indikatorId, target, satuan string
+		)
+
+		err := rows.Scan(
+			&indId,
+			&rekinId,
+			&indikator,
+			&targetId,
+			&indikatorId,
+			&target,
+			&satuan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Proses Indikator
+		ind, exists := indikatorMap[indId]
+		if !exists {
+			ind = &domain.Indikator{
+				Id:               indId,
+				RencanaKinerjaId: rekinId,
+				Indikator:        indikator,
+				Target:           []domain.Target{},
+			}
+			indikatorMap[indId] = ind
+		}
+
+		// Proses Target jika ada
+		if targetId != "" && indikatorId != "" {
+			target := domain.Target{
+				Id:          targetId,
+				IndikatorId: indikatorId,
+				Target:      target,
+				Satuan:      satuan,
+			}
+			ind.Target = append(ind.Target, target)
+		}
+	}
+
+	// Convert map to slice
+	var result []domain.Indikator
+	for _, ind := range indikatorMap {
+		result = append(result, *ind)
+	}
+
+	return result, nil
+}
+
+func (repository *RincianBelanjaRepositoryImpl) FindIndikatorSubkegiatanByKodeAndOpd(ctx context.Context, tx *sql.Tx, kodeSubkegiatan string, kodeOpd string, tahun string) ([]domain.Indikator, error) {
+	script := `
+        SELECT 
+            i.id,
+            i.kode as kode_subkegiatan,
+            i.kode_opd,
+            i.indikator,
+            i.tahun,
+            t.id as target_id,
+            t.indikator_id,
+            COALESCE(t.target, '') as target,
+            COALESCE(t.satuan, '') as satuan
+        FROM tb_indikator i
+        LEFT JOIN tb_target t ON i.id = t.indikator_id
+        WHERE i.kode = ?
+        AND i.kode_opd = ?
+        AND i.tahun = ?
+        ORDER BY i.id, i.tahun`
+
+	rows, err := tx.QueryContext(ctx, script, kodeSubkegiatan, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	indikatorMap := make(map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId, kodeSubkegiatan, kodeOpd, indikator, tahun string
+			targetId, indikatorId                             sql.NullString // Menggunakan sql.NullString untuk field yang bisa NULL
+			target, satuan                                    sql.NullString
+		)
+
+		err := rows.Scan(
+			&indId,
+			&kodeSubkegiatan,
+			&kodeOpd,
+			&indikator,
+			&tahun,
+			&targetId,
+			&indikatorId,
+			&target,
+			&satuan,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning indikator: %v", err)
+		}
+
+		ind, exists := indikatorMap[indId]
+		if !exists {
+			ind = &domain.Indikator{
+				Id:        indId,
+				Kode:      kodeSubkegiatan,
+				KodeOpd:   kodeOpd,
+				Tahun:     tahun,
+				Indikator: indikator,
+				Target:    []domain.Target{},
+			}
+			indikatorMap[indId] = ind
+		}
+
+		// Hanya tambahkan target jika targetId valid
+		if targetId.Valid && targetId.String != "" {
+			targetObj := domain.Target{
+				Id:          targetId.String,
+				IndikatorId: helper.GetNullStringValue(indikatorId),
+				Target:      helper.GetNullStringValue(target),
+				Satuan:      helper.GetNullStringValue(satuan),
+			}
+			ind.Target = append(ind.Target, targetObj)
+		}
+	}
+
+	var result []domain.Indikator
+	for _, ind := range indikatorMap {
+		result = append(result, *ind)
+	}
+
+	return result, nil
+}
+
+func (repository *RincianBelanjaRepositoryImpl) FindAnggaranByRenaksiId(ctx context.Context, tx *sql.Tx, renaksiId string) (domain.RincianBelanja, error) {
+	query := `
+        SELECT 
+            rb.id,
+            rb.renaksi_id,
+            rb.anggaran,
+            ra.nama_rencana_aksi
+        FROM tb_rincian_belanja rb
+        LEFT JOIN tb_rencana_aksi ra ON ra.id = rb.renaksi_id
+        WHERE rb.renaksi_id = ?
+    `
+
+	var result domain.RincianBelanja
+	row := tx.QueryRowContext(ctx, query, renaksiId)
+	err := row.Scan(
+		&result.Id,
+		&result.RenaksiId,
+		&result.Anggaran,
+		&result.Renaksi,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.RincianBelanja{}, nil // Return empty struct if not found
+		}
+		return domain.RincianBelanja{}, err
 	}
 
 	return result, nil

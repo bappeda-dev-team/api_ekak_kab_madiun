@@ -1,10 +1,11 @@
 package domain
 
 type Users struct {
-	Id       int
-	Nip      string
-	Email    string
-	Password string
-	IsActive bool
-	Role     []Roles
+	Id        int
+	Nip       string
+	Email     string
+	Password  string
+	IsActive  bool
+	Role      []Roles
+	PegawaiId string
 }
