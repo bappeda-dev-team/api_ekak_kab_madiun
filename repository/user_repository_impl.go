@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"log"
+	"sort"
 	"time"
 )
 
@@ -290,7 +291,15 @@ func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *
 
 func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, tx *sql.Tx, kodeOpd string, roleName string) ([]domain.Users, error) {
 	script := `
-        SELECT DISTINCT u.id, u.nip, u.email, u.is_active, ur.role_id, r.role, p.id as pegawai_id
+        SELECT DISTINCT 
+            u.id, 
+            u.nip, 
+            u.email, 
+            u.is_active, 
+            ur.role_id, 
+            r.role, 
+            p.id as pegawai_id,
+            p.nama as nama_pegawai  -- Menambahkan nama pegawai
         FROM tb_users u
         LEFT JOIN tb_user_role ur ON u.id = ur.user_id
         LEFT JOIN tb_role r ON ur.role_id = r.id
@@ -305,7 +314,6 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 	}
 	defer rows.Close()
 
-	var users []domain.Users
 	userMap := make(map[int]*domain.Users)
 
 	for rows.Next() {
@@ -315,6 +323,7 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 		var roleId sql.NullInt64
 		var roleName sql.NullString
 		var pegawaiId string
+		var namaPegawai string // Menambahkan variabel untuk nama pegawai
 
 		err := rows.Scan(
 			&userId,
@@ -324,6 +333,7 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 			&roleId,
 			&roleName,
 			&pegawaiId,
+			&namaPegawai, // Menambahkan scan untuk nama pegawai
 		)
 		if err != nil {
 			return []domain.Users{}, err
@@ -332,12 +342,13 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 		user, exists := userMap[userId]
 		if !exists {
 			user = &domain.Users{
-				Id:        userId,
-				Nip:       nip,
-				Email:     email,
-				IsActive:  isActive,
-				PegawaiId: pegawaiId,
-				Role:      []domain.Roles{},
+				Id:          userId,
+				Nip:         nip,
+				Email:       email,
+				IsActive:    isActive,
+				PegawaiId:   pegawaiId,
+				NamaPegawai: namaPegawai, // Menambahkan nama pegawai ke struct
+				Role:        []domain.Roles{},
 			}
 			userMap[userId] = user
 		}
@@ -350,9 +361,14 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 		}
 	}
 
+	// Sort users berdasarkan ID untuk konsistensi
+	var sortedUsers []domain.Users
 	for _, user := range userMap {
-		users = append(users, *user)
+		sortedUsers = append(sortedUsers, *user)
 	}
+	sort.Slice(sortedUsers, func(i, j int) bool {
+		return sortedUsers[i].Id < sortedUsers[j].Id
+	})
 
-	return users, nil
+	return sortedUsers, nil
 }

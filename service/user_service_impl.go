@@ -450,12 +450,12 @@ func (service *UserServiceImpl) FindByKodeOpdAndRole(ctx context.Context, kodeOp
 		}
 
 		userResponse := user.UserResponse{
-			Id:        u.Id,
-			Nip:       u.Nip,
-			Email:     u.Email,
-			IsActive:  u.IsActive,
-			PegawaiId: u.PegawaiId,
-			Role:      roles,
+			Id:          u.Id,
+			Nip:         u.Nip,
+			IsActive:    u.IsActive,
+			PegawaiId:   u.PegawaiId,
+			NamaPegawai: u.NamaPegawai,
+			Role:        roles,
 		}
 		userResponses = append(userResponses, userResponse)
 	}
