@@ -78,3 +78,36 @@ func (controller *RincianBelanjaControllerImpl) FindRincianBelanjaAsn(writer htt
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *RincianBelanjaControllerImpl) LaporanRincianBelanjaOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	query := request.URL.Query()
+	kodeOpd := query.Get("kode_opd")
+	tahun := query.Get("tahun")
+
+	filterParams := make(map[string]string)
+
+	if kodeOpd != "" {
+		filterParams["kode_opd"] = kodeOpd
+	}
+	if tahun != "" {
+		filterParams["tahun"] = tahun
+	}
+
+	rincianBelanjaResponses, err := controller.rincianBelanjaService.LaporanRincianBelanjaOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed get laporan rincian belanja",
+			Data:   nil,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success get laporan rincian belanja " + kodeOpd + " tahun " + tahun,
+		Data:   rincianBelanjaResponses,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

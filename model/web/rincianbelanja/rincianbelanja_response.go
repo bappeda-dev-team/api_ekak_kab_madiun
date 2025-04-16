@@ -1,8 +1,8 @@
 package rincianbelanja
 
 type RincianBelanjaAsnResponse struct {
-	PegawaiId            string                   `json:"pegawai_id"`
-	NamaPegawai          string                   `json:"nama_pegawai"`
+	PegawaiId            string                   `json:"pegawai_id,omitempty"`
+	NamaPegawai          string                   `json:"nama_pegawai,omitempty"`
 	KodeSubkegiatan      string                   `json:"kode_subkegiatan"`
 	NamaSubkegiatan      string                   `json:"nama_subkegiatan"`
 	IndikatorSubkegiatan []IndikatorResponse      `json:"indikator_subkegiatan"`
@@ -13,6 +13,8 @@ type RincianBelanjaAsnResponse struct {
 type RincianBelanjaResponse struct {
 	RencanaKinerjaId string                `json:"rencana_kinerja_id"`
 	RencanaKinerja   string                `json:"rencana_kinerja"`
+	PegawaiId        string                `json:"pegawai_id,omitempty"`
+	NamaPegawai      string                `json:"nama_pegawai,omitempty"`
 	Indikator        []IndikatorResponse   `json:"indikator"`
 	TotalAnggaran    int                   `json:"total_anggaran"`
 	RencanaAksi      []RencanaAksiResponse `json:"rencana_aksi"`
