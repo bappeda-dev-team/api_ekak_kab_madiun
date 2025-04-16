@@ -299,7 +299,7 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
             ur.role_id, 
             r.role, 
             p.id as pegawai_id,
-            p.nama as nama_pegawai  -- Menambahkan nama pegawai
+            p.nama as nama_pegawai  
         FROM tb_users u
         LEFT JOIN tb_user_role ur ON u.id = ur.user_id
         LEFT JOIN tb_role r ON ur.role_id = r.id
@@ -323,7 +323,7 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 		var roleId sql.NullInt64
 		var roleName sql.NullString
 		var pegawaiId string
-		var namaPegawai string // Menambahkan variabel untuk nama pegawai
+		var namaPegawai string
 
 		err := rows.Scan(
 			&userId,
@@ -333,7 +333,7 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 			&roleId,
 			&roleName,
 			&pegawaiId,
-			&namaPegawai, // Menambahkan scan untuk nama pegawai
+			&namaPegawai,
 		)
 		if err != nil {
 			return []domain.Users{}, err
@@ -347,7 +347,7 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 				Email:       email,
 				IsActive:    isActive,
 				PegawaiId:   pegawaiId,
-				NamaPegawai: namaPegawai, // Menambahkan nama pegawai ke struct
+				NamaPegawai: namaPegawai,
 				Role:        []domain.Roles{},
 			}
 			userMap[userId] = user
