@@ -20,70 +20,70 @@ func NewIkuRepositoryImpl() *IkuRepositoryImpl {
 // iku pemda
 func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.Indikator, error) {
 	query := `
-    WITH indikator_tujuan AS (
-        SELECT 
-            i.id as indikator_id,
-            i.indikator,
-            i.rumus_perhitungan,
-            i.sumber_data,
-            i.created_at as indikator_created_at,
-            t.id as target_id,
-            t.target,
-            t.satuan,
-            t.tahun as target_tahun,
-            'Tujuan Pemda' as sumber,
-            tp.id as parent_id,
-            tp.tujuan_pemda as parent_name,
-            tp.tahun_awal_periode,
-            tp.tahun_akhir_periode,
-            tp.jenis_periode,
-            pk_tematik.is_active as is_active
-        FROM tb_indikator i
-        INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
-        LEFT JOIN tb_target t ON t.indikator_id = i.id
-        LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
-        WHERE tp.tahun_awal_periode = ? 
-        AND tp.tahun_akhir_periode = ?
-        AND tp.jenis_periode = ?
-    ),
-    indikator_sasaran AS (
-        SELECT 
-            i.id as indikator_id,
-            i.indikator,
-            i.rumus_perhitungan,
-            i.sumber_data,
-            i.created_at as indikator_created_at,
-            t.id as target_id,
-            t.target,
-            t.satuan,
-            t.tahun as target_tahun,
-            'Sasaran Pemda' as sumber,
-            sp.id as parent_id,
-            sp.sasaran_pemda as parent_name,
-            sp.tahun_awal,
-            sp.tahun_akhir,
-            sp.jenis_periode,
-            CASE 
-                WHEN pk_subtematik.is_active = true AND pk_tematik.is_active = true THEN true
-                ELSE false
-            END as is_active
-        FROM tb_indikator i
-        INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
-        LEFT JOIN tb_target t ON t.indikator_id = i.id
-        LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
-        LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
-        LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
-        WHERE sp.tahun_awal = ? 
-        AND sp.tahun_akhir = ?
-        AND sp.jenis_periode = ?
-    )
-    SELECT * FROM (
-        SELECT * FROM indikator_tujuan
-        UNION ALL
-        SELECT * FROM indikator_sasaran
-    ) combined
-    WHERE indikator IS NOT NULL
-    ORDER BY indikator_created_at ASC`
+		WITH indikator_tujuan AS (
+			SELECT 
+				i.id as indikator_id,
+				i.indikator,
+				i.rumus_perhitungan,
+				i.sumber_data,
+				i.created_at as indikator_created_at,
+				t.id as target_id,
+				t.target,
+				t.satuan,
+				t.tahun as target_tahun,
+				'Tujuan Pemda' as sumber,
+				tp.id as parent_id,
+				tp.tujuan_pemda as parent_name,
+				tp.tahun_awal_periode,
+				tp.tahun_akhir_periode,
+				tp.jenis_periode,
+				COALESCE(pk_tematik.is_active, false) as is_active
+			FROM tb_indikator i
+			INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
+			LEFT JOIN tb_target t ON t.indikator_id = i.id
+			LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
+			WHERE tp.tahun_awal_periode = ? 
+			AND tp.tahun_akhir_periode = ?
+			AND tp.jenis_periode = ?
+		),
+		indikator_sasaran AS (
+			SELECT 
+				i.id as indikator_id,
+				i.indikator,
+				i.rumus_perhitungan,
+				i.sumber_data,
+				i.created_at as indikator_created_at,
+				t.id as target_id,
+				t.target,
+				t.satuan,
+				t.tahun as target_tahun,
+				'Sasaran Pemda' as sumber,
+				sp.id as parent_id,
+				sp.sasaran_pemda as parent_name,
+				sp.tahun_awal,
+				sp.tahun_akhir,
+				sp.jenis_periode,
+				CASE 
+					WHEN COALESCE(pk_subtematik.is_active, false) = true AND COALESCE(pk_tematik.is_active, false) = true THEN true
+					ELSE false
+				END as is_active
+			FROM tb_indikator i
+			INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
+			LEFT JOIN tb_target t ON t.indikator_id = i.id
+			LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
+			LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
+			LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
+			WHERE sp.tahun_awal = ? 
+			AND sp.tahun_akhir = ?
+			AND sp.jenis_periode = ?
+		)
+		SELECT * FROM (
+			SELECT * FROM indikator_tujuan
+			UNION ALL
+			SELECT * FROM indikator_sasaran
+		) combined
+		WHERE indikator IS NOT NULL
+		ORDER BY indikator_created_at ASC`
 
 	rows, err := tx.QueryContext(ctx, query,
 		tahunAwal, tahunAkhir, jenisPeriode,

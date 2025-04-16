@@ -368,3 +368,131 @@ func (repository *RincianBelanjaRepositoryImpl) FindAnggaranByRenaksiId(ctx cont
 
 	return result, nil
 }
+
+// laporan rincian belanja
+func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RincianBelanjaAsn, error) {
+	query := `
+    WITH valid_users AS (
+            SELECT DISTINCT p.nip
+            FROM tb_pegawai p
+            JOIN tb_users u ON u.nip = p.nip
+            JOIN tb_user_role ur ON ur.user_id = u.id
+            JOIN tb_role r ON r.id = ur.role_id
+            WHERE r.role = 'level_3'
+        ),
+        rencana_kinerja_opd AS (
+            SELECT 
+                rk.id as rekin_id,
+                rk.pegawai_id,
+                p.nama as nama_pegawai,
+                st.kode_subkegiatan,
+                sk.nama_subkegiatan,
+                rk.nama_rencana_kinerja
+            FROM tb_rencana_kinerja rk
+            INNER JOIN valid_users vu ON vu.nip = rk.pegawai_id
+            LEFT JOIN tb_pegawai p ON p.nip = rk.pegawai_id
+            INNER JOIN tb_subkegiatan_terpilih st ON st.rekin_id = rk.id
+            LEFT JOIN tb_subkegiatan sk ON sk.kode_subkegiatan = st.kode_subkegiatan
+            WHERE rk.kode_opd = ? 
+            AND rk.tahun = ?
+            AND st.kode_subkegiatan IS NOT NULL
+            AND st.kode_subkegiatan != ''
+        )
+        SELECT 
+            rkp.pegawai_id,
+            rkp.nama_pegawai,
+            rkp.kode_subkegiatan,
+            rkp.nama_subkegiatan,
+            rkp.rekin_id,
+            rkp.nama_rencana_kinerja,
+            ra.id as renaksi_id,
+            ra.nama_rencana_aksi,
+            COALESCE(rb.anggaran, 0) as anggaran
+        FROM rencana_kinerja_opd rkp
+        LEFT JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rkp.rekin_id
+        LEFT JOIN tb_rincian_belanja rb ON rb.renaksi_id = ra.id
+        ORDER BY rkp.kode_subkegiatan, rkp.rekin_id, ra.id
+`
+
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("error querying rincian belanja asn: %v", err)
+	}
+	defer rows.Close()
+
+	var result []domain.RincianBelanjaAsn
+	var currentSubkegiatan *domain.RincianBelanjaAsn
+	var currentRencanaKinerja *domain.RencanaKinerjaAsn
+
+	for rows.Next() {
+		var (
+			pegawaiId, namaPegawai, kodeSubkegiatan, namaSubkegiatan string
+			rekinId, namaRencanaKinerja                              string
+			renaksiId, namaRenaksi                                   sql.NullString
+			anggaran                                                 int64
+		)
+
+		err := rows.Scan(
+			&pegawaiId,
+			&namaPegawai,
+			&kodeSubkegiatan,
+			&namaSubkegiatan,
+			&rekinId,
+			&namaRencanaKinerja,
+			&renaksiId,
+			&namaRenaksi,
+			&anggaran,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning rincian belanja asn: %v", err)
+		}
+
+		// Jika subkegiatan baru
+		if currentSubkegiatan == nil || currentSubkegiatan.KodeSubkegiatan != kodeSubkegiatan {
+			if currentSubkegiatan != nil {
+				result = append(result, *currentSubkegiatan)
+			}
+			currentSubkegiatan = &domain.RincianBelanjaAsn{
+				PegawaiId:       pegawaiId,
+				NamaPegawai:     namaPegawai,
+				KodeSubkegiatan: kodeSubkegiatan,
+				NamaSubkegiatan: namaSubkegiatan,
+				TotalAnggaran:   0,
+				RencanaKinerja:  []domain.RencanaKinerjaAsn{},
+			}
+			currentRencanaKinerja = nil
+		}
+
+		// Jika rencana kinerja baru dalam subkegiatan yang sama
+		if currentRencanaKinerja == nil || currentRencanaKinerja.RencanaKinerja != namaRencanaKinerja {
+			currentRencanaKinerja = &domain.RencanaKinerjaAsn{
+				RencanaKinerjaId: rekinId,
+				RencanaKinerja:   namaRencanaKinerja,
+				RencanaAksi:      make([]domain.RincianBelanja, 0),
+			}
+			currentSubkegiatan.RencanaKinerja = append(currentSubkegiatan.RencanaKinerja, *currentRencanaKinerja)
+		}
+
+		// Tambahkan rencana aksi jika ada
+		if renaksiId.Valid && namaRenaksi.Valid {
+			rincianBelanja := domain.RincianBelanja{
+				RenaksiId: renaksiId.String,
+				Renaksi:   namaRenaksi.String,
+				Anggaran:  anggaran,
+			}
+			lastIdx := len(currentSubkegiatan.RencanaKinerja) - 1
+			currentSubkegiatan.RencanaKinerja[lastIdx].RencanaAksi = append(
+				currentSubkegiatan.RencanaKinerja[lastIdx].RencanaAksi,
+				rincianBelanja,
+			)
+			currentSubkegiatan.TotalAnggaran += int(anggaran)
+		}
+	}
+
+	// Tambahkan subkegiatan terakhir jika ada
+	if currentSubkegiatan != nil {
+		result = append(result, *currentSubkegiatan)
+	}
+
+	return result, nil
+}
