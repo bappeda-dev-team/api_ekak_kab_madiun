@@ -558,18 +558,22 @@ func (repository *TujuanOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.
 
 func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error) {
 	script := `
-        SELECT
-            t.id,
-            t.kode_opd,
-            t.tujuan,
-            t.tahun_awal,
-            t.tahun_akhir,
-            t.jenis_periode
-        FROM tb_tujuan_opd t
-        WHERE t.kode_opd = ?
-        AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
-        AND t.jenis_periode = ?
-        ORDER BY t.id ASC
+SELECT
+    t.id,
+    t.kode_opd,
+    t.tujuan,
+    t.tahun_awal,
+    t.tahun_akhir,
+    t.jenis_periode
+FROM tb_tujuan_opd t
+INNER JOIN tb_periode p ON 
+    t.tahun_awal = p.tahun_awal 
+    AND t.tahun_akhir = p.tahun_akhir 
+    AND t.jenis_periode = p.jenis_periode
+WHERE t.kode_opd = ?
+AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
+AND t.jenis_periode = ?
+ORDER BY t.id ASC
     `
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun, jenisPeriode)
@@ -670,19 +674,23 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdId(ctx contex
 
 func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdForCascadingOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error) {
 	script := `
-        SELECT
-            t.id,
-            t.kode_opd,
-            t.tujuan,
-            t.tahun_awal,
-            t.tahun_akhir,
-            t.jenis_periode,
-            t.kode_bidang_urusan
-        FROM tb_tujuan_opd t
-        WHERE t.kode_opd = ?
-        AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
-        AND t.jenis_periode = ?
-        ORDER BY t.id ASC
+    SELECT
+    t.id,
+    t.kode_opd,
+    t.tujuan,
+    t.tahun_awal,
+    t.tahun_akhir,
+    t.jenis_periode,
+    t.kode_bidang_urusan
+FROM tb_tujuan_opd t
+INNER JOIN tb_periode p ON 
+    t.tahun_awal = p.tahun_awal 
+    AND t.tahun_akhir = p.tahun_akhir 
+    AND t.jenis_periode = p.jenis_periode
+WHERE t.kode_opd = ?
+AND CAST(? AS SIGNED) BETWEEN CAST(p.tahun_awal AS SIGNED) AND CAST(p.tahun_akhir AS SIGNED)
+AND p.jenis_periode = ?
+ORDER BY t.id ASC
     `
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun, jenisPeriode)
