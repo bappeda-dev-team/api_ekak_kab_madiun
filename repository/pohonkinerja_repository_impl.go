@@ -2653,3 +2653,65 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context,
 
 	return nil
 }
+
+// count pokin pemda in opd
+func (repository *PohonKinerjaRepositoryImpl) CountPokinPemdaByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]int, error) {
+	script := `
+    WITH RECURSIVE pohon_hierarchy AS (
+        -- Base case: level 4 (tidak perlu cek parent karena level 4 pasti parent = null)
+        SELECT 
+            id,
+            parent,
+            level_pohon,
+            status,
+            TRUE as is_valid_pemda
+        FROM tb_pohon_kinerja
+        WHERE kode_opd = ?
+        AND tahun = ?
+        AND level_pohon = 4
+        AND status = 'pokin dari pemda'
+
+        UNION ALL
+
+        -- Recursive case: level > 4 (perlu cek parent)
+        SELECT 
+            p.id,
+            p.parent,
+            p.level_pohon,
+            p.status,
+            CASE 
+                WHEN p.status = 'pokin dari pemda' AND ph.is_valid_pemda = TRUE THEN TRUE
+                ELSE FALSE
+            END as is_valid_pemda
+        FROM tb_pohon_kinerja p
+        INNER JOIN pohon_hierarchy ph ON p.parent = ph.id
+        WHERE p.kode_opd = ?
+        AND p.tahun = ?
+        AND p.level_pohon > 4
+        AND p.status = 'pokin dari pemda'
+    )
+    SELECT 
+        level_pohon,
+        COUNT(*) as jumlah
+    FROM pohon_hierarchy
+    WHERE is_valid_pemda = TRUE
+    GROUP BY level_pohon
+    ORDER BY level_pohon;`
+
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int]int)
+	for rows.Next() {
+		var level, count int
+		if err := rows.Scan(&level, &count); err != nil {
+			return nil, err
+		}
+		result[level] = count
+	}
+
+	return result, nil
+}

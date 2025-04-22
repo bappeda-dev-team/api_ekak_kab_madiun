@@ -406,5 +406,8 @@ func NewRouter(
 	router.POST("/pohon_kinerja_opd/clone", pohonKinerjaOpdController.Clone)
 	router.GET("/pohon_kinerja_opd/check_pokin/:kode_opd/:tahun", pohonKinerjaOpdController.CheckPokinExistsByTahun)
 
+	//count pokin pemda in opd
+	router.GET("/pohon_kinerja_opd/count_pokin_pemda/:kode_opd/:tahun", pohonKinerjaOpdController.CountPokinPemda)
+
 	return router
 }

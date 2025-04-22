@@ -1724,3 +1724,65 @@ func (service *PohonKinerjaOpdServiceImpl) CheckPokinExistsByTahun(ctx context.C
 
 	return exists, nil
 }
+
+func (service *PohonKinerjaOpdServiceImpl) CountPokinPemda(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.CountPokinPemdaResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.CountPokinPemdaResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return pohonkinerja.CountPokinPemdaResponse{}, errors.New("kode opd tidak ditemukan")
+	}
+
+	// Hitung jumlah pokin pemda per level
+	countByLevel, err := service.pohonKinerjaOpdRepository.CountPokinPemdaByLevel(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return pohonkinerja.CountPokinPemdaResponse{}, err
+	}
+
+	// Siapkan response
+	response := pohonkinerja.CountPokinPemdaResponse{
+		KodeOpd: kodeOpd,
+		NamaOpd: opd.NamaOpd,
+		Tahun:   tahun,
+	}
+
+	totalPemda := 0
+	var details []pohonkinerja.LevelDetail
+
+	// Mapping jenis pohon berdasarkan level
+	jenisPohonMap := map[int]string{
+		4: "Strategic",
+		5: "Tactical",
+		6: "Operational",
+	}
+
+	// Susun detail per level
+	for level, count := range countByLevel {
+		jenisPohon := jenisPohonMap[level]
+		if level > 6 {
+			jenisPohon = fmt.Sprintf("Operational-%d", level-6)
+		}
+
+		details = append(details, pohonkinerja.LevelDetail{
+			Level:       level,
+			JenisPohon:  jenisPohon,
+			JumlahPemda: count,
+		})
+		totalPemda += count
+	}
+
+	// Urutkan detail berdasarkan level
+	sort.Slice(details, func(i, j int) bool {
+		return details[i].Level < details[j].Level
+	})
+
+	response.TotalPemda = totalPemda
+	response.DetailLevel = details
+
+	return response, nil
+}

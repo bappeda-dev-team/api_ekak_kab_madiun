@@ -445,3 +445,26 @@ func (controller *PohonKinerjaOpdControllerImpl) CheckPokinExistsByTahun(writer 
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaOpdControllerImpl) CountPokinPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	countPokinPemda, err := controller.PohonKinerjaOpdService.CountPokinPemda(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success",
+		Data:   countPokinPemda,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
