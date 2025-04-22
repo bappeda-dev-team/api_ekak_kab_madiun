@@ -50,6 +50,7 @@ func NewRouter(
 	matrixRenstraController controller.MatrixRenstraController,
 	cascadingOpdController controller.CascadingOpdController,
 	rincianBelanjaController controller.RincianBelanjaController,
+	kelompokAnggaranController controller.KelompokAnggaranController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -395,6 +396,12 @@ func NewRouter(
 	router.PUT("/rincian_belanja/update/:renaksiId", rincianBelanjaController.Update)
 
 	router.GET("/rincian_belanja/laporan", rincianBelanjaController.LaporanRincianBelanjaOpd)
+
+	//kelompok anggaran
+	router.POST("/kelompok_anggaran/create", kelompokAnggaranController.Create)
+	// router.PUT("/kelompok_anggaran/update", kelompokAnggaranController.Update)
+	router.GET("/kelompok_anggaran/findall", kelompokAnggaranController.FindAll)
+	router.GET("/kelompok_anggaran/detail/:id", kelompokAnggaranController.FindById)
 
 	return router
 }
