@@ -220,75 +220,80 @@ func (repository *UserRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id
 
 func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *sql.Tx, username string) (domain.Users, error) {
 	startTime := time.Now()
-	log.Printf("Start finding user by email/NIP: %s", username)
+	log.Printf("Start finding user by NIP: %s", username)
 
-	script := `
-		SELECT u.id, u.nip, u.email, u.password, u.is_active, ur.role_id, r.role 
-		FROM tb_users u
-		LEFT JOIN tb_user_role ur ON u.id = ur.user_id
-		LEFT JOIN tb_role r ON ur.role_id = r.id
-		WHERE u.email = ? OR u.nip = ?
-		ORDER BY ur.role_id
-	`
-	rows, err := tx.QueryContext(ctx, script, username, username)
-	if err != nil {
-		log.Printf("Error querying user by email/NIP: %v", err)
-		return domain.Users{}, err
-	}
-	defer rows.Close()
+	// Query untuk mendapatkan data user terlebih dahulu
+	userScript := `
+        SELECT 
+            id, 
+            nip, 
+            email, 
+            password, 
+            is_active
+        FROM tb_users
+        WHERE nip = ?
+    `
 
 	var user domain.Users
-	first := true
+	err := tx.QueryRowContext(ctx, userScript, username).Scan(
+		&user.Id,
+		&user.Nip,
+		&user.Email,
+		&user.Password,
+		&user.IsActive,
+	)
 
-	for rows.Next() {
-		var roleId sql.NullInt64
-		var roleName sql.NullString
-
-		if first {
-			err := rows.Scan(
-				&user.Id,
-				&user.Nip,
-				&user.Email,
-				&user.Password,
-				&user.IsActive,
-				&roleId,
-				&roleName,
-			)
-			if err != nil {
-				log.Printf("Error scanning first user row: %v", err)
-				return domain.Users{}, err
-			}
-			first = false
-		} else {
-			var userId int
-			var nip, email, password string
-			var isActive bool
-			err := rows.Scan(
-				&userId,
-				&nip,
-				&email,
-				&password,
-				&isActive,
-				&roleId,
-				&roleName,
-			)
-			if err != nil {
-				return domain.Users{}, err
-			}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("No user found with NIP: %s", username)
+			return domain.Users{}, err
 		}
-
-		if roleId.Valid && roleName.Valid {
-			user.Role = append(user.Role, domain.Roles{
-				Id:   int(roleId.Int64),
-				Role: roleName.String,
-			})
-		}
+		log.Printf("Error querying user by NIP: %v", err)
+		return domain.Users{}, err
 	}
 
-	log.Printf("Successfully found user by email/NIP: %s, execution time: %v", username, time.Since(startTime))
+	// Query terpisah untuk mendapatkan role
+	roleScript := `
+        SELECT DISTINCT 
+            r.id,
+            r.role
+        FROM tb_role r
+        JOIN tb_user_role ur ON r.id = ur.role_id
+        WHERE ur.user_id = ?
+    `
+
+	roleRows, err := tx.QueryContext(ctx, roleScript, user.Id)
+	if err != nil {
+		log.Printf("Error querying roles: %v", err)
+		return domain.Users{}, err
+	}
+	defer roleRows.Close()
+
+	user.Role = []domain.Roles{} // Inisialisasi slice kosong
+
+	// Scan semua role yang dimiliki user
+	for roleRows.Next() {
+		var role domain.Roles
+		err := roleRows.Scan(
+			&role.Id,
+			&role.Role,
+		)
+		if err != nil {
+			log.Printf("Error scanning role: %v", err)
+			return domain.Users{}, err
+		}
+		user.Role = append(user.Role, role)
+	}
+
+	if err = roleRows.Err(); err != nil {
+		log.Printf("Error iterating roles: %v", err)
+		return domain.Users{}, err
+	}
+
+	log.Printf("Successfully found user by NIP: %s with %d roles, execution time: %v",
+		username, len(user.Role), time.Since(startTime))
 	return user, nil
 }
-
 func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, tx *sql.Tx, kodeOpd string, roleName string) ([]domain.Users, error) {
 	script := `
         SELECT DISTINCT 

@@ -269,9 +269,67 @@ func (repository *PohonKinerjaRepositoryImpl) FindById(ctx context.Context, tx *
 	return pohonKinerja, nil
 }
 
+//pokin lama
+// func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.PohonKinerja, error) {
+// 	script := `
+//         SELECT
+//             id,
+//             COALESCE(nama_pohon, '') as nama_pohon,
+//             COALESCE(parent, 0) as parent,
+//             COALESCE(jenis_pohon, '') as jenis_pohon,
+//             COALESCE(level_pohon, 0) as level_pohon,
+//             COALESCE(kode_opd, '') as kode_opd,
+//             COALESCE(keterangan, '') as keterangan,
+//             COALESCE(keterangan_crosscutting, '') as keterangan_crosscutting,
+//             COALESCE(tahun, '') as tahun,
+//             COALESCE(status, '') as status,
+// 			COALESCE(is_active) as is_active
+//         FROM tb_pohon_kinerja
+//         WHERE kode_opd = ?
+// 		AND tahun = ?
+// 		AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+//         ORDER BY level_pohon, id ASC`
+
+// 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var pokins []domain.PohonKinerja
+// 	for rows.Next() {
+// 		var pokin domain.PohonKinerja
+// 		err := rows.Scan(
+// 			&pokin.Id,
+// 			&pokin.NamaPohon,
+// 			&pokin.Parent,
+// 			&pokin.JenisPohon,
+// 			&pokin.LevelPohon,
+// 			&pokin.KodeOpd,
+// 			&pokin.Keterangan,
+// 			&pokin.KeteranganCrosscutting,
+// 			&pokin.Tahun,
+// 			&pokin.Status,
+// 			&pokin.IsActive,
+// 		)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		pokins = append(pokins, pokin)
+// 	}
+
+// 	// Inisialisasi slice kosong jika tidak ada data
+// 	if pokins == nil {
+// 		pokins = make([]domain.PohonKinerja, 0)
+// 	}
+
+// 	return pokins, nil
+// }
+
+// pokin baru
 func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.PohonKinerja, error) {
 	script := `
-        SELECT 
+    SELECT 
             id,
             COALESCE(nama_pohon, '') as nama_pohon,
             COALESCE(parent, 0) as parent,
@@ -282,12 +340,18 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
             COALESCE(keterangan_crosscutting, '') as keterangan_crosscutting,
             COALESCE(tahun, '') as tahun,
             COALESCE(status, '') as status,
-			COALESCE(is_active) as is_active
+            COALESCE(is_active) as is_active
         FROM tb_pohon_kinerja 
         WHERE kode_opd = ? 
-		AND tahun = ?
-		AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-        ORDER BY level_pohon, id ASC`
+        AND tahun = ?
+        AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+        ORDER BY 
+            CASE 
+                WHEN status = 'pokin dari pemda' THEN 0 
+                ELSE 1 
+            END,
+            level_pohon, 
+            id ASC`
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
 	if err != nil {
@@ -2408,4 +2472,246 @@ func (repository *PohonKinerjaRepositoryImpl) GetChildrenAndClones(ctx context.C
 	}
 
 	return ids, rows.Err()
+}
+
+// clone pokin opd
+func (repository *PohonKinerjaRepositoryImpl) IsExistsByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) bool {
+	script := "SELECT COUNT(*) FROM tb_pohon_kinerja WHERE kode_opd = ? AND tahun = ?"
+	var count int
+	err := tx.QueryRowContext(ctx, script, kodeOpd, tahun).Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
+
+func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, sourceTahun string, targetTahun string) error {
+	// 1. Dapatkan daftar ID yang valid (status kosong dan parent dengan status kosong)
+	scriptValidIds := `
+	  SELECT p1.id 
+	  FROM tb_pohon_kinerja p1
+	  LEFT JOIN tb_pohon_kinerja p2 ON p1.parent = p2.id 
+	  WHERE p1.kode_opd = ? 
+	  AND p1.tahun = ?
+	  AND p1.status = ''
+	  AND (p1.parent = 0 OR (p2.status = '' OR p2.status IS NULL))
+  `
+	validRows, err := tx.QueryContext(ctx, scriptValidIds, kodeOpd, sourceTahun)
+	if err != nil {
+		return err
+	}
+	defer validRows.Close()
+
+	var validIds []int
+	for validRows.Next() {
+		var id int
+		if err := validRows.Scan(&id); err != nil {
+			return err
+		}
+		validIds = append(validIds, id)
+	}
+
+	// 2. Clone Pohon Kinerja yang valid
+	for _, validId := range validIds {
+		scriptPokin := `
+		  INSERT INTO tb_pohon_kinerja (
+			  nama_pohon, parent, jenis_pohon, level_pohon, 
+			  kode_opd, keterangan, keterangan_crosscutting, 
+			  tahun, status, is_active
+		  )
+		  SELECT 
+			  nama_pohon, parent, jenis_pohon, level_pohon,
+			  kode_opd, keterangan, keterangan_crosscutting,
+			  ?, '', is_active
+		  FROM tb_pohon_kinerja
+		  WHERE id = ?
+	  `
+		_, err := tx.ExecContext(ctx, scriptPokin, targetTahun, validId)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 3. Dapatkan mapping ID lama ke ID baru
+	scriptMapping := `
+	  SELECT 
+		  src.id as old_id,
+		  dst.id as new_id
+	  FROM tb_pohon_kinerja src
+	  JOIN tb_pohon_kinerja dst ON 
+		  src.nama_pohon = dst.nama_pohon AND
+		  src.kode_opd = dst.kode_opd AND
+		  src.level_pohon = dst.level_pohon
+	  WHERE src.tahun = ? AND dst.tahun = ? 
+	  AND src.kode_opd = ?
+  `
+	rows, err := tx.QueryContext(ctx, scriptMapping, sourceTahun, targetTahun, kodeOpd)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	idMapping := make(map[int]int)
+	for rows.Next() {
+		var oldId, newId int
+		if err := rows.Scan(&oldId, &newId); err != nil {
+			return err
+		}
+		idMapping[oldId] = newId
+	}
+
+	// 4. Update parent IDs menggunakan mapping
+	for oldId, newId := range idMapping {
+		scriptUpdateParent := `
+		  UPDATE tb_pohon_kinerja 
+		  SET parent = ?
+		  WHERE id = ? AND tahun = ?
+	  `
+		oldPokin := `SELECT parent FROM tb_pohon_kinerja WHERE id = ? AND tahun = ?`
+		var oldParent int
+		err := tx.QueryRowContext(ctx, oldPokin, oldId, sourceTahun).Scan(&oldParent)
+		if err != nil {
+			continue
+		}
+
+		if newParent, exists := idMapping[oldParent]; exists {
+			_, err = tx.ExecContext(ctx, scriptUpdateParent, newParent, newId, targetTahun)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// 5. Clone Indikator untuk pohon kinerja yang valid
+	for oldId, newId := range idMapping {
+		// Clone indikator - Tambahkan kolom tahun
+		scriptIndikator := `
+			INSERT INTO tb_indikator (
+				id, pokin_id, indikator, tahun
+			)
+			SELECT 
+				CONCAT('IND-', UUID_SHORT()), 
+				?, 
+				indikator,
+				''
+			FROM tb_indikator
+			WHERE pokin_id = ?
+		`
+		_, err := tx.ExecContext(ctx, scriptIndikator, newId, oldId)
+		if err != nil {
+			return err
+		}
+
+		// Dapatkan mapping ID indikator (menggunakan string untuk ID)
+		scriptIndikatorMapping := `
+            SELECT 
+                src.id as old_indikator_id,
+                dst.id as new_indikator_id
+            FROM tb_indikator src
+            JOIN tb_indikator dst ON 
+                src.indikator = dst.indikator AND
+                dst.pokin_id = ?
+            WHERE src.pokin_id = ?
+        `
+		indikatorRows, err := tx.QueryContext(ctx, scriptIndikatorMapping, newId, oldId)
+		if err != nil {
+			return err
+		}
+		defer indikatorRows.Close()
+
+		// Ubah tipe mapping menjadi string
+		indikatorMapping := make(map[string]string)
+		for indikatorRows.Next() {
+			var oldIndikatorId, newIndikatorId string
+			if err := indikatorRows.Scan(&oldIndikatorId, &newIndikatorId); err != nil {
+				return err
+			}
+			indikatorMapping[oldIndikatorId] = newIndikatorId
+		}
+
+		// Clone target untuk setiap indikator
+		for oldIndikatorId, newIndikatorId := range indikatorMapping {
+			scriptTarget := `
+				INSERT INTO tb_target (
+					id, indikator_id, target, satuan, tahun
+				)
+				SELECT 
+					CONCAT('TRG-', UUID_SHORT()), 
+					?, 
+					target, 
+					satuan,
+					? 
+				FROM tb_target
+				WHERE indikator_id = ?
+			`
+			_, err := tx.ExecContext(ctx, scriptTarget, newIndikatorId, targetTahun, oldIndikatorId)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// count pokin pemda in opd
+func (repository *PohonKinerjaRepositoryImpl) CountPokinPemdaByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]int, error) {
+	script := `
+    WITH RECURSIVE pohon_hierarchy AS (
+        -- Base case: level 4 (tidak perlu cek parent karena level 4 pasti parent = null)
+        SELECT 
+            id,
+            parent,
+            level_pohon,
+            status,
+            TRUE as is_valid_pemda
+        FROM tb_pohon_kinerja
+        WHERE kode_opd = ?
+        AND tahun = ?
+        AND level_pohon = 4
+        AND status = 'pokin dari pemda'
+
+        UNION ALL
+
+        -- Recursive case: level > 4 (perlu cek parent)
+        SELECT 
+            p.id,
+            p.parent,
+            p.level_pohon,
+            p.status,
+            CASE 
+                WHEN p.status = 'pokin dari pemda' AND ph.is_valid_pemda = TRUE THEN TRUE
+                ELSE FALSE
+            END as is_valid_pemda
+        FROM tb_pohon_kinerja p
+        INNER JOIN pohon_hierarchy ph ON p.parent = ph.id
+        WHERE p.kode_opd = ?
+        AND p.tahun = ?
+        AND p.level_pohon > 4
+        AND p.status = 'pokin dari pemda'
+    )
+    SELECT 
+        level_pohon,
+        COUNT(*) as jumlah
+    FROM pohon_hierarchy
+    WHERE is_valid_pemda = TRUE
+    GROUP BY level_pohon
+    ORDER BY level_pohon;`
+
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int]int)
+	for rows.Next() {
+		var level, count int
+		if err := rows.Scan(&level, &count); err != nil {
+			return nil, err
+		}
+		result[level] = count
+	}
+
+	return result, nil
 }

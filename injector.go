@@ -387,6 +387,15 @@ var rincianBelanjaSet = wire.NewSet(
 	wire.Bind(new(controller.RincianBelanjaController), new(*controller.RincianBelanjaControllerImpl)),
 )
 
+var kelompokAnggaranSet = wire.NewSet(
+	repository.NewKelompokAnggaranRepositoryImpl,
+	wire.Bind(new(repository.KelompokAnggaranRepository), new(*repository.KelompokAnggaranRepositoryImpl)),
+	service.NewKelompokAnggaranServiceImpl,
+	wire.Bind(new(service.KelompokAnggaranService), new(*service.KelompokAnggaranServiceImpl)),
+	controller.NewKelompokAnggaranControllerImpl,
+	wire.Bind(new(controller.KelompokAnggaranController), new(*controller.KelompokAnggaranControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -433,6 +442,7 @@ func InitializeServer() *http.Server {
 		matrixRenstraSet,
 		cascadingOpdSet,
 		rincianBelanjaSet,
+		kelompokAnggaranSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

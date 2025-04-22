@@ -50,6 +50,7 @@ func NewRouter(
 	matrixRenstraController controller.MatrixRenstraController,
 	cascadingOpdController controller.CascadingOpdController,
 	rincianBelanjaController controller.RincianBelanjaController,
+	kelompokAnggaranController controller.KelompokAnggaranController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -395,6 +396,18 @@ func NewRouter(
 	router.PUT("/rincian_belanja/update/:renaksiId", rincianBelanjaController.Update)
 
 	router.GET("/rincian_belanja/laporan", rincianBelanjaController.LaporanRincianBelanjaOpd)
+
+	//kelompok anggaran
+	router.POST("/kelompok_anggaran/create", kelompokAnggaranController.Create)
+	router.GET("/kelompok_anggaran/findall", kelompokAnggaranController.FindAll)
+	router.GET("/kelompok_anggaran/detail/:id", kelompokAnggaranController.FindById)
+
+	//clonning pohon kinerja opd
+	router.POST("/pohon_kinerja_opd/clone", pohonKinerjaOpdController.Clone)
+	router.GET("/pohon_kinerja_opd/check_pokin/:kode_opd/:tahun", pohonKinerjaOpdController.CheckPokinExistsByTahun)
+
+	//count pokin pemda in opd
+	router.GET("/pohon_kinerja_opd/count_pokin_pemda/:kode_opd/:tahun", pohonKinerjaOpdController.CountPokinPemda)
 
 	return router
 }

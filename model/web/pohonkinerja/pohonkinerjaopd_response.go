@@ -127,3 +127,17 @@ type PeriodeResponse struct {
 	TahunAwal  string `json:"tahun_awal"`
 	TahunAkhir string `json:"tahun_akhir"`
 }
+
+type CountPokinPemdaResponse struct {
+	KodeOpd     string        `json:"kode_opd"`
+	NamaOpd     string        `json:"nama_opd"`
+	Tahun       string        `json:"tahun"`
+	TotalPemda  int           `json:"total_pemda"`
+	DetailLevel []LevelDetail `json:"detail_level"`
+}
+
+type LevelDetail struct {
+	Level       int    `json:"level"`
+	JenisPohon  string `json:"jenis_pohon"`
+	JumlahPemda int    `json:"jumlah_pemda"`
+}
