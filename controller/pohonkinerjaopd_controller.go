@@ -18,4 +18,6 @@ type PohonKinerjaOpdController interface {
 	DeletePokinPemdaInOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateParent(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindidPokinWithAllTema(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	Clone(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CheckPokinExistsByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

@@ -398,3 +398,50 @@ func (controller *PohonKinerjaOpdControllerImpl) FindidPokinWithAllTema(writer h
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaOpdControllerImpl) Clone(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	cloneRequest := pohonkinerja.PohonKinerjaCloneRequest{}
+	helper.ReadFromRequestBody(request, &cloneRequest)
+
+	err := controller.PohonKinerjaOpdService.CloneByKodeOpdAndTahun(request.Context(), cloneRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   "Berhasil cloning pohon kinerja dari tahun " + cloneRequest.TahunSumber + " ke tahun " + cloneRequest.TahunTujuan + " untuk OPD " + cloneRequest.KodeOpd,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaOpdControllerImpl) CheckPokinExistsByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	exists, err := controller.PohonKinerjaOpdService.CheckPokinExistsByTahun(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success",
+		Data:   exists,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

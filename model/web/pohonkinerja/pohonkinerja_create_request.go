@@ -54,3 +54,9 @@ type TematikStatusRequest struct {
 	Id       int  `json:"id" validate:"required"`
 	IsActive bool `json:"is_active"`
 }
+
+type PohonKinerjaCloneRequest struct {
+	KodeOpd     string `json:"kode_opd" validate:"required"`
+	TahunSumber string `json:"tahun_sumber" validate:"required"`
+	TahunTujuan string `json:"tahun_tujuan" validate:"required"`
+}

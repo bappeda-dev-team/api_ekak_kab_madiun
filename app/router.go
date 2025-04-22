@@ -399,9 +399,12 @@ func NewRouter(
 
 	//kelompok anggaran
 	router.POST("/kelompok_anggaran/create", kelompokAnggaranController.Create)
-	// router.PUT("/kelompok_anggaran/update", kelompokAnggaranController.Update)
 	router.GET("/kelompok_anggaran/findall", kelompokAnggaranController.FindAll)
 	router.GET("/kelompok_anggaran/detail/:id", kelompokAnggaranController.FindById)
+
+	//clonning pohon kinerja opd
+	router.POST("/pohon_kinerja_opd/clone", pohonKinerjaOpdController.Clone)
+	router.GET("/pohon_kinerja_opd/check_pokin/:kode_opd/:tahun", pohonKinerjaOpdController.CheckPokinExistsByTahun)
 
 	return router
 }
