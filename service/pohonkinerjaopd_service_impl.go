@@ -1032,6 +1032,12 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 	if tacticalList := pohonMap[5][strategic.Id]; len(tacticalList) > 0 {
 		var tacticals []pohonkinerja.TacticalOpdResponse
 		sort.Slice(tacticalList, func(i, j int) bool {
+			if tacticalList[i].Status == "pokin dari pemda" && tacticalList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if tacticalList[i].Status != "pokin dari pemda" && tacticalList[j].Status == "pokin dari pemda" {
+				return false
+			}
 			return tacticalList[i].Id < tacticalList[j].Id
 		})
 
@@ -1041,8 +1047,6 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 		}
 		strategicResp.Tacticals = tacticals
 	}
-
-	strategicResp.Crosscutting = service.buildCrosscuttingResponse(ctx, tx, strategic.Id, pelaksanaMap, indikatorMap)
 
 	return strategicResp
 }
@@ -1100,6 +1104,12 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
 		var operationals []pohonkinerja.OperationalOpdResponse
 		sort.Slice(operationalList, func(i, j int) bool {
+			if operationalList[i].Status == "pokin dari pemda" && operationalList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if operationalList[i].Status != "pokin dari pemda" && operationalList[j].Status == "pokin dari pemda" {
+				return false
+			}
 			return operationalList[i].Id < operationalList[j].Id
 		})
 
@@ -1109,8 +1119,6 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 		}
 		tacticalResp.Operationals = operationals
 	}
-
-	tacticalResp.Crosscutting = service.buildCrosscuttingResponse(ctx, tx, tactical.Id, pelaksanaMap, indikatorMap)
 
 	return tacticalResp
 }
@@ -1169,7 +1177,15 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 	nextLevel := operational.LevelPohon + 1
 	if operationalNList := pohonMap[nextLevel][operational.Id]; len(operationalNList) > 0 {
 		var childs []pohonkinerja.OperationalNOpdResponse
+		// Ubah pengurutan untuk operational-n
 		sort.Slice(operationalNList, func(i, j int) bool {
+			// Prioritaskan status "pokin dari pemda"
+			if operationalNList[i].Status == "pokin dari pemda" && operationalNList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if operationalNList[i].Status != "pokin dari pemda" && operationalNList[j].Status == "pokin dari pemda" {
+				return false
+			}
 			return operationalNList[i].Id < operationalNList[j].Id
 		})
 
@@ -1179,8 +1195,6 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 		}
 		operationalResp.Childs = childs
 	}
-
-	operationalResp.Crosscutting = service.buildCrosscuttingResponse(ctx, tx, operational.Id, pelaksanaMap, indikatorMap)
 
 	return operationalResp
 }
@@ -1751,29 +1765,40 @@ func (service *PohonKinerjaOpdServiceImpl) CountPokinPemda(ctx context.Context, 
 		Tahun:   tahun,
 	}
 
-	totalPemda := 0
-	var details []pohonkinerja.LevelDetail
-
-	// Mapping jenis pohon berdasarkan level
-	jenisPohonMap := map[int]string{
-		4: "Strategic",
-		5: "Tactical",
-		6: "Operational",
+	// Definisikan level yang harus selalu ada dalam response
+	requiredLevels := []struct {
+		Level      int
+		JenisPohon string
+	}{
+		{4, "Strategic"},
+		{5, "Tactical"},
+		{6, "Operational"},
 	}
 
-	// Susun detail per level
-	for level, count := range countByLevel {
-		jenisPohon := jenisPohonMap[level]
-		if level > 6 {
-			jenisPohon = fmt.Sprintf("Operational-%d", level-6)
-		}
+	var details []pohonkinerja.LevelDetail
+	totalPemda := 0
 
+	// Tambahkan semua level yang required
+	for _, req := range requiredLevels {
+		count := countByLevel[req.Level] // Akan return 0 jika tidak ada data
 		details = append(details, pohonkinerja.LevelDetail{
-			Level:       level,
-			JenisPohon:  jenisPohon,
+			Level:       req.Level,
+			JenisPohon:  req.JenisPohon,
 			JumlahPemda: count,
 		})
 		totalPemda += count
+	}
+
+	// Tambahkan level operational-n (> 6) jika ada
+	for level, count := range countByLevel {
+		if level > 6 {
+			details = append(details, pohonkinerja.LevelDetail{
+				Level:       level,
+				JenisPohon:  fmt.Sprintf("Operational-%d", level-6),
+				JumlahPemda: count,
+			})
+			totalPemda += count
+		}
 	}
 
 	// Urutkan detail berdasarkan level
