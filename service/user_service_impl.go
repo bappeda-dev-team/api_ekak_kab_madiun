@@ -241,12 +241,15 @@ func (service *UserServiceImpl) FindAll(ctx context.Context, kodeOpd string) ([]
 			})
 		}
 
+		pegawaiDomain, _ := service.PegawaiRepository.FindByNip(ctx, tx, u.Nip)
+
 		userResponse := user.UserResponse{
-			Id:       u.Id,
-			Nip:      u.Nip,
-			Email:    u.Email,
-			IsActive: u.IsActive,
-			Role:     roles,
+			Id:          u.Id,
+			Nip:         u.Nip,
+			Email:       u.Email,
+			NamaPegawai: pegawaiDomain.NamaPegawai,
+			IsActive:    u.IsActive,
+			Role:        roles,
 		}
 		userResponses = append(userResponses, userResponse)
 	}
@@ -281,13 +284,16 @@ func (service *UserServiceImpl) FindById(ctx context.Context, id int) (user.User
 		})
 	}
 
+	pegawaiDomain, _ := service.PegawaiRepository.FindByNip(ctx, tx, userDomain.Nip)
+
 	// Convert ke response
 	response := user.UserResponse{
-		Id:       userDomain.Id,
-		Nip:      userDomain.Nip,
-		Email:    userDomain.Email,
-		IsActive: userDomain.IsActive,
-		Role:     roles,
+		Id:          userDomain.Id,
+		Nip:         userDomain.Nip,
+		Email:       userDomain.Email,
+		NamaPegawai: pegawaiDomain.NamaPegawai,
+		IsActive:    userDomain.IsActive,
+		Role:        roles,
 	}
 
 	return response, nil
