@@ -243,6 +243,13 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 		log.Printf("Processing %d strategic entries", len(strategicList))
 		for _, strategicsByParent := range strategicList {
 			sort.Slice(strategicsByParent, func(i, j int) bool {
+				// Prioritaskan status "pokin dari pemda"
+				if strategicsByParent[i].Status == "pokin dari pemda" && strategicsByParent[j].Status != "pokin dari pemda" {
+					return true
+				}
+				if strategicsByParent[i].Status != "pokin dari pemda" && strategicsByParent[j].Status == "pokin dari pemda" {
+					return false
+				}
 				return strategicsByParent[i].Id < strategicsByParent[j].Id
 			})
 
@@ -253,11 +260,16 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 		}
 
 		sort.Slice(response.Strategics, func(i, j int) bool {
+			if response.Strategics[i].Status == "pokin dari pemda" && response.Strategics[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if response.Strategics[i].Status != "pokin dari pemda" && response.Strategics[j].Status == "pokin dari pemda" {
+				return false
+			}
 			return response.Strategics[i].Id < response.Strategics[j].Id
 		})
 	}
 
-	log.Printf("FindAll completed: Processed %d strategic entries", len(response.Strategics))
 	return response, nil
 }
 
@@ -410,6 +422,13 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 	if tacticalList := pohonMap[5][strategic.Id]; len(tacticalList) > 0 {
 		var tacticals []pohonkinerja.TacticalCascadingOpdResponse
 		sort.Slice(tacticalList, func(i, j int) bool {
+			// Prioritaskan status "pokin dari pemda"
+			if tacticalList[i].Status == "pokin dari pemda" && tacticalList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if tacticalList[i].Status != "pokin dari pemda" && tacticalList[j].Status == "pokin dari pemda" {
+				return false
+			}
 			return tacticalList[i].Id < tacticalList[j].Id
 		})
 
@@ -576,6 +595,13 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
 		var operationals []pohonkinerja.OperationalCascadingOpdResponse
 		sort.Slice(operationalList, func(i, j int) bool {
+			// Prioritaskan status "pokin dari pemda"
+			if operationalList[i].Status == "pokin dari pemda" && operationalList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if operationalList[i].Status != "pokin dari pemda" && operationalList[j].Status == "pokin dari pemda" {
+				return false
+			}
 			return operationalList[i].Id < operationalList[j].Id
 		})
 

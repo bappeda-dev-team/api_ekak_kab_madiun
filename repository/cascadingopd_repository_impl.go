@@ -15,7 +15,7 @@ func NewCascadingOpdRepositoryImpl(db *sql.DB, rencanaKinerjaRepository RencanaK
 
 func (repository *CascadingOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.PohonKinerja, error) {
 	script := `
-        SELECT 
+         SELECT 
             id,
             COALESCE(nama_pohon, '') as nama_pohon,
             COALESCE(parent, 0) as parent,
@@ -26,12 +26,18 @@ func (repository *CascadingOpdRepositoryImpl) FindAll(ctx context.Context, tx *s
             COALESCE(keterangan_crosscutting, '') as keterangan_crosscutting,
             COALESCE(tahun, '') as tahun,
             COALESCE(status, '') as status,
-			COALESCE(is_active) as is_active
+            COALESCE(is_active) as is_active
         FROM tb_pohon_kinerja 
         WHERE kode_opd = ? 
-		AND tahun = ?
-		AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-        ORDER BY level_pohon, id ASC`
+        AND tahun = ?
+        AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+        ORDER BY 
+            CASE 
+                WHEN status = 'pokin dari pemda' THEN 0 
+                ELSE 1 
+            END,
+            level_pohon, 
+            id ASC`
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
 	if err != nil {
