@@ -2657,65 +2657,94 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context,
 // count pokin pemda in opd
 func (repository *PohonKinerjaRepositoryImpl) CountPokinPemdaByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]int, error) {
 	script := `
-    WITH RECURSIVE pohon_all AS (
-        SELECT 
-            id,
-            parent,
-            level_pohon,
-            status,
-            CASE 
-                WHEN level_pohon = 4 AND status = 'pokin dari pemda' AND parent IS NULL THEN TRUE
-                ELSE FALSE
-            END as is_counted
-        FROM tb_pohon_kinerja
-        WHERE kode_opd = ? AND tahun = ?
-    ),
-    pohon_hierarchy AS (
-        SELECT 
-            p.*,
-            p.is_counted as should_count
-        FROM pohon_all p
-        WHERE p.level_pohon = 4
-
-        UNION ALL
-
-        SELECT 
-            child.*,
-            CASE
-                WHEN child.level_pohon = 5 AND child.status = 'pokin dari pemda' THEN
-                    CASE
-                        WHEN parent.status = 'pokin dari pemda' THEN
-                            CASE WHEN (SELECT p2.parent FROM pohon_all p2 WHERE p2.id = parent.id) IS NULL THEN TRUE
-                            ELSE FALSE END
-                        WHEN parent.status = '' THEN TRUE
-                        ELSE FALSE
-                    END
-                WHEN child.level_pohon >= 6 AND child.status = 'pokin dari pemda' THEN
-                    CASE
-                        WHEN parent.status = 'pokin dari pemda' THEN
-                            CASE
-                                WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = 'pokin dari pemda' THEN
-                                    CASE WHEN (SELECT p3.parent FROM pohon_all p3 WHERE p3.id = parent.parent) IS NULL THEN TRUE
-                                    ELSE FALSE END
-                                WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = '' THEN TRUE
-                                ELSE FALSE
-                            END
-                        WHEN parent.status = '' THEN TRUE
-                        ELSE FALSE
-                    END
-                ELSE FALSE
-            END as should_count
-        FROM pohon_all child
-        JOIN pohon_hierarchy parent ON child.parent = parent.id
-        WHERE child.level_pohon > 4
-    )
+ WITH RECURSIVE pohon_all AS (
     SELECT 
+        id,
+        parent,
         level_pohon,
-        COUNT(*) as jumlah
-    FROM pohon_hierarchy
-    WHERE should_count = TRUE
-    GROUP BY level_pohon
-    ORDER BY level_pohon;`
+        status,
+        CASE 
+            WHEN level_pohon = 4 AND status = 'pokin dari pemda' AND parent = 0 THEN TRUE
+            ELSE FALSE
+        END as is_counted
+    FROM tb_pohon_kinerja
+    WHERE kode_opd = ? AND tahun = ?
+),
+valid_level_4 AS (
+    SELECT id 
+    FROM pohon_all 
+    WHERE level_pohon = 4 
+    AND status = 'pokin dari pemda' 
+    AND parent = 0
+),
+pohon_hierarchy AS (
+    SELECT 
+        p.*,
+        p.is_counted as should_count
+    FROM pohon_all p
+    WHERE p.level_pohon = 4
+
+    UNION ALL
+
+    SELECT 
+        child.*,
+        CASE
+            WHEN child.level_pohon = 5 AND child.status = 'pokin dari pemda' THEN
+                CASE
+                    WHEN parent.status = 'pokin dari pemda' THEN
+                        CASE WHEN (SELECT p2.parent FROM pohon_all p2 WHERE p2.id = parent.id) = 0 THEN TRUE
+                        ELSE FALSE END
+                    WHEN parent.status = '' THEN TRUE
+                    WHEN EXISTS (
+                        SELECT 1 FROM valid_level_4 
+                        WHERE id = child.parent
+                    ) THEN TRUE
+                    ELSE FALSE
+                END
+            WHEN child.level_pohon >= 6 AND child.status = 'pokin dari pemda' THEN
+                CASE
+                    WHEN parent.status = 'pokin dari pemda' THEN
+                        CASE
+                            WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = 'pokin dari pemda' THEN
+                                CASE WHEN (SELECT p3.parent FROM pohon_all p3 WHERE p3.id = parent.parent) = 0 THEN TRUE
+                                ELSE FALSE END
+                            WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = '' THEN TRUE
+                            ELSE FALSE
+                        END
+                    WHEN parent.status = '' THEN TRUE
+                    WHEN EXISTS (
+                        WITH RECURSIVE ancestors AS (
+                            SELECT p2.id, p2.parent, p2.level_pohon
+                            FROM pohon_all p2
+                            WHERE p2.id = child.parent
+                            
+                            UNION ALL
+                            
+                            SELECT p3.id, p3.parent, p3.level_pohon
+                            FROM pohon_all p3
+                            JOIN ancestors a ON p3.id = a.parent
+                            WHERE p3.level_pohon >= 4
+                        )
+                        SELECT 1 
+                        FROM ancestors a
+                        JOIN valid_level_4 v ON v.id = a.id
+                        WHERE a.level_pohon = 4
+                    ) THEN TRUE
+                    ELSE FALSE
+                END
+            ELSE FALSE
+        END as should_count
+    FROM pohon_all child
+    JOIN pohon_hierarchy parent ON child.parent = parent.id
+    WHERE child.level_pohon > 4
+)
+SELECT 
+    level_pohon,
+    COUNT(*) as jumlah
+FROM pohon_hierarchy
+WHERE should_count = TRUE
+GROUP BY level_pohon
+ORDER BY level_pohon;`
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
 	if err != nil {
