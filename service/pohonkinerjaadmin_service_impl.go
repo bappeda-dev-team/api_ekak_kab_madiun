@@ -993,45 +993,61 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 	}
 
 	// Fungsi rekursif untuk mengupdate status
-	var updateStatusRecursive func(ctx context.Context, tx *sql.Tx, pokinId int) error
-	updateStatusRecursive = func(ctx context.Context, tx *sql.Tx, pokinId int) error {
-		// Update status pokin saat ini jika statusnya menunggu_disetujui
+	var updateStatusRecursive func(ctx context.Context, tx *sql.Tx, pokinId int, parentKodeOpd string) error
+	updateStatusRecursive = func(ctx context.Context, tx *sql.Tx, pokinId int, parentKodeOpd string) error {
+		// Ambil data pokin saat ini
 		pokin, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, pokinId)
 		if err != nil {
 			return err
 		}
 
-		if pokin.Status == "menunggu_disetujui" || pokin.Status == "ditolak" {
-			err = service.pohonKinerjaRepository.UpdatePokinStatus(ctx, tx, pokinId, "disetujui")
+		// Cek apakah kode_opd sama dengan parent atau ini adalah pohon pertama
+		if parentKodeOpd == "" || pokin.KodeOpd == parentKodeOpd {
+			// Update status hanya jika kode_opd sesuai dan statusnya menunggu_disetujui atau ditolak
+			if pokin.Status == "menunggu_disetujui" || pokin.Status == "ditolak" {
+				err = service.pohonKinerjaRepository.UpdatePokinStatus(ctx, tx, pokinId, "disetujui")
+				if err != nil {
+					return err
+				}
+			}
+
+			// Simpan kode_opd untuk digunakan di level berikutnya
+			currentKodeOpd := pokin.KodeOpd
+
+			// Cari child pokin
+			childPokins, err := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(pokinId))
 			if err != nil {
 				return err
 			}
-		}
 
-		// Cari child pokin
-		childPokins, err := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(pokinId))
-		if err != nil {
-			return err
-		}
-
-		// Update status untuk setiap child secara rekursif
-		for _, childPokin := range childPokins {
-			err = updateStatusRecursive(ctx, tx, childPokin.Id)
-			if err != nil {
-				return err
+			// Update status untuk setiap child secara rekursif
+			for _, childPokin := range childPokins {
+				err = updateStatusRecursive(ctx, tx, childPokin.Id, currentKodeOpd)
+				if err != nil {
+					return err
+				}
 			}
 		}
+		// Jika kode_opd berbeda, tidak perlu update status dan tidak perlu memeriksa child-nya
 
 		return nil
 	}
 
 	// Fungsi rekursif untuk clone pokin dan child-nya
-	var clonePokinRecursive func(ctx context.Context, tx *sql.Tx, pokinId int, parentId int) (int64, error)
-	clonePokinRecursive = func(ctx context.Context, tx *sql.Tx, pokinId int, parentId int) (int64, error) {
+	var clonePokinRecursive func(ctx context.Context, tx *sql.Tx, pokinId int, parentId int, parentKodeOpd string) (int64, error)
+	clonePokinRecursive = func(ctx context.Context, tx *sql.Tx, pokinId int, parentId int, parentKodeOpd string) (int64, error) {
 		existingPokin, err := service.pohonKinerjaRepository.FindPokinToClone(ctx, tx, pokinId)
 		if err != nil {
 			return 0, err
 		}
+
+		// Hanya clone jika kode_opd sama dengan parent atau ini adalah pohon pertama yang diclone
+		if parentKodeOpd != "" && existingPokin.KodeOpd != parentKodeOpd {
+			return 0, nil // Skip clone untuk pohon dengan kode_opd berbeda
+		}
+
+		// Simpan kode_opd untuk digunakan di level berikutnya
+		currentKodeOpd := existingPokin.KodeOpd
 
 		// Siapkan data pokin baru
 		newPokin := domain.PohonKinerja{
@@ -1077,7 +1093,8 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 		}
 
 		for _, childPokin := range childPokins {
-			_, err := clonePokinRecursive(ctx, tx, childPokin.Id, int(newPokinId))
+			// Gunakan kode_opd saat ini untuk validasi child
+			_, err := clonePokinRecursive(ctx, tx, childPokin.Id, int(newPokinId), currentKodeOpd)
 			if err != nil {
 				return 0, err
 			}
@@ -1086,14 +1103,14 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 		return newPokinId, nil
 	}
 
-	// Mulai proses clone
-	newPokinId, err := clonePokinRecursive(ctx, tx, request.IdToClone, request.Parent)
+	// Mulai proses clone dengan kode_opd kosong untuk root
+	newPokinId, err := clonePokinRecursive(ctx, tx, request.IdToClone, request.Parent, "")
 	if err != nil {
 		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
 	}
 
 	// Update status untuk pohon asli dan semua child-nya yang berstatus menunggu_disetujui
-	err = updateStatusRecursive(ctx, tx, request.IdToClone)
+	err = updateStatusRecursive(ctx, tx, request.IdToClone, "")
 	if err != nil {
 		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
 	}
