@@ -14,6 +14,7 @@ import (
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
 	"log"
+	"math/rand"
 	"sort"
 	"strconv"
 	"time"
@@ -1099,6 +1100,35 @@ func (service *RencanaKinerjaServiceImpl) CreateSasaranOpd(ctx context.Context, 
 
 		log.Printf("Indikator dibuat: %+v", indikator)
 
+		rencanaKinerja.Indikator[i] = indikator
+
+		randomInt := rand.Intn(100000)
+
+		manualIK := domain.ManualIK{
+			Id:                  randomInt,
+			IndikatorId:         indikatorId,
+			Formula:             helper.EmptyStringIfNull(indikatorRequest.Formula),
+			SumberData:          helper.EmptyStringIfNull(indikatorRequest.SumberData),
+			Perspektif:          "",
+			TujuanRekin:         "",
+			Definisi:            "",
+			KeyActivities:       "",
+			JenisIndikator:      "",
+			Kinerja:             false,
+			Penduduk:            false,
+			Spatial:             false,
+			UnitPenanggungJawab: "",
+			UnitPenyediaData:    "",
+			JangkaWaktuAwal:     "",
+			JangkaWaktuAkhir:    "",
+			PeriodePelaporan:    "",
+		}
+		_, err := service.manualIKRepository.Create(ctx, tx, manualIK)
+		if err != nil {
+			log.Printf("Gagal membuat Manual IK: %v", err)
+			return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal membuat Manual IK: %v", err)
+		}
+
 		for j, targetRequest := range indikatorRequest.Target {
 			targetRandomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
 			targetId := fmt.Sprintf("TRGT-IND-REKIN-%s", targetRandomDigits)
@@ -1201,6 +1231,30 @@ func (service *RencanaKinerjaServiceImpl) UpdateSasaranOpd(ctx context.Context, 
 			log.Printf("Gagal menemukan RencanaKinerja: %v", err)
 			return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal menemukan RencanaKinerja: %v", err)
 		}
+		indikatorLamaList, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rencanaKinerja.Id)
+		if err != nil {
+			log.Printf("Gagal mengambil indikator lama: %v", err)
+			return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil indikator lama: %v", err)
+		}
+		mapIndikatorLama := map[string]bool{}
+		for _, ind := range indikatorLamaList {
+			mapIndikatorLama[ind.Id] = true
+		}
+		mapIndikatorBaru := map[string]bool{}
+		for _, indReq := range request.Indikator {
+			if indReq.Id != "" {
+				mapIndikatorBaru[indReq.Id] = true
+			}
+		}
+		for idLama := range mapIndikatorLama {
+			if !mapIndikatorBaru[idLama] {
+				err := service.manualIKRepository.DeleteByIndikatorId(ctx, tx, idLama)
+				if err != nil {
+					log.Printf("Gagal menghapus Manual IK untuk indikator %s: %v", idLama, err)
+					return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal menghapus Manual IK: %v", err)
+				}
+			}
+		}
 	} else {
 		randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
 		rencanaKinerja.Id = fmt.Sprintf("REKIN-PEG-%s", randomDigits)
@@ -1234,6 +1288,49 @@ func (service *RencanaKinerjaServiceImpl) UpdateSasaranOpd(ctx context.Context, 
 			Id:               indikatorId,
 			Indikator:        indikatorRequest.Indikator,
 			RencanaKinerjaId: rencanaKinerja.Id,
+		}
+
+		rencanaKinerja.Indikator[i] = indikator
+
+		manualIK := domain.ManualIK{
+			IndikatorId:         indikatorId,
+			Formula:             helper.EmptyStringIfNull(indikatorRequest.Formula),
+			SumberData:          helper.EmptyStringIfNull(indikatorRequest.SumberData),
+			Perspektif:          "",
+			TujuanRekin:         "",
+			Definisi:            "",
+			KeyActivities:       "",
+			JenisIndikator:      "",
+			Kinerja:             false,
+			Penduduk:            false,
+			Spatial:             false,
+			UnitPenanggungJawab: "",
+			UnitPenyediaData:    "",
+			JangkaWaktuAwal:     "",
+			JangkaWaktuAkhir:    "",
+			PeriodePelaporan:    "",
+		}
+		// Cek apakah manual IK sudah ada
+		existingManualIK, err := service.manualIKRepository.FindByIndikatorId(ctx, tx, indikatorId)
+		if err != nil {
+			log.Printf("Gagal cek Manual IK: %v", err)
+			return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal cek Manual IK: %v", err)
+		}
+		if existingManualIK.Id == 0 {
+			// Belum ada, create baru
+			_, err := service.manualIKRepository.Create(ctx, tx, manualIK)
+			if err != nil {
+				log.Printf("Gagal membuat Manual IK: %v", err)
+				return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal membuat Manual IK: %v", err)
+			}
+		} else {
+			// Sudah ada, update
+			manualIK.Id = existingManualIK.Id
+			_, err := service.manualIKRepository.Update(ctx, tx, manualIK)
+			if err != nil {
+				log.Printf("Gagal update Manual IK: %v", err)
+				return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal update Manual IK: %v", err)
+			}
 		}
 
 		indikator.Target = make([]domain.Target, len(indikatorRequest.Target))

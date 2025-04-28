@@ -430,3 +430,9 @@ func (repository *ManualIKRepositoryImpl) FindManualIKSasaranOpdByIndikatorId(ct
 
 	return manualIK, nil
 }
+
+func (repository *ManualIKRepositoryImpl) DeleteByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error {
+	script := `DELETE FROM tb_manual_ik WHERE indikator_id = ?`
+	_, err := tx.ExecContext(ctx, script, indikatorId)
+	return err
+}
