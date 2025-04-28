@@ -440,8 +440,8 @@ func (repository *RencanaKinerjaRepositoryImpl) CreateSasaranOpd(ctx context.Con
 	}
 
 	for _, indikator := range rencanaKinerja.Indikator {
-		queryIndikator := "INSERT INTO tb_indikator (id, rencana_kinerja_id, indikator) VALUES (?, ?, ?)"
-		_, err := tx.ExecContext(ctx, queryIndikator, indikator.Id, rencanaKinerja.Id, indikator.Indikator)
+		queryIndikator := "INSERT INTO tb_indikator (id, rencana_kinerja_id, indikator, tahun) VALUES (?, ?, ?, ?)"
+		_, err := tx.ExecContext(ctx, queryIndikator, indikator.Id, rencanaKinerja.Id, indikator.Indikator, indikator.Tahun)
 		if err != nil {
 			return domain.RencanaKinerja{}, fmt.Errorf("error saat menyimpan indikator: %v", err)
 		}

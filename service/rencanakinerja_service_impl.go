@@ -1090,6 +1090,7 @@ func (service *RencanaKinerjaServiceImpl) CreateSasaranOpd(ctx context.Context, 
 		indikator := domain.Indikator{
 			Id:               indikatorId,
 			Indikator:        indikatorRequest.NamaIndikator,
+			Tahun:            "",
 			Target:           make([]domain.Target, len(indikatorRequest.Target)),
 			RencanaKinerjaId: rencanaKinerja.Id,
 		}
@@ -1288,6 +1289,7 @@ func (service *RencanaKinerjaServiceImpl) UpdateSasaranOpd(ctx context.Context, 
 			Id:               indikatorId,
 			Indikator:        indikatorRequest.Indikator,
 			RencanaKinerjaId: rencanaKinerja.Id,
+			Tahun:            "",
 		}
 
 		rencanaKinerja.Indikator[i] = indikator
