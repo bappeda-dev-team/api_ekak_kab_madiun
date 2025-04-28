@@ -17,6 +17,8 @@ type RencanaKinerjaCreateRequest struct {
 
 type IndikatorCreateRequest struct {
 	NamaIndikator string                `json:"nama_indikator"`
+	Formula       string                `json:"rumus_perhitungan"`
+	SumberData    string                `json:"sumber_data"`
 	Tahun         string                `json:"tahun"`
 	Target        []TargetCreateRequest `json:"target"`
 }

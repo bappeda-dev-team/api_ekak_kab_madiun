@@ -30,10 +30,12 @@ type PelaksanaOpdResponse struct {
 }
 
 type IndikatorResponse struct {
-	Id        string            `json:"id"`
-	Indikator string            `json:"indikator"`
-	ManualIK  *ManualIKResponse `json:"manual_ik"`
-	Target    []TargetResponse  `json:"target"`
+	Id         string            `json:"id"`
+	Indikator  string            `json:"indikator"`
+	ManualIK   *ManualIKResponse `json:"manual_ik"`
+	Formula    string            `json:"rumus_perhitungan"`
+	SumberData string            `json:"sumber_data"`
+	Target     []TargetResponse  `json:"target"`
 }
 
 type ManualIKResponse struct {
