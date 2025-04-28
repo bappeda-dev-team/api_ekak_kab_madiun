@@ -19,6 +19,8 @@ type RencanaKinerjaUpdateRequest struct {
 type IndikatorUpdateRequest struct {
 	Id               string                `json:"id_indikator"`
 	RencanaKinerjaId string                `json:"rencana_kinerja_id"`
+	Formula          string                `json:"rumus_perhitungan,omitempty"`
+	SumberData       string                `json:"sumber_data,omitempty"`
 	Indikator        string                `json:"nama_indikator"`
 	Tahun            string                `json:"tahun"`
 	Target           []TargetUpdateRequest `json:"target"`

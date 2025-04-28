@@ -181,17 +181,19 @@ func (service *SasaranOpdServiceImpl) FindByIdRencanaKinerja(ctx context.Context
 		// Convert Indikator
 		for _, indikator := range rekin.Indikator {
 			indResponse := sasaranopd.IndikatorResponse{
-				Id:        indikator.Id,
-				Indikator: indikator.Indikator,
-				Target:    make([]sasaranopd.TargetResponse, 0),
+				Id:         indikator.Id,
+				Indikator:  indikator.Indikator,
+				Formula:    indikator.ManualIK.Formula,
+				SumberData: indikator.ManualIK.SumberData,
+				Target:     make([]sasaranopd.TargetResponse, 0),
 			}
 
-			if indikator.ManualIK != nil {
-				indResponse.ManualIK = &sasaranopd.ManualIKResponse{
-					Formula:    indikator.ManualIK.Formula,
-					SumberData: indikator.ManualIK.SumberData,
-				}
-			}
+			// if indikator.ManualIK != nil {
+			// 	indResponse.ManualIK = &sasaranopd.ManualIKResponse{
+			// 		Formula:    indikator.ManualIK.Formula,
+			// 		SumberData: indikator.ManualIK.SumberData,
+			// 	}
+			// }
 
 			for _, target := range indikator.Target {
 				indResponse.Target = append(indResponse.Target, sasaranopd.TargetResponse{
