@@ -384,11 +384,18 @@ func (service *RencanaKinerjaServiceImpl) FindAll(ctx context.Context, pegawaiId
 				})
 			}
 
+			exist, err := service.manualIKRepository.IsIndikatorExist(ctx, tx, indikator.Id)
+			if err != nil {
+				log.Printf("Gagal memeriksa keberadaan indikator: %v", err)
+				return nil, fmt.Errorf("gagal memeriksa keberadaan indikator: %v", err)
+			}
+
 			indikatorResponses = append(indikatorResponses, rencanakinerja.IndikatorResponse{
 				Id:               indikator.Id,
 				RencanaKinerjaId: indikator.RencanaKinerjaId,
 				NamaIndikator:    indikator.Indikator,
 				Target:           targetResponses,
+				ManualIKExist:    exist,
 			})
 		}
 
@@ -954,11 +961,18 @@ func (service *RencanaKinerjaServiceImpl) RekinsasaranOpd(ctx context.Context, p
 				})
 			}
 
+			exist, err := service.manualIKRepository.IsIndikatorExist(ctx, tx, indikator.Id)
+			if err != nil {
+				log.Printf("Gagal memeriksa keberadaan indikator: %v", err)
+				return nil, fmt.Errorf("gagal memeriksa keberadaan indikator: %v", err)
+			}
+
 			indikatorResponses = append(indikatorResponses, rencanakinerja.IndikatorResponse{
 				Id:               indikator.Id,
 				RencanaKinerjaId: indikator.RencanaKinerjaId,
 				NamaIndikator:    indikator.Indikator,
 				Target:           targetResponses,
+				ManualIKExist:    exist,
 			})
 		}
 

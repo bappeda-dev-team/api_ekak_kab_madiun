@@ -30,6 +30,7 @@ type IndikatorResponse struct {
 	NamaIndikator    string           `json:"nama_indikator,omitempty"`
 	Target           []TargetResponse `json:"targets,omitempty"`
 	ManualIK         *DataOutput      `json:"data_output,omitempty"`
+	ManualIKExist    bool             `json:"manual_ik_exist"`
 }
 
 type TargetResponse struct {

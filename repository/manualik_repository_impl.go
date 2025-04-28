@@ -436,3 +436,17 @@ func (repository *ManualIKRepositoryImpl) DeleteByIndikatorId(ctx context.Contex
 	_, err := tx.ExecContext(ctx, script, indikatorId)
 	return err
 }
+
+func (repository *ManualIKRepositoryImpl) IsIndikatorExist(ctx context.Context, tx *sql.Tx, indikatorId string) (bool, error) {
+	// Query untuk memeriksa keberadaan indikator di tabel manual_ik
+	script := `SELECT COUNT(*) FROM tb_manual_ik WHERE indikator_id = ?`
+
+	var count int
+	err := tx.QueryRowContext(ctx, script, indikatorId).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("gagal memeriksa keberadaan indikator: %v", err)
+	}
+
+	// Mengembalikan true jika count > 0 (indikator ditemukan)
+	return count > 0, nil
+}
