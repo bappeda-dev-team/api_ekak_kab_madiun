@@ -86,9 +86,20 @@ func (controller *PohonKinerjaOpdControllerImpl) Update(writer http.ResponseWrit
 }
 
 func (controller *PohonKinerjaOpdControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	err := controller.PohonKinerjaOpdService.Delete(request.Context(), params.ByName("id"))
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "ID harus berupa angka",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
 
+	err = controller.PohonKinerjaOpdService.Delete(request.Context(), id)
+	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   400,
 			Status: "Error",
