@@ -397,32 +397,91 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 	}, nil
 }
 
-func (service *PohonKinerjaOpdServiceImpl) Delete(ctx context.Context, id string) error {
+func (service *PohonKinerjaOpdServiceImpl) Delete(ctx context.Context, id int) error {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("gagal memulai transaksi: %v", err)
 	}
 	defer helper.CommitOrRollback(tx)
 
-	// Konversi id string ke int
-	idInt, err := strconv.Atoi(id)
+	// 1. Cek apakah pohon kinerja dengan ID tersebut ada
+	pokin, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, id)
 	if err != nil {
-		return errors.New("id tidak valid")
+		return fmt.Errorf("pohon kinerja tidak ditemukan: %v", err)
 	}
 
-	// Cek apakah data exists
-	_, err = service.pohonKinerjaOpdRepository.FindById(ctx, tx, idInt)
-	if err != nil {
-		return errors.New("data pohon kinerja tidak ditemukan")
+	if pokin.LevelPohon != 4 {
+		return fmt.Errorf("hanya pohon kinerja level 4 yang dapat dihapus dengan metode ini")
 	}
 
+	// 2. Lakukan penghapusan dengan fungsi baru
 	err = service.pohonKinerjaOpdRepository.Delete(ctx, tx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("gagal menghapus pohon kinerja: %v", err)
 	}
 
 	return nil
 }
+
+// func (service *PohonKinerjaOpdServiceImpl) Delete(ctx context.Context, id int) error {
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return fmt.Errorf("gagal memulai transaksi: %v", err)
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+
+// 	// 1. Cek apakah pohon kinerja dengan ID tersebut ada
+// 	_, err = service.pohonKinerjaOpdRepository.FindById(ctx, tx, id)
+// 	if err != nil {
+// 		return fmt.Errorf("pohon kinerja tidak ditemukan: %v", err)
+// 	}
+
+// 	// 2. Dapatkan seluruh hierarki child
+// 	childHierarchy, err := service.pohonKinerjaOpdRepository.FindPokinAdminByIdHierarki(ctx, tx, id)
+// 	if err != nil {
+// 		return fmt.Errorf("gagal mendapatkan hierarki pohon kinerja: %v", err)
+// 	}
+
+// 	// 3. Pertama, update status semua node yang memiliki clone_from
+// 	for _, node := range childHierarchy {
+// 		cloneFrom, err := service.pohonKinerjaOpdRepository.CheckCloneFrom(ctx, tx, node.Id)
+// 		if err != nil && err != sql.ErrNoRows {
+// 			return fmt.Errorf("gagal memeriksa clone_from untuk node ID %d: %v", node.Id, err)
+// 		}
+
+// 		if cloneFrom != 0 {
+// 			// Update status node asli menjadi menunggu_disetujui
+// 			err = service.pohonKinerjaOpdRepository.UpdatePokinStatusFromApproved(ctx, tx, cloneFrom)
+// 			if err != nil {
+// 				return fmt.Errorf("gagal mengupdate status node asli ID %d: %v", cloneFrom, err)
+// 			}
+// 		}
+// 	}
+
+// 	// 4. Kemudian, proses penghapusan
+// 	for _, node := range childHierarchy {
+// 		cloneFrom, err := service.pohonKinerjaOpdRepository.CheckCloneFrom(ctx, tx, node.Id)
+// 		if err != nil && err != sql.ErrNoRows {
+// 			return fmt.Errorf("gagal memeriksa clone_from untuk node ID %d: %v", node.Id, err)
+// 		}
+
+// 		if cloneFrom != 0 {
+// 			// Hapus node clone dan seluruh hierarkinya
+// 			err = service.pohonKinerjaOpdRepository.DeleteClonedPokinHierarchy(ctx, tx, node.Id)
+// 			if err != nil {
+// 				return fmt.Errorf("gagal menghapus hierarki clone untuk node ID %d: %v", node.Id, err)
+// 			}
+// 		} else {
+// 			// Jika bukan clone, hapus node beserta indikator dan targetnya
+// 			err = service.pohonKinerjaOpdRepository.DeletePokinWithIndikatorAndTarget(ctx, tx, node.Id)
+// 			if err != nil {
+// 				return fmt.Errorf("gagal menghapus node ID %d beserta indikator dan target: %v", node.Id, err)
+// 			}
+// 		}
+// 	}
+
+// 	return nil
+// }
 
 func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int) (pohonkinerja.PohonKinerjaOpdResponse, error) {
 	tx, err := service.DB.Begin()
@@ -1286,117 +1345,117 @@ func (service *PohonKinerjaOpdServiceImpl) FindPokinByPelaksana(ctx context.Cont
 	return responses, nil
 }
 
-func (service *PohonKinerjaOpdServiceImpl) buildCrosscuttingResponse(ctx context.Context, tx *sql.Tx, pokinId int, pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse, indikatorMap map[int][]pohonkinerja.IndikatorResponse) []pohonkinerja.CrosscuttingOpdResponse {
-	// Ambil data crosscutting berdasarkan crosscutting_from
-	crosscuttings, err := service.crosscuttingOpdRepository.FindAllCrosscutting(ctx, tx, pokinId)
-	if err != nil {
-		log.Printf("Error getting crosscutting data: %v", err)
-		return nil
-	}
+// func (service *PohonKinerjaOpdServiceImpl) buildCrosscuttingResponse(ctx context.Context, tx *sql.Tx, pokinId int, pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse, indikatorMap map[int][]pohonkinerja.IndikatorResponse) []pohonkinerja.CrosscuttingOpdResponse {
+// 	// Ambil data crosscutting berdasarkan crosscutting_from
+// 	crosscuttings, err := service.crosscuttingOpdRepository.FindAllCrosscutting(ctx, tx, pokinId)
+// 	if err != nil {
+// 		log.Printf("Error getting crosscutting data: %v", err)
+// 		return nil
+// 	}
 
-	var crosscuttingResponses []pohonkinerja.CrosscuttingOpdResponse
-	for _, crosscutting := range crosscuttings {
-		// Filter status crosscutting yang akan ditampilkan
-		if crosscutting.Status != "crosscutting_disetujui" &&
-			crosscutting.Status != "crosscutting_disetujui_existing" {
-			continue
-		}
+// 	var crosscuttingResponses []pohonkinerja.CrosscuttingOpdResponse
+// 	for _, crosscutting := range crosscuttings {
+// 		// Filter status crosscutting yang akan ditampilkan
+// 		if crosscutting.Status != "crosscutting_disetujui" &&
+// 			crosscutting.Status != "crosscutting_disetujui_existing" {
+// 			continue
+// 		}
 
-		// Ambil data OPD
-		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, crosscutting.KodeOpd)
-		if err != nil {
-			log.Printf("Gagal mengambil data OPD: %v", err)
-			continue
-		}
+// 		// Ambil data OPD
+// 		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, crosscutting.KodeOpd)
+// 		if err != nil {
+// 			log.Printf("Gagal mengambil data OPD: %v", err)
+// 			continue
+// 		}
 
-		// Ambil data indikator untuk crosscutting
-		indikatorList, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(crosscutting.Id))
-		if err == nil {
-			var indikatorResponses []pohonkinerja.IndikatorResponse
-			for _, indikator := range indikatorList {
-				// Ambil target untuk setiap indikator
-				targetList, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
-				if err != nil {
-					continue
-				}
+// 		// Ambil data indikator untuk crosscutting
+// 		indikatorList, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(crosscutting.Id))
+// 		if err == nil {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+// 			for _, indikator := range indikatorList {
+// 				// Ambil target untuk setiap indikator
+// 				targetList, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
+// 				if err != nil {
+// 					continue
+// 				}
 
-				var targetResponses []pohonkinerja.TargetResponse
-				for _, target := range targetList {
-					targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-						Id:              target.Id,
-						IndikatorId:     target.IndikatorId,
-						TargetIndikator: target.Target,
-						SatuanIndikator: target.Satuan,
-					})
-				}
+// 				var targetResponses []pohonkinerja.TargetResponse
+// 				for _, target := range targetList {
+// 					targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 						Id:              target.Id,
+// 						IndikatorId:     target.IndikatorId,
+// 						TargetIndikator: target.Target,
+// 						SatuanIndikator: target.Satuan,
+// 					})
+// 				}
 
-				indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
-					Id:            indikator.Id,
-					IdPokin:       fmt.Sprint(crosscutting.Id),
-					NamaIndikator: indikator.Indikator,
-					Target:        targetResponses,
-				})
-			}
-			indikatorMap[crosscutting.Id] = indikatorResponses
-		}
+// 				indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 					Id:            indikator.Id,
+// 					IdPokin:       fmt.Sprint(crosscutting.Id),
+// 					NamaIndikator: indikator.Indikator,
+// 					Target:        targetResponses,
+// 				})
+// 			}
+// 			indikatorMap[crosscutting.Id] = indikatorResponses
+// 		}
 
-		// Ambil data pelaksana untuk crosscutting
-		pelaksanaList, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(crosscutting.Id))
-		if err == nil {
-			var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
-			for _, pelaksana := range pelaksanaList {
-				pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
-				if err != nil {
-					continue
-				}
-				pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
-					Id:             pelaksana.Id,
-					PohonKinerjaId: fmt.Sprint(crosscutting.Id),
-					PegawaiId:      pelaksana.PegawaiId,
-					NamaPegawai:    pegawai.NamaPegawai,
-				})
-			}
-			pelaksanaMap[crosscutting.Id] = pelaksanaResponses
-		}
+// 		// Ambil data pelaksana untuk crosscutting
+// 		pelaksanaList, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(crosscutting.Id))
+// 		if err == nil {
+// 			var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
+// 			for _, pelaksana := range pelaksanaList {
+// 				pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
+// 				if err != nil {
+// 					continue
+// 				}
+// 				pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
+// 					Id:             pelaksana.Id,
+// 					PohonKinerjaId: fmt.Sprint(crosscutting.Id),
+// 					PegawaiId:      pelaksana.PegawaiId,
+// 					NamaPegawai:    pegawai.NamaPegawai,
+// 				})
+// 			}
+// 			pelaksanaMap[crosscutting.Id] = pelaksanaResponses
+// 		}
 
-		// Jika status disetujui_existing, ambil data pohon kinerja yang di-crosscut
-		var namaPohon string
-		var jenisPohon string
-		var levelPohon int
+// 		// Jika status disetujui_existing, ambil data pohon kinerja yang di-crosscut
+// 		var namaPohon string
+// 		var jenisPohon string
+// 		var levelPohon int
 
-		if crosscutting.Status == "crosscutting_disetujui_existing" && crosscutting.CrosscuttingTo != 0 {
-			pokinExisting, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, crosscutting.CrosscuttingTo)
-			if err == nil {
-				namaPohon = pokinExisting.NamaPohon
-				jenisPohon = pokinExisting.JenisPohon
-				levelPohon = pokinExisting.LevelPohon
-			}
-		} else {
-			namaPohon = crosscutting.NamaPohon
-			jenisPohon = crosscutting.JenisPohon
-			levelPohon = crosscutting.LevelPohon
-		}
+// 		if crosscutting.Status == "crosscutting_disetujui_existing" && crosscutting.CrosscuttingTo != 0 {
+// 			pokinExisting, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, crosscutting.CrosscuttingTo)
+// 			if err == nil {
+// 				namaPohon = pokinExisting.NamaPohon
+// 				jenisPohon = pokinExisting.JenisPohon
+// 				levelPohon = pokinExisting.LevelPohon
+// 			}
+// 		} else {
+// 			namaPohon = crosscutting.NamaPohon
+// 			jenisPohon = crosscutting.JenisPohon
+// 			levelPohon = crosscutting.LevelPohon
+// 		}
 
-		crosscuttingResp := pohonkinerja.CrosscuttingOpdResponse{
-			Id:         crosscutting.Id,
-			Parent:     pokinId,
-			NamaPohon:  namaPohon,
-			JenisPohon: jenisPohon,
-			LevelPohon: levelPohon,
-			Keterangan: crosscutting.Keterangan,
-			Status:     crosscutting.Status,
-			KodeOpd:    crosscutting.KodeOpd,
-			NamaOpd:    opd.NamaOpd,
-			Tahun:      crosscutting.Tahun,
-			Pelaksana:  pelaksanaMap[crosscutting.Id],
-			Indikator:  indikatorMap[crosscutting.Id],
-		}
+// 		crosscuttingResp := pohonkinerja.CrosscuttingOpdResponse{
+// 			Id:         crosscutting.Id,
+// 			Parent:     pokinId,
+// 			NamaPohon:  namaPohon,
+// 			JenisPohon: jenisPohon,
+// 			LevelPohon: levelPohon,
+// 			Keterangan: crosscutting.Keterangan,
+// 			Status:     crosscutting.Status,
+// 			KodeOpd:    crosscutting.KodeOpd,
+// 			NamaOpd:    opd.NamaOpd,
+// 			Tahun:      crosscutting.Tahun,
+// 			Pelaksana:  pelaksanaMap[crosscutting.Id],
+// 			Indikator:  indikatorMap[crosscutting.Id],
+// 		}
 
-		crosscuttingResponses = append(crosscuttingResponses, crosscuttingResp)
-	}
+// 		crosscuttingResponses = append(crosscuttingResponses, crosscuttingResp)
+// 	}
 
-	return crosscuttingResponses
-}
+// 	return crosscuttingResponses
+// }
 
 func (service *PohonKinerjaOpdServiceImpl) DeletePokinPemdaInOpd(ctx context.Context, id int) error {
 	tx, err := service.DB.Begin()
@@ -1422,7 +1481,7 @@ func (service *PohonKinerjaOpdServiceImpl) DeletePokinPemdaInOpd(ctx context.Con
 	}
 
 	// 3. Hapus data clone saat ini
-	err = service.pohonKinerjaOpdRepository.Delete(ctx, tx, fmt.Sprint(id))
+	err = service.pohonKinerjaOpdRepository.Delete(ctx, tx, id)
 	if err != nil {
 		return fmt.Errorf("gagal menghapus pohon kinerja clone: %v", err)
 	}
