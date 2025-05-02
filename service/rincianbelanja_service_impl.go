@@ -8,6 +8,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/rincianbelanja"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
+	"fmt"
 	"log"
 	"sort"
 )
@@ -406,6 +407,155 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 		responses = append(responses, *response)
 	}
 	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].KodeSubkegiatan < responses[j].KodeSubkegiatan
+	})
+
+	return responses, nil
+}
+
+func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx context.Context, pegawaiId string, tahun string) ([]rincianbelanja.RincianBelanjaAsnResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	rincianBelanjaList, err := service.rincianBelanjaRepository.LaporanRincianBelanjaPegawai(ctx, tx, pegawaiId, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map untuk mengelompokkan berdasarkan kode OPD dan subkegiatan
+	subkegiatanMap := make(map[string]*rincianbelanja.RincianBelanjaAsnResponse)
+
+	for _, rb := range rincianBelanjaList {
+		// Buat key unik untuk kombinasi OPD dan subkegiatan
+		key := fmt.Sprintf("%s_%s", rb.KodeOpd, rb.KodeSubkegiatan)
+
+		// Ambil atau buat response subkegiatan
+		subResponse, exists := subkegiatanMap[key]
+		if !exists {
+			// Ambil indikator subkegiatan
+			indikatorSubkegiatan, err := service.rincianBelanjaRepository.FindIndikatorSubkegiatanByKodeAndOpd(
+				ctx,
+				tx,
+				rb.KodeSubkegiatan,
+				rb.KodeOpd,
+				tahun,
+			)
+			if err != nil {
+				log.Printf("Error mengambil indikator subkegiatan: %v", err)
+				continue
+			}
+
+			// Sort dan konversi indikator subkegiatan
+			sort.Slice(indikatorSubkegiatan, func(i, j int) bool {
+				return indikatorSubkegiatan[i].Id < indikatorSubkegiatan[j].Id
+			})
+
+			var indikatorSubkegiatanResponses []rincianbelanja.IndikatorResponse
+			for _, ind := range indikatorSubkegiatan {
+				sort.Slice(ind.Target, func(i, j int) bool {
+					return ind.Target[i].Id < ind.Target[j].Id
+				})
+
+				var targetResponses []rincianbelanja.TargetResponse
+				for _, t := range ind.Target {
+					targetResponses = append(targetResponses, rincianbelanja.TargetResponse{
+						Id:          t.Id,
+						IndikatorId: t.IndikatorId,
+						Target:      t.Target,
+						Satuan:      t.Satuan,
+					})
+				}
+
+				indikatorSubkegiatanResponses = append(indikatorSubkegiatanResponses, rincianbelanja.IndikatorResponse{
+					Id:              ind.Id,
+					KodeSubkegiatan: ind.Kode,
+					KodeOPD:         ind.KodeOpd,
+					NamaIndikator:   ind.Indikator,
+					Target:          targetResponses,
+				})
+			}
+
+			subResponse = &rincianbelanja.RincianBelanjaAsnResponse{
+				KodeOpd:              rb.KodeOpd,
+				KodeSubkegiatan:      rb.KodeSubkegiatan,
+				NamaSubkegiatan:      rb.NamaSubkegiatan,
+				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
+				TotalAnggaran:        0,
+				RincianBelanja:       []rincianbelanja.RincianBelanjaResponse{},
+			}
+			subkegiatanMap[key] = subResponse
+		}
+
+		// Proses rencana kinerja
+		for _, rk := range rb.RencanaKinerja {
+			var rencanaAksiResponses []rincianbelanja.RencanaAksiResponse
+			var totalAnggaranRekin int = 0
+
+			// Ambil dan proses indikator rencana kinerja
+			indikators, err := service.rincianBelanjaRepository.FindIndikatorByRekinId(ctx, tx, rk.RencanaKinerjaId)
+			if err != nil {
+				log.Printf("Error mengambil indikator untuk rekin %s: %v", rk.RencanaKinerjaId, err)
+				continue
+			}
+
+			// Sort dan konversi indikator
+			var indikatorResponses []rincianbelanja.IndikatorResponse
+			for _, ind := range indikators {
+				var targetResponses []rincianbelanja.TargetResponse
+				for _, t := range ind.Target {
+					targetResponses = append(targetResponses, rincianbelanja.TargetResponse{
+						Id:          t.Id,
+						IndikatorId: t.IndikatorId,
+						Target:      t.Target,
+						Satuan:      t.Satuan,
+					})
+				}
+
+				indikatorResponses = append(indikatorResponses, rincianbelanja.IndikatorResponse{
+					Id:               ind.Id,
+					RencanaKinerjaId: ind.RencanaKinerjaId,
+					NamaIndikator:    ind.Indikator,
+					Target:           targetResponses,
+				})
+			}
+
+			// Proses rencana aksi
+			for _, ra := range rk.RencanaAksi {
+				rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
+					RenaksiId: ra.RenaksiId,
+					Renaksi:   ra.Renaksi,
+					Anggaran:  int(ra.Anggaran),
+				})
+				totalAnggaranRekin += int(ra.Anggaran)
+			}
+
+			subResponse.RincianBelanja = append(subResponse.RincianBelanja, rincianbelanja.RincianBelanjaResponse{
+				RencanaKinerjaId: rk.RencanaKinerjaId,
+				RencanaKinerja:   rk.RencanaKinerja,
+				PegawaiId:        rk.PegawaiId,
+				NamaPegawai:      rk.NamaPegawai,
+				Indikator:        indikatorResponses,
+				TotalAnggaran:    totalAnggaranRekin,
+				RencanaAksi:      rencanaAksiResponses,
+			})
+			subResponse.TotalAnggaran += totalAnggaranRekin
+		}
+	}
+
+	// Convert map to slice dan sort
+	var responses []rincianbelanja.RincianBelanjaAsnResponse
+	for _, response := range subkegiatanMap {
+		responses = append(responses, *response)
+	}
+
+	// Sort berdasarkan kode OPD dan kode subkegiatan
+	sort.Slice(responses, func(i, j int) bool {
+		if responses[i].KodeOpd != responses[j].KodeOpd {
+			return responses[i].KodeOpd < responses[j].KodeOpd
+		}
 		return responses[i].KodeSubkegiatan < responses[j].KodeSubkegiatan
 	})
 

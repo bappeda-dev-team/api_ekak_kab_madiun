@@ -496,3 +496,161 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
 
 	return result, nil
 }
+
+func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx context.Context, tx *sql.Tx, pegawaiId string, tahun string) ([]domain.RincianBelanjaAsn, error) {
+	// Pertama, dapatkan semua kode OPD dari rencana kinerja pegawai tersebut
+	opdQuery := `
+    SELECT DISTINCT kode_opd 
+    FROM tb_rencana_kinerja 
+    WHERE pegawai_id = ? AND tahun = ?
+    `
+	opdRows, err := tx.QueryContext(ctx, opdQuery, pegawaiId, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("error querying opd: %v", err)
+	}
+	defer opdRows.Close()
+
+	var kodeOpds []string
+	for opdRows.Next() {
+		var kodeOpd string
+		if err := opdRows.Scan(&kodeOpd); err != nil {
+			return nil, fmt.Errorf("error scanning opd: %v", err)
+		}
+		kodeOpds = append(kodeOpds, kodeOpd)
+	}
+
+	fmt.Println(kodeOpds)
+
+	// Query utama yang mencakup rencana kinerja dari semua pegawai dengan OPD yang sama
+	query := `
+    WITH pegawai_rencana AS (
+        -- Ambil semua subkegiatan dari pegawai yang ditentukan
+        SELECT DISTINCT st.kode_subkegiatan, rk.kode_opd
+        FROM tb_rencana_kinerja rk
+        INNER JOIN tb_subkegiatan_terpilih st ON st.rekin_id = rk.id
+        WHERE rk.pegawai_id = ? AND rk.tahun = ?
+    ),
+    related_rencana AS (
+        -- Ambil semua rencana kinerja yang memiliki OPD dan subkegiatan yang sama
+        SELECT 
+            rk.id as rekin_id,
+            rk.pegawai_id,
+            rk.kode_opd,
+            p.nama as nama_pegawai,
+            st.kode_subkegiatan,
+            sk.nama_subkegiatan,
+            rk.nama_rencana_kinerja
+        FROM tb_rencana_kinerja rk
+        INNER JOIN tb_subkegiatan_terpilih st ON st.rekin_id = rk.id
+        INNER JOIN pegawai_rencana pr ON pr.kode_subkegiatan = st.kode_subkegiatan 
+            AND pr.kode_opd = rk.kode_opd
+        LEFT JOIN tb_pegawai p ON p.nip = rk.pegawai_id
+        LEFT JOIN tb_subkegiatan sk ON sk.kode_subkegiatan = st.kode_subkegiatan
+        WHERE rk.tahun = ?
+    )
+    SELECT 
+        rr.pegawai_id,
+        rr.nama_pegawai,
+        rr.kode_opd,
+        rr.kode_subkegiatan,
+        rr.nama_subkegiatan,
+        rr.rekin_id,
+        rr.nama_rencana_kinerja,
+        ra.id as renaksi_id,
+        ra.nama_rencana_aksi,
+        COALESCE(rb.anggaran, 0) as anggaran
+    FROM related_rencana rr
+    LEFT JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rr.rekin_id
+    LEFT JOIN tb_rincian_belanja rb ON rb.renaksi_id = ra.id
+    ORDER BY rr.kode_opd, rr.kode_subkegiatan, rr.pegawai_id, rr.rekin_id, ra.id
+    `
+
+	rows, err := tx.QueryContext(ctx, query, pegawaiId, tahun, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("error querying rincian belanja pegawai: %v", err)
+	}
+	defer rows.Close()
+
+	// Struktur yang sama seperti sebelumnya, tapi dengan pengelompokan tambahan
+	var result []domain.RincianBelanjaAsn
+	var currentSubkegiatan *domain.RincianBelanjaAsn
+	var currentRencanaKinerja *domain.RencanaKinerjaAsn
+
+	for rows.Next() {
+		// Scanning fields sama seperti sebelumnya
+		var (
+			pegawaiId, namaPegawai, kodeOpd, kodeSubkegiatan, namaSubkegiatan string
+			rekinId, namaRencanaKinerja                                       string
+			renaksiId, namaRenaksi                                            sql.NullString
+			anggaran                                                          int64
+		)
+
+		err := rows.Scan(
+			&pegawaiId,
+			&namaPegawai,
+			&kodeOpd,
+			&kodeSubkegiatan,
+			&namaSubkegiatan,
+			&rekinId,
+			&namaRencanaKinerja,
+			&renaksiId,
+			&namaRenaksi,
+			&anggaran,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning rincian belanja pegawai: %v", err)
+		}
+
+		// Logika pengelompokan yang diperbarui
+		if currentSubkegiatan == nil ||
+			currentSubkegiatan.KodeSubkegiatan != kodeSubkegiatan ||
+			currentSubkegiatan.KodeOpd != kodeOpd {
+			if currentSubkegiatan != nil {
+				result = append(result, *currentSubkegiatan)
+			}
+			currentSubkegiatan = &domain.RincianBelanjaAsn{
+				KodeOpd:         kodeOpd,
+				KodeSubkegiatan: kodeSubkegiatan,
+				NamaSubkegiatan: namaSubkegiatan,
+				TotalAnggaran:   0,
+				RencanaKinerja:  []domain.RencanaKinerjaAsn{},
+			}
+			currentRencanaKinerja = nil
+		}
+
+		// Logika rencana kinerja yang diperbarui
+		if currentRencanaKinerja == nil ||
+			currentRencanaKinerja.RencanaKinerja != namaRencanaKinerja ||
+			currentRencanaKinerja.PegawaiId != pegawaiId {
+			currentRencanaKinerja = &domain.RencanaKinerjaAsn{
+				RencanaKinerjaId: rekinId,
+				RencanaKinerja:   namaRencanaKinerja,
+				PegawaiId:        pegawaiId,
+				NamaPegawai:      namaPegawai,
+				RencanaAksi:      make([]domain.RincianBelanja, 0),
+			}
+			currentSubkegiatan.RencanaKinerja = append(currentSubkegiatan.RencanaKinerja, *currentRencanaKinerja)
+		}
+
+		// Tambahkan rencana aksi jika ada
+		if renaksiId.Valid && namaRenaksi.Valid {
+			rincianBelanja := domain.RincianBelanja{
+				RenaksiId: renaksiId.String,
+				Renaksi:   namaRenaksi.String,
+				Anggaran:  anggaran,
+			}
+			lastIdx := len(currentSubkegiatan.RencanaKinerja) - 1
+			currentSubkegiatan.RencanaKinerja[lastIdx].RencanaAksi = append(
+				currentSubkegiatan.RencanaKinerja[lastIdx].RencanaAksi,
+				rincianBelanja,
+			)
+			currentSubkegiatan.TotalAnggaran += int(anggaran)
+		}
+	}
+
+	if currentSubkegiatan != nil {
+		result = append(result, *currentSubkegiatan)
+	}
+
+	return result, nil
+}

@@ -1,6 +1,7 @@
 package rincianbelanja
 
 type RincianBelanjaAsnResponse struct {
+	KodeOpd              string                   `json:"kode_opd,omitempty"`
 	PegawaiId            string                   `json:"pegawai_id,omitempty"`
 	NamaPegawai          string                   `json:"nama_pegawai,omitempty"`
 	KodeSubkegiatan      string                   `json:"kode_subkegiatan"`
