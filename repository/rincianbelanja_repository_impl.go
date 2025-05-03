@@ -372,15 +372,7 @@ func (repository *RincianBelanjaRepositoryImpl) FindAnggaranByRenaksiId(ctx cont
 // laporan rincian belanja
 func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RincianBelanjaAsn, error) {
 	query := `
-    WITH valid_users AS (
-            SELECT DISTINCT p.nip
-            FROM tb_pegawai p
-            JOIN tb_users u ON u.nip = p.nip
-            JOIN tb_user_role ur ON ur.user_id = u.id
-            JOIN tb_role r ON r.id = ur.role_id
-            WHERE r.role = 'level_3'
-        ),
-        rencana_kinerja_opd AS (
+         WITH rencana_kinerja_opd AS (
             SELECT 
                 rk.id as rekin_id,
                 rk.pegawai_id,
@@ -389,7 +381,6 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
                 sk.nama_subkegiatan,
                 rk.nama_rencana_kinerja
             FROM tb_rencana_kinerja rk
-            INNER JOIN valid_users vu ON vu.nip = rk.pegawai_id
             LEFT JOIN tb_pegawai p ON p.nip = rk.pegawai_id
             INNER JOIN tb_subkegiatan_terpilih st ON st.rekin_id = rk.id
             LEFT JOIN tb_subkegiatan sk ON sk.kode_subkegiatan = st.kode_subkegiatan
@@ -468,6 +459,8 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
 			currentRencanaKinerja = &domain.RencanaKinerjaAsn{
 				RencanaKinerjaId: rekinId,
 				RencanaKinerja:   namaRencanaKinerja,
+				PegawaiId:        pegawaiId,
+				NamaPegawai:      namaPegawai,
 				RencanaAksi:      make([]domain.RincianBelanja, 0),
 			}
 			currentSubkegiatan.RencanaKinerja = append(currentSubkegiatan.RencanaKinerja, *currentRencanaKinerja)

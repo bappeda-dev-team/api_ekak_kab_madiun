@@ -387,8 +387,8 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 			subResponse.RincianBelanja = append(subResponse.RincianBelanja, rincianbelanja.RincianBelanjaResponse{
 				RencanaKinerjaId: rk.RencanaKinerjaId,
 				RencanaKinerja:   rk.RencanaKinerja,
-				PegawaiId:        rb.PegawaiId,
-				NamaPegawai:      rb.NamaPegawai,
+				PegawaiId:        rk.PegawaiId,
+				NamaPegawai:      rk.NamaPegawai,
 				Indikator:        indikatorResponses,
 				TotalAnggaran:    totalAnggaranRekin,
 				RencanaAksi:      rencanaAksiResponses,
@@ -549,6 +549,22 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 	var responses []rincianbelanja.RincianBelanjaAsnResponse
 	for _, response := range subkegiatanMap {
 		responses = append(responses, *response)
+	}
+	for i := range responses {
+		// Urutkan RincianBelanja sehingga rencana kinerja pegawai yang difilter muncul duluan
+		sort.Slice(responses[i].RincianBelanja, func(x, y int) bool {
+			// Jika salah satu adalah pegawai yang dicari, letakkan di atas
+			isPegawaiX := responses[i].RincianBelanja[x].PegawaiId == pegawaiId
+			isPegawaiY := responses[i].RincianBelanja[y].PegawaiId == pegawaiId
+
+			if isPegawaiX != isPegawaiY {
+				return isPegawaiX // true jika x adalah pegawai yang dicari
+			}
+
+			// Jika keduanya bukan pegawai yang dicari atau keduanya adalah pegawai yang dicari
+			// urutkan berdasarkan RencanaKinerjaId
+			return responses[i].RincianBelanja[x].RencanaKinerjaId < responses[i].RincianBelanja[y].RencanaKinerjaId
+		})
 	}
 
 	// Sort berdasarkan kode OPD dan kode subkegiatan
