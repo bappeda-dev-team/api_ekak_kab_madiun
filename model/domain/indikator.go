@@ -23,7 +23,6 @@ type Indikator struct {
 	ParentOpdId      string
 	AsalIku          string
 	ParentName       string
-	ManualIK         *ManualIKSasaranOpd
 	CreatedAt        time.Time
 	TahunAwal        string
 	TahunAkhir       string

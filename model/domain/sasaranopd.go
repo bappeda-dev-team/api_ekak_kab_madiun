@@ -11,13 +11,15 @@ type SasaranOpd struct {
 	TahunAkhirPeriode string
 	JenisPeriode      string
 	Pelaksana         []PelaksanaPokin
-	RencanaKinerja    []RencanaKinerja
+	SasaranOpd        []SasaranOpdDetail
 }
 
-type ManualIKSasaranOpd struct {
-	IndikatorId string
-	Formula     string
-	SumberData  string
-	ManualIK    *ManualIKSasaranOpd
-	Target      []Target
+type SasaranOpdDetail struct {
+	Id             int
+	IdPohon        int
+	NamaSasaranOpd string
+	TahunAwal      string
+	TahunAkhir     string
+	JenisPeriode   string
+	Indikator      []Indikator
 }

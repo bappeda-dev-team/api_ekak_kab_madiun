@@ -3,6 +3,7 @@ package controller
 import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"ekak_kabupaten_madiun/model/web/sasaranopd"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
 	"strconv"
@@ -44,10 +45,12 @@ func (controller *SasaranOpdControllerImpl) FindAll(writer http.ResponseWriter, 
 	}
 }
 
-func (controller *SasaranOpdControllerImpl) FindByIdRencanaKinerja(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	idRencanaKinerja := params.ByName("id_rencana_kinerja")
+func (controller *SasaranOpdControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	idInt, err := strconv.Atoi(id)
+	helper.PanicIfError(err)
 
-	sasaranOpdResponse, err := controller.SasaranOpdService.FindByIdRencanaKinerja(request.Context(), idRencanaKinerja)
+	sasaranOpdResponse, err := controller.SasaranOpdService.FindById(request.Context(), idInt)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   400,
@@ -58,8 +61,91 @@ func (controller *SasaranOpdControllerImpl) FindByIdRencanaKinerja(writer http.R
 	} else {
 		webResponse := web.WebResponse{
 			Code:   200,
-			Status: "get all sasaran opd by id rencana kinerja",
+			Status: "get sasaran opd by id",
 			Data:   sasaranOpdResponse,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+	}
+}
+
+func (controller *SasaranOpdControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	sasaranOpdCreateRequest := sasaranopd.SasaranOpdCreateRequest{}
+	helper.ReadFromRequestBody(request, &sasaranOpdCreateRequest)
+
+	sasaranOpdCreateResponse, err := controller.SasaranOpdService.Create(request.Context(), sasaranOpdCreateRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "failed create sasaran opd",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusCreated,
+		Status: "success create sasaran opd",
+		Data:   sasaranOpdCreateResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *SasaranOpdControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	sasaranOpdUpdateRequest := sasaranopd.SasaranOpdUpdateRequest{}
+	helper.ReadFromRequestBody(request, &sasaranOpdUpdateRequest)
+
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "ID harus berupa angka",
+		}
+		writer.WriteHeader(http.StatusBadRequest)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	sasaranOpdUpdateRequest.IdSasaranOpd = id
+
+	// Panggil service Update
+	sasaranOpdResponse, err := controller.SasaranOpdService.Update(request.Context(), sasaranOpdUpdateRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// Kirim response
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Update Sasaran Opd",
+		Data:   sasaranOpdResponse,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *SasaranOpdControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+
+	err := controller.SasaranOpdService.Delete(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "failed delete sasaran opd",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+	} else {
+		webResponse := web.WebResponse{
+			Code:   200,
+			Status: "success delete sasaran opd",
+			Data:   id,
 		}
 		helper.WriteToResponseBody(writer, webResponse)
 	}

@@ -349,10 +349,13 @@ func NewRouter(
 
 	//sasaran opd
 	router.GET("/sasaran_opd/findall/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", sasaranOpdController.FindAll)
-	router.GET("/sasaran_opd/detail/:id_rencana_kinerja", sasaranOpdController.FindByIdRencanaKinerja)
+	router.GET("/sasaran_opd/detail/:id", sasaranOpdController.FindById)
 	router.GET("/rencana_kinerja_sasaran_opd/pegawai_level1/:pegawai_id/tahun/:tahun", rencanaKinerjaController.FindRekinSasaranOpd)
-	router.POST("/sasaran_opd/create", rencanaKinerjaController.CreateSasaranOpd)
-	router.PUT("/sasaran_opd/update/:id", rencanaKinerjaController.UpdateSasaranOpd)
+	// router.POST("/sasaran_opd/create", rencanaKinerjaController.CreateSasaranOpd)
+	// router.PUT("/sasaran_opd/update/:id", rencanaKinerjaController.UpdateSasaranOpd)
+	router.POST("/sasaran_opd/create", sasaranOpdController.Create)
+	router.PUT("/sasaran_opd/update/:id", sasaranOpdController.Update)
+	router.DELETE("/sasaran_opd/delete/:id", sasaranOpdController.Delete)
 	router.GET("/sasaran_opd/pokin/:id", sasaranOpdController.FindIdPokinSasaran)
 
 	//visi pemda
