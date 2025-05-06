@@ -151,6 +151,72 @@ func (controller *SasaranOpdControllerImpl) Delete(writer http.ResponseWriter, r
 	}
 }
 
+func (controller *SasaranOpdControllerImpl) FindByIdPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokinStr := params.ByName("id_pokin")
+	tahun := params.ByName("tahun")
+
+	// Validasi parameter tidak boleh kosong
+	if idPokinStr == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "ID pohon kinerja tidak boleh kosong",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	if tahun == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "Tahun tidak boleh kosong",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// Validasi format tahun
+	if len(tahun) != 4 {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "Format tahun harus 4 digit (YYYY)",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	idPokin, err := strconv.Atoi(idPokinStr)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "ID pohon kinerja harus berupa angka",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	sasaranOpdResponse, err := controller.SasaranOpdService.FindByIdPokin(request.Context(), idPokin, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "get sasaran opd by id pokin and tahun",
+		Data:   sasaranOpdResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
 func (controller *SasaranOpdControllerImpl) FindIdPokinSasaran(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	idPokinStr := params.ByName("id")
 	idPokin, err := strconv.Atoi(idPokinStr)

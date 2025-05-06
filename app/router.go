@@ -356,7 +356,7 @@ func NewRouter(
 	router.POST("/sasaran_opd/create", sasaranOpdController.Create)
 	router.PUT("/sasaran_opd/update/:id", sasaranOpdController.Update)
 	router.DELETE("/sasaran_opd/delete/:id", sasaranOpdController.Delete)
-	router.GET("/sasaran_opd/pokin/:id", sasaranOpdController.FindIdPokinSasaran)
+	router.GET("/sasaran_opd/pokin/:id_pokin/tahun/:tahun", sasaranOpdController.FindByIdPokin)
 
 	//visi pemda
 	router.POST("/visi_pemda/create", visiPemdaController.Create)

@@ -147,7 +147,6 @@ func (service *SasaranOpdServiceImpl) FindAll(ctx context.Context, KodeOpd strin
 	return responses, nil
 }
 
-// service/sasaranopd_service_impl.go
 func (service *SasaranOpdServiceImpl) FindById(ctx context.Context, id int) (*sasaranopd.SasaranOpdResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -467,6 +466,78 @@ func (service *SasaranOpdServiceImpl) Delete(ctx context.Context, id string) err
 	}
 
 	return nil
+}
+
+func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin int, tahun string) (*sasaranopd.SasaranOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	sasaranOpd, err := service.sasaranOpdRepository.FindByIdPokin(ctx, tx, idPokin, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &sasaranopd.SasaranOpdResponse{
+		IdPohon:    sasaranOpd.IdPohon,
+		NamaPohon:  sasaranOpd.NamaPohon,
+		JenisPohon: sasaranOpd.JenisPohon,
+		LevelPohon: sasaranOpd.LevelPohon,
+		TahunPohon: sasaranOpd.TahunPohon,
+		Pelaksana:  make([]sasaranopd.PelaksanaOpdResponse, 0),
+		SasaranOpd: make([]sasaranopd.SasaranOpdDetailResponse, 0),
+	}
+
+	// Convert Pelaksana
+	for _, pelaksana := range sasaranOpd.Pelaksana {
+		response.Pelaksana = append(response.Pelaksana, sasaranopd.PelaksanaOpdResponse{
+			Id:          pelaksana.Id,
+			PegawaiId:   pelaksana.PegawaiId,
+			Nip:         pelaksana.Nip,
+			NamaPegawai: pelaksana.NamaPegawai,
+		})
+	}
+
+	// Convert SasaranOpd
+	for _, sasaran := range sasaranOpd.SasaranOpd {
+		sasaranResponse := sasaranopd.SasaranOpdDetailResponse{
+			Id:             strconv.Itoa(sasaran.Id),
+			NamaSasaranOpd: sasaran.NamaSasaranOpd,
+			TahunAwal:      sasaran.TahunAwal,
+			TahunAkhir:     sasaran.TahunAkhir,
+			JenisPeriode:   sasaran.JenisPeriode,
+			Indikator:      make([]sasaranopd.IndikatorResponse, 0),
+		}
+
+		// Convert Indikator
+		for _, indikator := range sasaran.Indikator {
+			indResponse := sasaranopd.IndikatorResponse{
+				Id:               indikator.Id,
+				Indikator:        indikator.Indikator,
+				RumusPerhitungan: indikator.RumusPerhitungan.String,
+				SumberData:       indikator.SumberData.String,
+				Target:           make([]sasaranopd.TargetResponse, 0),
+			}
+
+			// Convert Target
+			for _, target := range indikator.Target {
+				indResponse.Target = append(indResponse.Target, sasaranopd.TargetResponse{
+					Id:     target.Id,
+					Tahun:  target.Tahun,
+					Target: target.Target,
+					Satuan: target.Satuan,
+				})
+			}
+
+			sasaranResponse.Indikator = append(sasaranResponse.Indikator, indResponse)
+		}
+
+		response.SasaranOpd = append(response.SasaranOpd, sasaranResponse)
+	}
+
+	return response, nil
 }
 
 func (service *SasaranOpdServiceImpl) FindIdPokinSasaran(ctx context.Context, id int) (pohonkinerja.PohonKinerjaOpdResponse, error) {
