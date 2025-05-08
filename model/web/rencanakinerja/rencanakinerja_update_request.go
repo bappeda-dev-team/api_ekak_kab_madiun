@@ -2,7 +2,7 @@ package rencanakinerja
 
 type RencanaKinerjaUpdateRequest struct {
 	Id                   string                   `json:"id"`
-	SasaranOpdId         int                      `json:"sasaranopd_id" validate:"required"`
+	SasaranOpdId         int                      `json:"sasaranopd_id"`
 	IdPohon              int                      `json:"id_pohon" validate:"required"`
 	NamaRencanaKinerja   string                   `json:"nama_rencana_kinerja" validate:"required"`
 	Tahun                string                   `json:"tahun" validate:"required"`
