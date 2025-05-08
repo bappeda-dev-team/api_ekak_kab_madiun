@@ -29,4 +29,5 @@ type RencanaKinerja struct {
 	NamaSubKegiatan string
 	KodeKegiatan    string
 	NamaKegiatan    string
+	SasaranOpdId    int
 }

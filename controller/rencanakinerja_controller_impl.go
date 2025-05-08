@@ -217,40 +217,40 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRincianKak(writer http.Re
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
-func (controller *RencanaKinerjaControllerImpl) FindRekinSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	pegawaiId := params.ByName("pegawai_id")
-	tahun := params.ByName("tahun")
-	kodeOPD := params.ByName("kode_opd")
+// func (controller *RencanaKinerjaControllerImpl) FindRekinSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+// 	pegawaiId := params.ByName("pegawai_id")
+// 	tahun := params.ByName("tahun")
+// 	kodeOPD := params.ByName("kode_opd")
 
-	rencanaKinerjaResponses, err := controller.rencanaKinerjaService.RekinsasaranOpd(request.Context(), pegawaiId, kodeOPD, tahun)
-	if err != nil {
-		webResponse := web.WebRencanaKinerjaResponse{
-			Code:   http.StatusBadRequest,
-			Status: "failed get rekin sasaran opd",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+// 	rencanaKinerjaResponses, err := controller.rencanaKinerjaService.RekinsasaranOpd(request.Context(), pegawaiId, kodeOPD, tahun)
+// 	if err != nil {
+// 		webResponse := web.WebRencanaKinerjaResponse{
+// 			Code:   http.StatusBadRequest,
+// 			Status: "failed get rekin sasaran opd",
+// 			Data:   err.Error(),
+// 		}
+// 		helper.WriteToResponseBody(writer, webResponse)
+// 		return
+// 	}
 
-	webResponse := web.WebRencanaKinerjaResponse{
-		Code:   http.StatusOK,
-		Status: "success get rekin sasaran opd",
-		Data:   rencanaKinerjaResponses,
-	}
+// 	webResponse := web.WebRencanaKinerjaResponse{
+// 		Code:   http.StatusOK,
+// 		Status: "success get rekin sasaran opd",
+// 		Data:   rencanaKinerjaResponses,
+// 	}
 
-	helper.WriteToResponseBody(writer, webResponse)
-}
+// 	helper.WriteToResponseBody(writer, webResponse)
+// }
 
-func (controller *RencanaKinerjaControllerImpl) CreateSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *RencanaKinerjaControllerImpl) CreateRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	rencanaKinerjaCreateRequest := rencanakinerja.RencanaKinerjaCreateRequest{}
 	helper.ReadFromRequestBody(request, &rencanaKinerjaCreateRequest)
 
-	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.CreateSasaranOpd(request.Context(), rencanaKinerjaCreateRequest)
+	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.CreateRekinLevel1(request.Context(), rencanaKinerjaCreateRequest)
 	if err != nil {
 		webResponse := web.WebRencanaKinerjaResponse{
 			Code:   400,
-			Status: "failed create sasaran opd",
+			Status: "failed create rekin level 1",
 			Data:   err.Error(),
 		}
 		helper.WriteToResponseBody(writer, webResponse)
@@ -258,24 +258,24 @@ func (controller *RencanaKinerjaControllerImpl) CreateSasaranOpd(writer http.Res
 	}
 	webResponse := web.WebRencanaKinerjaResponse{
 		Code:   http.StatusCreated,
-		Status: "success create sasaran opd",
+		Status: "success create rekin level 1",
 		Data:   rencanaKinerjaResponse,
 	}
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
-func (controller *RencanaKinerjaControllerImpl) UpdateSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *RencanaKinerjaControllerImpl) UpdateRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	rencanaKinerjaUpdateRequest := rencanakinerja.RencanaKinerjaUpdateRequest{}
 	helper.ReadFromRequestBody(request, &rencanaKinerjaUpdateRequest)
 
 	rencanaKinerjaUpdateRequest.Id = params.ByName("id")
 
-	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.UpdateSasaranOpd(request.Context(), rencanaKinerjaUpdateRequest)
+	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.UpdateRekinLevel1(request.Context(), rencanaKinerjaUpdateRequest)
 	if err != nil {
 		webResponse := web.WebRencanaKinerjaResponse{
 			Code:   400,
-			Status: "failed update sasaran opd",
+			Status: "failed update rekin level 1",
 			Data:   nil,
 		}
 		helper.WriteToResponseBody(writer, webResponse)
@@ -283,9 +283,40 @@ func (controller *RencanaKinerjaControllerImpl) UpdateSasaranOpd(writer http.Res
 	}
 	webResponse := web.WebRencanaKinerjaResponse{
 		Code:   200,
-		Status: "success update sasaran opd",
+		Status: "success update rekin level 1",
 		Data:   rencanaKinerjaResponse,
 	}
 
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *RencanaKinerjaControllerImpl) FindIdRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	if id == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "ID tidak boleh kosong",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.FindIdRekinLevel1(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   rencanaKinerjaResponse,
+	}
 	helper.WriteToResponseBody(writer, webResponse)
 }

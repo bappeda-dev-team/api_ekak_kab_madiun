@@ -2,13 +2,14 @@ package rencanakinerja
 
 type RencanaKinerjaUpdateRequest struct {
 	Id                   string                   `json:"id"`
-	IdPohon              int                      `json:"id_pohon"`
-	NamaRencanaKinerja   string                   `json:"nama_rencana_kinerja"`
-	Tahun                string                   `json:"tahun"`
-	StatusRencanaKinerja string                   `json:"status_rencana_kinerja"`
+	SasaranOpdId         int                      `json:"sasaranopd_id" validate:"required"`
+	IdPohon              int                      `json:"id_pohon" validate:"required"`
+	NamaRencanaKinerja   string                   `json:"nama_rencana_kinerja" validate:"required"`
+	Tahun                string                   `json:"tahun" validate:"required"`
+	StatusRencanaKinerja string                   `json:"status_rencana_kinerja" validate:"required"`
 	Catatan              string                   `json:"catatan"`
-	KodeOpd              string                   `json:"kode_opd"`
-	PegawaiId            string                   `json:"pegawai_id"`
+	KodeOpd              string                   `json:"kode_opd" validate:"required"`
+	PegawaiId            string                   `json:"pegawai_id" validate:"required"`
 	PeriodeId            int                      `json:"periode_id"`
 	TahunAwal            string                   `json:"tahun_awal"`
 	TahunAkhir           string                   `json:"tahun_akhir"`
