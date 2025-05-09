@@ -323,6 +323,7 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 }
 
 func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasaranopd.SasaranOpdUpdateRequest) (*sasaranopd.SasaranOpdCreateResponse, error) {
+	// Validasi awal tetap sama
 	err := service.validate.Struct(request)
 	if err != nil {
 		return nil, err
@@ -334,7 +335,7 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 	}
 	defer helper.CommitOrRollback(tx)
 
-	// Validasi periode
+	// Validasi periode tetap sama
 	tahunAwalInt, err := strconv.Atoi(request.TahunAwal)
 	if err != nil {
 		return nil, errors.New("format tahun awal tidak valid")
@@ -360,26 +361,28 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 	for _, indikatorReq := range request.Indikator {
 		var indikatorId string
 
-		// Penanganan ID indikator
+		// Cek apakah indikator sudah ada
 		if indikatorReq.Id != "" {
+			// Gunakan ID yang sudah ada
 			indikatorId = indikatorReq.Id
 		} else {
 			// Generate ID baru untuk indikator baru
-			indikatorId = fmt.Sprintf("IND-SAS-%s", uuid.New().String()[:5])
+			indikatorId = fmt.Sprintf("IND-SAS-%s", uuid.New().String()[:4])
 		}
 
 		var targetList []domain.Target
 		var targetResponses []sasaranopd.TargetDetail
 
-		// Hanya proses target yang ada di request
 		for _, targetReq := range indikatorReq.Target {
 			var targetId string
 
-			// Generate ID baru jika tidak ada ID atau indikator baru
-			if indikatorReq.Id == "" || targetReq.Id == "" {
-				targetId = fmt.Sprintf("TRG-SAS-%s", uuid.New().String()[:5])
-			} else {
+			// Cek apakah target sudah ada
+			if targetReq.Id != "" {
+				// Gunakan ID yang sudah ada
 				targetId = targetReq.Id
+			} else {
+				// Generate ID baru untuk target baru
+				targetId = fmt.Sprintf("TRG-SAS-%d-%s-%s", request.IdSasaranOpd, indikatorId, targetReq.Tahun)
 			}
 
 			target := domain.Target{
@@ -400,15 +403,16 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 		}
 
 		indikator := domain.Indikator{
-			Id:        indikatorId,
-			Indikator: indikatorReq.Indikator,
+			Id:           indikatorId,
+			SasaranOpdId: request.IdSasaranOpd,
+			Indikator:    indikatorReq.Indikator,
 			RumusPerhitungan: sql.NullString{
 				String: indikatorReq.RumusPerhitungan,
-				Valid:  indikatorReq.RumusPerhitungan != "",
+				Valid:  true,
 			},
 			SumberData: sql.NullString{
 				String: indikatorReq.SumberData,
-				Valid:  indikatorReq.SumberData != "",
+				Valid:  true,
 			},
 			Target: targetList,
 		}
@@ -425,7 +429,7 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 
 	// Persiapkan data update
 	sasaranOpdUpdate := domain.SasaranOpdDetail{
-		Id:             existingSasaran.Id,
+		Id:             request.IdSasaranOpd,
 		IdPohon:        existingSasaran.IdPohon,
 		NamaSasaranOpd: request.NamaSasaran,
 		TahunAwal:      request.TahunAwal,
@@ -469,15 +473,28 @@ func (service *SasaranOpdServiceImpl) Delete(ctx context.Context, id string) err
 }
 
 func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin int, tahun string) (*sasaranopd.SasaranOpdResponse, error) {
+	// Start transaction
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error starting transaction: %v", err)
 	}
-	defer helper.CommitOrRollback(tx)
+
+	// Ensure transaction is handled properly
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
 
 	sasaranOpd, err := service.sasaranOpdRepository.FindByIdPokin(ctx, tx, idPokin, tahun)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error finding sasaran opd: %v", err)
+	}
+
+	// Commit transaction before converting response
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("error committing transaction: %v", err)
 	}
 
 	response := &sasaranopd.SasaranOpdResponse{
@@ -490,7 +507,7 @@ func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin
 		SasaranOpd: make([]sasaranopd.SasaranOpdDetailResponse, 0),
 	}
 
-	// Convert Pelaksana
+	// Convert response outside of transaction
 	for _, pelaksana := range sasaranOpd.Pelaksana {
 		response.Pelaksana = append(response.Pelaksana, sasaranopd.PelaksanaOpdResponse{
 			Id:          pelaksana.Id,
@@ -500,7 +517,6 @@ func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin
 		})
 	}
 
-	// Convert SasaranOpd
 	for _, sasaran := range sasaranOpd.SasaranOpd {
 		sasaranResponse := sasaranopd.SasaranOpdDetailResponse{
 			Id:             strconv.Itoa(sasaran.Id),
@@ -511,7 +527,7 @@ func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin
 			Indikator:      make([]sasaranopd.IndikatorResponse, 0),
 		}
 
-		// Convert Indikator
+		// Convert dan urutkan indikator
 		for _, indikator := range sasaran.Indikator {
 			indResponse := sasaranopd.IndikatorResponse{
 				Id:               indikator.Id,
@@ -521,7 +537,7 @@ func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin
 				Target:           make([]sasaranopd.TargetResponse, 0),
 			}
 
-			// Convert Target
+			// Convert dan urutkan target
 			for _, target := range indikator.Target {
 				indResponse.Target = append(indResponse.Target, sasaranopd.TargetResponse{
 					Id:     target.Id,
@@ -531,8 +547,18 @@ func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin
 				})
 			}
 
+			// Urutkan target berdasarkan tahun
+			sort.Slice(indResponse.Target, func(i, j int) bool {
+				return indResponse.Target[i].Tahun < indResponse.Target[j].Tahun
+			})
+
 			sasaranResponse.Indikator = append(sasaranResponse.Indikator, indResponse)
 		}
+
+		// Urutkan indikator berdasarkan nama
+		sort.Slice(sasaranResponse.Indikator, func(i, j int) bool {
+			return sasaranResponse.Indikator[i].Indikator < sasaranResponse.Indikator[j].Indikator
+		})
 
 		response.SasaranOpd = append(response.SasaranOpd, sasaranResponse)
 	}

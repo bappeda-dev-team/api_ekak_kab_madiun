@@ -15,6 +15,7 @@ type Indikator struct {
 	TujuanOpdId      int
 	TujuanPemdaId    int
 	SasaranPemdaId   int
+	SasaranOpdId     int
 	Indikator        string
 	Tahun            string
 	CloneFrom        string
