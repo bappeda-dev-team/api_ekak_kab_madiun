@@ -111,3 +111,26 @@ func (controller *RincianBelanjaControllerImpl) LaporanRincianBelanjaOpd(writer 
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *RincianBelanjaControllerImpl) LaporanRincianBelanjaPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	pegawaiId := params.ByName("pegawai_id")
+	tahun := params.ByName("tahun")
+
+	response, err := controller.rincianBelanjaService.LaporanRincianBelanjaPegawai(request.Context(), pegawaiId, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed get laporan rincian belanja",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "success",
+		Data:   response,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

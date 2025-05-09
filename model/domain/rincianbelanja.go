@@ -2,6 +2,7 @@ package domain
 
 type RincianBelanjaAsn struct {
 	PegawaiId       string
+	KodeOpd         string
 	NamaPegawai     string
 	KodeSubkegiatan string
 	NamaSubkegiatan string
@@ -13,6 +14,8 @@ type RincianBelanjaAsn struct {
 type RencanaKinerjaAsn struct {
 	RencanaKinerjaId string
 	RencanaKinerja   string
+	PegawaiId        string
+	NamaPegawai      string
 	Indikator        []Indikator
 	RencanaAksi      []RincianBelanja
 }

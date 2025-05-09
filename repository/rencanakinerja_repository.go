@@ -16,8 +16,9 @@ type RencanaKinerjaRepository interface {
 	Delete(ctx context.Context, tx *sql.Tx, id string) error
 	FindAllRincianKak(ctx context.Context, tx *sql.Tx, rencanakinerjaid, pegawaiId string) ([]domain.RencanaKinerja, error)
 	//sasaran opd
-	CreateSasaranOpd(ctx context.Context, tx *sql.Tx, sasaranOpd domain.RencanaKinerja) (domain.RencanaKinerja, error)
-	UpdateSasaranOpd(ctx context.Context, tx *sql.Tx, sasaranOpd domain.RencanaKinerja) (domain.RencanaKinerja, error)
+	CreateRekinLevel1(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error)
+	UpdateRekinLevel1(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error)
+	FindIdRekinLevel1(ctx context.Context, tx *sql.Tx, id string) (domain.RencanaKinerja, error)
 	RekinsasaranOpd(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error)
 	FindIndikatorSasaranbyRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error)
 	FindTargetByIndikatorIdAndTahun(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) ([]domain.Target, error)
