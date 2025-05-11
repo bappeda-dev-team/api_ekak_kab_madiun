@@ -405,13 +405,9 @@ func (service *PohonKinerjaOpdServiceImpl) Delete(ctx context.Context, id int) e
 	defer helper.CommitOrRollback(tx)
 
 	// 1. Cek apakah pohon kinerja dengan ID tersebut ada
-	pokin, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, id)
+	_, err = service.pohonKinerjaOpdRepository.FindById(ctx, tx, id)
 	if err != nil {
 		return fmt.Errorf("pohon kinerja tidak ditemukan: %v", err)
-	}
-
-	if pokin.LevelPohon != 4 {
-		return fmt.Errorf("hanya pohon kinerja level 4 yang dapat dihapus dengan metode ini")
 	}
 
 	// 2. Lakukan penghapusan dengan fungsi baru
