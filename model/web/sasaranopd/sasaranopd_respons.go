@@ -1,25 +1,22 @@
 package sasaranopd
 
 type SasaranOpdResponse struct {
-	Id             int                    `json:"id"`
-	IdPohon        int                    `json:"id_pohon"`
-	NamaPohon      string                 `json:"nama_pohon"`
-	JenisPohon     string                 `json:"jenis_pohon"`
-	TahunPohon     string                 `json:"tahun_pohon"`
-	LevelPohon     int                    `json:"level_pohon"`
-	RencanaKinerja []RencanaKinerjaOpd    `json:"rencana_kinerja"`
-	Pelaksana      []PelaksanaOpdResponse `json:"pelaksana"`
+	IdPohon    int                        `json:"id_pohon"`
+	NamaPohon  string                     `json:"nama_pohon"`
+	JenisPohon string                     `json:"jenis_pohon"`
+	TahunPohon string                     `json:"tahun_pohon"`
+	LevelPohon int                        `json:"level_pohon"`
+	Pelaksana  []PelaksanaOpdResponse     `json:"pelaksana"`
+	SasaranOpd []SasaranOpdDetailResponse `json:"sasaran_opd"`
 }
 
-type RencanaKinerjaOpd struct {
-	Id                 string              `json:"id"`
-	TahunAwal          string              `json:"tahun_awal"`
-	TahunAkhir         string              `json:"tahun_akhir"`
-	JenisPeriode       string              `json:"jenis_periode"`
-	NamaRencanaKinerja string              `json:"nama_rencana_kinerja"`
-	Nip                string              `json:"nip"`
-	NamaPegawai        string              `json:"nama_pegawai"`
-	Indikator          []IndikatorResponse `json:"indikator"`
+type SasaranOpdDetailResponse struct {
+	Id             string              `json:"id"`
+	NamaSasaranOpd string              `json:"nama_sasaran_opd"`
+	TahunAwal      string              `json:"tahun_awal"`
+	TahunAkhir     string              `json:"tahun_akhir"`
+	JenisPeriode   string              `json:"jenis_periode"`
+	Indikator      []IndikatorResponse `json:"indikator"`
 }
 
 type PelaksanaOpdResponse struct {
@@ -30,12 +27,11 @@ type PelaksanaOpdResponse struct {
 }
 
 type IndikatorResponse struct {
-	Id         string            `json:"id"`
-	Indikator  string            `json:"indikator"`
-	ManualIK   *ManualIKResponse `json:"manual_ik"`
-	Formula    string            `json:"rumus_perhitungan"`
-	SumberData string            `json:"sumber_data"`
-	Target     []TargetResponse  `json:"target"`
+	Id               string           `json:"id"`
+	Indikator        string           `json:"indikator"`
+	RumusPerhitungan string           `json:"rumus_perhitungan"`
+	SumberData       string           `json:"sumber_data"`
+	Target           []TargetResponse `json:"target"`
 }
 
 type ManualIKResponse struct {
@@ -44,6 +40,33 @@ type ManualIKResponse struct {
 }
 
 type TargetResponse struct {
+	Id     string `json:"id"`
+	Tahun  string `json:"tahun"`
+	Target string `json:"target"`
+	Satuan string `json:"satuan"`
+}
+
+// respons create update
+
+type SasaranOpdCreateResponse struct {
+	IdPohon        int               `json:"id_pohon"`
+	NamaSasaranOpd string            `json:"nama_sasaran_opd"`
+	TahunAwal      string            `json:"tahun_awal"`
+	TahunAkhir     string            `json:"tahun_akhir"`
+	JenisPeriode   string            `json:"jenis_periode"`
+	Indikator      []IndikatorDetail `json:"indikator"`
+}
+
+type IndikatorDetail struct {
+	Id               string         `json:"id"`
+	Indikator        string         `json:"indikator"`
+	RumusPerhitungan string         `json:"rumus_perhitungan"`
+	SumberData       string         `json:"sumber_data"`
+	Target           []TargetDetail `json:"target"`
+}
+
+type TargetDetail struct {
+	Id     string `json:"id"`
 	Tahun  string `json:"tahun"`
 	Target string `json:"target"`
 	Satuan string `json:"satuan"`

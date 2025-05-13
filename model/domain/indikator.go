@@ -15,6 +15,7 @@ type Indikator struct {
 	TujuanOpdId      int
 	TujuanPemdaId    int
 	SasaranPemdaId   int
+	SasaranOpdId     int
 	Indikator        string
 	Tahun            string
 	CloneFrom        string
@@ -23,7 +24,6 @@ type Indikator struct {
 	ParentOpdId      string
 	AsalIku          string
 	ParentName       string
-	ManualIK         *ManualIKSasaranOpd
 	CreatedAt        time.Time
 	TahunAwal        string
 	TahunAkhir       string

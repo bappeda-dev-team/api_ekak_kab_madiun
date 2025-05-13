@@ -2,6 +2,7 @@ package rencanakinerja
 
 type RencanaKinerjaCreateRequest struct {
 	IdPohon              int                      `json:"id_pohon"`
+	SasaranOpdId         int                      `json:"sasaranopd_id"`
 	NamaRencanaKinerja   string                   `json:"nama_rencana_kinerja"`
 	Tahun                string                   `json:"tahun"`
 	StatusRencanaKinerja string                   `json:"status_rencana_kinerja"`
