@@ -1076,7 +1076,7 @@ func (service *RencanaKinerjaServiceImpl) CreateRekinLevel1(ctx context.Context,
 	rencanaKinerja := domain.RencanaKinerja{
 		Id:                   customId,
 		IdPohon:              request.IdPohon,
-		SasaranOpdId:         request.SasaranOpdId,
+		SasaranOpdId:         helper.EmptyIntIfNull(request.SasaranOpdId),
 		NamaRencanaKinerja:   request.NamaRencanaKinerja,
 		Tahun:                request.Tahun,
 		KodeSubKegiatan:      "",
@@ -1262,7 +1262,7 @@ func (service *RencanaKinerjaServiceImpl) UpdateRekinLevel1(ctx context.Context,
 	}
 
 	rencanaKinerja.IdPohon = request.IdPohon
-	rencanaKinerja.SasaranOpdId = request.SasaranOpdId
+	rencanaKinerja.SasaranOpdId = helper.EmptyIntIfNull(request.SasaranOpdId)
 	rencanaKinerja.NamaRencanaKinerja = request.NamaRencanaKinerja
 	rencanaKinerja.Tahun = request.Tahun
 	rencanaKinerja.StatusRencanaKinerja = request.StatusRencanaKinerja

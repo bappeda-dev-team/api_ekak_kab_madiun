@@ -56,8 +56,7 @@ type RencanaKinerjaLevel1Response struct {
 	KodeOpd              opdmaster.OpdResponseForAll `json:"operasional_daerah,omitempty"`
 	PegawaiId            string                      `json:"pegawai_id,omitempty"`
 	NamaPegawai          string                      `json:"nama_pegawai,omitempty"`
-	Indikator            []IndikatorResponseLevel1   `json:"indikator,omitempty"`
-	Action               []web.ActionButton          `json:"action,omitempty"`
+	Indikator            []IndikatorResponseLevel1   `json:"indikator"`
 }
 
 type IndikatorResponseLevel1 struct {
