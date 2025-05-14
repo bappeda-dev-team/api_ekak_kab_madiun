@@ -29,4 +29,5 @@ type PohonKinerjaAdminController interface {
 	TolakCrosscutting(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindPokinFromOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	AktiforNonAktifTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindListOpdAllTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

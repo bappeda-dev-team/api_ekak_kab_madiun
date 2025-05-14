@@ -534,12 +534,15 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIdRekinLevel1(ctx context.Co
 	defer rows.Close()
 
 	var rencanaKinerja domain.RencanaKinerja
+	rencanaKinerja.Indikator = []domain.Indikator{}
 	indikatorMap := make(map[string]*domain.Indikator)
 
 	for rows.Next() {
 		var indikator domain.Indikator
 		var target domain.Target
 		var formula, sumberData sql.NullString
+		var indikatorId, indikatorNama, indikatorTahun sql.NullString
+		var targetId, targetNama, targetSatuan, targetTahun sql.NullString
 
 		err := rows.Scan(
 			&rencanaKinerja.Id,
@@ -551,13 +554,13 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIdRekinLevel1(ctx context.Co
 			&rencanaKinerja.Catatan,
 			&rencanaKinerja.KodeOpd,
 			&rencanaKinerja.PegawaiId,
-			&indikator.Id,
-			&indikator.Indikator,
-			&indikator.Tahun,
-			&target.Id,
-			&target.Target,
-			&target.Satuan,
-			&target.Tahun,
+			&indikatorId,
+			&indikatorNama,
+			&indikatorTahun,
+			&targetId,
+			&targetNama,
+			&targetSatuan,
+			&targetTahun,
 			&formula,
 			&sumberData,
 		)
@@ -565,22 +568,43 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIdRekinLevel1(ctx context.Co
 			return domain.RencanaKinerja{}, err
 		}
 
-		// Set formula dan sumber data ke indikator
+		// Jika tidak ada indikator, lanjutkan ke baris berikutnya
+		if !indikatorId.Valid {
+			continue
+		}
+
+		// Set nilai indikator
+		indikator.Id = indikatorId.String
+		indikator.Indikator = indikatorNama.String
+		indikator.Tahun = indikatorTahun.String
 		indikator.RumusPerhitungan = formula
 		indikator.SumberData = sumberData
 
 		// Cek apakah indikator sudah ada di map
 		if existingIndikator, exists := indikatorMap[indikator.Id]; exists {
-			// Tambahkan target ke indikator yang sudah ada
-			if target.Id != "" {
+			// Tambahkan target ke indikator yang sudah ada jika ada target
+			if targetId.Valid {
+				target = domain.Target{
+					Id:          targetId.String,
+					Target:      targetNama.String,
+					Satuan:      targetSatuan.String,
+					Tahun:       targetTahun.String,
+					IndikatorId: indikator.Id,
+				}
 				existingIndikator.Target = append(existingIndikator.Target, target)
 			}
 		} else {
 			// Buat indikator baru
-			if target.Id != "" {
-				indikator.Target = []domain.Target{target}
-			} else {
-				indikator.Target = []domain.Target{}
+			indikator.Target = []domain.Target{}
+			if targetId.Valid {
+				target = domain.Target{
+					Id:          targetId.String,
+					Target:      targetNama.String,
+					Satuan:      targetSatuan.String,
+					Tahun:       targetTahun.String,
+					IndikatorId: indikator.Id,
+				}
+				indikator.Target = append(indikator.Target, target)
 			}
 			indikatorMap[indikator.Id] = &indikator
 		}
@@ -593,6 +617,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIdRekinLevel1(ctx context.Co
 
 	return rencanaKinerja, nil
 }
+
 func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error) {
 	SQL := `
     SELECT 

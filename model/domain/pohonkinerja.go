@@ -39,6 +39,7 @@ type PohonKinerja struct {
 	KodeSubkegiatan sql.NullString
 	Strategi        string
 	PelaksanaIds    string
+	ListOpd         []OpdList
 }
 
 type PegawaiAction struct {
@@ -46,4 +47,9 @@ type PegawaiAction struct {
 	RejectBy  *string
 	ApproveAt *time.Time
 	RejectAt  *time.Time
+}
+
+type OpdList struct {
+	KodeOpd         string `json:"kode_opd"`
+	PerangkatDaerah string `json:"perangkat_daerah"`
 }
