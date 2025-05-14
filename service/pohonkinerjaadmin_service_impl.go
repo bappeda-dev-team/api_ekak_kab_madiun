@@ -1973,6 +1973,11 @@ func (service *PohonKinerjaAdminServiceImpl) FindListOpdAllTematik(ctx context.C
 			})
 		}
 
+		// Sort list OPD berdasarkan kode OPD ASC
+		sort.Slice(listOpd, func(i, j int) bool {
+			return listOpd[i].KodeOpd < listOpd[j].KodeOpd
+		})
+
 		response := pohonkinerja.TematikListOpdResponse{
 			Tematik:    pokin.NamaPohon,
 			LevelPohon: pokin.LevelPohon,
@@ -1982,6 +1987,11 @@ func (service *PohonKinerjaAdminServiceImpl) FindListOpdAllTematik(ctx context.C
 		}
 		responses = append(responses, response)
 	}
+
+	// Sort responses berdasarkan nama tematik ASC
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].Tematik < responses[j].Tematik
+	})
 
 	return responses, nil
 }
