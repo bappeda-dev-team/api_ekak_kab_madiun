@@ -654,3 +654,26 @@ func (controller *PohonKinerjaAdminControllerImpl) AktiforNonAktifTematik(writer
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaAdminControllerImpl) FindListOpdAllTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+
+	result, err := controller.pohonKinerjaAdminService.FindListOpdAllTematik(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "Success Get List Opd All Tematik",
+		Data:   result,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

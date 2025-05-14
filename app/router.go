@@ -188,6 +188,7 @@ func NewRouter(
 	router.PUT("/pohon_kinerja_admin/tolak_pokin/:pohonKinerjaId", pohonKinerjaAdminController.UpdatePokinStatusTolak)
 	router.GET("/pohon_kinerja_admin/crosscutting/:kode_opd/:tahun", pohonKinerjaAdminController.FindPokinByCrosscuttingStatus)
 	router.POST("/pokin/activation_tematik/:id", pohonKinerjaAdminController.AktiforNonAktifTematik)
+	router.GET("/pokin_tematik/list_opd/:tahun", pohonKinerjaAdminController.FindListOpdAllTematik)
 	// router.POST("/pohon_kinerja_admin/crosscutting/create", pohonKinerjaAdminController.CrosscuttingOpd)
 	// router.PUT("/pohon_kinerja_admin/setujui_crosscutting/:pohonKinerjaId", pohonKinerjaAdminController.SetujuiCrosscutting)
 	// router.PUT("/pohon_kinerja_admin/tolak_crosscutting/:pohonKinerjaId", pohonKinerjaAdminController.TolakCrosscutting)

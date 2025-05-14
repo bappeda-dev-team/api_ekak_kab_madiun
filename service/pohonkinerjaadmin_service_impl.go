@@ -1948,3 +1948,39 @@ func (service *PohonKinerjaAdminServiceImpl) AktiforNonAktifTematik(ctx context.
 	}
 	return "berhasil dinonaktifkan", nil
 }
+
+func (service *PohonKinerjaAdminServiceImpl) FindListOpdAllTematik(ctx context.Context, tahun string) ([]pohonkinerja.TematikListOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil data pohon kinerja dengan OPD
+	pokins, err := service.pohonKinerjaRepository.FindListOpdAllTematik(ctx, tx, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	// Konversi ke response
+	var responses []pohonkinerja.TematikListOpdResponse
+	for _, pokin := range pokins {
+		var listOpd []pohonkinerja.OpdListResponse
+		for _, opd := range pokin.ListOpd {
+			listOpd = append(listOpd, pohonkinerja.OpdListResponse{
+				KodeOpd:         opd.KodeOpd,
+				PerangkatDaerah: opd.PerangkatDaerah,
+			})
+		}
+
+		response := pohonkinerja.TematikListOpdResponse{
+			Tematik:    pokin.NamaPohon,
+			LevelPohon: pokin.LevelPohon,
+			Tahun:      pokin.Tahun,
+			ListOpd:    listOpd,
+		}
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
