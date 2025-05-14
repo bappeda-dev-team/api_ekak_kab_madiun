@@ -152,6 +152,7 @@ type TematikListOpdResponse struct {
 	Tematik    string            `json:"tematik"`
 	LevelPohon int               `json:"level_pohon"`
 	Tahun      string            `json:"tahun"`
+	IsActive   bool              `json:"is_active"`
 	ListOpd    []OpdListResponse `json:"list_opd"`
 }
 

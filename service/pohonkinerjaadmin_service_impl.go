@@ -1977,6 +1977,7 @@ func (service *PohonKinerjaAdminServiceImpl) FindListOpdAllTematik(ctx context.C
 			Tematik:    pokin.NamaPohon,
 			LevelPohon: pokin.LevelPohon,
 			Tahun:      pokin.Tahun,
+			IsActive:   pokin.IsActive,
 			ListOpd:    listOpd,
 		}
 		responses = append(responses, response)
