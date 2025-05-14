@@ -45,9 +45,10 @@ type RencanaKinerjaServiceImpl struct {
 	permasalahanRekinRepository      repository.PermasalahanRekinRepository
 	SubKegiatanService               *SubKegiatanServiceImpl
 	PeriodeRepository                repository.PeriodeRepository
+	SasaranOpdRepository             repository.SasaranOpdRepository
 }
 
-func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, rencanaAksiRepository repository.RencanaAksiRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository) *RencanaKinerjaServiceImpl {
+func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, rencanaAksiRepository repository.RencanaAksiRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository, sasaranOpdRepository repository.SasaranOpdRepository) *RencanaKinerjaServiceImpl {
 	return &RencanaKinerjaServiceImpl{
 		rencanaKinerjaRepository:         rencanaKinerjaRepository,
 		DB:                               DB,
@@ -70,6 +71,7 @@ func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKin
 		SubKegiatanTerpilihRepository:    subKegiatanTerpilihRepository,
 		SubKegiatanService:               subKegiatanService,
 		PeriodeRepository:                periodeRepository,
+		SasaranOpdRepository:             sasaranOpdRepository,
 	}
 }
 
@@ -1076,7 +1078,7 @@ func (service *RencanaKinerjaServiceImpl) CreateRekinLevel1(ctx context.Context,
 	rencanaKinerja := domain.RencanaKinerja{
 		Id:                   customId,
 		IdPohon:              request.IdPohon,
-		SasaranOpdId:         request.SasaranOpdId,
+		SasaranOpdId:         helper.EmptyIntIfNull(request.SasaranOpdId),
 		NamaRencanaKinerja:   request.NamaRencanaKinerja,
 		Tahun:                request.Tahun,
 		KodeSubKegiatan:      "",
@@ -1262,7 +1264,7 @@ func (service *RencanaKinerjaServiceImpl) UpdateRekinLevel1(ctx context.Context,
 	}
 
 	rencanaKinerja.IdPohon = request.IdPohon
-	rencanaKinerja.SasaranOpdId = request.SasaranOpdId
+	rencanaKinerja.SasaranOpdId = helper.EmptyIntIfNull(request.SasaranOpdId)
 	rencanaKinerja.NamaRencanaKinerja = request.NamaRencanaKinerja
 	rencanaKinerja.Tahun = request.Tahun
 	rencanaKinerja.StatusRencanaKinerja = request.StatusRencanaKinerja
@@ -1428,6 +1430,18 @@ func (service *RencanaKinerjaServiceImpl) FindIdRekinLevel1(ctx context.Context,
 		return rencanakinerja.RencanaKinerjaLevel1Response{}, fmt.Errorf("gagal mengambil data rencana kinerja: %v", err)
 	}
 
+	// Ambil nama sasaran OPD
+	if rencanaKinerja.SasaranOpdId != 0 {
+		sasaranOpd, err := service.SasaranOpdRepository.FindByIdSasaran(ctx, tx, rencanaKinerja.SasaranOpdId)
+		if err != nil {
+			return rencanakinerja.RencanaKinerjaLevel1Response{}, fmt.Errorf("gagal mengambil data sasaran OPD: %v", err)
+		}
+		rencanaKinerja.NamaSasaranOpd = sasaranOpd.NamaSasaranOpd
+		rencanaKinerja.TahunAwal = sasaranOpd.TahunAwal
+		rencanaKinerja.TahunAkhir = sasaranOpd.TahunAkhir
+		rencanaKinerja.JenisPeriode = sasaranOpd.JenisPeriode
+	}
+
 	// Ambil data OPD
 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, rencanaKinerja.KodeOpd)
 	if err != nil {
@@ -1496,6 +1510,10 @@ func (service *RencanaKinerjaServiceImpl) FindIdRekinLevel1(ctx context.Context,
 		Id:                   rencanaKinerja.Id,
 		IdPohon:              rencanaKinerja.IdPohon,
 		SasaranOpdId:         rencanaKinerja.SasaranOpdId,
+		NamaSasaranOpd:       rencanaKinerja.NamaSasaranOpd,
+		TahunAwal:            rencanaKinerja.TahunAwal,
+		TahunAkhir:           rencanaKinerja.TahunAkhir,
+		JenisPeriode:         rencanaKinerja.JenisPeriode,
 		NamaRencanaKinerja:   rencanaKinerja.NamaRencanaKinerja,
 		Tahun:                rencanaKinerja.Tahun,
 		StatusRencanaKinerja: rencanaKinerja.StatusRencanaKinerja,

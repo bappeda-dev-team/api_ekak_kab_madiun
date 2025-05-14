@@ -147,3 +147,16 @@ type OperationalNResponse struct {
 	Indikators  []IndikatorResponse          `json:"indikator"`
 	Childs      []OperationalNResponse       `json:"childs,omitempty"`
 }
+
+type TematikListOpdResponse struct {
+	Tematik    string            `json:"tematik"`
+	LevelPohon int               `json:"level_pohon"`
+	Tahun      string            `json:"tahun"`
+	IsActive   bool              `json:"is_active"`
+	ListOpd    []OpdListResponse `json:"list_opd"`
+}
+
+type OpdListResponse struct {
+	KodeOpd         string `json:"kode_opd"`
+	PerangkatDaerah string `json:"perangkat_daerah"`
+}

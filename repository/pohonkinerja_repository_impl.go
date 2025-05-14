@@ -2761,3 +2761,137 @@ func (repository *PohonKinerjaRepositoryImpl) DeletePokinWithIndikatorAndTarget(
 
 	return nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) FindListOpdAllTematik(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error) {
+	script := `
+        WITH RECURSIVE pohon_hierarki AS (
+            -- Base case: pilih semua node level 0
+            SELECT 
+                id, 
+                nama_pohon, 
+                parent, 
+                jenis_pohon, 
+                level_pohon, 
+                kode_opd, 
+                keterangan, 
+                tahun, 
+                status, 
+                is_active,
+                id as root_id
+            FROM tb_pohon_kinerja 
+            WHERE level_pohon = 0 AND tahun = ?
+            
+            UNION ALL
+            
+            -- Recursive case: ambil semua child nodes
+            SELECT 
+                pk.id, 
+                pk.nama_pohon, 
+                pk.parent, 
+                pk.jenis_pohon, 
+                pk.level_pohon, 
+                pk.kode_opd, 
+                pk.keterangan, 
+                pk.tahun, 
+                pk.status, 
+                pk.is_active,
+                ph.root_id
+            FROM tb_pohon_kinerja pk
+            INNER JOIN pohon_hierarki ph ON pk.parent = ph.id
+        )
+        SELECT 
+            ph.id,
+            ph.nama_pohon,
+            ph.parent,
+            ph.jenis_pohon,
+            ph.level_pohon,
+            ph.kode_opd,
+            ph.keterangan,
+            ph.tahun,
+            ph.status,
+            ph.is_active,
+            o.nama_opd,
+            ph.root_id
+        FROM 
+            pohon_hierarki ph
+        LEFT JOIN 
+            tb_operasional_daerah o ON ph.kode_opd = o.kode_opd
+        ORDER BY 
+            ph.level_pohon, ph.id
+    `
+
+	rows, err := tx.QueryContext(ctx, script, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Map untuk menyimpan pohon kinerja level 0
+	pokinMap := make(map[int]domain.PohonKinerja)
+	// Map untuk menyimpan OPD yang sudah diproses per pohon kinerja
+	opdMap := make(map[int]map[string]string)
+
+	for rows.Next() {
+		var (
+			pokinId, parent, levelPohon, rootId                            int
+			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin, status string
+			is_active                                                      bool
+			namaOpd                                                        sql.NullString
+		)
+
+		err := rows.Scan(
+			&pokinId, &namaPohon, &parent, &jenisPohon, &levelPohon,
+			&kodeOpd, &keterangan, &tahunPokin, &status, &is_active,
+			&namaOpd, &rootId,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Jika ini adalah level 0, simpan ke pokinMap
+		if levelPohon == 0 {
+			pokinMap[pokinId] = domain.PohonKinerja{
+				Id:         pokinId,
+				NamaPohon:  namaPohon,
+				Parent:     parent,
+				JenisPohon: jenisPohon,
+				LevelPohon: levelPohon,
+				KodeOpd:    kodeOpd,
+				Keterangan: keterangan,
+				Tahun:      tahunPokin,
+				Status:     status,
+				IsActive:   is_active,
+				ListOpd:    []domain.OpdList{},
+			}
+			// Inisialisasi map OPD untuk level 0
+			opdMap[pokinId] = make(map[string]string)
+		}
+
+		// Jika ini adalah child node (level > 0) dan memiliki kode_opd
+		if levelPohon > 0 && kodeOpd != "" {
+			// Gunakan rootId untuk menambahkan OPD ke parent level 0
+			if _, exists := opdMap[rootId]; !exists {
+				opdMap[rootId] = make(map[string]string)
+			}
+			// Tambahkan OPD ke map jika belum ada
+			if _, exists := opdMap[rootId][kodeOpd]; !exists {
+				opdMap[rootId][kodeOpd] = namaOpd.String
+			}
+		}
+	}
+
+	// Konversi map ke slice
+	var result []domain.PohonKinerja
+	for id, pokin := range pokinMap {
+		// Tambahkan list OPD ke pohon kinerja
+		for kodeOpd, namaOpd := range opdMap[id] {
+			pokin.ListOpd = append(pokin.ListOpd, domain.OpdList{
+				KodeOpd:         kodeOpd,
+				PerangkatDaerah: namaOpd,
+			})
+		}
+		result = append(result, pokin)
+	}
+
+	return result, nil
+}

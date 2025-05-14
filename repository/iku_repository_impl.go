@@ -237,38 +237,28 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 
 	// Query untuk mengambil indikator dari sasaran OPD
 	scriptSasaran := `
-        WITH valid_pelaksana AS (
-            SELECT DISTINCT p.nip
-            FROM tb_pelaksana_pokin pp
-            JOIN tb_pegawai p ON pp.pegawai_id = p.id
-            WHERE pp.pohon_kinerja_id IN (
-                SELECT id FROM tb_pohon_kinerja 
-                WHERE kode_opd = ?
-            )
-        )
-        SELECT 
-            'Sasaran OPD' as jenis,
-            pk.id as parent_id,
-            pk.nama_pohon as nama_parent,
-            i.id as indikator_id,
-            i.indikator,
-            COALESCE(m.formula, '') as rumus_perhitungan,
-            COALESCE(m.sumber_data, '') as sumber_data,
-            tg.id as target_id,
-            tg.target,
-            tg.satuan,
-            tg.tahun
-        FROM tb_pohon_kinerja pk
-        INNER JOIN tb_rencana_kinerja rk ON pk.id = rk.id_pohon
-        LEFT JOIN tb_indikator i ON rk.id = i.rencana_kinerja_id
-        LEFT JOIN tb_manual_ik m ON i.id = m.indikator_id
-        LEFT JOIN tb_target tg ON i.id = tg.indikator_id
-        WHERE pk.kode_opd = ?
-        AND rk.tahun_awal = ?
-        AND rk.tahun_akhir = ?
-        AND rk.jenis_periode = ?
-        AND rk.pegawai_id IN (SELECT nip FROM valid_pelaksana)
-        AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
+         SELECT 
+        'Sasaran OPD' as jenis,
+        so.id as parent_id,
+        so.nama_sasaran_opd as nama_parent,
+        i.id as indikator_id,
+        i.indikator,
+        COALESCE(m.formula, '') as rumus_perhitungan,
+        COALESCE(m.sumber_data, '') as sumber_data,
+        tg.id as target_id,
+        tg.target,
+        tg.satuan,
+        tg.tahun
+    FROM tb_sasaran_opd so
+    INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+    LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id
+    LEFT JOIN tb_manual_ik m ON i.id = m.indikator_id
+    LEFT JOIN tb_target tg ON i.id = tg.indikator_id
+    WHERE pk.kode_opd = ?
+    AND so.tahun_awal = ?
+    AND so.tahun_akhir = ?
+    AND so.jenis_periode = ?
+    AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
     `
 
 	// Map untuk menyimpan hasil
@@ -388,7 +378,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 	}
 
 	rowsSasaran, err := tx.QueryContext(ctx, scriptSasaran,
-		kodeOpd, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, tahunAwal, tahunAkhir)
+		kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, tahunAwal, tahunAkhir)
 	if err != nil {
 		return nil, err
 	}
@@ -408,6 +398,16 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 		})
 		result = append(result, *iku)
 	}
+
+	// Sort hasil berdasarkan jenis (Tujuan OPD dulu) dan indikator ASC
+	sort.Slice(result, func(i, j int) bool {
+		// Jika jenis berbeda, Tujuan OPD harus di depan
+		if result[i].AsalIku != result[j].AsalIku {
+			return result[i].AsalIku == "Tujuan OPD"
+		}
+		// Jika jenis sama, urutkan berdasarkan indikator ASC
+		return result[i].Indikator < result[j].Indikator
+	})
 
 	return result, nil
 }

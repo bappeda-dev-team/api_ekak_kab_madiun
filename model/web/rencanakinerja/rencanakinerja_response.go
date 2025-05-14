@@ -44,20 +44,20 @@ type TargetResponse struct {
 type RencanaKinerjaLevel1Response struct {
 	Id                   string                      `json:"id_rencana_kinerja,omitempty"`
 	IdPohon              int                         `json:"id_pohon,omitempty"`
-	SasaranOpdId         int                         `json:"sasaran_opd_id,omitempty"`
+	SasaranOpdId         int                         `json:"sasaran_opd_id"`
+	NamaSasaranOpd       string                      `json:"nama_sasaran_opd,omitempty"`
 	NamaPohon            string                      `json:"nama_pohon,omitempty"`
 	NamaRencanaKinerja   string                      `json:"nama_rencana_kinerja,omitempty"`
-	TahunAwal            string                      `json:"tahun_awal,omitempty"`
-	TahunAkhir           string                      `json:"tahun_akhir,omitempty"`
-	JenisPeriode         string                      `json:"jenis_periode,omitempty"`
+	TahunAwal            string                      `json:"tahun_awal"`
+	TahunAkhir           string                      `json:"tahun_akhir"`
+	JenisPeriode         string                      `json:"jenis_periode"`
 	Tahun                string                      `json:"tahun,omitempty"`
 	StatusRencanaKinerja string                      `json:"status_rencana_kinerja,omitempty"`
 	Catatan              string                      `json:"catatan,omitempty"`
 	KodeOpd              opdmaster.OpdResponseForAll `json:"operasional_daerah,omitempty"`
 	PegawaiId            string                      `json:"pegawai_id,omitempty"`
 	NamaPegawai          string                      `json:"nama_pegawai,omitempty"`
-	Indikator            []IndikatorResponseLevel1   `json:"indikator,omitempty"`
-	Action               []web.ActionButton          `json:"action,omitempty"`
+	Indikator            []IndikatorResponseLevel1   `json:"indikator"`
 }
 
 type IndikatorResponseLevel1 struct {
