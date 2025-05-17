@@ -1529,3 +1529,104 @@ func (service *RencanaKinerjaServiceImpl) FindIdRekinLevel1(ctx context.Context,
 	}
 	return response, nil
 }
+
+func (service *RencanaKinerjaServiceImpl) FindRekinLevel3(ctx context.Context, kodeOpd string, tahun string) ([]rencanakinerja.RencanaKinerjaResponse, error) {
+	log.Println("Memulai proses FindRekinLevel3")
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Gagal memulai transaksi: %v", err)
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	rencanaKinerjaList, err := service.rencanaKinerjaRepository.FindRekinLevel3(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		log.Printf("Gagal mencari RencanaKinerja Level 3: %v", err)
+		return nil, fmt.Errorf("gagal mencari RencanaKinerja Level 3: %v", err)
+	}
+
+	var responses []rencanakinerja.RencanaKinerjaResponse
+	for _, rencana := range rencanaKinerjaList {
+		// Ambil data indikator
+		indikators, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rencana.Id)
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("Gagal mencari Indikator: %v", err)
+			return nil, fmt.Errorf("gagal mencari Indikator: %v", err)
+		}
+
+		var indikatorResponses []rencanakinerja.IndikatorResponse
+		for _, indikator := range indikators {
+			targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
+			if err != nil && err != sql.ErrNoRows {
+				log.Printf("Gagal mencari Target: %v", err)
+				return nil, fmt.Errorf("gagal mencari Target: %v", err)
+			}
+
+			var targetResponses []rencanakinerja.TargetResponse
+			for _, target := range targets {
+				targetResponses = append(targetResponses, rencanakinerja.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
+				})
+			}
+
+			exist, err := service.manualIKRepository.IsIndikatorExist(ctx, tx, indikator.Id)
+			if err != nil {
+				log.Printf("Gagal memeriksa keberadaan indikator: %v", err)
+				return nil, fmt.Errorf("gagal memeriksa keberadaan indikator: %v", err)
+			}
+
+			indikatorResponses = append(indikatorResponses, rencanakinerja.IndikatorResponse{
+				Id:               indikator.Id,
+				RencanaKinerjaId: indikator.RencanaKinerjaId,
+				NamaIndikator:    indikator.Indikator,
+				Target:           targetResponses,
+				ManualIKExist:    exist,
+			})
+		}
+
+		// Ambil data OPD
+		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, rencana.KodeOpd)
+		if err != nil {
+			log.Printf("Gagal mencari OPD: %v", err)
+			return nil, fmt.Errorf("gagal mencari OPD: %v", err)
+		}
+
+		// Ambil data pegawai
+		pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, rencana.PegawaiId)
+		if err != nil {
+			log.Printf("Gagal mencari Pegawai: %v", err)
+			return nil, fmt.Errorf("gagal mencari Pegawai: %v", err)
+		}
+
+		// Ambil data pohon kinerja
+		pohon, err := service.pohonKinerjaRepository.FindById(ctx, tx, rencana.IdPohon)
+		if err != nil {
+			log.Printf("Gagal mencari Pohon Kinerja: %v", err)
+			return nil, fmt.Errorf("gagal mencari Pohon Kinerja: %v", err)
+		}
+
+		responses = append(responses, rencanakinerja.RencanaKinerjaResponse{
+			Id:                   rencana.Id,
+			NamaRencanaKinerja:   rencana.NamaRencanaKinerja,
+			Tahun:                rencana.Tahun,
+			StatusRencanaKinerja: rencana.StatusRencanaKinerja,
+			Catatan:              rencana.Catatan,
+			KodeOpd: opdmaster.OpdResponseForAll{
+				KodeOpd: opd.KodeOpd,
+				NamaOpd: opd.NamaOpd,
+			},
+			PegawaiId:   rencana.PegawaiId,
+			NamaPegawai: pegawai.NamaPegawai,
+			IdPohon:     rencana.IdPohon,
+			NamaPohon:   pohon.NamaPohon,
+
+			Indikator: indikatorResponses,
+		})
+	}
+
+	return responses, nil
+}
