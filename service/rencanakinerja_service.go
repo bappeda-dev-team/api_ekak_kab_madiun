@@ -19,4 +19,7 @@ type RencanaKinerjaService interface {
 	CreateRekinLevel1(ctx context.Context, request rencanakinerja.RencanaKinerjaCreateRequest) (rencanakinerja.RencanaKinerjaResponse, error)
 	UpdateRekinLevel1(ctx context.Context, request rencanakinerja.RencanaKinerjaUpdateRequest) (rencanakinerja.RencanaKinerjaResponse, error)
 	FindIdRekinLevel1(ctx context.Context, id string) (rencanakinerja.RencanaKinerjaLevel1Response, error)
+
+	//rencana kinerja level 3
+	FindRekinLevel3(ctx context.Context, kodeOpd string, tahun string) ([]rencanakinerja.RencanaKinerjaResponse, error)
 }

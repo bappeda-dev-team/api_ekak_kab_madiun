@@ -15,6 +15,7 @@ type RencanaKinerjaRepository interface {
 	Update(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error)
 	Delete(ctx context.Context, tx *sql.Tx, id string) error
 	FindAllRincianKak(ctx context.Context, tx *sql.Tx, rencanakinerjaid, pegawaiId string) ([]domain.RencanaKinerja, error)
+	FindRekinLevel3(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RencanaKinerja, error)
 	//sasaran opd
 	CreateRekinLevel1(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error)
 	UpdateRekinLevel1(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error)

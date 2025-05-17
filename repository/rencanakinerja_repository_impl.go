@@ -687,3 +687,57 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Contex
 
 	return rencanaKinerjas, nil
 }
+
+func (repository *RencanaKinerjaRepositoryImpl) FindRekinLevel3(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RencanaKinerja, error) {
+	script := `
+        SELECT DISTINCT 
+            rk.id,
+            rk.id_pohon,
+            rk.nama_rencana_kinerja,
+            rk.tahun,
+            rk.status_rencana_kinerja,
+            COALESCE(rk.catatan, ''),
+            rk.kode_opd,
+            rk.pegawai_id,
+            rk.created_at,
+            rk.kode_subkegiatan
+        FROM tb_rencana_kinerja rk
+        INNER JOIN tb_subkegiatan_terpilih st ON rk.id = st.rekin_id
+        INNER JOIN tb_users u ON rk.pegawai_id = u.nip
+        INNER JOIN tb_user_role ur ON u.id = ur.user_id
+        INNER JOIN tb_role r ON ur.role_id = r.id
+        WHERE r.role = 'level_3'
+        AND rk.kode_opd = ?
+        AND rk.tahun = ?
+        ORDER BY rk.created_at ASC
+    `
+
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data rencana kinerja level 3: %v", err)
+	}
+	defer rows.Close()
+
+	var rencanaKinerjas []domain.RencanaKinerja
+	for rows.Next() {
+		var rk domain.RencanaKinerja
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.StatusRencanaKinerja,
+			&rk.Catatan,
+			&rk.KodeOpd,
+			&rk.PegawaiId,
+			&rk.CreatedAt,
+			&rk.KodeSubKegiatan,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("gagal scan data rencana kinerja: %v", err)
+		}
+		rencanaKinerjas = append(rencanaKinerjas, rk)
+	}
+
+	return rencanaKinerjas, nil
+}

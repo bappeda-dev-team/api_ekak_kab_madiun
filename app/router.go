@@ -64,6 +64,7 @@ func NewRouter(
 	router.POST("/rencana_kinerja/create_level1", rencanaKinerjaController.CreateRekinLevel1)
 	router.PUT("/rencana_kinerja/update_level1/:id", rencanaKinerjaController.UpdateRekinLevel1)
 	router.GET("/rencana_kinerja_level1/:id", rencanaKinerjaController.FindIdRekinLevel1)
+	router.GET("/rencana_kinerja_level3/:kode_opd/:tahun", rencanaKinerjaController.FindRekinLevel3)
 	// router.GET("/rencana_kinerja_sasaran_opd/pegawai_level1/:pegawai_id/tahun/:tahun", rencanaKinerjaController.FindRekinSasaranOpd)
 
 	//rencana_aksi
