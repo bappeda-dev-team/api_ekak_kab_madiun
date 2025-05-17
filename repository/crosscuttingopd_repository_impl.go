@@ -55,9 +55,9 @@ func (repository *CrosscuttingOpdRepositoryImpl) CreateCrosscutting(ctx context.
 func (repository *CrosscuttingOpdRepositoryImpl) FindAllCrosscutting(ctx context.Context, tx *sql.Tx, parentId int) ([]domain.PohonKinerja, error) {
 	script := `
         SELECT 
-		c.id as id_crosscutting,
+            c.id as id_crosscutting,
             CASE 
-                WHEN c.crosscutting_to = 0 THEN c.id
+                WHEN c.crosscutting_to = 0 OR p.id IS NULL THEN c.id
                 ELSE p.id 
             END as id,
             COALESCE(p.nama_pohon, '') as nama_pohon,
