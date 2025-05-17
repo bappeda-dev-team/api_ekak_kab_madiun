@@ -229,14 +229,14 @@ func (repository *PohonKinerjaRepositoryImpl) FindById(ctx context.Context, tx *
 	scriptPokin := `
         SELECT 
             pk.id, 
-            pk.parent, 
-            pk.nama_pohon, 
-            pk.jenis_pohon, 
-            pk.level_pohon, 
-            pk.kode_opd, 
-            pk.keterangan, 
-            pk.tahun,
-            pk.status
+            COALESCE(pk.parent, 0) as parent, 
+            COALESCE(pk.nama_pohon, '') as nama_pohon, 
+            COALESCE(pk.jenis_pohon, '') as jenis_pohon, 
+            COALESCE(pk.level_pohon, 0) as level_pohon, 
+            COALESCE(pk.kode_opd, '') as kode_opd, 
+            COALESCE(pk.keterangan, '') as keterangan, 
+            COALESCE(pk.tahun, '') as tahun,
+            COALESCE(pk.status, '') as status
         FROM 
             tb_pohon_kinerja pk 
         WHERE 
