@@ -972,6 +972,10 @@ func (service *PohonKinerjaOpdServiceImpl) DeletePelaksana(ctx context.Context, 
 
 // Tambahkan fungsi helper untuk membangun OperationalN response
 func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponse(ctx context.Context, tx *sql.Tx, pohonMap map[int]map[int][]domain.PohonKinerja, operationalN domain.PohonKinerja, pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse, indikatorMap map[int][]pohonkinerja.IndikatorResponse) pohonkinerja.OperationalNOpdResponse {
+	var keteranganCrosscutting *string
+	if operationalN.KeteranganCrosscutting != nil && *operationalN.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = operationalN.KeteranganCrosscutting
+	}
 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, operationalN.KodeOpd)
 	if err == nil {
 		operationalN.NamaOpd = opd.NamaOpd
@@ -998,14 +1002,15 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponse(ctx context
 		}
 	}
 	operationalNResp := pohonkinerja.OperationalNOpdResponse{
-		Id:         operationalN.Id,
-		Parent:     operationalN.Parent,
-		Strategi:   operationalN.NamaPohon,
-		JenisPohon: operationalN.JenisPohon,
-		LevelPohon: operationalN.LevelPohon,
-		Keterangan: operationalN.Keterangan,
-		Status:     operationalN.Status,
-		IsActive:   operationalN.IsActive,
+		Id:                     operationalN.Id,
+		Parent:                 operationalN.Parent,
+		Strategi:               operationalN.NamaPohon,
+		JenisPohon:             operationalN.JenisPohon,
+		LevelPohon:             operationalN.LevelPohon,
+		Keterangan:             operationalN.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 operationalN.Status,
+		IsActive:               operationalN.IsActive,
 		KodeOpd: opdmaster.OpdResponseForAll{
 			KodeOpd: operationalN.KodeOpd,
 			NamaOpd: operationalN.NamaOpd,
