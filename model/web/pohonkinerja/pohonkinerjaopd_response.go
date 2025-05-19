@@ -35,7 +35,7 @@ type StrategicOpdResponse struct {
 	JenisPohon             string                      `json:"jenis_pohon"`
 	LevelPohon             int                         `json:"level_pohon"`
 	Keterangan             string                      `json:"keterangan"`
-	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting,omitempty"`
+	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
@@ -54,7 +54,7 @@ type TacticalOpdResponse struct {
 	JenisPohon             string                      `json:"jenis_pohon"`
 	LevelPohon             int                         `json:"level_pohon"`
 	Keterangan             string                      `json:"keterangan"`
-	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting,omitempty"`
+	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
@@ -73,7 +73,7 @@ type OperationalOpdResponse struct {
 	JenisPohon             string                      `json:"jenis_pohon"`
 	LevelPohon             int                         `json:"level_pohon"`
 	Keterangan             string                      `json:"keterangan"`
-	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting,omitempty"`
+	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
@@ -86,20 +86,21 @@ type OperationalOpdResponse struct {
 }
 
 type OperationalNOpdResponse struct {
-	Id          int                         `json:"id"`
-	Parent      int                         `json:"parent"`
-	Strategi    string                      `json:"nama_pohon"`
-	JenisPohon  string                      `json:"jenis_pohon"`
-	LevelPohon  int                         `json:"level_pohon"`
-	Keterangan  string                      `json:"keterangan"`
-	Status      string                      `json:"status"`
-	CountReview int                         `json:"jumlah_review"`
-	KodeOpd     opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
-	IsActive    bool                        `json:"is_active"`
-	Pelaksana   []PelaksanaOpdResponse      `json:"pelaksana"`
-	Indikator   []IndikatorResponse         `json:"indikator"`
-	Childs      []OperationalNOpdResponse   `json:"childs,omitempty"`
-	Review      []ReviewResponse            `json:"review,omitempty"`
+	Id                     int                         `json:"id"`
+	Parent                 int                         `json:"parent"`
+	Strategi               string                      `json:"nama_pohon"`
+	JenisPohon             string                      `json:"jenis_pohon"`
+	LevelPohon             int                         `json:"level_pohon"`
+	Keterangan             string                      `json:"keterangan"`
+	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
+	Status                 string                      `json:"status"`
+	CountReview            int                         `json:"jumlah_review"`
+	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
+	IsActive               bool                        `json:"is_active"`
+	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
+	Indikator              []IndikatorResponse         `json:"indikator"`
+	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`
+	Review                 []ReviewResponse            `json:"review,omitempty"`
 }
 
 type PelaksanaOpdResponse struct {
