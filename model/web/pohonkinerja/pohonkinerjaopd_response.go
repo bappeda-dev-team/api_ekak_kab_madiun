@@ -5,19 +5,20 @@ import (
 )
 
 type PohonKinerjaOpdResponse struct {
-	Id          int                    `json:"id"`
-	Parent      string                 `json:"parent"`
-	NamaPohon   string                 `json:"nama_pohon"`
-	JenisPohon  string                 `json:"jenis_pohon"`
-	LevelPohon  int                    `json:"level_pohon"`
-	KodeOpd     string                 `json:"kode_opd,omitempty"`
-	NamaOpd     string                 `json:"nama_opd,omitempty"`
-	Keterangan  string                 `json:"keterangan,omitempty"`
-	Tahun       string                 `json:"tahun,omitempty"`
-	CountReview int                    `json:"jumlah_review"`
-	Status      string                 `json:"status"`
-	Pelaksana   []PelaksanaOpdResponse `json:"pelaksana"`
-	Indikator   []IndikatorResponse    `json:"indikator"`
+	Id                     int                    `json:"id"`
+	Parent                 string                 `json:"parent"`
+	NamaPohon              string                 `json:"nama_pohon"`
+	JenisPohon             string                 `json:"jenis_pohon"`
+	LevelPohon             int                    `json:"level_pohon"`
+	KodeOpd                string                 `json:"kode_opd,omitempty"`
+	NamaOpd                string                 `json:"nama_opd,omitempty"`
+	Keterangan             string                 `json:"keterangan,omitempty"`
+	Tahun                  string                 `json:"tahun,omitempty"`
+	CountReview            int                    `json:"jumlah_review"`
+	Status                 string                 `json:"status"`
+	Pelaksana              []PelaksanaOpdResponse `json:"pelaksana"`
+	Indikator              []IndikatorResponse    `json:"indikator"`
+	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 }
 
 type PohonKinerjaOpdAllResponse struct {

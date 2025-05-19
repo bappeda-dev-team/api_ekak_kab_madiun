@@ -235,6 +235,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindById(ctx context.Context, tx *
             COALESCE(pk.level_pohon, 0) as level_pohon, 
             COALESCE(pk.kode_opd, '') as kode_opd, 
             COALESCE(pk.keterangan, '') as keterangan, 
+			COALESCE(pk.keterangan_crosscutting, '') as keterangan_crosscutting,
             COALESCE(pk.tahun, '') as tahun,
             COALESCE(pk.status, '') as status
         FROM 
@@ -258,6 +259,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindById(ctx context.Context, tx *
 			&pohonKinerja.LevelPohon,
 			&pohonKinerja.KodeOpd,
 			&pohonKinerja.Keterangan,
+			&pohonKinerja.KeteranganCrosscutting,
 			&pohonKinerja.Tahun,
 			&pohonKinerja.Status,
 		)
