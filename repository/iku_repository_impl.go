@@ -237,29 +237,28 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 
 	// Query untuk mengambil indikator dari sasaran OPD
 	scriptSasaran := `
-         SELECT 
-        'Sasaran OPD' as jenis,
-        so.id as parent_id,
-        so.nama_sasaran_opd as nama_parent,
-        i.id as indikator_id,
-        i.indikator,
-        COALESCE(m.formula, '') as rumus_perhitungan,
-        COALESCE(m.sumber_data, '') as sumber_data,
-        tg.id as target_id,
-        tg.target,
-        tg.satuan,
-        tg.tahun
-    FROM tb_sasaran_opd so
-    INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
-    LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id
-    LEFT JOIN tb_manual_ik m ON i.id = m.indikator_id
-    LEFT JOIN tb_target tg ON i.id = tg.indikator_id
-    WHERE pk.kode_opd = ?
-    AND so.tahun_awal = ?
-    AND so.tahun_akhir = ?
-    AND so.jenis_periode = ?
-    AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
-    `
+		SELECT 
+			'Sasaran OPD' as jenis,
+			so.id as parent_id,
+			so.nama_sasaran_opd as nama_parent,
+			i.id as indikator_id,
+			i.indikator,
+			COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,  -- Ubah dari m.formula
+			COALESCE(i.sumber_data, '') as sumber_data,              -- Ubah dari m.sumber_data
+			tg.id as target_id,
+			tg.target,
+			tg.satuan,
+			tg.tahun
+			FROM tb_sasaran_opd so
+			INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+			LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id
+			LEFT JOIN tb_target tg ON i.id = tg.indikator_id
+			WHERE pk.kode_opd = ?
+			AND so.tahun_awal = ?
+			AND so.tahun_akhir = ?
+			AND so.jenis_periode = ?
+			AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
+		`
 
 	// Map untuk menyimpan hasil
 	ikuMap := make(map[string]*domain.Indikator)
