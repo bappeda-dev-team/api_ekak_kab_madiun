@@ -24,6 +24,7 @@ type PohonKinerjaAdminResponseData struct {
 	CountReview     int                          `json:"jumlah_review"`
 	Pelaksana       []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
 	Indikators      []IndikatorResponse          `json:"indikator,omitempty"`
+	Childs          []interface{}                `json:"childs,omitempty"`
 	// SubTematiks []SubtematikResponse `json:"sub_tematiks,omitempty"`
 }
 

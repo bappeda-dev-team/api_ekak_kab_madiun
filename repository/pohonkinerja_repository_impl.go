@@ -1367,7 +1367,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTargetByIndikatorId(ctx contex
 }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinToClone(ctx context.Context, tx *sql.Tx, id int) (domain.PohonKinerja, error) {
-	script := "SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status FROM tb_pohon_kinerja WHERE id = ?"
+	script := "SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, is_active FROM tb_pohon_kinerja WHERE id = ?"
 	rows, err := tx.QueryContext(ctx, script, id)
 	if err != nil {
 		return domain.PohonKinerja{}, fmt.Errorf("gagal memeriksa data yang akan di-clone: %v", err)
@@ -1386,6 +1386,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinToClone(ctx context.Conte
 			&existingPokin.Keterangan,
 			&existingPokin.Tahun,
 			&existingPokin.Status,
+			&existingPokin.IsActive,
 		)
 		if err != nil {
 			return domain.PohonKinerja{}, fmt.Errorf("gagal membaca data yang akan di-clone: %v", err)
@@ -1492,8 +1493,8 @@ func (repository *PohonKinerjaRepositoryImpl) FindTargetToClone(ctx context.Cont
 
 func (repository *PohonKinerjaRepositoryImpl) InsertClonedPokin(ctx context.Context, tx *sql.Tx, pokin domain.PohonKinerja) (int64, error) {
 	script := `INSERT INTO tb_pohon_kinerja 
-        (nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        (nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from, is_active) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	result, err := tx.ExecContext(ctx, script,
 		pokin.NamaPohon,
 		pokin.Parent,
@@ -1504,6 +1505,7 @@ func (repository *PohonKinerjaRepositoryImpl) InsertClonedPokin(ctx context.Cont
 		pokin.Tahun,
 		pokin.Status,
 		pokin.CloneFrom,
+		pokin.IsActive,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("gagal menyimpan data pohon kinerja yang di-clone: %v", err)
@@ -1931,7 +1933,7 @@ func (repository *PohonKinerjaRepositoryImpl) DeleteClonedPokinHierarchy(ctx con
 }
 
 func (r *PohonKinerjaRepositoryImpl) FindChildPokins(ctx context.Context, tx *sql.Tx, parentId int64) ([]domain.PohonKinerja, error) {
-	SQL := `SELECT id, parent, nama_pohon, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from 
+	SQL := `SELECT id, parent, nama_pohon, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from, is_active
             FROM tb_pohon_kinerja 
             WHERE parent = ?`
 
@@ -1955,6 +1957,7 @@ func (r *PohonKinerjaRepositoryImpl) FindChildPokins(ctx context.Context, tx *sq
 			&pokin.Tahun,
 			&pokin.Status,
 			&pokin.CloneFrom,
+			&pokin.IsActive,
 		)
 		if err != nil {
 			return nil, err
@@ -2898,4 +2901,41 @@ func (repository *PohonKinerjaRepositoryImpl) FindListOpdAllTematik(ctx context.
 	}
 
 	return result, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) ValidateParentLevelTarikStrategiOpd(ctx context.Context, tx *sql.Tx, parentId int, childLevel int) error {
+	if parentId == 0 {
+		// Jika parent 0, validasi level harus 4 (Strategic)
+		if childLevel != 4 {
+			return fmt.Errorf("level pohon kinerja harus 4 (Strategic) untuk parent 0")
+		}
+		return nil
+	}
+
+	// Ambil data parent
+	SQL := `SELECT level_pohon FROM tb_pohon_kinerja WHERE id = ?`
+	var parentLevel int
+	err := tx.QueryRowContext(ctx, SQL, parentId).Scan(&parentLevel)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("parent dengan id %d tidak ditemukan", parentId)
+		}
+		return err
+	}
+
+	// Validasi level
+	if childLevel <= parentLevel {
+		return fmt.Errorf("level pohon kinerja (%d) harus lebih besar dari level parent (%d)", childLevel, parentLevel)
+	}
+
+	if childLevel != parentLevel+1 {
+		return fmt.Errorf("level pohon kinerja (%d) harus tepat satu tingkat di bawah level parent (%d)", childLevel, parentLevel)
+	}
+
+	// Validasi range level (4-6)
+	if childLevel < 4 || childLevel > 6 {
+		return fmt.Errorf("level pohon kinerja harus antara 4 sampai 6")
+	}
+
+	return nil
 }
