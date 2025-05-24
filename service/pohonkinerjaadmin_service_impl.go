@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 
@@ -162,16 +163,19 @@ func (service *PohonKinerjaAdminServiceImpl) Create(ctx context.Context, request
 	helper.PanicIfError(err)
 
 	response := pohonkinerja.PohonKinerjaAdminResponseData{
-		Id:          result.Id,
-		Parent:      result.Parent,
-		NamaPohon:   result.NamaPohon,
-		JenisPohon:  result.JenisPohon,
-		LevelPohon:  result.LevelPohon,
-		KodeOpd:     result.KodeOpd,
-		NamaOpd:     namaOpd,
+		Id:         result.Id,
+		Parent:     result.Parent,
+		NamaPohon:  result.NamaPohon,
+		JenisPohon: result.JenisPohon,
+		LevelPohon: result.LevelPohon,
+		PerangkatDaerah: &opdmaster.OpdResponseForAll{
+			KodeOpd: result.KodeOpd,
+			NamaOpd: namaOpd,
+		},
 		Keterangan:  result.Keterangan,
 		Tahun:       result.Tahun,
 		Status:      result.Status,
+		IsActive:    true,
 		CountReview: countReview,
 		Pelaksana:   pelaksanaResponses,
 		Indikators:  indikatorResponses,
@@ -414,23 +418,31 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		}
 	}
 
+	findidpokin, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, updatedPokin.Id)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
 	helper.PanicIfError(err)
 
 	response := pohonkinerja.PohonKinerjaAdminResponseData{
-		Id:          updatedPokin.Id,
-		Parent:      updatedPokin.Parent,
-		NamaPohon:   updatedPokin.NamaPohon,
-		JenisPohon:  updatedPokin.JenisPohon,
-		LevelPohon:  updatedPokin.LevelPohon,
-		KodeOpd:     updatedPokin.KodeOpd,
-		NamaOpd:     namaOpd,
+		Id:         updatedPokin.Id,
+		Parent:     updatedPokin.Parent,
+		NamaPohon:  updatedPokin.NamaPohon,
+		JenisPohon: updatedPokin.JenisPohon,
+		LevelPohon: updatedPokin.LevelPohon,
+		PerangkatDaerah: &opdmaster.OpdResponseForAll{
+			KodeOpd: updatedPokin.KodeOpd,
+			NamaOpd: namaOpd,
+		},
 		Keterangan:  updatedPokin.Keterangan,
 		Tahun:       updatedPokin.Tahun,
 		Status:      updatedPokin.Status,
 		CountReview: countReview,
 		Pelaksana:   pelaksanaResponses,
 		Indikators:  indikatorResponses,
+		IsActive:    findidpokin.IsActive,
 	}
 
 	return response, nil

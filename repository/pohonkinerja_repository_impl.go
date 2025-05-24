@@ -962,7 +962,8 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
             pk.kode_opd, 
             pk.keterangan, 
             pk.tahun,
-            pk.status
+            pk.status,
+			pk.is_active
         FROM 
             tb_pohon_kinerja pk 
         WHERE 
@@ -979,6 +980,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 		&pokin.Keterangan,
 		&pokin.Tahun,
 		&pokin.Status,
+		&pokin.IsActive,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
