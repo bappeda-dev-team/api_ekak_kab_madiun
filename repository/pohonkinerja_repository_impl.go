@@ -2904,18 +2904,15 @@ func (repository *PohonKinerjaRepositoryImpl) FindListOpdAllTematik(ctx context.
 }
 
 func (repository *PohonKinerjaRepositoryImpl) ValidateParentLevelTarikStrategiOpd(ctx context.Context, tx *sql.Tx, parentId int, childLevel int) error {
+	// Jika tidak ada parent (parent = 0), tidak perlu validasi
 	if parentId == 0 {
-		// Jika parent 0, validasi level harus 4 (Strategic)
-		if childLevel != 4 {
-			return fmt.Errorf("level pohon kinerja harus 4 (Strategic) untuk parent 0")
-		}
 		return nil
 	}
 
 	// Ambil data parent
-	SQL := `SELECT level_pohon FROM tb_pohon_kinerja WHERE id = ?`
+	query := "SELECT level_pohon FROM tb_pohon_kinerja WHERE id = ?"
 	var parentLevel int
-	err := tx.QueryRowContext(ctx, SQL, parentId).Scan(&parentLevel)
+	err := tx.QueryRowContext(ctx, query, parentId).Scan(&parentLevel)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("parent dengan id %d tidak ditemukan", parentId)
@@ -2923,18 +2920,20 @@ func (repository *PohonKinerjaRepositoryImpl) ValidateParentLevelTarikStrategiOp
 		return err
 	}
 
-	// Validasi level
-	if childLevel <= parentLevel {
-		return fmt.Errorf("level pohon kinerja (%d) harus lebih besar dari level parent (%d)", childLevel, parentLevel)
+	// Validasi khusus untuk level 4 (Strategic)
+	if childLevel == 4 {
+		// Level 4 bisa memiliki parent dari level 0,1,2,3
+		if parentLevel < 0 || parentLevel > 3 {
+			return fmt.Errorf("untuk level Strategic (4), parent harus memiliki level 0-3, parent level saat ini: %d", parentLevel)
+		}
+		return nil
 	}
 
-	if childLevel != parentLevel+1 {
-		return fmt.Errorf("level pohon kinerja (%d) harus tepat satu tingkat di bawah level parent (%d)", childLevel, parentLevel)
-	}
-
-	// Validasi range level (4-6)
-	if childLevel < 4 || childLevel > 6 {
-		return fmt.Errorf("level pohon kinerja harus antara 4 sampai 6")
+	// Untuk level lainnya, parent harus memiliki level tepat 1 di atasnya
+	expectedParentLevel := childLevel - 1
+	if parentLevel != expectedParentLevel {
+		return fmt.Errorf("level parent (%d) tidak sesuai dengan yang diharapkan (%d) untuk child level %d",
+			parentLevel, expectedParentLevel, childLevel)
 	}
 
 	return nil
