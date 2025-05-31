@@ -17,13 +17,17 @@ func NewAuthMiddleware(handler http.Handler) *AuthMiddleware {
 }
 
 func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	publicPaths := []string{
-		"/user/login",
+	publicPaths := []struct {
+		path    string
+		pattern string
+	}{
+		{"/user/login", "^/user/login$"},
+		{"/api/pokin_opd/findall/", "^/api/pokin_opd/findall/[^/]+/[^/]+$"},
 	}
 
 	currentPath := request.URL.Path
-	for _, path := range publicPaths {
-		if currentPath == path {
+	for _, route := range publicPaths {
+		if strings.HasPrefix(currentPath, route.path) || helper.MatchPattern(currentPath, route.pattern) {
 			middleware.Handler.ServeHTTP(writer, request)
 			return
 		}
