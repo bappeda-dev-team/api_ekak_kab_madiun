@@ -37,7 +37,14 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 				tp.tahun_awal_periode,
 				tp.tahun_akhir_periode,
 				tp.jenis_periode,
-				COALESCE(pk_tematik.is_active, false) as is_active
+				CASE 
+					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
+					ELSE COALESCE(pk_tematik.is_active, false)  -- Jika ditemukan, gunakan status is_active
+				END as is_active,
+				CASE 
+					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
+					ELSE true  -- Jika ditemukan
+				END as is_exists
 			FROM tb_indikator i
 			INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
 			LEFT JOIN tb_target t ON t.indikator_id = i.id
@@ -64,23 +71,29 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 				sp.tahun_akhir,
 				sp.jenis_periode,
 				CASE 
-					WHEN COALESCE(pk_subtematik.is_active, false) = true AND COALESCE(pk_tematik.is_active, false) = true THEN true
-					ELSE false
-				END as is_active
+					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
+					WHEN pk_subtematik.id IS NULL THEN false  -- Jika subtematik_id tidak ditemukan
+					ELSE COALESCE(pk_subtematik.is_active, false)  -- Jika keduanya ditemukan, gunakan status is_active subtematik
+				END as is_active,
+				CASE 
+					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
+					WHEN pk_subtematik.id IS NULL THEN false  -- Jika subtematik_id tidak ditemukan
+					ELSE true  -- Jika keduanya ditemukan
+				END as is_exists
 			FROM tb_indikator i
 			INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
 			LEFT JOIN tb_target t ON t.indikator_id = i.id
-			LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
 			LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
 			LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
+			LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
 			WHERE sp.tahun_awal = ? 
 			AND sp.tahun_akhir = ?
 			AND sp.jenis_periode = ?
 		)
 		SELECT * FROM (
-			SELECT * FROM indikator_tujuan
+			SELECT * FROM indikator_tujuan WHERE is_exists = true
 			UNION ALL
-			SELECT * FROM indikator_sasaran
+			SELECT * FROM indikator_sasaran WHERE is_exists = true
 		) combined
 		WHERE indikator IS NOT NULL
 		ORDER BY indikator_created_at ASC`
@@ -112,9 +125,9 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			parentName         sql.NullString
 			tahunAwal          string
 			tahunAkhir         string
-			// periodeId          int
-			jenisPeriodeData string
-			isActive         bool
+			jenisPeriodeData   string
+			isActive           bool
+			isExists           bool
 		)
 
 		err := rows.Scan(
@@ -132,14 +145,16 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			&parentName,
 			&tahunAwal,
 			&tahunAkhir,
-			// &periodeId,
 			&jenisPeriodeData,
 			&isActive,
+			&isExists,
 		)
 		if err != nil {
 			return nil, err
 		}
-		if !indikator.Valid || !indikatorId.Valid {
+
+		// Skip jika indikator tidak valid atau tidak exists
+		if !indikator.Valid || !indikatorId.Valid || !isExists {
 			continue
 		}
 
