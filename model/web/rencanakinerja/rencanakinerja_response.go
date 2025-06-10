@@ -9,6 +9,7 @@ type RencanaKinerjaResponse struct {
 	Id                   string                      `json:"id_rencana_kinerja,omitempty"`
 	IdPohon              int                         `json:"id_pohon,omitempty"`
 	NamaPohon            string                      `json:"nama_pohon,omitempty"`
+	LevelPohon           int                         `json:"level_pohon,omitempty"`
 	NamaRencanaKinerja   string                      `json:"nama_rencana_kinerja,omitempty"`
 	TahunAwal            string                      `json:"tahun_awal,omitempty"`
 	TahunAkhir           string                      `json:"tahun_akhir,omitempty"`
