@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
-	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/permasalahan"
 	"ekak_kabupaten_madiun/model/web/rencanaaksi"
@@ -401,23 +400,23 @@ func (service *RencanaKinerjaServiceImpl) FindAll(ctx context.Context, pegawaiId
 			})
 		}
 
-		ActionButton := []web.ActionButton{
-			{
-				NameAction: "Find By Id Rencana Kinerja",
-				Method:     "GET",
-				Url:        "/detail-rencana_kinerja/:rencana_kinerja_id",
-			},
-			{
-				NameAction: "Update Rencana Kinerja",
-				Method:     "PUT",
-				Url:        "/rencana_kinerja/update/:id",
-			},
-			{
-				NameAction: "Delete Rencana Kinerja",
-				Method:     "DELETE",
-				Url:        "/rencana_kinerja/delete/:id",
-			},
-		}
+		// ActionButton := []web.ActionButton{
+		// 	{
+		// 		NameAction: "Find By Id Rencana Kinerja",
+		// 		Method:     "GET",
+		// 		Url:        "/detail-rencana_kinerja/:rencana_kinerja_id",
+		// 	},
+		// 	{
+		// 		NameAction: "Update Rencana Kinerja",
+		// 		Method:     "PUT",
+		// 		Url:        "/rencana_kinerja/update/:id",
+		// 	},
+		// 	{
+		// 		NameAction: "Delete Rencana Kinerja",
+		// 		Method:     "DELETE",
+		// 		Url:        "/rencana_kinerja/delete/:id",
+		// 	},
+		// }
 
 		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, rencana.KodeOpd)
 		if err != nil {
@@ -451,8 +450,8 @@ func (service *RencanaKinerjaServiceImpl) FindAll(ctx context.Context, pegawaiId
 			NamaPegawai: pegawai.NamaPegawai,
 			IdPohon:     rencana.IdPohon,
 			NamaPohon:   pohon.NamaPohon,
+			LevelPohon:  pohon.LevelPohon,
 			Indikator:   indikatorResponses,
-			Action:      ActionButton,
 		})
 		log.Printf("RencanaKinerja Response ditambahkan untuk ID: %s", rencana.Id)
 	}
