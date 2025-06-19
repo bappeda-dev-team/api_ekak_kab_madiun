@@ -18,6 +18,8 @@ type SasaranOpdDetail struct {
 	Id             int
 	IdPohon        int
 	NamaSasaranOpd string
+	IdTujuanOpd    int
+	NamaTujuanOpd  string
 	TahunAwal      string
 	TahunAkhir     string
 	JenisPeriode   string
