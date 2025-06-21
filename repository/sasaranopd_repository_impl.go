@@ -34,6 +34,7 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
         so.tahun_awal,
         so.tahun_akhir,
         so.jenis_periode,
+        so.id_tujuan_opd,
         i.id as indikator_id,
         i.indikator,
         i.rumus_perhitungan,
@@ -77,8 +78,9 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
 			namaPohon, jenisPohon, tahunPohon    string
 			pelaksanaId, pegawaiId, pelaksanaNip sql.NullString
 			namaPegawai                          sql.NullString
-			sasaranId                            sql.NullInt64 // Menggunakan NullInt64 untuk ID integer
+			sasaranId                            sql.NullInt64
 			namaSasaranOpd                       sql.NullString
+			idTujuanOpd                          sql.NullInt64
 			tahunAwalSasaran, tahunAkhirSasaran  sql.NullString
 			jenisPeriodeSasaran                  sql.NullString
 			indikatorId, indikator               sql.NullString
@@ -92,6 +94,7 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
 			&pelaksanaId, &pegawaiId, &pelaksanaNip, &namaPegawai,
 			&sasaranId, &namaSasaranOpd,
 			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
+			&idTujuanOpd, // Tambahkan ini
 			&indikatorId, &indikator,
 			&rumusPerhitungan, &sumberData,
 			&targetId, &targetTahun, &targetValue, &targetSatuan,
@@ -152,6 +155,7 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
 					TahunAwal:      tahunAwalSasaran.String,
 					TahunAkhir:     tahunAkhirSasaran.String,
 					JenisPeriode:   jenisPeriodeSasaran.String,
+					IdTujuanOpd:    int(idTujuanOpd.Int64),
 					Indikator:      make([]domain.Indikator, 0),
 				}
 				sasaranOpd.SasaranOpd = append(sasaranOpd.SasaranOpd, newSasaran)
@@ -252,6 +256,7 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
         so.tahun_awal,
         so.tahun_akhir,
         so.jenis_periode,
+        so.id_tujuan_opd,
         i.id as indikator_id,
         i.indikator,
         i.rumus_perhitungan,
@@ -284,8 +289,9 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 			namaPohon, jenisPohon, tahunPohon    string
 			pelaksanaId, pegawaiId, pelaksanaNip sql.NullString
 			namaPegawai                          sql.NullString
-			sasaranId                            sql.NullInt64 // Ubah ke NullInt64
+			sasaranId                            sql.NullInt64
 			namaSasaranOpd                       sql.NullString
+			idTujuanOpd                          sql.NullInt64
 			tahunAwalSasaran, tahunAkhirSasaran  sql.NullString
 			jenisPeriodeSasaran                  sql.NullString
 			indikatorId, indikator               sql.NullString
@@ -299,6 +305,7 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 			&pelaksanaId, &pegawaiId, &pelaksanaNip, &namaPegawai,
 			&sasaranId, &namaSasaranOpd,
 			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
+			&idTujuanOpd,
 			&indikatorId, &indikator,
 			&rumusPerhitungan, &sumberData,
 			&targetId, &targetTahun, &targetValue, &targetSatuan,
@@ -322,12 +329,13 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 
 			// Tambahkan SasaranOpdDetail
 			sasaranDetail := domain.SasaranOpdDetail{
-				Id:             int(sasaranId.Int64), // Konversi ke int
+				Id:             int(sasaranId.Int64),
 				IdPohon:        pokinId,
 				NamaSasaranOpd: namaSasaranOpd.String,
 				TahunAwal:      tahunAwalSasaran.String,
 				TahunAkhir:     tahunAkhirSasaran.String,
 				JenisPeriode:   jenisPeriodeSasaran.String,
+				IdTujuanOpd:    int(idTujuanOpd.Int64),
 				Indikator:      make([]domain.Indikator, 0),
 			}
 			sasaranOpd.SasaranOpd = append(sasaranOpd.SasaranOpd, sasaranDetail)
@@ -414,13 +422,14 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 func (repository *SasaranOpdRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, sasaranOpd domain.SasaranOpdDetail) error {
 	// Insert Sasaran OPD
 	scriptSasaran := `INSERT INTO tb_sasaran_opd 
-        (id, pokin_id, nama_sasaran_opd, tahun_awal, tahun_akhir, jenis_periode) 
-        VALUES (?, ?, ?, ?, ?, ?)`
+        (id, pokin_id, nama_sasaran_opd, id_tujuan_opd, tahun_awal, tahun_akhir, jenis_periode) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	_, err := tx.ExecContext(ctx, scriptSasaran,
 		sasaranOpd.Id,
 		sasaranOpd.IdPohon,
 		sasaranOpd.NamaSasaranOpd,
+		sasaranOpd.IdTujuanOpd,
 		sasaranOpd.TahunAwal,
 		sasaranOpd.TahunAkhir,
 		sasaranOpd.JenisPeriode,
@@ -471,10 +480,10 @@ func (repository *SasaranOpdRepositoryImpl) Create(ctx context.Context, tx *sql.
 }
 
 func (repository *SasaranOpdRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, sasaranOpd domain.SasaranOpdDetail) (domain.SasaranOpdDetail, error) {
-	// Update tb_sasaran_opd
 	scriptSasaran := `
         UPDATE tb_sasaran_opd 
         SET nama_sasaran_opd = ?, 
+            id_tujuan_opd = ?,
             tahun_awal = ?,
             tahun_akhir = ?,
             jenis_periode = ?
@@ -482,6 +491,7 @@ func (repository *SasaranOpdRepositoryImpl) Update(ctx context.Context, tx *sql.
 
 	_, err := tx.ExecContext(ctx, scriptSasaran,
 		sasaranOpd.NamaSasaranOpd,
+		sasaranOpd.IdTujuanOpd,
 		sasaranOpd.TahunAwal,
 		sasaranOpd.TahunAkhir,
 		sasaranOpd.JenisPeriode,

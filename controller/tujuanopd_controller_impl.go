@@ -175,3 +175,28 @@ func (controller *TujuanOpdControllerImpl) FindAll(writer http.ResponseWriter, r
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *TujuanOpdControllerImpl) FindTujuanOpdOnlyName(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahunAwal := params.ByName("tahun_awal")
+	tahunAkhir := params.ByName("tahun_akhir")
+	jenisPeriode := params.ByName("jenis_periode")
+
+	tujuanOpdResponses, err := controller.TujuanOpdService.FindTujuanOpdOnlyName(request.Context(), kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success find tujuan opd",
+		Data:   tujuanOpdResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
