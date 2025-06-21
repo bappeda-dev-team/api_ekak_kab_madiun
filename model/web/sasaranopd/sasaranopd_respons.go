@@ -13,6 +13,8 @@ type SasaranOpdResponse struct {
 type SasaranOpdDetailResponse struct {
 	Id             string              `json:"id"`
 	NamaSasaranOpd string              `json:"nama_sasaran_opd"`
+	IdTujuanOpd    int                 `json:"id_tujuan_opd"`
+	NamaTujuanOpd  string              `json:"nama_tujuan_opd"`
 	TahunAwal      string              `json:"tahun_awal"`
 	TahunAkhir     string              `json:"tahun_akhir"`
 	JenisPeriode   string              `json:"jenis_periode"`
@@ -51,6 +53,7 @@ type TargetResponse struct {
 type SasaranOpdCreateResponse struct {
 	IdPohon        int               `json:"id_pohon"`
 	NamaSasaranOpd string            `json:"nama_sasaran_opd"`
+	NamaTujuanOpd  string            `json:"nama_tujuan_opd"`
 	TahunAwal      string            `json:"tahun_awal"`
 	TahunAkhir     string            `json:"tahun_akhir"`
 	JenisPeriode   string            `json:"jenis_periode"`

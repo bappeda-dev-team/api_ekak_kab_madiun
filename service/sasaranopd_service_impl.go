@@ -27,6 +27,7 @@ type SasaranOpdServiceImpl struct {
 	pohonkinerjaRepository    repository.PohonKinerjaRepository
 	DB                        *sql.DB
 	validate                  *validator.Validate
+	tujuanOpdRepository       repository.TujuanOpdRepository
 }
 
 func NewSasaranOpdServiceImpl(
@@ -36,6 +37,7 @@ func NewSasaranOpdServiceImpl(
 	manualIndikatorRepository repository.ManualIKRepository,
 	pegawaiRepository repository.PegawaiRepository,
 	pohonkinerjaRepository repository.PohonKinerjaRepository,
+	tujuanOpdRepository repository.TujuanOpdRepository,
 	db *sql.DB,
 	validate *validator.Validate,
 ) *SasaranOpdServiceImpl {
@@ -46,6 +48,7 @@ func NewSasaranOpdServiceImpl(
 		manualIndikatorRepository: manualIndikatorRepository,
 		pegawaiRepository:         pegawaiRepository,
 		pohonkinerjaRepository:    pohonkinerjaRepository,
+		tujuanOpdRepository:       tujuanOpdRepository,
 		DB:                        db,
 		validate:                  validate,
 	}
@@ -98,9 +101,13 @@ func (service *SasaranOpdServiceImpl) FindAll(ctx context.Context, KodeOpd strin
 
 		// Convert SasaranOpd
 		for _, sasaran := range sasaranOpd.SasaranOpd {
+			TujuanOpd, _ := service.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
+
 			sasaranResponse := sasaranopd.SasaranOpdDetailResponse{
 				Id:             strconv.Itoa(sasaran.Id),
 				NamaSasaranOpd: sasaran.NamaSasaranOpd,
+				IdTujuanOpd:    TujuanOpd.Id,
+				NamaTujuanOpd:  TujuanOpd.Tujuan,
 				TahunAwal:      sasaran.TahunAwal,
 				TahunAkhir:     sasaran.TahunAkhir,
 				JenisPeriode:   sasaran.JenisPeriode,
@@ -181,9 +188,12 @@ func (service *SasaranOpdServiceImpl) FindById(ctx context.Context, id int) (*sa
 
 	// Convert SasaranOpd
 	for _, sasaran := range sasaranOpd.SasaranOpd {
+		TujuanOpd, _ := service.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
 		sasaranResponse := sasaranopd.SasaranOpdDetailResponse{
 			Id:             strconv.Itoa(sasaran.Id),
 			NamaSasaranOpd: sasaran.NamaSasaranOpd,
+			IdTujuanOpd:    sasaran.IdTujuanOpd,
+			NamaTujuanOpd:  TujuanOpd.Tujuan,
 			TahunAwal:      sasaran.TahunAwal,
 			TahunAkhir:     sasaran.TahunAkhir,
 			JenisPeriode:   sasaran.JenisPeriode,
@@ -247,6 +257,7 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 		TahunAwal:      request.TahunAwal,
 		TahunAkhir:     request.TahunAkhir,
 		JenisPeriode:   request.JenisPeriode,
+		IdTujuanOpd:    request.IdTujuanOpd,
 		Indikator:      make([]domain.Indikator, 0),
 	}
 
@@ -286,10 +297,16 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 		return nil, err
 	}
 
+	TujuanOpd, err := service.tujuanOpdRepository.FindById(ctx, tx, sasaranOpd.IdTujuanOpd)
+	if err != nil {
+		return nil, errors.New("tujuan opd tidak ditemukan")
+	}
+
 	// Buat response dengan indikator dan target
 	response := &sasaranopd.SasaranOpdCreateResponse{
 		IdPohon:        sasaranOpd.IdPohon,
 		NamaSasaranOpd: sasaranOpd.NamaSasaranOpd,
+		NamaTujuanOpd:  TujuanOpd.Tujuan,
 		TahunAwal:      sasaranOpd.TahunAwal,
 		TahunAkhir:     sasaranOpd.TahunAkhir,
 		JenisPeriode:   sasaranOpd.JenisPeriode,
@@ -427,11 +444,17 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 		})
 	}
 
+	TujuanOpd, err := service.tujuanOpdRepository.FindById(ctx, tx, request.IdTujuanOpd)
+	if err != nil {
+		return nil, errors.New("tujuan opd tidak ditemukan")
+	}
+
 	// Persiapkan data update
 	sasaranOpdUpdate := domain.SasaranOpdDetail{
 		Id:             request.IdSasaranOpd,
 		IdPohon:        existingSasaran.IdPohon,
 		NamaSasaranOpd: request.NamaSasaran,
+		IdTujuanOpd:    request.IdTujuanOpd,
 		TahunAwal:      request.TahunAwal,
 		TahunAkhir:     request.TahunAkhir,
 		JenisPeriode:   request.JenisPeriode,
@@ -448,6 +471,7 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 	response := &sasaranopd.SasaranOpdCreateResponse{
 		IdPohon:        updatedSasaranOpd.IdPohon,
 		NamaSasaranOpd: updatedSasaranOpd.NamaSasaranOpd,
+		NamaTujuanOpd:  TujuanOpd.Tujuan,
 		TahunAwal:      updatedSasaranOpd.TahunAwal,
 		TahunAkhir:     updatedSasaranOpd.TahunAkhir,
 		JenisPeriode:   updatedSasaranOpd.JenisPeriode,

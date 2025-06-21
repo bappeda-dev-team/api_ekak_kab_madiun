@@ -5,6 +5,7 @@ type SasaranOpdUpdateRequest struct {
 	NamaSasaran  string                   `json:"nama_sasaran" validate:"required"`
 	TahunAwal    string                   `json:"tahun_awal" validate:"required"`
 	TahunAkhir   string                   `json:"tahun_akhir" validate:"required"`
+	IdTujuanOpd  int                      `json:"id_tujuan_opd" validate:"required"`
 	JenisPeriode string                   `json:"jenis_periode" validate:"required"`
 	Indikator    []IndikatorUpdateRequest `json:"indikator"`
 }

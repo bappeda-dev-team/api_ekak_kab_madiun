@@ -128,7 +128,7 @@ func InitializeServer() *http.Server {
 	ikuRepositoryImpl := repository.NewIkuRepositoryImpl()
 	ikuServiceImpl := service.NewIkuServiceImpl(ikuRepositoryImpl, db)
 	ikuControllerImpl := controller.NewIkuControllerImpl(ikuServiceImpl)
-	sasaranOpdServiceImpl := service.NewSasaranOpdServiceImpl(sasaranOpdRepositoryImpl, opdRepositoryImpl, rencanaKinerjaRepositoryImpl, manualIKRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, db, validate)
+	sasaranOpdServiceImpl := service.NewSasaranOpdServiceImpl(sasaranOpdRepositoryImpl, opdRepositoryImpl, rencanaKinerjaRepositoryImpl, manualIKRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, tujuanOpdRepositoryImpl, db, validate)
 	sasaranOpdControllerImpl := controller.NewSasaranOpdControllerImpl(sasaranOpdServiceImpl)
 	visiPemdaServiceImpl := service.NewVisiPemdaServiceImpl(visiPemdaRepositoryImpl, validate, db)
 	visiPemdaControllerImpl := controller.NewVisiPemdaControllerImpl(visiPemdaServiceImpl)

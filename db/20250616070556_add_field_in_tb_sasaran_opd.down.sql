@@ -1,0 +1,1 @@
+ALTER TABLE tb_sasaran_opd DROP COLUMN id_tujuan_opd;

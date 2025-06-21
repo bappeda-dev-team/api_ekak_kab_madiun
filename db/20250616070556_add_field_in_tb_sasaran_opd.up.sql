@@ -1,0 +1,1 @@
+ALTER TABLE tb_sasaran_opd ADD COLUMN id_tujuan_opd INT DEFAULT 0;
