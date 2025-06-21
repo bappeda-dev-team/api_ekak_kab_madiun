@@ -188,11 +188,12 @@ func (service *SasaranOpdServiceImpl) FindById(ctx context.Context, id int) (*sa
 
 	// Convert SasaranOpd
 	for _, sasaran := range sasaranOpd.SasaranOpd {
+		TujuanOpd, _ := service.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
 		sasaranResponse := sasaranopd.SasaranOpdDetailResponse{
 			Id:             strconv.Itoa(sasaran.Id),
 			NamaSasaranOpd: sasaran.NamaSasaranOpd,
 			IdTujuanOpd:    sasaran.IdTujuanOpd,
-			NamaTujuanOpd:  sasaran.NamaTujuanOpd,
+			NamaTujuanOpd:  TujuanOpd.Tujuan,
 			TahunAwal:      sasaran.TahunAwal,
 			TahunAkhir:     sasaran.TahunAkhir,
 			JenisPeriode:   sasaran.JenisPeriode,
