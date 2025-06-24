@@ -396,6 +396,12 @@ var kelompokAnggaranSet = wire.NewSet(
 	wire.Bind(new(controller.KelompokAnggaranController), new(*controller.KelompokAnggaranControllerImpl)),
 )
 
+var isustrategisSet = wire.NewSet(
+	repository.NewCSFRepositoryImpl,
+	service.NewCSFService,
+	controller.NewCSFControllerImpl,
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -443,6 +449,7 @@ func InitializeServer() *http.Server {
 		cascadingOpdSet,
 		rincianBelanjaSet,
 		kelompokAnggaranSet,
+		isustrategisSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

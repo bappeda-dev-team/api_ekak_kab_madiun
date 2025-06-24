@@ -51,6 +51,7 @@ func NewRouter(
 	cascadingOpdController controller.CascadingOpdController,
 	rincianBelanjaController controller.RincianBelanjaController,
 	kelompokAnggaranController controller.KelompokAnggaranController,
+	csfController controller.CSFController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -204,6 +205,9 @@ func NewRouter(
 	router.GET("/pohon_kinerja/pemda/:kode_opd/:tahun", pohonKinerjaAdminController.FindPokinFromPemda)
 	router.GET("/pohon_kinerja/pilih_parent/:kode_opd/:tahun/:level_pohon", pohonKinerjaAdminController.FindPokinFromOpd)
 	router.GET("/pohon_kinerja_opd/pokinpemda_review/:id", pohonKinerjaOpdController.FindidPokinWithAllTema)
+
+	// isustrategis - csf
+	router.GET("/isustrategis/csf/:tahun", csfController.FindByTahun)
 
 	//DATA MASTER
 	//pegawai
