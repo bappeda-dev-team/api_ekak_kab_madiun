@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/isustrategis"
 )
 
@@ -55,4 +56,25 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 	}
 
 	return result, nil
+}
+
+func (r *CSFRepositoryImpl) CreateCsf(ctx context.Context, tx *sql.Tx, csf domain.CSF) error {
+	query := `
+		INSERT INTO tb_csf 
+			(pohon_id, pernyataan_kondisi_strategis, alasan_kondisi_strategis, data_terukur, kondisi_terukur, kondisi_wujud, tahun)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`
+	_, err := tx.ExecContext(ctx, query,
+		csf.PohonID,
+		csf.PernyataanKondisiStrategis,
+		csf.AlasanKondisiStrategis,
+		csf.DataTerukur,
+		csf.KondisiTerukur,
+		csf.KondisiWujud,
+		csf.Tahun,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }

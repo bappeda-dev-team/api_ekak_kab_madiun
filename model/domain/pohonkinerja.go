@@ -9,6 +9,7 @@ type PohonKinerja struct {
 	IdCrosscutting         int
 	Id                     int
 	Parent                 int
+	CSF                    CSF
 	NamaPohon              string
 	KodeOpd                string
 	NamaOpd                string
@@ -40,6 +41,16 @@ type PohonKinerja struct {
 	Strategi        string
 	PelaksanaIds    string
 	ListOpd         []OpdList
+}
+
+type CSF struct {
+	PohonID                    int
+	PernyataanKondisiStrategis string
+	AlasanKondisiStrategis     string
+	DataTerukur                string
+	KondisiTerukur             string
+	KondisiWujud               string
+	Tahun                      int
 }
 
 type PegawaiAction struct {
