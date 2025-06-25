@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web/isustrategis"
+	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 )
 
@@ -33,10 +34,30 @@ func (service *CSFServiceImpl) FindByTahun(ctx context.Context, tahun string) ([
 		return nil, err
 	}
 
-	// Transformasi ke bentuk response (web model)
 	var responses []isustrategis.CSFResponse
+
 	for _, csf := range csfList {
-		responses = append(responses, isustrategis.CSFResponse{
+		var indikatorResponses []pohonkinerja.IndikatorResponse
+
+		for _, ind := range csf.Indikator {
+			var targetResponses []pohonkinerja.TargetResponse
+			for _, t := range ind.Target {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              t.Id,
+					IndikatorId:     t.IndikatorId,
+					TargetIndikator: t.Target,
+					SatuanIndikator: t.Satuan,
+				})
+			}
+
+			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+				Id:            ind.Id,
+				NamaIndikator: ind.Indikator,
+				Target:        targetResponses,
+			})
+		}
+
+		response := isustrategis.CSFResponse{
 			ID:                         csf.ID,
 			PohonID:                    csf.PohonID,
 			PernyataanKondisiStrategis: csf.PernyataanKondisiStrategis,
@@ -50,7 +71,10 @@ func (service *CSFServiceImpl) FindByTahun(ctx context.Context, tahun string) ([
 			Strategi:                   csf.Strategi,
 			Keterangan:                 csf.Keterangan,
 			IsActive:                   csf.IsActive,
-		})
+			Indikators:                 indikatorResponses,
+		}
+
+		responses = append(responses, response)
 	}
 
 	return responses, nil

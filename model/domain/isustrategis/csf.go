@@ -1,6 +1,9 @@
 package isustrategis
 
-import "time"
+import (
+	"ekak_kabupaten_madiun/model/domain"
+	"time"
+)
 
 type CSF struct {
 	ID                         int
@@ -29,4 +32,5 @@ type CSFPokin struct {
 	Strategi                   string
 	Keterangan                 string
 	IsActive                   bool
+	Indikator                  []domain.Indikator
 }

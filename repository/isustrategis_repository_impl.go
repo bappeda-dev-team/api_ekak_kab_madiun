@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/isustrategis"
+	"fmt"
 )
 
 type CSFRepositoryImpl struct{}
@@ -28,12 +29,21 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 		tb_pohon_kinerja.level_pohon,
 		tb_pohon_kinerja.nama_pohon,
 		tb_pohon_kinerja.keterangan,
-        tb_pohon_kinerja.is_active
+		tb_pohon_kinerja.is_active,
+		i.id as indikator_id,
+		i.indikator as nama_indikator,
+		t.id as target_id,
+		t.target as target_value,
+		t.satuan as target_satuan
 	FROM
 		tb_csf
 	JOIN tb_pohon_kinerja ON tb_csf.pohon_id = tb_pohon_kinerja.id
+	LEFT JOIN tb_indikator i ON tb_pohon_kinerja.id = i.pokin_id
+	LEFT JOIN tb_target t ON i.id = t.indikator_id
 	WHERE
 		tb_csf.tahun = ?
+	ORDER BY
+		tb_csf.id
 	`
 
 	rows, err := tx.QueryContext(ctx, query, tahun)
@@ -42,35 +52,99 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 	}
 	defer rows.Close()
 
-	var result []isustrategis.CSFPokin
+	csfMap := make(map[int]*isustrategis.CSFPokin)
+	indikatorMap := make(map[string]*domain.Indikator)
 
 	for rows.Next() {
-		var csf isustrategis.CSFPokin
-		err := rows.Scan(
-			&csf.ID,
-			&csf.PohonID,
-			&csf.PernyataanKondisiStrategis,
-			&csf.AlasanKondisiStrategis,
-			&csf.DataTerukur,
-			&csf.KondisiTerukur,
-			&csf.KondisiWujud,
-			&csf.Tahun,
-			&csf.JenisPohon,
-			&csf.LevelPohon,
-			&csf.Strategi,
-			&csf.Keterangan,
-			&csf.IsActive,
+		var (
+			csfID, pohonID               int
+			pernyataan, alasan, data     string
+			kondisiTerukur, kondisiWujud string
+			tahunInt                     int
+			jenisPohon, namaPohon, ket   string
+			levelPohon                   int
+			isActive                     bool
+			indikatorID                  sql.NullString
+			namaIndikator                sql.NullString
+			targetID                     sql.NullString
+			targetValue                  sql.NullString
+			targetSatuan                 sql.NullString
 		)
-		if err != nil {
+
+		if err := rows.Scan(
+			&csfID, &pohonID, &pernyataan, &alasan, &data,
+			&kondisiTerukur, &kondisiWujud, &tahunInt,
+			&jenisPohon, &levelPohon, &namaPohon, &ket, &isActive,
+			&indikatorID, &namaIndikator,
+			&targetID, &targetValue, &targetSatuan,
+		); err != nil {
 			return nil, err
 		}
-		result = append(result, csf)
+
+		csf, ok := csfMap[csfID]
+		if !ok {
+			csf = &isustrategis.CSFPokin{
+				ID:                         csfID,
+				PohonID:                    pohonID,
+				PernyataanKondisiStrategis: pernyataan,
+				AlasanKondisiStrategis:     alasan,
+				DataTerukur:                data,
+				KondisiTerukur:             kondisiTerukur,
+				KondisiWujud:               kondisiWujud,
+				Tahun:                      tahunInt,
+				JenisPohon:                 jenisPohon,
+				LevelPohon:                 levelPohon,
+				Strategi:                   namaPohon,
+				Keterangan:                 ket,
+				IsActive:                   isActive,
+			}
+			csfMap[csfID] = csf
+		}
+
+		// Proses indikator jika ada
+		if indikatorID.Valid && namaIndikator.Valid {
+			indID := indikatorID.String
+			indikator, exists := indikatorMap[indID]
+			if !exists {
+				indikator = &domain.Indikator{
+					Id:        indID,
+					PokinId:   fmt.Sprint(pohonID),
+					Indikator: namaIndikator.String,
+					Tahun:     fmt.Sprint(tahunInt),
+					Target:    []domain.Target{},
+				}
+				indikatorMap[indID] = indikator
+			}
+
+			// Tambahkan target jika ada
+			if targetID.Valid && targetValue.Valid && targetSatuan.Valid {
+				indikator.Target = append(indikator.Target, domain.Target{
+					Id:          targetID.String,
+					IndikatorId: indID,
+					Target:      targetValue.String,
+					Satuan:      targetSatuan.String,
+					Tahun:       fmt.Sprint(tahunInt),
+				})
+			}
+
+			// Tambahkan ke CSF jika indikator belum pernah dimasukkan
+			found := false
+			for _, ind := range csf.Indikator {
+				if ind.Id == indID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				csf.Indikator = append(csf.Indikator, *indikator)
+			}
+		}
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
+	var result []isustrategis.CSFPokin
+	for _, csf := range csfMap {
+		result = append(result, *csf)
 	}
-
 	return result, nil
 }
 
