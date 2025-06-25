@@ -1,7 +1,5 @@
 package isustrategis
 
-import "time"
-
 type CSFResponse struct {
 	ID                         int       `json:"id"`
 	PohonID                    int       `json:"pohon_id"`
@@ -11,6 +9,9 @@ type CSFResponse struct {
 	KondisiTerukur             string    `json:"kondisi_terukur"`
 	KondisiWujud               string    `json:"kondisi_wujud"`
 	Tahun                      int       `json:"tahun"`
-	CreatedAt                  time.Time `json:"created_at"`
-	UpdatedAt                  time.Time `json:"updated_at"`
+	JenisPohon                 string    `json:"jenis_pohon"`
+	LevelPohon                 int       `json:"level_pohon"`
+	Strategi                   string    `json:"tema"`
+	Keterangan                 string    `json:"keterangan"`
+	IsActive                   bool      `json:"is_active"`
 }

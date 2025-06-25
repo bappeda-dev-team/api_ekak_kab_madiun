@@ -45,8 +45,11 @@ func (service *CSFServiceImpl) FindByTahun(ctx context.Context, tahun string) ([
 			KondisiTerukur:             csf.KondisiTerukur,
 			KondisiWujud:               csf.KondisiWujud,
 			Tahun:                      csf.Tahun,
-			CreatedAt:                  csf.CreatedAt,
-			UpdatedAt:                  csf.UpdatedAt,
+			JenisPohon:                 csf.JenisPohon,
+			LevelPohon:                 csf.LevelPohon,
+			Strategi:                   csf.Strategi,
+			Keterangan:                 csf.Keterangan,
+			IsActive:                   csf.IsActive,
 		})
 	}
 
