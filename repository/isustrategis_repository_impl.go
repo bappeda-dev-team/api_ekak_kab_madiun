@@ -51,7 +51,12 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
 
 	csfMap := make(map[int]*isustrategis.CSFPokin)
 	indikatorMap := make(map[string]*domain.Indikator)
@@ -241,7 +246,12 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, c
 	if err != nil {
 		return isustrategis.CSFPokin{}, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
 
 	var csf *isustrategis.CSFPokin
 	indikatorMap := make(map[string]*domain.Indikator)
