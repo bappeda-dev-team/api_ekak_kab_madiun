@@ -7,4 +7,5 @@ import (
 
 type CSFService interface {
 	FindByTahun(ctx context.Context, tahun string) ([]isustrategis.CSFResponse, error)
+	FindById(ctx context.Context, csfID int) (isustrategis.CSFResponse, error)
 }

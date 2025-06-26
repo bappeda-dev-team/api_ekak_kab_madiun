@@ -5,6 +5,7 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -37,6 +38,34 @@ func (controller *CSFControllerImpl) FindByTahun(writer http.ResponseWriter, req
 		Code:   200,
 		Status: http.StatusText(200),
 		Data:   csfResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *CSFControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+
+	if id == "" {
+		helper.WriteToResponseBody(writer, "ID Tidak boleh kosong")
+		return
+	}
+
+	csfID, err := strconv.Atoi(id)
+	if err != nil {
+		helper.WriteToResponseBody(writer, err.Error())
+		return
+	}
+
+	csfResponse, err := controller.CSFService.FindById(request.Context(), csfID)
+	if err != nil {
+		helper.WriteToResponseBody(writer, err.Error())
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: http.StatusText(200),
+		Data:   csfResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
