@@ -452,6 +452,28 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
 	helper.PanicIfError(err)
 
+	updatedCsfInput := domain.CSF{
+		PohonID:                    updatedPokin.Id,
+		PernyataanKondisiStrategis: request.PernyataanKondisiStrategis,
+		AlasanKondisiStrategis:     request.AlasanKondisiStrategis,
+		DataTerukur:                request.DataTerukur,
+		KondisiTerukur:             request.KondisiTerukur,
+		KondisiWujud:               request.KondisiWujud,
+	}
+
+	updatedCsf, err := service.csfRepository.UpdateCSFByPohonID(ctx, tx, updatedCsfInput)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+
+	csfResponse := pohonkinerja.CSFResponse{
+		PernyataanKondisiStrategis: updatedCsf.PernyataanKondisiStrategis,
+		AlasanKondisiStrategis:     updatedCsf.AlasanKondisiStrategis,
+		DataTerukur:                updatedCsf.DataTerukur,
+		KondisiTerukur:             updatedCsf.KondisiTerukur,
+		KondisiWujud:               updatedCsf.KondisiWujud,
+	}
+
 	response := pohonkinerja.PohonKinerjaAdminResponseData{
 		Id:         updatedPokin.Id,
 		Parent:     updatedPokin.Parent,
@@ -469,6 +491,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		Pelaksana:   pelaksanaResponses,
 		Indikators:  indikatorResponses,
 		IsActive:    findidpokin.IsActive,
+		CSFResponse: csfResponse,
 	}
 
 	return response, nil

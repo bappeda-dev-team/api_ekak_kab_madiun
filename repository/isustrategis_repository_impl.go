@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/isustrategis"
 	"fmt"
+	"log"
 )
 
 type CSFRepositoryImpl struct{}
@@ -167,4 +168,39 @@ func (r *CSFRepositoryImpl) CreateCsf(ctx context.Context, tx *sql.Tx, csf domai
 		return err
 	}
 	return nil
+}
+
+func (r *CSFRepositoryImpl) UpdateCSFByPohonID(ctx context.Context, tx *sql.Tx, csf domain.CSF) (domain.CSF, error) {
+	query := `
+	UPDATE tb_csf
+	SET
+		pernyataan_kondisi_strategis = ?,
+		alasan_kondisi_strategis = ?,
+		data_terukur = ?,
+		kondisi_terukur = ?,
+		kondisi_wujud = ?
+	WHERE pohon_id = ?
+`
+	if csf.PohonID == 0 {
+		return domain.CSF{}, fmt.Errorf("[ERROR] POHON ID TIDAK BOLEH 0")
+	}
+	result, err := tx.ExecContext(ctx, query,
+		csf.PernyataanKondisiStrategis,
+		csf.AlasanKondisiStrategis,
+		csf.DataTerukur,
+		csf.KondisiTerukur,
+		csf.KondisiWujud,
+		csf.PohonID,
+	)
+	if err != nil {
+		return domain.CSF{}, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return domain.CSF{}, err
+	}
+	log.Printf("[LOG] ROW CSF UPDATED: %d", rowsAffected)
+
+	return csf, nil
 }
