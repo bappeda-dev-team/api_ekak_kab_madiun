@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain/isustrategis"
 	"fmt"
 	"log"
+	"sort"
 )
 
 type CSFRepositoryImpl struct{}
@@ -149,8 +150,13 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 
 	log.Print("[LOG] Record CSF ditemukan")
 	var result []isustrategis.CSFPokin
-	for _, csf := range csfMap {
-		result = append(result, *csf)
+	var keys []int
+	for id := range csfMap {
+		keys = append(keys, id)
+	}
+	sort.Ints(keys)
+	for _, id := range keys {
+		result = append(result, *csfMap[id])
 	}
 	return result, nil
 }
