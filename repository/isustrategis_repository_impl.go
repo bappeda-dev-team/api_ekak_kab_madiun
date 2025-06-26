@@ -329,7 +329,9 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, c
 
 	// Akumulasi indikator yang ditemukan
 	for _, indikator := range indikatorMap {
-		csf.Indikator = append(csf.Indikator, *indikator)
+		if indikator != nil {
+			csf.Indikator = append(csf.Indikator, *indikator)
+		}
 	}
 
 	if csf == nil {
