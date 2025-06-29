@@ -284,6 +284,7 @@ func NewRouter(
 	router.GET("/user/findall", userController.FindAll)
 	router.POST("/user/login", userController.Login)
 	router.GET("/user/findbykodeopdandrole", userController.FindByKodeOpdAndRole)
+	router.GET("/user/findpegawai/:nip", userController.FindByNip)
 
 	//tujuan opd
 	router.POST("/tujuan_opd/create", tujuanOpdController.Create)
