@@ -469,3 +469,38 @@ func (service *UserServiceImpl) FindByKodeOpdAndRole(ctx context.Context, kodeOp
 
 	return userResponses, nil
 }
+
+func (service *UserServiceImpl) FindByNip(ctx context.Context, nip string) (user.UserResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return user.UserResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	userDomain, err := service.UserRepository.FindByNip(ctx, tx, nip)
+	if err != nil {
+		return user.UserResponse{}, err
+	}
+
+	var roles []user.RoleResponse
+	for _, role := range userDomain.Role {
+		roles = append(roles, user.RoleResponse{
+			Id:   role.Id,
+			Role: role.Role,
+		})
+	}
+
+	pegawaiDomain, err := service.PegawaiRepository.FindByNip(ctx, tx, userDomain.Nip)
+	if err != nil {
+		return user.UserResponse{}, err
+	}
+
+	userResponse := user.UserResponse{
+		Nip:         userDomain.Nip,
+		NamaPegawai: pegawaiDomain.NamaPegawai,
+		IsActive:    userDomain.IsActive,
+		Role:        roles,
+	}
+
+	return userResponse, nil
+}

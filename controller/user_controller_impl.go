@@ -210,3 +210,26 @@ func (controller *UserControllerImpl) FindByKodeOpdAndRole(writer http.ResponseW
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *UserControllerImpl) FindByNip(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	nip := params.ByName("nip")
+
+	userResponse, err := controller.userService.FindByNip(request.Context(), nip)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "failed find by nip",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "success find by nip",
+		Data:   userResponse,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

@@ -202,6 +202,71 @@ func (repository *UserRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, 
 	return user, nil
 }
 
+func (repository *UserRepositoryImpl) FindByNip(ctx context.Context, tx *sql.Tx, nip string) (domain.Users, error) {
+	script := `
+		SELECT u.id, u.nip, u.email, u.password, u.is_active, ur.role_id, r.role 
+		FROM tb_users u
+			LEFT JOIN tb_user_role ur ON u.id = ur.user_id
+			LEFT JOIN tb_role r ON ur.role_id = r.id
+		WHERE u.nip = ?
+		ORDER BY ur.role_id
+	`
+	rows, err := tx.QueryContext(ctx, script, nip)
+	if err != nil {
+		return domain.Users{}, err
+	}
+	defer rows.Close()
+
+	var user domain.Users
+	first := true
+
+	for rows.Next() {
+		var roleId sql.NullInt64
+		var roleName sql.NullString
+
+		if first {
+			err := rows.Scan(
+				&user.Id,
+				&user.Nip,
+				&user.Email,
+				&user.Password,
+				&user.IsActive,
+				&roleId,
+				&roleName,
+			)
+			if err != nil {
+				return domain.Users{}, err
+			}
+			first = false
+		} else {
+			var userId int
+			var nip, email, password string
+			var isActive bool
+			err := rows.Scan(
+				&userId,
+				&nip,
+				&email,
+				&password,
+				&isActive,
+				&roleId,
+				&roleName,
+			)
+			if err != nil {
+				return domain.Users{}, err
+			}
+		}
+
+		if roleId.Valid && roleName.Valid {
+			user.Role = append(user.Role, domain.Roles{
+				Id:   int(roleId.Int64),
+				Role: roleName.String,
+			})
+		}
+	}
+
+	return user, nil
+}
+
 func (repository *UserRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id int) error {
 	scriptRole := "DELETE FROM tb_user_role WHERE user_id = ?"
 	_, err := tx.ExecContext(ctx, scriptRole, id)
