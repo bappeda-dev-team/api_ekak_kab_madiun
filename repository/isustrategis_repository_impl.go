@@ -43,7 +43,7 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 	LEFT JOIN tb_indikator i ON tb_pohon_kinerja.id = i.pokin_id
 	LEFT JOIN tb_target t ON i.id = t.indikator_id
 	WHERE
-		tb_csf.tahun = ?
+		tb_csf.tahun = ? and tb_pohon_kinerja.level_pohon = 0
 	ORDER BY
 		tb_csf.id
 	`
