@@ -30,6 +30,7 @@ type PohonKinerjaAdminUpdateRequest struct {
 	Status     string                   `json:"status"`
 	Pelaksana  []PelaksanaUpdateRequest `json:"pelaksana"`
 	Indikator  []IndikatorUpdateRequest `json:"indikator"`
+	CSFRequest `json:",inline"`
 }
 
 type IndikatorUpdateRequest struct {
