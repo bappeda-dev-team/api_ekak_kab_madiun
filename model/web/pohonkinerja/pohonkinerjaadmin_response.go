@@ -25,7 +25,16 @@ type PohonKinerjaAdminResponseData struct {
 	Pelaksana       []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
 	Indikators      []IndikatorResponse          `json:"indikator,omitempty"`
 	Childs          []interface{}                `json:"childs,omitempty"`
+	CSFResponse `json:",inline"`
 	// SubTematiks []SubtematikResponse `json:"sub_tematiks,omitempty"`
+}
+
+type CSFResponse struct {
+	PernyataanKondisiStrategis string `json:"pernyataan_kondisi_strategis"`
+	AlasanKondisiStrategis     string `json:"alasan_sebagai_kondisi_strategis"`
+	DataTerukur                string `json:"data_terukur_pendukung_pernyataan"`
+	KondisiTerukur             string `json:"kondisi_terukur_yang_diharapkan"`
+	KondisiWujud               string `json:"kondisi_yang_ingin_diwujudkan"`
 }
 
 type TematikResponse struct {

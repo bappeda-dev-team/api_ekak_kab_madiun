@@ -8,6 +8,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
+	"strconv"
 
 	"log"
 
@@ -25,16 +26,18 @@ type PohonKinerjaAdminServiceImpl struct {
 	opdRepository          repository.OpdRepository
 	pegawaiRepository      repository.PegawaiRepository
 	reviewRepository       repository.ReviewRepository
+	csfRepository          repository.CSFRepository
 	DB                     *sql.DB
 }
 
-func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository) *PohonKinerjaAdminServiceImpl {
+func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, csfRepository repository.CSFRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository) *PohonKinerjaAdminServiceImpl {
 	return &PohonKinerjaAdminServiceImpl{
 		pohonKinerjaRepository: pohonKinerjaRepository,
 		opdRepository:          opdRepository,
 		pegawaiRepository:      pegawaiRepository,
 		DB:                     DB,
 		reviewRepository:       reviewRepository,
+		csfRepository:          csfRepository,
 	}
 }
 
@@ -129,6 +132,29 @@ func (service *PohonKinerjaAdminServiceImpl) Create(ctx context.Context, request
 
 	log.Printf("Berhasil membuat PohonKinerja dengan ID: %d", result.Id)
 
+	// CSF
+	tahunCsf, err := strconv.Atoi(request.Tahun)
+	if err != nil {
+		log.Printf("Error konversi tahun CSF: %v", err)
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+	// 🔽 Buat dan simpan CSF setelah pohon kinerja berhasil
+	csf := domain.CSF{
+		PohonID:                    result.Id,
+		PernyataanKondisiStrategis: request.PernyataanKondisiStrategis,
+		AlasanKondisiStrategis:     request.AlasanKondisiStrategis,
+		DataTerukur:                request.DataTerukur,
+		KondisiTerukur:             request.KondisiTerukur,
+		KondisiWujud:               request.KondisiWujud,
+		Tahun:                      tahunCsf,
+	}
+	log.Printf("Membuat CSF untuk PohonKinerja ID: %d", result.Id)
+
+	err = service.csfRepository.CreateCsf(ctx, tx, csf)
+	if err != nil {
+		log.Printf("Error saat membuat CSF: %v", err)
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
 	// Konversi indikator domain ke IndikatorResponse
 	var indikatorResponses []pohonkinerja.IndikatorResponse
 	for _, ind := range result.Indikator {
@@ -426,6 +452,28 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
 	helper.PanicIfError(err)
 
+	updatedCsfInput := domain.CSF{
+		PohonID:                    updatedPokin.Id,
+		PernyataanKondisiStrategis: request.PernyataanKondisiStrategis,
+		AlasanKondisiStrategis:     request.AlasanKondisiStrategis,
+		DataTerukur:                request.DataTerukur,
+		KondisiTerukur:             request.KondisiTerukur,
+		KondisiWujud:               request.KondisiWujud,
+	}
+
+	updatedCsf, err := service.csfRepository.UpdateCSFByPohonID(ctx, tx, updatedCsfInput)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+
+	csfResponse := pohonkinerja.CSFResponse{
+		PernyataanKondisiStrategis: updatedCsf.PernyataanKondisiStrategis,
+		AlasanKondisiStrategis:     updatedCsf.AlasanKondisiStrategis,
+		DataTerukur:                updatedCsf.DataTerukur,
+		KondisiTerukur:             updatedCsf.KondisiTerukur,
+		KondisiWujud:               updatedCsf.KondisiWujud,
+	}
+
 	response := pohonkinerja.PohonKinerjaAdminResponseData{
 		Id:         updatedPokin.Id,
 		Parent:     updatedPokin.Parent,
@@ -443,6 +491,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		Pelaksana:   pelaksanaResponses,
 		Indikators:  indikatorResponses,
 		IsActive:    findidpokin.IsActive,
+		CSFResponse: csfResponse,
 	}
 
 	return response, nil
