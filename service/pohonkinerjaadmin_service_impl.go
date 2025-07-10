@@ -8,7 +8,11 @@ import (
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
+	"encoding/json"
+	"net/http"
+	"os"
 	"strconv"
+	"time"
 
 	"log"
 
@@ -847,6 +851,10 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			}
 		}
 
+		sort.Slice(tematik[0].Indikator, func(i, j int) bool {
+			return tematik[0].Indikator[i].CreatedAt.Before(tematik[0].Indikator[j].CreatedAt)
+		})
+
 		// Konversi indikator dengan pengecekan duplikasi
 		var uniqueIndikators []pohonkinerja.IndikatorResponse
 		for _, ind := range tematik[0].Indikator {
@@ -855,6 +863,57 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 				processedIndikators[ind.Id] = true
 				indResp := helper.ConvertToIndikatorResponse(ind)
 				uniqueIndikators = append(uniqueIndikators, indResp)
+			}
+		}
+
+		// Consume API CSF untuk level tematik
+		if tematik[0].LevelPohon == 0 {
+			// Buat HTTP client dengan timeout
+			client := &http.Client{
+				Timeout: time.Second * 10,
+			}
+
+			// Buat request ke endpoint CSF
+			CSFApi := os.Getenv("CSF_API")
+			req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/csf/%d", CSFApi, tematik[0].Id), nil)
+			if err != nil {
+				log.Printf("Error membuat request CSF: %v", err)
+				// Lanjutkan tanpa data CSF
+			} else {
+				// Kirim request
+				resp, err := client.Do(req)
+				if err != nil {
+					log.Printf("Error melakukan request CSF: %v", err)
+					// Lanjutkan tanpa data CSF
+				} else {
+					defer resp.Body.Close()
+
+					// Baca response body
+					if resp.StatusCode == http.StatusOK {
+						var csfResponse pohonkinerja.CSFAPIResponse
+						if err := json.NewDecoder(resp.Body).Decode(&csfResponse); err != nil {
+							log.Printf("Error decode response CSF: %v", err)
+							// Lanjutkan tanpa data CSF
+						} else {
+							// Tambahkan CSF ke response
+							tematikResponse = pohonkinerja.TematikResponse{
+
+								Id:          tematik[0].Id,
+								Parent:      nil,
+								Tema:        tematik[0].NamaPohon,
+								JenisPohon:  tematik[0].JenisPohon,
+								LevelPohon:  tematik[0].LevelPohon,
+								Keterangan:  tematik[0].Keterangan,
+								IsActive:    tematik[0].IsActive,
+								CountReview: tematik[0].CountReview,
+								Indikators:  uniqueIndikators,
+								Child:       childs,
+								CSF:         csfResponse.Data,
+							}
+							return tematikResponse, nil
+						}
+					}
+				}
 			}
 		}
 

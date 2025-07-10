@@ -1,6 +1,8 @@
 package pohonkinerja
 
-import "ekak_kabupaten_madiun/model/web/opdmaster"
+import (
+	"ekak_kabupaten_madiun/model/web/opdmaster"
+)
 
 type PohonKinerjaAdminResponse struct {
 	Tahun   string            `json:"tahun,omitempty"`
@@ -25,7 +27,7 @@ type PohonKinerjaAdminResponseData struct {
 	Pelaksana       []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
 	Indikators      []IndikatorResponse          `json:"indikator,omitempty"`
 	Childs          []interface{}                `json:"childs,omitempty"`
-	CSFResponse `json:",inline"`
+	CSFResponse     `json:",inline"`
 	// SubTematiks []SubtematikResponse `json:"sub_tematiks,omitempty"`
 }
 
@@ -38,6 +40,7 @@ type CSFResponse struct {
 }
 
 type TematikResponse struct {
+	CSF         []CSFApiResponse    `json:"csf"`
 	Id          int                 `json:"id"`
 	Parent      *int                `json:"parent"`
 	Tema        string              `json:"tema"`

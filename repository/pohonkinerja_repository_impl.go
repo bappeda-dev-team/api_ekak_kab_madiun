@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PohonKinerjaRepositoryImpl struct {
@@ -1136,9 +1137,10 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
             ph.keterangan,
             ph.tahun,
             ph.status,
-			ph.is_active,
+            ph.is_active,
             i.id as indikator_id,
             i.indikator as nama_indikator,
+            COALESCE(i.created_at, '') as indikator_created_at,
             t.id as target_id,
             t.target as target_value,
             t.satuan as target_satuan,
@@ -1153,7 +1155,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
         LEFT JOIN 
             tb_pelaksana_pokin pp ON ph.id = pp.pohon_kinerja_id
         ORDER BY 
-            ph.level_pohon, ph.id, i.id, t.id, pp.id
+            ph.level_pohon, ph.id, i.created_at, i.id, t.id, pp.id
     `
 
 	rows, err := tx.QueryContext(ctx, script, idPokin)
@@ -1162,10 +1164,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 	}
 	defer rows.Close()
 
-	// Map untuk menyimpan pohon kinerja yang sudah diproses
 	pokinMap := make(map[int]domain.PohonKinerja)
-
-	// Gunakan map untuk melacak indikator yang sudah diproses
 	processedIndikators := make(map[string]bool)
 
 	for rows.Next() {
@@ -1174,6 +1173,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin, status string
 			is_active                                                      bool
 			indikatorId, namaIndikator                                     sql.NullString
+			indikatorCreatedAt                                             sql.NullString // Ubah ke NullString
 			targetId, targetValue, targetSatuan                            sql.NullString
 			pelaksanaId, pegawaiId                                         sql.NullString
 		)
@@ -1181,7 +1181,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 		err := rows.Scan(
 			&pokinId, &namaPohon, &parent, &jenisPohon, &levelPohon,
 			&kodeOpd, &keterangan, &tahunPokin, &status, &is_active,
-			&indikatorId, &namaIndikator,
+			&indikatorId, &namaIndikator, &indikatorCreatedAt,
 			&targetId, &targetValue, &targetSatuan,
 			&pelaksanaId, &pegawaiId,
 		)
@@ -1189,7 +1189,6 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 			return nil, err
 		}
 
-		// Proses Pohon Kinerja
 		pokin, exists := pokinMap[pokinId]
 		if !exists {
 			pokin = domain.PohonKinerja{
@@ -1206,13 +1205,11 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 			}
 		}
 
-		// Proses Pelaksana jika ada
 		if pelaksanaId.Valid && pegawaiId.Valid {
 			pelaksana := domain.PelaksanaPokin{
 				Id:        pelaksanaId.String,
 				PegawaiId: pegawaiId.String,
 			}
-			// Cek duplikasi pelaksana
 			isDuplicate := false
 			for _, p := range pokin.Pelaksana {
 				if p.Id == pelaksana.Id {
@@ -1225,23 +1222,29 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 			}
 		}
 
-		// Proses Indikator jika ada
 		if indikatorId.Valid && namaIndikator.Valid {
-			// Cek apakah indikator sudah diproses
 			if !processedIndikators[indikatorId.String] {
 				processedIndikators[indikatorId.String] = true
+
+				// Parse created_at string ke time.Time jika ada
+				var createdAt time.Time
+				if indikatorCreatedAt.Valid && indikatorCreatedAt.String != "" {
+					parsedTime, err := time.Parse("2006-01-02 15:04:05", indikatorCreatedAt.String)
+					if err == nil {
+						createdAt = parsedTime
+					}
+				}
 
 				indikator := domain.Indikator{
 					Id:        indikatorId.String,
 					PokinId:   fmt.Sprint(pokinId),
 					Indikator: namaIndikator.String,
 					Tahun:     tahunPokin,
+					CreatedAt: createdAt,
 				}
 
-				// Gunakan map untuk melacak target yang unik
 				processedTargets := make(map[string]bool)
 
-				// Proses Target jika ada
 				if targetId.Valid && targetValue.Valid && targetSatuan.Valid {
 					if !processedTargets[targetId.String] {
 						processedTargets[targetId.String] = true
@@ -1263,13 +1266,15 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
 		pokinMap[pokinId] = pokin
 	}
 
-	// Konversi map ke slice
 	var result []domain.PohonKinerja
 	for _, pokin := range pokinMap {
+		// Urutkan indikator berdasarkan created_at sebelum menambahkan ke result
+		sort.Slice(pokin.Indikator, func(i, j int) bool {
+			return pokin.Indikator[i].CreatedAt.Before(pokin.Indikator[j].CreatedAt)
+		})
 		result = append(result, pokin)
 	}
 
-	// Urutkan berdasarkan level dan ID
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].LevelPohon == result[j].LevelPohon {
 			return result[i].Id < result[j].Id
