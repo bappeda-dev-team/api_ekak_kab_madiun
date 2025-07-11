@@ -659,7 +659,42 @@ func (service *PohonKinerjaAdminServiceImpl) FindAll(ctx context.Context, tahun 
 	var tematiks []pohonkinerja.TematikResponse
 	for _, tematik := range pohonMap[0][0] {
 		tematikResp := helper.BuildTematikResponse(pohonMap, tematik)
+		// Consume API CSF untuk setiap tematik
+		client := &http.Client{
+			Timeout: time.Second * 10,
+		}
+
+		// Buat request ke endpoint CSF
+		CSFApi := os.Getenv("CSF_API")
+		req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/csf/%d", CSFApi, tematik.Id), nil)
+		if err != nil {
+			log.Printf("Error membuat request CSF untuk tematik %d: %v", tematik.Id, err)
+			// Lanjutkan tanpa data CSF
+		} else {
+			// Kirim request
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Printf("Error melakukan request CSF untuk tematik %d: %v", tematik.Id, err)
+				// Lanjutkan tanpa data CSF
+			} else {
+				defer resp.Body.Close()
+
+				// Baca response body
+				if resp.StatusCode == http.StatusOK {
+					var csfResponse pohonkinerja.CSFAPIResponse
+					if err := json.NewDecoder(resp.Body).Decode(&csfResponse); err != nil {
+						log.Printf("Error decode response CSF untuk tematik %d: %v", tematik.Id, err)
+						// Lanjutkan tanpa data CSF
+					} else {
+						// Tambahkan CSF ke response tematik
+						tematikResp.CSF = csfResponse.Data
+					}
+				}
+			}
+		}
+
 		tematiks = append(tematiks, tematikResp)
+
 	}
 
 	return pohonkinerja.PohonKinerjaAdminResponse{
