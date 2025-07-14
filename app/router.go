@@ -207,7 +207,7 @@ func NewRouter(
 	router.GET("/pohon_kinerja_opd/pokinpemda_review/:id", pohonKinerjaOpdController.FindidPokinWithAllTema)
 
 	// isustrategis - csf
-	router.GET("/isustrategis/csfs/:tahun", csfController.FindByTahun)
+	router.GET("/isustrategis/csfs/:tahun", csfController.AllCsfsByTahun)
 	router.GET("/isustrategis/csf/detail/:id", csfController.FindById)
 
 	//DATA MASTER

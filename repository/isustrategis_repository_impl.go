@@ -16,6 +16,61 @@ func NewCSFRepositoryImpl() CSFRepository {
 	return &CSFRepositoryImpl{}
 }
 
+func (repo *CSFRepositoryImpl) AllCsfByTahun(ctx context.Context, tx *sql.Tx, tahun string, pokinRepo PohonKinerjaRepository) ([]domain.PohonKinerja, error) {
+	// get pokin level 0
+	allPohons, err := pokinRepo.FindPokinAdminAll(ctx, tx, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("[ERROR] Gagal mendapatkan pokin: %v", err)
+	}
+	// Filter manual level_pohon == 0
+	var pohons []domain.PohonKinerja
+	for _, p := range allPohons {
+		if p.LevelPohon == 0 {
+			pohons = append(pohons, p)
+		}
+	}
+
+	// csf in tahun
+	queryCsf := `
+	SELECT pohon_id,
+	pernyataan_kondisi_strategis, alasan_kondisi_strategis,
+    data_terukur, kondisi_terukur, kondisi_wujud, tahun
+	FROM tb_csf
+	WHERE tahun = ?
+	`
+	rows, err := tx.QueryContext(ctx, queryCsf, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("[ERROR] Gagal mendapatkan data CSF: %v", err)
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("[ERROR] Gagal menutup rows: %v", err)
+		}
+	}(rows)
+
+	csfMap := make(map[int]*domain.CSF)
+	for rows.Next() {
+		var csf domain.CSF
+		if err := rows.Scan(
+			&csf.PohonID,
+			&csf.PernyataanKondisiStrategis, &csf.AlasanKondisiStrategis,
+			&csf.DataTerukur, &csf.KondisiTerukur, &csf.KondisiWujud, &csf.Tahun,
+		); err != nil {
+			return nil, fmt.Errorf("[ERROR] Gagal mendapatkan data CSF: %v", err)
+		}
+		csfMap[csf.PohonID] = &csf
+	}
+
+	// join ke pokin
+	for i, p := range pohons {
+		if csf, exists := csfMap[p.Id]; exists {
+			pohons[i].CSF = csf
+		}
+	}
+	return pohons, nil
+}
+
 func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]isustrategis.CSFPokin, error) {
 	query := `
 	SELECT

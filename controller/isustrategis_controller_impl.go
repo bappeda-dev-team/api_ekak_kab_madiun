@@ -20,6 +20,28 @@ func NewCSFControllerImpl(csfService service.CSFService) CSFController {
 	}
 }
 
+func (controller *CSFControllerImpl) AllCsfsByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+
+	if tahun == "" {
+		helper.WriteToResponseBody(writer, "Tahun harus diisi")
+		return
+	}
+
+	csfResponses, err := controller.CSFService.AllCsfsByTahun(request.Context(), tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, err.Error())
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: http.StatusText(200),
+		Data:   csfResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
 func (controller *CSFControllerImpl) FindByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	tahun := params.ByName("tahun")
 

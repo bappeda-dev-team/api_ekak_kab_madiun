@@ -9,7 +9,7 @@ type PohonKinerja struct {
 	IdCrosscutting         int
 	Id                     int
 	Parent                 int
-	CSF                    CSF
+	CSF                    *CSF
 	NamaPohon              string
 	KodeOpd                string
 	NamaOpd                string
