@@ -40,7 +40,7 @@ type CSFResponse struct {
 }
 
 type TematikResponse struct {
-	CSF         []CSFApiResponse    `json:"csf"`
+	// CSF         CSFApiResponse      `json:"csf"`
 	Id          int                 `json:"id"`
 	Parent      *int                `json:"parent"`
 	Tema        string              `json:"tema"`
@@ -56,6 +56,7 @@ type TematikResponse struct {
 }
 
 type SubtematikResponse struct {
+	// Outcome     []outcome.OutcomeResponse `json:"outcome"`
 	Id          int                 `json:"id"`
 	Parent      int                 `json:"parent"`
 	Tema        string              `json:"tema"`
@@ -99,6 +100,7 @@ type SuperSubTematikResponse struct {
 }
 
 type StrategicResponse struct {
+	// Intermediate []intermediate.IntermediateResponse `json:"intermediate"`
 	Id          int                          `json:"id"`
 	Parent      int                          `json:"parent"`
 	Strategi    string                       `json:"tema"`

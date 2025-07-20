@@ -184,7 +184,6 @@ func NewRouter(
 	router.GET("/pohon_kinerja_admin/detail/:id", pohonKinerjaAdminController.FindById)
 	router.DELETE("/pohon_kinerja_admin/delete/:pohonKinerjaId", pohonKinerjaAdminController.Delete)
 	router.GET("/pohon_kinerja_admin/findall/:tahun", pohonKinerjaAdminController.FindAll)
-	router.GET("/pohon_kinerja_admin/subtematik/:tahun", pohonKinerjaAdminController.FindSubTematik)
 	router.GET("/pohon_kinerja_admin/tematik/:idPokin", pohonKinerjaAdminController.FindPokinAdminByIdHierarki)
 	router.POST("/pohon_kinerja_admin/clone_strategic/create", pohonKinerjaAdminController.CreateStrategicAdmin)
 	router.POST("/pohon_kinerja_admin/clone_pokin_pemda/create", pohonKinerjaAdminController.CloneStrategiFromPemda)
@@ -424,8 +423,14 @@ func NewRouter(
 	//count pokin pemda in opd
 	router.GET("/pohon_kinerja_opd/count_pokin_pemda/:kode_opd/:tahun", pohonKinerjaOpdController.CountPokinPemda)
 
+	//Isustrategis pemda in perencanaan
+	router.GET("/tematik_pemda/:tahun", pohonKinerjaAdminController.FindAllTematik)
+	router.GET("/rekap_outcome/:tahun", pohonKinerjaAdminController.FindSubTematik)
+	router.GET("/rekap_intermediate/:tahun", pohonKinerjaAdminController.RekapIntermediate)
+
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)
+	router.GET("/api/pokin_pemda/subtematik/:tahun", pohonKinerjaAdminController.FindSubTematik)
 
 	return router
 }

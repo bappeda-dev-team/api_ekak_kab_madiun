@@ -10,7 +10,6 @@ import (
 
 func BuildTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, tematik domain.PohonKinerja) pohonkinerja.TematikResponse {
 	tematikResp := pohonkinerja.TematikResponse{
-		CSF:         nil,
 		Id:          tematik.Id,
 		Parent:      nil,
 		Tema:        tematik.NamaPohon,

@@ -677,3 +677,49 @@ func (controller *PohonKinerjaAdminControllerImpl) FindListOpdAllTematik(writer 
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaAdminControllerImpl) RekapIntermediate(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+
+	result, err := controller.pohonKinerjaAdminService.RekapIntermediate(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "Success Get Rekap Intermediate",
+		Data:   result,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaAdminControllerImpl) FindAllTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+
+	result, err := controller.pohonKinerjaAdminService.FindAllTematik(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "Success Get All Tematik",
+		Data:   result,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
