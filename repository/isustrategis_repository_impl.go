@@ -273,16 +273,18 @@ func (r *CSFRepositoryImpl) UpdateCSFByPohonID(ctx context.Context, tx *sql.Tx, 
 }
 
 func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, pohonId int) (isustrategis.CSFPokin, error) {
+	// id tetap csf
+	// get by pohon_kinerja_id yang valid
 	query := `
 	SELECT
 		tb_csf.id,
-		tb_csf.pohon_id,
+		tb_pohon_kinerja.id,
 		tb_csf.pernyataan_kondisi_strategis,
 		tb_csf.alasan_kondisi_strategis,
 		tb_csf.data_terukur,
 		tb_csf.kondisi_terukur,
 		tb_csf.kondisi_wujud,
-		tb_csf.tahun,
+		tb_pohon_kinerja.tahun,
 		tb_pohon_kinerja.jenis_pohon,
 		tb_pohon_kinerja.level_pohon,
 		tb_pohon_kinerja.nama_pohon,
