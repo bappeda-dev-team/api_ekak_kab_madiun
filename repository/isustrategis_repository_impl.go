@@ -308,29 +308,22 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, p
 	if err != nil {
 		return isustrategis.CSFPokin{}, err
 	}
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-
-		}
-	}(rows)
+	defer rows.Close()
 
 	var csf *isustrategis.CSFPokin
 	indikatorMap := make(map[string]*domain.Indikator)
 
 	for rows.Next() {
 		var (
-			csfID, pohonID               int
-			pernyataan, alasan, data     string
-			kondisiTerukur, kondisiWujud string
-			tahunInt                     int
+			csfID, pohonID               sql.NullInt64
+			pernyataan, alasan, data     sql.NullString
+			kondisiTerukur, kondisiWujud sql.NullString
+			tahunInt                     sql.NullInt64
 			jenisPohon, namaPohon, ket   string
 			levelPohon                   int
 			isActive                     bool
-			indikatorID                  sql.NullString
-			namaIndikator                sql.NullString
-			targetID                     sql.NullString
-			targetValue                  sql.NullString
+			indikatorID, namaIndikator   sql.NullString
+			targetID, targetValue        sql.NullString
 			targetSatuan                 sql.NullString
 		)
 
@@ -344,16 +337,17 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, p
 			return isustrategis.CSFPokin{}, err
 		}
 
+		// Inisialisasi struct utama hanya sekali
 		if csf == nil {
 			csf = &isustrategis.CSFPokin{
-				ID:                         csfID,
-				PohonID:                    pohonID,
-				PernyataanKondisiStrategis: pernyataan,
-				AlasanKondisiStrategis:     alasan,
-				DataTerukur:                data,
-				KondisiTerukur:             kondisiTerukur,
-				KondisiWujud:               kondisiWujud,
-				Tahun:                      tahunInt,
+				ID:                         int(csfID.Int64),
+				PohonID:                    int(pohonID.Int64),
+				PernyataanKondisiStrategis: pernyataan.String,
+				AlasanKondisiStrategis:     alasan.String,
+				DataTerukur:                data.String,
+				KondisiTerukur:             kondisiTerukur.String,
+				KondisiWujud:               kondisiWujud.String,
+				Tahun:                      int(tahunInt.Int64),
 				JenisPohon:                 jenisPohon,
 				LevelPohon:                 levelPohon,
 				Strategi:                   namaPohon,
@@ -363,15 +357,16 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, p
 			}
 		}
 
+		// Indikator + target
 		if indikatorID.Valid && namaIndikator.Valid {
 			indID := indikatorID.String
 			indikator, exists := indikatorMap[indID]
 			if !exists {
 				indikator = &domain.Indikator{
 					Id:        indID,
-					PokinId:   fmt.Sprint(pohonID),
+					PokinId:   fmt.Sprint(pohonId),
 					Indikator: namaIndikator.String,
-					Tahun:     fmt.Sprint(tahunInt),
+					Tahun:     fmt.Sprint(tahunInt.Int64),
 					Target:    []domain.Target{},
 				}
 				indikatorMap[indID] = indikator
@@ -383,15 +378,15 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, p
 					IndikatorId: indID,
 					Target:      targetValue.String,
 					Satuan:      targetSatuan.String,
-					Tahun:       fmt.Sprint(tahunInt),
+					Tahun:       fmt.Sprint(tahunInt.Int64),
 				})
 			}
 		}
 	}
 
-	// Akumulasi indikator yang ditemukan
+	// Gabungkan indikator
 	for _, indikator := range indikatorMap {
-		if csf != nil && indikator != nil { // Add check for csf != nil
+		if csf != nil && indikator != nil {
 			csf.Indikator = append(csf.Indikator, *indikator)
 		}
 	}
