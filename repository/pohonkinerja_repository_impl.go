@@ -1030,10 +1030,10 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Cont
 
 	for rows.Next() {
 		var (
-			pokinId, parent, levelPohon                            int
-			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin string
-			indikatorId, namaIndikator                             sql.NullString
-			targetId, targetValue, targetSatuan                    sql.NullString
+			pokinId, parent, levelPohon                int
+			namaPohon, jenisPohon, kodeOpd, tahunPokin string
+			indikatorId, namaIndikator, keterangan     sql.NullString
+			targetId, targetValue, targetSatuan        sql.NullString
 		)
 
 		err := rows.Scan(
@@ -1056,7 +1056,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Cont
 				JenisPohon: jenisPohon,
 				LevelPohon: levelPohon,
 				KodeOpd:    kodeOpd,
-				Keterangan: keterangan,
+				Keterangan: keterangan.String,
 				Tahun:      tahunPokin,
 			}
 			pokinMap[pokinId] = pokin
