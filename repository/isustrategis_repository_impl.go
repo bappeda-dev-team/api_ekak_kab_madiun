@@ -299,7 +299,7 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, c
 	LEFT JOIN tb_indikator i ON tb_pohon_kinerja.id = i.pokin_id
 	LEFT JOIN tb_target t ON i.id = t.indikator_id
 	WHERE
-		tb_csf.id = ?
+		tb_csf.pohon_id = ?
 	ORDER BY i.id, t.id
 	`
 
