@@ -237,37 +237,74 @@ func (r *CSFRepositoryImpl) CreateCsf(ctx context.Context, tx *sql.Tx, csf domai
 	return nil
 }
 
+// THIS IS UPSERT IMPLEMENTATION
 func (r *CSFRepositoryImpl) UpdateCSFByPohonID(ctx context.Context, tx *sql.Tx, csf domain.CSF) (domain.CSF, error) {
-	query := `
-	UPDATE tb_csf
-	SET
-		pernyataan_kondisi_strategis = ?,
-		alasan_kondisi_strategis = ?,
-		data_terukur = ?,
-		kondisi_terukur = ?,
-		kondisi_wujud = ?
-	WHERE pohon_id = ?
-`
 	if csf.PohonID == 0 {
 		return domain.CSF{}, fmt.Errorf("[ERROR] POHON ID TIDAK BOLEH 0")
 	}
-	result, err := tx.ExecContext(ctx, query,
-		csf.PernyataanKondisiStrategis,
-		csf.AlasanKondisiStrategis,
-		csf.DataTerukur,
-		csf.KondisiTerukur,
-		csf.KondisiWujud,
-		csf.PohonID,
-	)
+
+	// Cek apakah CSF dengan pohon_id sudah ada
+	var count int
+	checkQuery := `SELECT COUNT(*) FROM tb_csf WHERE pohon_id = ?`
+	err := tx.QueryRowContext(ctx, checkQuery, csf.PohonID).Scan(&count)
 	if err != nil {
-		return domain.CSF{}, err
+		return domain.CSF{}, fmt.Errorf("gagal cek keberadaan csf: %w", err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return domain.CSF{}, err
+	if count > 0 {
+		// UPDATE
+		updateQuery := `
+		UPDATE tb_csf
+		SET
+			pernyataan_kondisi_strategis = ?,
+			alasan_kondisi_strategis = ?,
+			data_terukur = ?,
+			kondisi_terukur = ?,
+			kondisi_wujud = ?,
+            tahun = ?
+		WHERE pohon_id = ?
+		`
+		result, err := tx.ExecContext(ctx, updateQuery,
+			csf.PernyataanKondisiStrategis,
+			csf.AlasanKondisiStrategis,
+			csf.DataTerukur,
+			csf.KondisiTerukur,
+			csf.KondisiWujud,
+			csf.Tahun,
+			csf.PohonID,
+		)
+		if err != nil {
+			return domain.CSF{}, err
+		}
+		rowsAffected, _ := result.RowsAffected()
+		log.Printf("[LOG] CSF updated (pohon_id = %d), rows affected = %d", csf.PohonID, rowsAffected)
+	} else {
+		// INSERT
+		insertQuery := `
+		INSERT INTO tb_csf (
+			pohon_id,
+			pernyataan_kondisi_strategis,
+			alasan_kondisi_strategis,
+			data_terukur,
+			kondisi_terukur,
+			kondisi_wujud,
+			tahun
+		) VALUES (?, ?, ?, ?, ?, ?, ?)
+		`
+		_, err := tx.ExecContext(ctx, insertQuery,
+			csf.PohonID,
+			csf.PernyataanKondisiStrategis,
+			csf.AlasanKondisiStrategis,
+			csf.DataTerukur,
+			csf.KondisiTerukur,
+			csf.KondisiWujud,
+			csf.Tahun, // pastikan `Tahun` ada di `domain.CSF`
+		)
+		if err != nil {
+			return domain.CSF{}, fmt.Errorf("gagal insert csf: %w", err)
+		}
+		log.Printf("[LOG] CSF inserted (pohon_id = %d)", csf.PohonID)
 	}
-	log.Printf("[LOG] ROW CSF UPDATED: %d", rowsAffected)
 
 	return csf, nil
 }

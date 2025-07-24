@@ -452,6 +452,10 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
 	helper.PanicIfError(err)
 
+	tahunPokin, err := strconv.Atoi(updatedPokin.Tahun)
+	if err != nil {
+		log.Printf("TAHUN TIDAK SESUAI")
+	}
 	updatedCsfInput := domain.CSF{
 		PohonID:                    updatedPokin.Id,
 		PernyataanKondisiStrategis: request.PernyataanKondisiStrategis,
@@ -459,6 +463,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		DataTerukur:                request.DataTerukur,
 		KondisiTerukur:             request.KondisiTerukur,
 		KondisiWujud:               request.KondisiWujud,
+		Tahun:                      tahunPokin,
 	}
 
 	updatedCsf, err := service.csfRepository.UpdateCSFByPohonID(ctx, tx, updatedCsfInput)
