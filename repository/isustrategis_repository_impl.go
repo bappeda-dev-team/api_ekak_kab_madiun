@@ -272,7 +272,7 @@ func (r *CSFRepositoryImpl) UpdateCSFByPohonID(ctx context.Context, tx *sql.Tx, 
 	return csf, nil
 }
 
-func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, csfId int) (isustrategis.CSFPokin, error) {
+func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, pohonId int) (isustrategis.CSFPokin, error) {
 	query := `
 	SELECT
 		tb_csf.id,
@@ -288,22 +288,23 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, c
 		tb_pohon_kinerja.nama_pohon,
 		tb_pohon_kinerja.keterangan,
 		tb_pohon_kinerja.is_active,
-		i.id as indikator_id,
-		i.indikator as nama_indikator,
-		t.id as target_id,
-		t.target as target_value,
-		t.satuan as target_satuan
+		i.id AS indikator_id,
+		i.indikator AS nama_indikator,
+		t.id AS target_id,
+		t.target AS target_value,
+		t.satuan AS target_satuan
 	FROM
-		tb_csf
-	JOIN tb_pohon_kinerja ON tb_csf.pohon_id = tb_pohon_kinerja.id
+		tb_pohon_kinerja
+	LEFT JOIN tb_csf ON tb_csf.pohon_id = tb_pohon_kinerja.id
 	LEFT JOIN tb_indikator i ON tb_pohon_kinerja.id = i.pokin_id
 	LEFT JOIN tb_target t ON i.id = t.indikator_id
 	WHERE
-		tb_csf.pohon_id = ?
-	ORDER BY i.id, t.id
+		tb_pohon_kinerja.id = ?
+	ORDER BY
+		i.id, t.id;
 	`
 
-	rows, err := tx.QueryContext(ctx, query, csfId)
+	rows, err := tx.QueryContext(ctx, query, pohonId)
 	if err != nil {
 		return isustrategis.CSFPokin{}, err
 	}
