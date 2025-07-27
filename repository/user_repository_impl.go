@@ -295,7 +295,10 @@ func (repository *UserRepositoryImpl) FindByEmailOrNip(ctx context.Context, tx *
 	return user, nil
 }
 func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, tx *sql.Tx, kodeOpd string, roleName string) ([]domain.Users, error) {
-	script := `
+	var script string
+	var args []interface{}
+
+	baseScript := `
         SELECT DISTINCT 
             u.id, 
             u.nip, 
@@ -309,11 +312,21 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
         LEFT JOIN tb_user_role ur ON u.id = ur.user_id
         LEFT JOIN tb_role r ON ur.role_id = r.id
         INNER JOIN tb_pegawai p ON u.nip = p.nip
-        WHERE p.kode_opd = ? AND r.role = ?
-        ORDER BY u.id, ur.role_id
+        WHERE p.kode_opd = ?
     `
+	args = append(args, kodeOpd)
 
-	rows, err := tx.QueryContext(ctx, script, kodeOpd, roleName)
+	if roleName == "level_3" {
+		script = baseScript + ` AND r.role IN (?, ?)`
+		args = append(args, roleName, "level_4")
+	} else {
+		script = baseScript + ` AND r.role = ?`
+		args = append(args, roleName)
+	}
+
+	script += " ORDER BY u.id, ur.role_id"
+
+	rows, err := tx.QueryContext(ctx, script, args...)
 	if err != nil {
 		return []domain.Users{}, err
 	}
