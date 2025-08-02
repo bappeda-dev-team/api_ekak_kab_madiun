@@ -1,0 +1,1 @@
+ALTER TABLE tb_indikator ADD COLUMN iku_active BOOLEAN DEFAULT TRUE;

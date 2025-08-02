@@ -3,6 +3,7 @@ package controller
 import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"ekak_kabupaten_madiun/model/web/iku"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
 
@@ -71,4 +72,26 @@ func (controller *IkuControllerImpl) FindAllIkuOpd(writer http.ResponseWriter, r
 
 	helper.WriteToResponseBody(writer, webResponse)
 
+}
+func (controller *IkuControllerImpl) UpdateIkuActive(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ikuUpdateActiveRequest := iku.IkuUpdateActiveRequest{}
+	helper.ReadFromRequestBody(request, &ikuUpdateActiveRequest)
+
+	id := params.ByName("indikator_id")
+
+	err := controller.IkuService.UpdateIkuActive(request.Context(), id, ikuUpdateActiveRequest)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   "Berhasil mengupdate status IKU",
+	})
 }
