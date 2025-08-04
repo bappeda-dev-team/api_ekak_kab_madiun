@@ -5,7 +5,8 @@ import "time"
 type IkuResponse struct {
 	IndikatorId      string           `json:"indikator_id"`
 	Sumber           string           `json:"asal_iku"`
-	IsActive         bool             `json:"is_active"`
+	IkuActive        bool             `json:"iku_active"`
+	IsActive         bool             `json:"is_active,omitempty"`
 	Indikator        string           `json:"indikator"`
 	RumusPerhitungan string           `json:"rumus_perhitungan"`
 	SumberData       string           `json:"sumber_data"`
@@ -26,6 +27,7 @@ type IkuOpdResponse struct {
 	IndikatorId      string              `json:"indikator_id"`
 	AsalIku          string              `json:"asal_iku"`
 	Indikator        string              `json:"indikator"`
+	IkuActive        bool                `json:"iku_active"`
 	CreatedAt        time.Time           `json:"created_at"`
 	RumusPerhitungan string              `json:"rumus_perhitungan"`
 	SumberData       string              `json:"sumber_data"`

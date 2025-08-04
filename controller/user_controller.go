@@ -14,4 +14,5 @@ type UserController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	Login(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByKodeOpdAndRole(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindByNip(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

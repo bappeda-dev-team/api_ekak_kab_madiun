@@ -36,4 +36,5 @@ type Indikator struct {
 	Kode             string
 	KodeOpd          string
 	PaguAnggaran     int64
+	IkuActive        bool
 }

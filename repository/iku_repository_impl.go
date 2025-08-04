@@ -20,83 +20,85 @@ func NewIkuRepositoryImpl() *IkuRepositoryImpl {
 // iku pemda
 func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.Indikator, error) {
 	query := `
-		WITH indikator_tujuan AS (
-			SELECT 
-				i.id as indikator_id,
-				i.indikator,
-				i.rumus_perhitungan,
-				i.sumber_data,
-				i.created_at as indikator_created_at,
-				t.id as target_id,
-				t.target,
-				t.satuan,
-				t.tahun as target_tahun,
-				'Tujuan Pemda' as sumber,
-				tp.id as parent_id,
-				tp.tujuan_pemda as parent_name,
-				tp.tahun_awal_periode,
-				tp.tahun_akhir_periode,
-				tp.jenis_periode,
-				CASE 
-					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
-					ELSE COALESCE(pk_tematik.is_active, false)  -- Jika ditemukan, gunakan status is_active
-				END as is_active,
-				CASE 
-					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
-					ELSE true  -- Jika ditemukan
-				END as is_exists
-			FROM tb_indikator i
-			INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
-			LEFT JOIN tb_target t ON t.indikator_id = i.id
-			LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
-			WHERE tp.tahun_awal_periode = ? 
-			AND tp.tahun_akhir_periode = ?
-			AND tp.jenis_periode = ?
-		),
-		indikator_sasaran AS (
-			SELECT 
-				i.id as indikator_id,
-				i.indikator,
-				i.rumus_perhitungan,
-				i.sumber_data,
-				i.created_at as indikator_created_at,
-				t.id as target_id,
-				t.target,
-				t.satuan,
-				t.tahun as target_tahun,
-				'Sasaran Pemda' as sumber,
-				sp.id as parent_id,
-				sp.sasaran_pemda as parent_name,
-				sp.tahun_awal,
-				sp.tahun_akhir,
-				sp.jenis_periode,
-				CASE 
-					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
-					WHEN pk_subtematik.id IS NULL THEN false  -- Jika subtematik_id tidak ditemukan
-					ELSE COALESCE(pk_subtematik.is_active, false)  -- Jika keduanya ditemukan, gunakan status is_active subtematik
-				END as is_active,
-				CASE 
-					WHEN pk_tematik.id IS NULL THEN false  -- Jika tematik_id tidak ditemukan
-					WHEN pk_subtematik.id IS NULL THEN false  -- Jika subtematik_id tidak ditemukan
-					ELSE true  -- Jika keduanya ditemukan
-				END as is_exists
-			FROM tb_indikator i
-			INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
-			LEFT JOIN tb_target t ON t.indikator_id = i.id
-			LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
-			LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
-			LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
-			WHERE sp.tahun_awal = ? 
-			AND sp.tahun_akhir = ?
-			AND sp.jenis_periode = ?
-		)
-		SELECT * FROM (
-			SELECT * FROM indikator_tujuan WHERE is_exists = true
-			UNION ALL
-			SELECT * FROM indikator_sasaran WHERE is_exists = true
-		) combined
-		WHERE indikator IS NOT NULL
-		ORDER BY indikator_created_at ASC`
+        WITH indikator_tujuan AS (
+            SELECT 
+                i.id as indikator_id,
+                i.indikator,
+                i.rumus_perhitungan,
+                i.sumber_data,
+                i.created_at as indikator_created_at,
+                i.iku_active,
+                t.id as target_id,
+                t.target,
+                t.satuan,
+                t.tahun as target_tahun,
+                'Tujuan Pemda' as sumber,
+                tp.id as parent_id,
+                tp.tujuan_pemda as parent_name,
+                tp.tahun_awal_periode,
+                tp.tahun_akhir_periode,
+                tp.jenis_periode,
+                CASE 
+                    WHEN pk_tematik.id IS NULL THEN false
+                    ELSE COALESCE(pk_tematik.is_active, false)
+                END as is_active,
+                CASE 
+                    WHEN pk_tematik.id IS NULL THEN false
+                    ELSE true
+                END as is_exists
+            FROM tb_indikator i
+            INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
+            LEFT JOIN tb_target t ON t.indikator_id = i.id
+            LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
+            WHERE tp.tahun_awal_periode = ? 
+            AND tp.tahun_akhir_periode = ?
+            AND tp.jenis_periode = ?
+        ),
+        indikator_sasaran AS (
+            SELECT 
+                i.id as indikator_id,
+                i.indikator,
+                i.rumus_perhitungan,
+                i.sumber_data,
+                i.created_at as indikator_created_at,
+                i.iku_active,
+                t.id as target_id,
+                t.target,
+                t.satuan,
+                t.tahun as target_tahun,
+                'Sasaran Pemda' as sumber,
+                sp.id as parent_id,
+                sp.sasaran_pemda as parent_name,
+                sp.tahun_awal,
+                sp.tahun_akhir,
+                sp.jenis_periode,
+                CASE 
+                    WHEN pk_tematik.id IS NULL THEN false
+                    WHEN pk_subtematik.id IS NULL THEN false
+                    ELSE COALESCE(pk_subtematik.is_active, false)
+                END as is_active,
+                CASE 
+                    WHEN pk_tematik.id IS NULL THEN false
+                    WHEN pk_subtematik.id IS NULL THEN false
+                    ELSE true
+                END as is_exists
+            FROM tb_indikator i
+            INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
+            LEFT JOIN tb_target t ON t.indikator_id = i.id
+            LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
+            LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
+            LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
+            WHERE sp.tahun_awal = ? 
+            AND sp.tahun_akhir = ?
+            AND sp.jenis_periode = ?
+        )
+        SELECT * FROM (
+            SELECT * FROM indikator_tujuan WHERE is_exists = true
+            UNION ALL
+            SELECT * FROM indikator_sasaran WHERE is_exists = true
+        ) combined
+        WHERE indikator IS NOT NULL
+        ORDER BY indikator_created_at ASC`
 
 	rows, err := tx.QueryContext(ctx, query,
 		tahunAwal, tahunAkhir, jenisPeriode,
@@ -116,6 +118,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			rumusPerhitungan   sql.NullString
 			sumberData         sql.NullString
 			indikatorCreatedAt sql.NullTime
+			ikuActive          bool
 			targetId           sql.NullString
 			target             sql.NullString
 			satuan             sql.NullString
@@ -136,6 +139,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			&rumusPerhitungan,
 			&sumberData,
 			&indikatorCreatedAt,
+			&ikuActive,
 			&targetId,
 			&target,
 			&satuan,
@@ -153,14 +157,12 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			return nil, err
 		}
 
-		// Skip jika indikator tidak valid atau tidak exists
 		if !indikator.Valid || !indikatorId.Valid || !isExists {
 			continue
 		}
 
 		item, exists := indikatorMap[indikatorId.String]
 		if !exists {
-			// Inisialisasi target kosong untuk semua tahun dalam periode
 			tahunAwalInt, _ := strconv.Atoi(tahunAwal)
 			tahunAkhirInt, _ := strconv.Atoi(tahunAkhir)
 
@@ -187,11 +189,11 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 				ParentName:       parentName.String,
 				Target:           targets,
 				IsActive:         isActive,
+				IkuActive:        ikuActive,
 			}
 			indikatorMap[indikatorId.String] = item
 		}
 
-		// Update target yang memiliki data
 		if targetId.Valid && targetTahun.Valid {
 			tahunInt, _ := strconv.Atoi(targetTahun.String)
 			tahunAwalInt, _ := strconv.Atoi(tahunAwal)
@@ -236,6 +238,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
             i.indikator,
            	i.rumus_perhitungan,
           	i.sumber_data,
+			 i.iku_active,
             tg.id as target_id,
             tg.target,
             tg.satuan,
@@ -258,8 +261,9 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 			so.nama_sasaran_opd as nama_parent,
 			i.id as indikator_id,
 			i.indikator,
-			COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,  -- Ubah dari m.formula
-			COALESCE(i.sumber_data, '') as sumber_data,              -- Ubah dari m.sumber_data
+			COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,  
+			COALESCE(i.sumber_data, '') as sumber_data,   
+			i.iku_active,          
 			tg.id as target_id,
 			tg.target,
 			tg.satuan,
@@ -305,6 +309,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 				parentId, namaParent         sql.NullString
 				indikatorId, namaIndikator   sql.NullString
 				rumusPerhitungan, sumberData sql.NullString
+				ikuActive                    bool
 				targetId                     sql.NullString
 				target                       sql.NullString
 				satuan                       sql.NullString
@@ -319,6 +324,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 				&namaIndikator,
 				&rumusPerhitungan,
 				&sumberData,
+				&ikuActive,
 				&targetId,
 				&target,
 				&satuan,
@@ -356,6 +362,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 					TahunAkhir:       tahunAkhir,
 					JenisPeriode:     jenisPeriode,
 					Target:           emptyTargets,
+					IkuActive:        ikuActive,
 				}
 				ikuMap[key] = iku
 			}
@@ -424,4 +431,24 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 	})
 
 	return result, nil
+}
+
+func (repository *IkuRepositoryImpl) UpdateIkuActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) error {
+	script := `UPDATE tb_indikator SET iku_active = ? WHERE id = ?`
+
+	result, err := tx.ExecContext(ctx, script, ikuActive, indikatorId)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("indikator dengan id %s tidak ditemukan", indikatorId)
+	}
+
+	return nil
 }

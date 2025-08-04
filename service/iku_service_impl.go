@@ -48,9 +48,10 @@ func (service *IkuServiceImpl) FindAll(ctx context.Context, tahunAwal string, ta
 		}
 
 		responses = append(responses, iku.IkuResponse{
-			IndikatorId:      item.Id,
-			Sumber:           item.Sumber,
-			IsActive:         item.IsActive,
+			IndikatorId: item.Id,
+			Sumber:      item.Sumber,
+			// IsActive:         item.IsActive,
+			IkuActive:        item.IkuActive,
 			Indikator:        item.Indikator,
 			RumusPerhitungan: item.RumusPerhitungan.String,
 			SumberData:       item.SumberData.String,
@@ -101,6 +102,7 @@ func (service *IkuServiceImpl) FindAllIkuOpd(ctx context.Context, kodeOpd string
 			IndikatorId:      item.Id,
 			AsalIku:          item.AsalIku,
 			Indikator:        item.Indikator,
+			IkuActive:        item.IkuActive,
 			RumusPerhitungan: item.RumusPerhitungan.String,
 			SumberData:       item.SumberData.String,
 			CreatedAt:        item.CreatedAt,
@@ -121,4 +123,19 @@ func (service *IkuServiceImpl) FindAllIkuOpd(ctx context.Context, kodeOpd string
 	}
 
 	return responses, nil
+}
+
+func (service *IkuServiceImpl) UpdateIkuActive(ctx context.Context, id string, request iku.IkuUpdateActiveRequest) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	err = service.IkuRepository.UpdateIkuActive(ctx, tx, id, request.IsActive)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

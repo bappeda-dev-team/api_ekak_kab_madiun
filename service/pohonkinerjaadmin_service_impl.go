@@ -669,26 +669,26 @@ func (service *PohonKinerjaAdminServiceImpl) FindAll(ctx context.Context, tahun 
 	}, nil
 }
 
-func (service *PohonKinerjaAdminServiceImpl) FindSubTematik(ctx context.Context, tahun string) (pohonkinerja.PohonKinerjaAdminResponse, error) {
+func (service *PohonKinerjaAdminServiceImpl) FindSubTematik(ctx context.Context, tahun string) (pohonkinerja.OutcomeResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return pohonkinerja.PohonKinerjaAdminResponse{}, err
+		return pohonkinerja.OutcomeResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
 
 	// Ambil semua data pohon kinerja
 	pokins, err := service.pohonKinerjaRepository.FindPokinAdminAll(ctx, tx, tahun)
 	if err != nil {
-		return pohonkinerja.PohonKinerjaAdminResponse{}, err
+		return pohonkinerja.OutcomeResponse{}, err
 	}
 
 	// Buat map untuk menyimpan data berdasarkan level dan parent
 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
-	for i := 1; i <= 2; i++ { // Hanya inisialisasi level 1 dan 2
+	for i := 0; i <= 1; i++ { // Inisialisasi level 0, 1, dan 2
 		pohonMap[i] = make(map[int][]domain.PohonKinerja)
 	}
 
-	// Filter dan kelompokkan data
+	// Filter dan kelompokkan data berdasarkan level dan parent
 	for _, p := range pokins {
 		// Ambil data OPD jika ada
 		if p.KodeOpd != "" {
@@ -698,56 +698,51 @@ func (service *PohonKinerjaAdminServiceImpl) FindSubTematik(ctx context.Context,
 			}
 		}
 
-		// Hanya masukkan data level 1 dan 2
-		if p.LevelPohon >= 1 && p.LevelPohon <= 2 {
+		// Kelompokkan berdasarkan level dan parent
+		if p.LevelPohon >= 0 && p.LevelPohon <= 1 {
 			pohonMap[p.LevelPohon][p.Parent] = append(pohonMap[p.LevelPohon][p.Parent], p)
 		}
 	}
 
-	// Bangun response dimulai dari SubTematik (level 1)
-	var tematiks []pohonkinerja.TematikResponse
-	for _, subTematiks := range pohonMap[1] {
-		// Urutkan subTematiks berdasarkan Id
-		sort.Slice(subTematiks, func(i, j int) bool {
-			return subTematiks[i].Id < subTematiks[j].Id
-		})
+	// Bangun response dimulai dari Tematik (level 0)
+	var tematiks []pohonkinerja.OutcomeTematikResponse
 
-		for _, subTematik := range subTematiks {
-			var childs []interface{}
+	// Ambil semua tematik (level 0)
+	for _, tematik := range pokins {
+		if tematik.LevelPohon == 0 { // Fokus pada level 0 (tematik)
+			tematikResp := pohonkinerja.OutcomeTematikResponse{
+				Id:         tematik.Id,
+				Parent:     nil,
+				Tema:       tematik.NamaPohon,
+				JenisPohon: tematik.JenisPohon,
+				LevelPohon: tematik.LevelPohon,
+				Indikators: helper.ConvertToIndikatorResponses(tematik.Indikator),
+				Child:      []interface{}{},
+			}
 
-			// Tambahkan subsubtematik ke childs
-			if subSubTematiks := pohonMap[2][subTematik.Id]; len(subSubTematiks) > 0 {
-				// Urutkan subSubTematiks berdasarkan Id
-				sort.Slice(subSubTematiks, func(i, j int) bool {
-					return subSubTematiks[i].Id < subSubTematiks[j].Id
-				})
+			// Cari subtematik (level 1) yang memiliki parent tematik ini
+			if subtematiks := pohonMap[1][tematik.Id]; len(subtematiks) > 0 {
+				for _, subtematik := range subtematiks {
 
-				for _, subSubTematik := range subSubTematiks {
-					subSubTematikResp := helper.BuildSubSubTematikResponse(pohonMap, subSubTematik)
-					childs = append(childs, subSubTematikResp)
+					subtematikResp := pohonkinerja.OutcomeSubtematikResponse{
+
+						Id:         subtematik.Id,
+						Parent:     subtematik.Parent,
+						Tema:       subtematik.NamaPohon,
+						JenisPohon: subtematik.JenisPohon,
+						LevelPohon: subtematik.LevelPohon,
+						Indikators: helper.ConvertToIndikatorResponses(subtematik.Indikator),
+					}
+
+					tematikResp.Child = append(tematikResp.Child, subtematikResp)
 				}
 			}
 
-			tematikResp := pohonkinerja.TematikResponse{
-				Id:         subTematik.Id,
-				Parent:     &subTematik.Parent,
-				Tema:       subTematik.NamaPohon,
-				JenisPohon: subTematik.JenisPohon,
-				LevelPohon: subTematik.LevelPohon,
-				Keterangan: subTematik.Keterangan,
-				Indikators: helper.ConvertToIndikatorResponses(subTematik.Indikator),
-				Child:      childs,
-			}
 			tematiks = append(tematiks, tematikResp)
 		}
 	}
 
-	// Urutkan hasil akhir berdasarkan Id
-	sort.Slice(tematiks, func(i, j int) bool {
-		return tematiks[i].Id < tematiks[j].Id
-	})
-
-	return pohonkinerja.PohonKinerjaAdminResponse{
+	return pohonkinerja.OutcomeResponse{
 		Tahun:   tahun,
 		Tematik: tematiks,
 	}, nil
@@ -2180,4 +2175,134 @@ func (service *PohonKinerjaAdminServiceImpl) FindListOpdAllTematik(ctx context.C
 	})
 
 	return responses, nil
+}
+
+func (service *PohonKinerjaAdminServiceImpl) RekapIntermediate(ctx context.Context, tahun string) (pohonkinerja.IntermediateResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.IntermediateResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+	// Ambil semua data pohon kinerja
+	pokins, err := service.pohonKinerjaRepository.FindPokinAdminAll(ctx, tx, tahun)
+	if err != nil {
+		return pohonkinerja.IntermediateResponse{}, err
+	}
+
+	// Buat map untuk menyimpan data berdasarkan level dan parent
+	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+	for i := 1; i <= 4; i++ { // Inisialisasi level 1, 2, dan 4
+		pohonMap[i] = make(map[int][]domain.PohonKinerja)
+	}
+
+	// Filter dan kelompokkan data berdasarkan level dan parent
+	for _, p := range pokins {
+		// Kelompokkan berdasarkan level dan parent
+		if p.LevelPohon == 1 || p.LevelPohon == 2 || p.LevelPohon == 4 {
+			pohonMap[p.LevelPohon][p.Parent] = append(pohonMap[p.LevelPohon][p.Parent], p)
+		}
+	}
+
+	// Bangun response dimulai dari Subtematik (level 1)
+	var intermediates []pohonkinerja.IntermediateSubtematikResponse
+
+	// Ambil semua subtematik (level 1)
+	for _, subtematik := range pokins {
+		if subtematik.LevelPohon == 1 { // Fokus pada level 1 (subtematik)
+			subtematikResp := pohonkinerja.IntermediateSubtematikResponse{
+				Id:         subtematik.Id,
+				Parent:     subtematik.Parent,
+				Tema:       subtematik.NamaPohon,
+				JenisPohon: subtematik.JenisPohon,
+				LevelPohon: subtematik.LevelPohon,
+				Indikators: helper.ConvertToIndikatorResponses(subtematik.Indikator),
+				Child:      []interface{}{},
+			}
+
+			// Cari subsubtematik (level 2) yang memiliki parent subtematik ini
+			if subsubtematiks := pohonMap[2][subtematik.Id]; len(subsubtematiks) > 0 {
+				for _, subsubtematik := range subsubtematiks {
+					subsubtematikResp := pohonkinerja.IntermediateSubSubtematikResponse{
+						Id:         subsubtematik.Id,
+						Parent:     subsubtematik.Parent,
+						Tema:       subsubtematik.NamaPohon,
+						JenisPohon: subsubtematik.JenisPohon,
+						LevelPohon: subsubtematik.LevelPohon,
+						Indikators: helper.ConvertToIndikatorResponses(subsubtematik.Indikator),
+						Child:      []interface{}{},
+					}
+
+					// Cari strategic (level 4) yang memiliki parent subsubtematik ini
+					if strategics := pohonMap[4][subsubtematik.Id]; len(strategics) > 0 {
+						for _, strategic := range strategics {
+
+							strategicResp := pohonkinerja.IntermediateStrategicPemdaResponse{
+								Id:         strategic.Id,
+								Parent:     strategic.Parent,
+								Tema:       strategic.NamaPohon,
+								JenisPohon: strategic.JenisPohon,
+								LevelPohon: strategic.LevelPohon,
+								Indikators: helper.ConvertToIndikatorResponses(strategic.Indikator),
+								Child:      []interface{}{},
+							}
+
+							subsubtematikResp.Child = append(subsubtematikResp.Child, strategicResp)
+						}
+					}
+
+					subtematikResp.Child = append(subtematikResp.Child, subsubtematikResp)
+				}
+			}
+
+			intermediates = append(intermediates, subtematikResp)
+		}
+	}
+
+	return pohonkinerja.IntermediateResponse{
+		Tahun:        tahun,
+		Intermediate: intermediates,
+	}, nil
+}
+
+func (service *PohonKinerjaAdminServiceImpl) FindAllTematik(ctx context.Context, tahun string) (pohonkinerja.PohonKinerjaAdminResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil semua data pohon kinerja
+	pokins, err := service.pohonKinerjaRepository.FindPokinAdminAll(ctx, tx, tahun)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponse{}, err
+	}
+
+	// Bangun response hanya untuk Tematik (level 0)
+	var tematiks []pohonkinerja.TematikResponse
+
+	// Filter hanya level 0 (tematik)
+	for _, pokin := range pokins {
+		if pokin.LevelPohon == 0 {
+			tematikResp := pohonkinerja.TematikResponse{
+				Id:          pokin.Id,
+				Parent:      nil, // level 0 tidak memiliki parent
+				Tema:        pokin.NamaPohon,
+				JenisPohon:  pokin.JenisPohon,
+				LevelPohon:  pokin.LevelPohon,
+				Keterangan:  pokin.Keterangan,
+				CountReview: pokin.CountReview,
+				IsActive:    pokin.IsActive,
+				Indikators:  helper.ConvertToIndikatorResponses(pokin.Indikator),
+				// Child dikosongkan karena hanya menampilkan level 0
+				Child: []interface{}{},
+			}
+
+			tematiks = append(tematiks, tematikResp)
+		}
+	}
+
+	return pohonkinerja.PohonKinerjaAdminResponse{
+		Tahun:   tahun,
+		Tematik: tematiks,
+	}, nil
 }

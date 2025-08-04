@@ -30,4 +30,6 @@ type PohonKinerjaAdminController interface {
 	FindPokinFromOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	AktiforNonAktifTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindListOpdAllTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	RekapIntermediate(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
