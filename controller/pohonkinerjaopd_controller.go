@@ -21,4 +21,5 @@ type PohonKinerjaOpdController interface {
 	Clone(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	CheckPokinExistsByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	CountPokinPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindPokinAtasan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

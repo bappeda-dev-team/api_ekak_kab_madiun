@@ -24,6 +24,7 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		{"/user/login", "^/user/login$"},
 		{"/api/pokin_opd/findall/", "^/api/pokin_opd/findall/[^/]+/[^/]+$"},
 		{"/api/pokin_pemda/subtematik/", "^/api/pokin_pemda/subtematik/[^/]+$"},
+		{"/pohon_kinerja/pokin_atasan/", "^/pohon_kinerja/pokin_atasan/[^/]+$"},
 	}
 
 	currentPath := request.URL.Path

@@ -73,4 +73,7 @@ type PohonKinerjaRepository interface {
 
 	//count pokin pemda in opd
 	CountPokinPemdaByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]int, error)
+
+	//pokin atasan
+	FindPokinAtasan(ctx context.Context, tx *sql.Tx, id int) (domain.PohonKinerja, []domain.PelaksanaPokin, error)
 }
