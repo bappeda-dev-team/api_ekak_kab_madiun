@@ -23,12 +23,13 @@ type RencanaKinerja struct {
 	CreatedAt            time.Time
 	Indikator            []Indikator
 	//tambahan
-	Formula         string
-	SumberData      string
-	KodeSubKegiatan string
-	NamaSubKegiatan string
-	KodeKegiatan    string
-	NamaKegiatan    string
-	SasaranOpdId    int
-	NamaSasaranOpd  string
+	Formula            string
+	SumberData         string
+	KodeSubKegiatan    string
+	NamaSubKegiatan    string
+	KodeKegiatan       string
+	NamaKegiatan       string
+	SasaranOpdId       int
+	NamaSasaranOpd     string
+	PohonKinerjaParent PohonKinerja
 }

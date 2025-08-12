@@ -13,7 +13,7 @@ type ManualIKRepository interface {
 	// FindBy(ctx context.Context, tx *sql.Tx, manualikId int) ([]domain.ManualIK, error)
 	// FindManualIKByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.ManualIK, error)
 	GetManualIK(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.ManualIK, error)
-	GetRencanaKinerjaWithTarget(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, domain.RencanaKinerja, []domain.Target, error)
+	GetRencanaKinerjaWithTarget(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, domain.RencanaKinerja, []domain.Target, domain.PohonKinerja, error)
 	FindByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.ManualIK, error)
 	FindManualIKSasaranOpdByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) (domain.ManualIK, error)
 	DeleteByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error

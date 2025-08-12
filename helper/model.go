@@ -639,6 +639,8 @@ func ToManualIKResponse(manualIK domain.ManualIK) rencanakinerja.ManualIKRespons
 	response := rencanakinerja.ManualIKResponse{
 		IndikatorId:   manualIK.IndikatorId,
 		DataIndikator: rencanaKinerjaResponse,
+		ParentPohon:   manualIK.DataIndikator.RencanaKinerja.PohonKinerjaParent.Id,
+		NamaParent:    manualIK.DataIndikator.RencanaKinerja.PohonKinerjaParent.NamaPohonParent,
 	}
 
 	// Hanya isi field manual IK jika data ditemukan
