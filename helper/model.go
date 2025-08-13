@@ -639,7 +639,7 @@ func ToManualIKResponse(manualIK domain.ManualIK) rencanakinerja.ManualIKRespons
 	response := rencanakinerja.ManualIKResponse{
 		IndikatorId:   manualIK.IndikatorId,
 		DataIndikator: rencanaKinerjaResponse,
-		ParentPohon:   manualIK.DataIndikator.RencanaKinerja.PohonKinerjaParent.Id,
+		ParentPohon:   manualIK.DataIndikator.RencanaKinerja.PohonKinerjaParent.Parent,
 		NamaParent:    manualIK.DataIndikator.RencanaKinerja.PohonKinerjaParent.NamaPohonParent,
 	}
 
