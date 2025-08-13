@@ -434,6 +434,7 @@ func NewRouter(
 	router.GET("/api/pokin_pemda/subtematik/:tahun", pohonKinerjaAdminController.FindSubTematik)
 	router.GET("/pohon_kinerja/pokin_atasan/:id", pohonKinerjaOpdController.FindPokinAtasan)
 	router.GET("/rekin/atasan/:rekin_id", rencanaKinerjaController.FindRekinAtasan)
+	router.GET("/api_internal/rencana_kinerja/findall", rencanaKinerjaController.FindAll)
 
 	return router
 }
