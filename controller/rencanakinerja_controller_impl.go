@@ -349,7 +349,7 @@ func (controller *RencanaKinerjaControllerImpl) FindRekinAtasan(writer http.Resp
 
 	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.FindRekinAtasan(request.Context(), rekinId)
 	if err != nil {
-		webResponse := web.WebRencanaKinerjaResponse{
+		webResponse := web.WebResponse{
 			Code:   http.StatusBadRequest,
 			Status: "failed get rekin atasan",
 			Data:   err.Error(),
@@ -358,7 +358,7 @@ func (controller *RencanaKinerjaControllerImpl) FindRekinAtasan(writer http.Resp
 		return
 	}
 
-	webResponse := web.WebRencanaKinerjaResponse{
+	webResponse := web.WebResponse{
 		Code:   http.StatusOK,
 		Status: "success get rekin atasan",
 		Data:   rencanaKinerjaResponse,

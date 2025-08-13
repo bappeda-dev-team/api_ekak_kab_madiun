@@ -769,13 +769,13 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinAtasan(ctx context.Cont
 	err = tx.QueryRowContext(ctx, scriptGetParent, idPohon).Scan(&parentId)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("pohon kinerja tidak ditemukan")
+			return []domain.RencanaKinerja{}, nil // Return empty slice instead of error
 		}
 		return nil, err
 	}
 
 	if !parentId.Valid {
-		return nil, fmt.Errorf("tidak ada pohon kinerja atasan")
+		return []domain.RencanaKinerja{}, nil // Return empty slice if no parent
 	}
 
 	// Query untuk mendapatkan semua rencana kinerja atasan dan data pegawai
@@ -827,7 +827,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinAtasan(ctx context.Cont
 	}
 
 	if len(rekins) == 0 {
-		return nil, fmt.Errorf("tidak ada rencana kinerja atasan yang ditemukan")
+		return []domain.RencanaKinerja{}, nil
 	}
 
 	return rekins, nil
