@@ -433,6 +433,7 @@ func NewRouter(
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)
 	router.GET("/api/pokin_pemda/subtematik/:tahun", pohonKinerjaAdminController.FindSubTematik)
 	router.GET("/pohon_kinerja/pokin_atasan/:id", pohonKinerjaOpdController.FindPokinAtasan)
+	router.GET("/rekin/atasan/:rekin_id", rencanaKinerjaController.FindRekinAtasan)
 
 	return router
 }

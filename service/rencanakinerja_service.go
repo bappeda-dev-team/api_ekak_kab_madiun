@@ -22,4 +22,7 @@ type RencanaKinerjaService interface {
 
 	//rencana kinerja level 3
 	FindRekinLevel3(ctx context.Context, kodeOpd string, tahun string) ([]rencanakinerja.RencanaKinerjaResponse, error)
+
+	//rencana kinerja atasan
+	FindRekinAtasan(ctx context.Context, rekinId string) (rencanakinerja.RekinAtasanResponse, error)
 }

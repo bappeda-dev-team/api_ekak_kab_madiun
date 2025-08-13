@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
 	"log"
 )
@@ -740,4 +741,109 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinLevel3(ctx context.Cont
 	}
 
 	return rencanaKinerjas, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindRekinAtasan(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.RencanaKinerja, error) {
+	// Query untuk mendapatkan id_pohon dari rencana kinerja
+	scriptGetPokin := `
+        SELECT id_pohon 
+        FROM tb_rencana_kinerja 
+        WHERE id = ?`
+
+	var idPohon int
+	err := tx.QueryRowContext(ctx, scriptGetPokin, rekinId).Scan(&idPohon)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("rencana kinerja tidak ditemukan")
+		}
+		return nil, err
+	}
+
+	// Query untuk mendapatkan parent dari pohon kinerja
+	scriptGetParent := `
+        SELECT parent 
+        FROM tb_pohon_kinerja 
+        WHERE id = ?`
+
+	var parentId sql.NullInt64
+	err = tx.QueryRowContext(ctx, scriptGetParent, idPohon).Scan(&parentId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("pohon kinerja tidak ditemukan")
+		}
+		return nil, err
+	}
+
+	if !parentId.Valid {
+		return nil, fmt.Errorf("tidak ada pohon kinerja atasan")
+	}
+
+	// Query untuk mendapatkan semua rencana kinerja atasan dan data pegawai
+	scriptRekinAtasan := `
+        SELECT 
+            rk.id,
+            rk.nama_rencana_kinerja,
+            rk.id_pohon,
+            rk.tahun,
+            rk.status_rencana_kinerja,
+            rk.catatan,
+            rk.kode_opd,
+            rk.pegawai_id,
+            p.nama as nama_pegawai,
+            p.nip as nip_pegawai
+        FROM tb_rencana_kinerja rk
+        INNER JOIN tb_pegawai p ON rk.pegawai_id = p.nip
+        WHERE rk.id_pohon = ?`
+
+	rows, err := tx.QueryContext(ctx, scriptRekinAtasan, parentId.Int64)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rekins []domain.RencanaKinerja
+	for rows.Next() {
+		var rekin domain.RencanaKinerja
+		var pegawai domainmaster.Pegawai
+
+		err := rows.Scan(
+			&rekin.Id,
+			&rekin.NamaRencanaKinerja,
+			&rekin.IdPohon,
+			&rekin.Tahun,
+			&rekin.StatusRencanaKinerja,
+			&rekin.Catatan,
+			&rekin.KodeOpd,
+			&rekin.PegawaiId,
+			&pegawai.NamaPegawai,
+			&pegawai.Nip,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		rekin.NamaPegawai = pegawai.NamaPegawai
+		rekins = append(rekins, rekin)
+	}
+
+	if len(rekins) == 0 {
+		return nil, fmt.Errorf("tidak ada rencana kinerja atasan yang ditemukan")
+	}
+
+	return rekins, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Context, tx *sql.Tx, rekinId string) error {
+	script := "SELECT id FROM tb_rencana_kinerja WHERE id = ?"
+
+	var existingId string
+	err := tx.QueryRowContext(ctx, script, rekinId).Scan(&existingId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("rencana kinerja dengan id %s tidak ditemukan", rekinId)
+		}
+		return err
+	}
+
+	return nil
 }

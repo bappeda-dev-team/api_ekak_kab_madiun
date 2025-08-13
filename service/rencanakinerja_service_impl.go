@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -1628,4 +1629,50 @@ func (service *RencanaKinerjaServiceImpl) FindRekinLevel3(ctx context.Context, k
 	}
 
 	return responses, nil
+}
+
+func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, rekinId string) (rencanakinerja.RekinAtasanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return rencanakinerja.RekinAtasanResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi ID rencana kinerja
+	err = service.rencanaKinerjaRepository.ValidateRekinId(ctx, tx, rekinId)
+	if err != nil {
+		return rencanakinerja.RekinAtasanResponse{}, err
+	}
+
+	// Ambil semua data rencana kinerja atasan
+	rekins, err := service.rencanaKinerjaRepository.FindRekinAtasan(ctx, tx, rekinId)
+	if err != nil {
+		if strings.Contains(err.Error(), "tidak ditemukan") || strings.Contains(err.Error(), "tidak ada") {
+			return rencanakinerja.RekinAtasanResponse{}, fmt.Errorf("rencana kinerja atasan tidak tersedia: %v", err)
+		}
+		return rencanakinerja.RekinAtasanResponse{}, err
+	}
+
+	// Transform ke response
+	var rekinDetails []rencanakinerja.RekinAtasanDetail
+	for _, rekin := range rekins {
+		detail := rencanakinerja.RekinAtasanDetail{
+			Id:                   rekin.Id,
+			NamaRencanaKinerja:   rekin.NamaRencanaKinerja,
+			IdPohon:              rekin.IdPohon,
+			Tahun:                rekin.Tahun,
+			StatusRencanaKinerja: rekin.StatusRencanaKinerja,
+			Catatan:              rekin.Catatan,
+			KodeOpd:              rekin.KodeOpd,
+			PegawaiId:            rekin.PegawaiId,
+			NamaPegawai:          rekin.NamaPegawai,
+		}
+		rekinDetails = append(rekinDetails, detail)
+	}
+
+	response := rencanakinerja.RekinAtasanResponse{
+		RekinAtasan: rekinDetails,
+	}
+
+	return response, nil
 }
