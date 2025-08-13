@@ -12,7 +12,6 @@ type RekinAtasanDetail struct {
 	StatusRencanaKinerja string `json:"status_rencana_kinerja"`
 	Catatan              string `json:"catatan"`
 	KodeOpd              string `json:"kode_opd"`
-	PegawaiId            string `json:"pegawai_id"`
+	PegawaiId            string `json:"nip"`
 	NamaPegawai          string `json:"nama_pegawai"`
-	NipPegawai           string `json:"nip_pegawai"`
 }
