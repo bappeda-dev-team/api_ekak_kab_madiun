@@ -16,7 +16,6 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -1644,15 +1643,11 @@ func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, r
 		return rencanakinerja.RekinAtasanResponse{}, err
 	}
 
-	// Ambil semua data rencana kinerja atasan
-	rekins, err := service.rencanaKinerjaRepository.FindRekinAtasan(ctx, tx, rekinId)
+	// Ambil semua data rencana kinerja atasan dan subkegiatan
+	rekins, subkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, err := service.rencanaKinerjaRepository.FindRekinAtasan(ctx, tx, rekinId)
 	if err != nil {
-		if strings.Contains(err.Error(), "tidak ditemukan") || strings.Contains(err.Error(), "tidak ada") {
-			return rencanakinerja.RekinAtasanResponse{}, fmt.Errorf("rencana kinerja atasan tidak tersedia: %v", err)
-		}
 		return rencanakinerja.RekinAtasanResponse{}, err
 	}
-
 	// Transform ke response
 	var rekinDetails []rencanakinerja.RekinAtasanDetail
 	for _, rekin := range rekins {
@@ -1666,12 +1661,21 @@ func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, r
 			KodeOpd:              rekin.KodeOpd,
 			PegawaiId:            rekin.PegawaiId,
 			NamaPegawai:          rekin.NamaPegawai,
+			Program:              rekin.Program,
+			KodeProgram:          rekin.KodeProgram,
+			PaguProgram:          paguProgram,
 		}
 		rekinDetails = append(rekinDetails, detail)
 	}
 
 	response := rencanakinerja.RekinAtasanResponse{
-		RekinAtasan: rekinDetails,
+		Subkegiatan:     subkegiatan,
+		KodeSubkegiatan: kodeSubkegiatan,
+		RekinAtasan:     rekinDetails,
+		PaguSubkegiatan: paguSubkegiatan,
+		KodeKegiatan:    kodeKegiatan,
+		Kegiatan:        namaKegiatan,
+		PaguKegiatan:    paguKegiatan,
 	}
 
 	return response, nil

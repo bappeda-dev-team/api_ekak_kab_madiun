@@ -32,4 +32,7 @@ type RencanaKinerja struct {
 	SasaranOpdId       int
 	NamaSasaranOpd     string
 	PohonKinerjaParent PohonKinerja
+	KodeProgram        string
+	Program            string
+	PaguProgram        string
 }

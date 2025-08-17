@@ -1,7 +1,13 @@
 package rencanakinerja
 
 type RekinAtasanResponse struct {
-	RekinAtasan []RekinAtasanDetail `json:"rekin_atasan"`
+	KodeSubkegiatan string              `json:"kode_subkegiatan"`
+	Subkegiatan     string              `json:"subkegiatan"`
+	PaguSubkegiatan string              `json:"pagu_subkegiatan"`
+	KodeKegiatan    string              `json:"kode_kegiatan"`
+	Kegiatan        string              `json:"kegiatan"`
+	PaguKegiatan    string              `json:"pagu_kegiatan"`
+	RekinAtasan     []RekinAtasanDetail `json:"rekin_atasan"`
 }
 
 type RekinAtasanDetail struct {
@@ -14,4 +20,7 @@ type RekinAtasanDetail struct {
 	KodeOpd              string `json:"kode_opd"`
 	PegawaiId            string `json:"nip"`
 	NamaPegawai          string `json:"nama_pegawai"`
+	KodeProgram          string `json:"kode_program"`
+	Program              string `json:"program"`
+	PaguProgram          string `json:"pagu_program"`
 }
