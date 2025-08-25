@@ -726,6 +726,26 @@ func (repository *PohonKinerjaRepositoryImpl) CreatePokinAdmin(ctx context.Conte
 		}
 	}
 
+	// Insert tagging
+	scriptTagging := "INSERT INTO tb_tagging_pokin (id_pokin, nama_tagging, keterangan_tagging) VALUES (?, ?, ?)"
+	for _, tagging := range pokinAdmin.TaggingPokin {
+		result, err := tx.ExecContext(ctx, scriptTagging,
+			pokinAdmin.Id,
+			tagging.NamaTagging,
+			tagging.KeteranganTagging)
+		if err != nil {
+			return pokinAdmin, err
+		}
+
+		// Dapatkan ID tagging yang baru dibuat
+		lastTaggingId, err := result.LastInsertId()
+		if err != nil {
+			return pokinAdmin, err
+		}
+		tagging.Id = int(lastTaggingId)
+		tagging.IdPokin = pokinAdmin.Id
+	}
+
 	return pokinAdmin, nil
 }
 
@@ -861,6 +881,66 @@ func (repository *PohonKinerjaRepositoryImpl) UpdatePokinAdmin(ctx context.Conte
 			if err != nil {
 				return pokinAdmin, err
 			}
+		}
+	}
+
+	// Update tagging
+	// Hapus tagging yang tidak ada di request baru
+	existingTaggings, err := repository.FindTaggingByPokinId(ctx, tx, pokinAdmin.Id)
+	if err != nil {
+		return pokinAdmin, err
+	}
+
+	// Buat map untuk tracking ID yang masih digunakan
+	existingIds := make(map[int]bool)
+	for _, tagging := range pokinAdmin.TaggingPokin {
+		if tagging.Id != 0 {
+			existingIds[tagging.Id] = true
+		}
+	}
+
+	// Hapus tagging yang tidak ada di request baru
+	for _, existing := range existingTaggings {
+		if !existingIds[existing.Id] {
+			scriptDelete := "DELETE FROM tb_tagging_pokin WHERE id = ?"
+			_, err := tx.ExecContext(ctx, scriptDelete, existing.Id)
+			if err != nil {
+				return pokinAdmin, err
+			}
+		}
+	}
+
+	// Update atau insert tagging
+	for _, tagging := range pokinAdmin.TaggingPokin {
+		if tagging.Id != 0 {
+			// Update existing tagging
+			script := "UPDATE tb_tagging_pokin SET nama_tagging = ?, keterangan_tagging = ? WHERE id = ? AND id_pokin = ?"
+			_, err := tx.ExecContext(ctx, script,
+				tagging.NamaTagging,
+				tagging.KeteranganTagging,
+				tagging.Id,
+				pokinAdmin.Id)
+			if err != nil {
+				return pokinAdmin, err
+			}
+			tagging.IdPokin = pokinAdmin.Id
+		} else {
+			// Insert new tagging
+			script := "INSERT INTO tb_tagging_pokin (id_pokin, nama_tagging, keterangan_tagging) VALUES (?, ?, ?)"
+			result, err := tx.ExecContext(ctx, script,
+				pokinAdmin.Id,
+				tagging.NamaTagging,
+				tagging.KeteranganTagging)
+			if err != nil {
+				return pokinAdmin, err
+			}
+
+			id, err := result.LastInsertId()
+			if err != nil {
+				return pokinAdmin, err
+			}
+			tagging.Id = int(id)
+			tagging.IdPokin = pokinAdmin.Id
 		}
 	}
 
@@ -1015,6 +1095,35 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 		}
 		return domain.PohonKinerja{}, err
 	}
+
+	// Ambil data tagging
+	scriptTagging := "SELECT id, id_pokin, nama_tagging, keterangan_tagging FROM tb_tagging_pokin WHERE id_pokin = ?"
+	taggingRows, err := tx.QueryContext(ctx, scriptTagging, id)
+	if err != nil {
+		return domain.PohonKinerja{}, err
+	}
+	defer taggingRows.Close()
+
+	var taggings []domain.TaggingPokin
+	for taggingRows.Next() {
+		var tagging domain.TaggingPokin
+		var keteranganTagging sql.NullString
+		err := taggingRows.Scan(
+			&tagging.Id,
+			&tagging.IdPokin,
+			&tagging.NamaTagging,
+			&keteranganTagging,
+		)
+		if err != nil {
+			return domain.PohonKinerja{}, err
+		}
+		if keteranganTagging.Valid {
+			tagging.KeteranganTagging = &keteranganTagging.String
+		}
+		taggings = append(taggings, tagging)
+	}
+	pokin.TaggingPokin = taggings
+
 	return pokin, nil
 }
 func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error) {

@@ -20,17 +20,18 @@ type PelaksanaCreateRequest struct {
 }
 
 type PohonKinerjaAdminCreateRequest struct {
-	CSFRequest `json:",inline"`
-	Parent     int                      `json:"parent"`
-	NamaPohon  string                   `json:"nama_pohon"`
-	JenisPohon string                   `json:"jenis_pohon"`
-	KodeOpd    string                   `json:"kode_opd,omitempty"`
-	LevelPohon int                      `json:"level_pohon"`
-	Keterangan string                   `json:"keterangan"`
-	Tahun      string                   `json:"tahun"`
-	Status     string                   `json:"status"`
-	Pelaksana  []PelaksanaCreateRequest `json:"pelaksana"`
-	Indikator  []IndikatorCreateRequest `json:"indikator"`
+	CSFRequest   `json:",inline"`
+	Parent       int                      `json:"parent"`
+	NamaPohon    string                   `json:"nama_pohon"`
+	JenisPohon   string                   `json:"jenis_pohon"`
+	KodeOpd      string                   `json:"kode_opd,omitempty"`
+	LevelPohon   int                      `json:"level_pohon"`
+	Keterangan   string                   `json:"keterangan"`
+	Tahun        string                   `json:"tahun"`
+	Status       string                   `json:"status"`
+	TaggingPokin []TaggingCreateRequest   `json:"tagging"`
+	Pelaksana    []PelaksanaCreateRequest `json:"pelaksana"`
+	Indikator    []IndikatorCreateRequest `json:"indikator"`
 }
 
 type CSFRequest struct {
