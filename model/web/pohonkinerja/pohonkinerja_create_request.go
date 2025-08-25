@@ -1,16 +1,17 @@
 package pohonkinerja
 
 type PohonKinerjaCreateRequest struct {
-	Parent      int                      `json:"parent"`
-	NamaPohon   string                   `json:"nama_pohon"`
-	JenisPohon  string                   `json:"jenis_pohon"`
-	LevelPohon  int                      `json:"level_pohon"`
-	KodeOpd     string                   `json:"kode_opd"`
-	Keterangan  string                   `json:"keterangan"`
-	Tahun       string                   `json:"tahun"`
-	Status      string                   `json:"status"`
-	PelaksanaId []PelaksanaCreateRequest `json:"pelaksana"`
-	Indikator   []IndikatorCreateRequest `json:"indikator"`
+	Parent       int                      `json:"parent"`
+	NamaPohon    string                   `json:"nama_pohon"`
+	JenisPohon   string                   `json:"jenis_pohon"`
+	LevelPohon   int                      `json:"level_pohon"`
+	KodeOpd      string                   `json:"kode_opd"`
+	Keterangan   string                   `json:"keterangan"`
+	Tahun        string                   `json:"tahun"`
+	Status       string                   `json:"status"`
+	PelaksanaId  []PelaksanaCreateRequest `json:"pelaksana"`
+	Indikator    []IndikatorCreateRequest `json:"indikator"`
+	TaggingPokin []TaggingCreateRequest   `json:"tagging"`
 }
 
 type PelaksanaCreateRequest struct {
@@ -68,4 +69,9 @@ type PohonKinerjaCloneRequest struct {
 	KodeOpd     string `json:"kode_opd" validate:"required"`
 	TahunSumber string `json:"tahun_sumber" validate:"required"`
 	TahunTujuan string `json:"tahun_tujuan" validate:"required"`
+}
+
+type TaggingCreateRequest struct {
+	NamaTagging       string `json:"nama_tagging"`
+	KeteranganTagging string `json:"keterangan_tagging"`
 }

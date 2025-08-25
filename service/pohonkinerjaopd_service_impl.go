@@ -140,23 +140,41 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		})
 	}
 
-	pohonKinerja := domain.PohonKinerja{
-		NamaPohon: request.NamaPohon,
-		Parent:    request.Parent,
+	var taggingList []domain.TaggingPokin
+	for _, taggingReq := range request.TaggingPokin {
+		tagging := domain.TaggingPokin{
+			NamaTagging:       taggingReq.NamaTagging,
+			KeteranganTagging: &taggingReq.KeteranganTagging,
+		}
+		taggingList = append(taggingList, tagging)
+	}
 
-		JenisPohon: request.JenisPohon,
-		LevelPohon: request.LevelPohon,
-		KodeOpd:    request.KodeOpd,
-		Keterangan: request.Keterangan,
-		Tahun:      request.Tahun,
-		Status:     request.Status,
-		Pelaksana:  pelaksanaList,
-		Indikator:  indikatorList,
+	pohonKinerja := domain.PohonKinerja{
+		NamaPohon:    request.NamaPohon,
+		Parent:       request.Parent,
+		JenisPohon:   request.JenisPohon,
+		LevelPohon:   request.LevelPohon,
+		KodeOpd:      request.KodeOpd,
+		Keterangan:   request.Keterangan,
+		Tahun:        request.Tahun,
+		Status:       request.Status,
+		Pelaksana:    pelaksanaList,
+		Indikator:    indikatorList,
+		TaggingPokin: taggingList,
 	}
 
 	result, err := service.pohonKinerjaOpdRepository.Create(ctx, tx, pohonKinerja)
 	if err != nil {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	// Siapkan response tagging
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range result.TaggingPokin {
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			NamaTagging:       tagging.NamaTagging,
+			KeteranganTagging: tagging.KeteranganTagging,
+		})
 	}
 
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, result.Id)
@@ -176,6 +194,7 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		CountReview: countReview,
 		Pelaksana:   pelaksanaResponses,
 		Indikator:   indikatorResponses,
+		Tagging:     taggingResponses,
 	}
 
 	return response, nil
@@ -381,6 +400,35 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
 	helper.PanicIfError(err)
 
+	// Proses tagging
+	var taggingList []domain.TaggingPokin
+	var taggingResponses []pohonkinerja.TaggingResponse
+
+	for _, taggingReq := range request.TaggingPokin {
+		tagging := domain.TaggingPokin{
+			Id: taggingReq.Id,
+
+			NamaTagging:       taggingReq.NamaTagging,
+			KeteranganTagging: &taggingReq.KeteranganTagging,
+		}
+		taggingList = append(taggingList, tagging)
+	}
+
+	// Update tagging
+	taggingResults, err := service.pohonKinerjaOpdRepository.UpdateTagging(ctx, tx, existingPokin.Id, taggingList)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	// Konversi ke response
+	for _, tagging := range taggingResults {
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                tagging.Id,
+			IdPokin:           updatedPokin.Id,
+			NamaTagging:       tagging.NamaTagging,
+			KeteranganTagging: tagging.KeteranganTagging,
+		})
+	}
 	return pohonkinerja.PohonKinerjaOpdResponse{
 		Id:                     updatedPokin.Id,
 		Parent:                 strconv.Itoa(updatedPokin.Parent),
@@ -395,6 +443,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		Status:                 updatedPokin.Status,
 		Pelaksana:              pelaksanaResponses,
 		Indikator:              indikatorResponses,
+		Tagging:                taggingResponses,
 		KeteranganCrosscutting: updatedPokin.KeteranganCrosscutting,
 	}, nil
 }
@@ -420,66 +469,6 @@ func (service *PohonKinerjaOpdServiceImpl) Delete(ctx context.Context, id int) e
 
 	return nil
 }
-
-// func (service *PohonKinerjaOpdServiceImpl) Delete(ctx context.Context, id int) error {
-// 	tx, err := service.DB.Begin()
-// 	if err != nil {
-// 		return fmt.Errorf("gagal memulai transaksi: %v", err)
-// 	}
-// 	defer helper.CommitOrRollback(tx)
-
-// 	// 1. Cek apakah pohon kinerja dengan ID tersebut ada
-// 	_, err = service.pohonKinerjaOpdRepository.FindById(ctx, tx, id)
-// 	if err != nil {
-// 		return fmt.Errorf("pohon kinerja tidak ditemukan: %v", err)
-// 	}
-
-// 	// 2. Dapatkan seluruh hierarki child
-// 	childHierarchy, err := service.pohonKinerjaOpdRepository.FindPokinAdminByIdHierarki(ctx, tx, id)
-// 	if err != nil {
-// 		return fmt.Errorf("gagal mendapatkan hierarki pohon kinerja: %v", err)
-// 	}
-
-// 	// 3. Pertama, update status semua node yang memiliki clone_from
-// 	for _, node := range childHierarchy {
-// 		cloneFrom, err := service.pohonKinerjaOpdRepository.CheckCloneFrom(ctx, tx, node.Id)
-// 		if err != nil && err != sql.ErrNoRows {
-// 			return fmt.Errorf("gagal memeriksa clone_from untuk node ID %d: %v", node.Id, err)
-// 		}
-
-// 		if cloneFrom != 0 {
-// 			// Update status node asli menjadi menunggu_disetujui
-// 			err = service.pohonKinerjaOpdRepository.UpdatePokinStatusFromApproved(ctx, tx, cloneFrom)
-// 			if err != nil {
-// 				return fmt.Errorf("gagal mengupdate status node asli ID %d: %v", cloneFrom, err)
-// 			}
-// 		}
-// 	}
-
-// 	// 4. Kemudian, proses penghapusan
-// 	for _, node := range childHierarchy {
-// 		cloneFrom, err := service.pohonKinerjaOpdRepository.CheckCloneFrom(ctx, tx, node.Id)
-// 		if err != nil && err != sql.ErrNoRows {
-// 			return fmt.Errorf("gagal memeriksa clone_from untuk node ID %d: %v", node.Id, err)
-// 		}
-
-// 		if cloneFrom != 0 {
-// 			// Hapus node clone dan seluruh hierarkinya
-// 			err = service.pohonKinerjaOpdRepository.DeleteClonedPokinHierarchy(ctx, tx, node.Id)
-// 			if err != nil {
-// 				return fmt.Errorf("gagal menghapus hierarki clone untuk node ID %d: %v", node.Id, err)
-// 			}
-// 		} else {
-// 			// Jika bukan clone, hapus node beserta indikator dan targetnya
-// 			err = service.pohonKinerjaOpdRepository.DeletePokinWithIndikatorAndTarget(ctx, tx, node.Id)
-// 			if err != nil {
-// 				return fmt.Errorf("gagal menghapus node ID %d beserta indikator dan target: %v", node.Id, err)
-// 			}
-// 		}
-// 	}
-
-// 	return nil
-// }
 
 func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int) (pohonkinerja.PohonKinerjaOpdResponse, error) {
 	tx, err := service.DB.Begin()
@@ -557,6 +546,20 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 		}
 	}
 
+	// Tambahkan: Ambil data tagging
+	var taggingResponses []pohonkinerja.TaggingResponse
+	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, pokin.Id)
+	if err == nil {
+		for _, tagging := range taggingList {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                tagging.Id,
+				IdPokin:           tagging.IdPokin,
+				NamaTagging:       tagging.NamaTagging,
+				KeteranganTagging: tagging.KeteranganTagging,
+			})
+		}
+	}
+
 	// 7. Susun response
 	response := pohonkinerja.PohonKinerjaOpdResponse{
 		Id:         pokin.Id,
@@ -571,6 +574,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 		Status:     pokin.Status,
 		Pelaksana:  pelaksanaResponses,
 		Indikator:  indikatorResponses,
+		Tagging:    taggingResponses,
 	}
 
 	return response, nil
@@ -999,6 +1003,20 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponse(ctx context
 	if err == nil {
 		operationalN.NamaOpd = opd.NamaOpd
 	}
+
+	//tagging
+	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, operationalN.Id)
+	var taggingResponses []pohonkinerja.TaggingResponse
+	if err == nil {
+		for _, tagging := range taggingList {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                tagging.Id,
+				NamaTagging:       tagging.NamaTagging,
+				KeteranganTagging: tagging.KeteranganTagging,
+			})
+		}
+	}
+
 	//review
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, operationalN.Id)
 	helper.PanicIfError(err)
@@ -1034,6 +1052,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponse(ctx context
 			KodeOpd: operationalN.KodeOpd,
 			NamaOpd: operationalN.NamaOpd,
 		},
+		Tagging:     taggingResponses,
 		Pelaksana:   pelaksanaMap[operationalN.Id],
 		Indikator:   indikatorMap[operationalN.Id],
 		Review:      reviewResponses,
@@ -1064,7 +1083,18 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 	if strategic.KeteranganCrosscutting != nil && *strategic.KeteranganCrosscutting != "" {
 		keteranganCrosscutting = strategic.KeteranganCrosscutting
 	}
-
+	//tagging
+	var taggingResponses []pohonkinerja.TaggingResponse
+	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, strategic.Id)
+	if err == nil {
+		for _, tagging := range taggingList {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                tagging.Id,
+				NamaTagging:       tagging.NamaTagging,
+				KeteranganTagging: tagging.KeteranganTagging,
+			})
+		}
+	}
 	//review
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, strategic.Id)
 	helper.PanicIfError(err)
@@ -1101,6 +1131,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 			KodeOpd: strategic.KodeOpd,
 			NamaOpd: strategic.NamaOpd,
 		},
+		Tagging:     taggingResponses,
 		Pelaksana:   pelaksanaMap[strategic.Id],
 		Indikator:   indikatorMap[strategic.Id],
 		Review:      reviewResponses,
@@ -1139,6 +1170,18 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 	if tactical.KeteranganCrosscutting != nil && *tactical.KeteranganCrosscutting != "" {
 		keteranganCrosscutting = tactical.KeteranganCrosscutting
 	}
+	//tagging
+	var taggingResponses []pohonkinerja.TaggingResponse
+	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, tactical.Id)
+	if err == nil {
+		for _, tagging := range taggingList {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                tagging.Id,
+				NamaTagging:       tagging.NamaTagging,
+				KeteranganTagging: tagging.KeteranganTagging,
+			})
+		}
+	}
 	//review
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, tactical.Id)
 	helper.PanicIfError(err)
@@ -1174,6 +1217,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 			NamaOpd: tactical.NamaOpd,
 		},
 		Pelaksana:   pelaksanaMap[tactical.Id],
+		Tagging:     taggingResponses,
 		Indikator:   indikatorMap[tactical.Id],
 		Review:      reviewResponses,
 		CountReview: countReview,
@@ -1215,6 +1259,18 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, operational.Id)
 	helper.PanicIfError(err)
 
+	//tagging
+	var taggingResponses []pohonkinerja.TaggingResponse
+	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, operational.Id)
+	if err == nil {
+		for _, tagging := range taggingList {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                tagging.Id,
+				NamaTagging:       tagging.NamaTagging,
+				KeteranganTagging: tagging.KeteranganTagging,
+			})
+		}
+	}
 	reviews, err := service.reviewRepository.FindByPohonKinerja(ctx, tx, operational.Id)
 	var reviewResponses []pohonkinerja.ReviewResponse
 	if err == nil {
@@ -1247,6 +1303,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 			NamaOpd: operational.NamaOpd,
 		},
 		Pelaksana:   pelaksanaMap[operational.Id],
+		Tagging:     taggingResponses,
 		Indikator:   indikatorMap[operational.Id],
 		Review:      reviewResponses,
 		CountReview: countReview,

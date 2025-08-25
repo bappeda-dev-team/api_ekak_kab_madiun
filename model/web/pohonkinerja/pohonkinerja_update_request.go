@@ -1,17 +1,18 @@
 package pohonkinerja
 
 type PohonKinerjaUpdateRequest struct {
-	Id          int                      `json:"id"`
-	Parent      int                      `json:"parent"`
-	NamaPohon   string                   `json:"nama_pohon"`
-	JenisPohon  string                   `json:"jenis_pohon"`
-	LevelPohon  int                      `json:"level_pohon"`
-	KodeOpd     string                   `json:"kode_opd"`
-	Keterangan  string                   `json:"keterangan"`
-	Tahun       string                   `json:"tahun"`
-	Status      string                   `json:"status"`
-	PelaksanaId []PelaksanaUpdateRequest `json:"pelaksana"`
-	Indikator   []IndikatorUpdateRequest `json:"indikator"`
+	Id           int                      `json:"id"`
+	Parent       int                      `json:"parent"`
+	NamaPohon    string                   `json:"nama_pohon"`
+	JenisPohon   string                   `json:"jenis_pohon"`
+	LevelPohon   int                      `json:"level_pohon"`
+	KodeOpd      string                   `json:"kode_opd"`
+	Keterangan   string                   `json:"keterangan"`
+	Tahun        string                   `json:"tahun"`
+	Status       string                   `json:"status"`
+	PelaksanaId  []PelaksanaUpdateRequest `json:"pelaksana"`
+	Indikator    []IndikatorUpdateRequest `json:"indikator"`
+	TaggingPokin []TaggingUpdateRequest   `json:"tagging"`
 }
 
 type PelaksanaUpdateRequest struct {
@@ -49,4 +50,10 @@ type TargetUpdateRequest struct {
 
 type PohonKinerjaAdminTolakRequest struct {
 	Id int `json:"id" validate:"required"`
+}
+
+type TaggingUpdateRequest struct {
+	Id                int    `json:"id"`
+	NamaTagging       string `json:"nama_tagging"`
+	KeteranganTagging string `json:"keterangan_tagging"`
 }
