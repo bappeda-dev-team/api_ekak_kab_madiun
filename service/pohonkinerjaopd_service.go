@@ -20,4 +20,5 @@ type PohonKinerjaOpdService interface {
 	CloneByKodeOpdAndTahun(ctx context.Context, request pohonkinerja.PohonKinerjaCloneRequest) error
 	CheckPokinExistsByTahun(ctx context.Context, kodeOpd string, tahun string) (bool, error)
 	CountPokinPemda(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.CountPokinPemdaResponse, error)
+	FindPokinAtasan(ctx context.Context, id int) (pohonkinerja.PokinAtasanResponse, error)
 }

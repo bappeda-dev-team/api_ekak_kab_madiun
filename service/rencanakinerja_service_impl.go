@@ -1629,3 +1629,54 @@ func (service *RencanaKinerjaServiceImpl) FindRekinLevel3(ctx context.Context, k
 
 	return responses, nil
 }
+
+func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, rekinId string) (rencanakinerja.RekinAtasanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return rencanakinerja.RekinAtasanResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi ID rencana kinerja
+	err = service.rencanaKinerjaRepository.ValidateRekinId(ctx, tx, rekinId)
+	if err != nil {
+		return rencanakinerja.RekinAtasanResponse{}, err
+	}
+
+	// Ambil semua data rencana kinerja atasan dan subkegiatan
+	rekins, subkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, err := service.rencanaKinerjaRepository.FindRekinAtasan(ctx, tx, rekinId)
+	if err != nil {
+		return rencanakinerja.RekinAtasanResponse{}, err
+	}
+	// Transform ke response
+	var rekinDetails []rencanakinerja.RekinAtasanDetail
+	for _, rekin := range rekins {
+		detail := rencanakinerja.RekinAtasanDetail{
+			Id:                   rekin.Id,
+			NamaRencanaKinerja:   rekin.NamaRencanaKinerja,
+			IdPohon:              rekin.IdPohon,
+			Tahun:                rekin.Tahun,
+			StatusRencanaKinerja: rekin.StatusRencanaKinerja,
+			Catatan:              rekin.Catatan,
+			KodeOpd:              rekin.KodeOpd,
+			PegawaiId:            rekin.PegawaiId,
+			NamaPegawai:          rekin.NamaPegawai,
+			Program:              rekin.Program,
+			KodeProgram:          rekin.KodeProgram,
+			PaguProgram:          paguProgram,
+		}
+		rekinDetails = append(rekinDetails, detail)
+	}
+
+	response := rencanakinerja.RekinAtasanResponse{
+		Subkegiatan:     subkegiatan,
+		KodeSubkegiatan: kodeSubkegiatan,
+		RekinAtasan:     rekinDetails,
+		PaguSubkegiatan: paguSubkegiatan,
+		KodeKegiatan:    kodeKegiatan,
+		Kegiatan:        namaKegiatan,
+		PaguKegiatan:    paguKegiatan,
+	}
+
+	return response, nil
+}

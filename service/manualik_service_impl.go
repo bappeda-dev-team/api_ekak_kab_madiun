@@ -118,18 +118,19 @@ func (service *ManualIKServiceImpl) Update(ctx context.Context, request rencanak
 }
 
 // Fungsi untuk mendapatkan data rencana kinerja
-func (service *ManualIKServiceImpl) getRencanaKinerjaWithTargetData(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, error) {
-	indikator, rencanaKinerja, targets, err := service.ManualIKRepository.GetRencanaKinerjaWithTarget(ctx, tx, indikatorId)
-	if err != nil {
-		return domain.Indikator{}, fmt.Errorf("gagal mengambil data rencana kinerja: %v", err)
-	}
+// func (service *ManualIKServiceImpl) getRencanaKinerjaWithTargetData(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, error) {
+// 	indikator, rencanaKinerja, targets, pohonParent, err := service.ManualIKRepository.GetRencanaKinerjaWithTarget(ctx, tx, indikatorId)
+// 	if err != nil {
+// 		return domain.Indikator{}, fmt.Errorf("gagal mengambil data rencana kinerja: %v", err)
+// 	}
 
-	// Set data lengkap
-	indikator.RencanaKinerja = rencanaKinerja
-	indikator.Target = targets
+// 	// Set data lengkap
+// 	indikator.RencanaKinerja = rencanaKinerja
+// 	indikator.Target = targets
+// 	indikator.RencanaKinerja.PohonKinerjaParent = pohonParent
 
-	return indikator, nil
-}
+// 	return indikator, nil
+// }
 
 func (service *ManualIKServiceImpl) FindManualIKByIndikatorId(ctx context.Context, indikatorId string) (rencanakinerja.ManualIKResponse, error) {
 	tx, err := service.DB.Begin()
@@ -139,10 +140,15 @@ func (service *ManualIKServiceImpl) FindManualIKByIndikatorId(ctx context.Contex
 	defer helper.CommitOrRollback(tx)
 
 	// Ambil data rencana kinerja terlebih dahulu
-	indikator, err := service.getRencanaKinerjaWithTargetData(ctx, tx, indikatorId)
+	indikator, rencanaKinerja, targets, pohonParent, err := service.ManualIKRepository.GetRencanaKinerjaWithTarget(ctx, tx, indikatorId)
 	if err != nil {
 		return rencanakinerja.ManualIKResponse{}, err
 	}
+
+	// Set data lengkap
+	indikator.RencanaKinerja = rencanaKinerja
+	indikator.Target = targets
+	indikator.RencanaKinerja.PohonKinerjaParent = pohonParent
 
 	// Ambil data manual IK jika ada
 	manualIK, err := service.ManualIKRepository.FindByIndikatorId(ctx, tx, indikatorId)

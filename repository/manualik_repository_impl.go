@@ -170,8 +170,8 @@ func (repository *ManualIKRepositoryImpl) GetManualIK(ctx context.Context, tx *s
 }
 
 // GetRencanaKinerja mengambil data rencana kinerja dan indikator
-func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, domain.RencanaKinerja, []domain.Target, error) {
-	// Query untuk mendapatkan indikator dan rencana kinerja
+func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, domain.RencanaKinerja, []domain.Target, domain.PohonKinerja, error) {
+	// Query untuk mendapatkan indikator, rencana kinerja, dan pohon kinerja parent
 	scriptIndikator := `
         SELECT 
             i.id, 
@@ -184,13 +184,28 @@ func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx contex
             rk.status_rencana_kinerja,
             rk.catatan,
             rk.kode_opd,
-            rk.pegawai_id
+            rk.pegawai_id,
+            pk.id as pohon_id,
+            pk.nama_pohon,
+            COALESCE(pk.parent, 0) as parent_id,
+            COALESCE(pkp.nama_pohon, '') as parent_nama_pohon,
+            COALESCE(pkp.jenis_pohon, '') as parent_jenis_pohon,
+            COALESCE(pkp.level_pohon, 0) as parent_level_pohon
         FROM tb_indikator i
         JOIN tb_rencana_kinerja rk ON i.rencana_kinerja_id = rk.id
+        LEFT JOIN tb_pohon_kinerja pk ON rk.id_pohon = pk.id
+        LEFT JOIN tb_pohon_kinerja pkp ON pk.parent = pkp.id
         WHERE i.id = ?`
 
 	var indikator domain.Indikator
 	var rencanaKinerja domain.RencanaKinerja
+	var pohonParent domain.PohonKinerja
+
+	// Gunakan sql.NullInt64 dan sql.NullString untuk menangani nilai null
+	var parentId sql.NullInt64
+	var parentNamaPohon sql.NullString
+	var parentJenisPohon sql.NullString
+	var parentLevelPohon sql.NullInt64
 
 	err := tx.QueryRowContext(ctx, scriptIndikator, indikatorId).Scan(
 		&indikator.Id,
@@ -204,12 +219,43 @@ func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx contex
 		&rencanaKinerja.Catatan,
 		&rencanaKinerja.KodeOpd,
 		&rencanaKinerja.PegawaiId,
+		&pohonParent.Id,
+		&pohonParent.NamaPohon,
+		&parentId,
+		&parentNamaPohon,
+		&parentJenisPohon,
+		&parentLevelPohon,
 	)
 	if err != nil && err != sql.ErrNoRows {
-		return domain.Indikator{}, domain.RencanaKinerja{}, nil, err
+		return domain.Indikator{}, domain.RencanaKinerja{}, nil, domain.PohonKinerja{}, err
 	}
 
-	// Query untuk mendapatkan target
+	// Set nilai dari NullInt64/NullString ke struct
+	if parentId.Valid {
+		pohonParent.Parent = int(parentId.Int64)
+	} else {
+		pohonParent.Parent = 0
+	}
+
+	if parentNamaPohon.Valid {
+		pohonParent.NamaPohonParent = parentNamaPohon.String
+	} else {
+		pohonParent.NamaPohonParent = ""
+	}
+
+	if parentJenisPohon.Valid {
+		pohonParent.JenisPohonParent = parentJenisPohon.String
+	} else {
+		pohonParent.JenisPohonParent = ""
+	}
+
+	if parentLevelPohon.Valid {
+		pohonParent.LevelPohonParent = int(parentLevelPohon.Int64)
+	} else {
+		pohonParent.LevelPohonParent = 0
+	}
+
+	// Query untuk target tetap sama
 	scriptTarget := `
         SELECT 
             id, 
@@ -222,7 +268,7 @@ func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx contex
 
 	rows, err := tx.QueryContext(ctx, scriptTarget, indikatorId)
 	if err != nil {
-		return domain.Indikator{}, domain.RencanaKinerja{}, nil, err
+		return domain.Indikator{}, domain.RencanaKinerja{}, nil, domain.PohonKinerja{}, err
 	}
 	defer rows.Close()
 
@@ -237,12 +283,12 @@ func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx contex
 			&target.Tahun,
 		)
 		if err != nil {
-			return domain.Indikator{}, domain.RencanaKinerja{}, nil, err
+			return domain.Indikator{}, domain.RencanaKinerja{}, nil, domain.PohonKinerja{}, err
 		}
 		targets = append(targets, target)
 	}
 
-	return indikator, rencanaKinerja, targets, nil
+	return indikator, rencanaKinerja, targets, pohonParent, nil
 }
 
 func (repository *ManualIKRepositoryImpl) FindByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.ManualIK, error) {

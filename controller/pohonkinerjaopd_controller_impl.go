@@ -479,3 +479,34 @@ func (controller *PohonKinerjaOpdControllerImpl) CountPokinPemda(writer http.Res
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaOpdControllerImpl) FindPokinAtasan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "ID harus berupa angka",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	pohonKinerjaResponse, err := controller.PohonKinerjaOpdService.FindPokinAtasan(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   404,
+			Status: "Not Found",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success",
+		Data:   pohonKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

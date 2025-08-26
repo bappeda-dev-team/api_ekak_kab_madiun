@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
 	"log"
 )
@@ -740,4 +741,309 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinLevel3(ctx context.Cont
 	}
 
 	return rencanaKinerjas, nil
+}
+
+// func (repository *RencanaKinerjaRepositoryImpl) FindRekinAtasan(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.RencanaKinerja, error) {
+// 	// Query untuk mendapatkan id_pohon dari rencana kinerja
+// 	scriptGetPokin := `
+//         SELECT id_pohon
+//         FROM tb_rencana_kinerja
+//         WHERE id = ?`
+
+// 	var idPohon int
+// 	err := tx.QueryRowContext(ctx, scriptGetPokin, rekinId).Scan(&idPohon)
+// 	if err != nil {
+// 		if err == sql.ErrNoRows {
+// 			return nil, fmt.Errorf("rencana kinerja tidak ditemukan")
+// 		}
+// 		return nil, err
+// 	}
+
+// 	// Query untuk mendapatkan parent dari pohon kinerja
+// 	scriptGetParent := `
+//         SELECT parent
+//         FROM tb_pohon_kinerja
+//         WHERE id = ?`
+
+// 	var parentId sql.NullInt64
+// 	err = tx.QueryRowContext(ctx, scriptGetParent, idPohon).Scan(&parentId)
+// 	if err != nil {
+// 		if err == sql.ErrNoRows {
+// 			return []domain.RencanaKinerja{}, nil // Return empty slice instead of error
+// 		}
+// 		return nil, err
+// 	}
+
+// 	if !parentId.Valid {
+// 		return []domain.RencanaKinerja{}, nil // Return empty slice if no parent
+// 	}
+
+// 	// Query untuk mendapatkan semua rencana kinerja atasan dan data pegawai
+// 	scriptRekinAtasan := `
+//         SELECT
+//             rk.id,
+//             rk.nama_rencana_kinerja,
+//             rk.id_pohon,
+//             rk.tahun,
+//             rk.status_rencana_kinerja,
+//             rk.catatan,
+//             rk.kode_opd,
+//             rk.pegawai_id,
+//             p.nama as nama_pegawai,
+//             p.nip as nip_pegawai
+//         FROM tb_rencana_kinerja rk
+//         INNER JOIN tb_pegawai p ON rk.pegawai_id = p.nip
+//         WHERE rk.id_pohon = ?`
+
+// 	rows, err := tx.QueryContext(ctx, scriptRekinAtasan, parentId.Int64)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var rekins []domain.RencanaKinerja
+// 	for rows.Next() {
+// 		var rekin domain.RencanaKinerja
+// 		var pegawai domainmaster.Pegawai
+
+// 		err := rows.Scan(
+// 			&rekin.Id,
+// 			&rekin.NamaRencanaKinerja,
+// 			&rekin.IdPohon,
+// 			&rekin.Tahun,
+// 			&rekin.StatusRencanaKinerja,
+// 			&rekin.Catatan,
+// 			&rekin.KodeOpd,
+// 			&rekin.PegawaiId,
+// 			&pegawai.NamaPegawai,
+// 			&pegawai.Nip,
+// 		)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		rekin.NamaPegawai = pegawai.NamaPegawai
+// 		rekins = append(rekins, rekin)
+// 	}
+
+// 	if len(rekins) == 0 {
+// 		return []domain.RencanaKinerja{}, nil
+// 	}
+
+// 	return rekins, nil
+// }
+
+func (repository *RencanaKinerjaRepositoryImpl) FindRekinAtasan(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.RencanaKinerja, string, string, string, string, string, string, string, error) {
+	// 1. Ambil data subkegiatan, kegiatan dan rencana kinerja
+	scriptGetSubkegiatan := `
+        SELECT 
+            s.nama_subkegiatan, 
+            s.kode_subkegiatan,
+            rk.kode_opd,
+            rk.tahun,
+            COALESCE(i.pagu_anggaran, 0) as pagu_subkegiatan,
+            k.kode_kegiatan,
+            k.nama_kegiatan
+        FROM tb_subkegiatan_terpilih st
+        JOIN tb_subkegiatan s ON st.subkegiatan_id = s.id
+        JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+        JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+        LEFT JOIN tb_indikator i ON i.kode = s.kode_subkegiatan 
+            AND i.kode_opd = rk.kode_opd 
+            AND i.tahun = rk.tahun
+        WHERE st.rekin_id = ?`
+
+	var (
+		namaSubkegiatan string
+		kodeSubkegiatan string
+		kodeOpd         string
+		tahun           string
+		paguSubkegiatan string
+		kodeKegiatan    string
+		namaKegiatan    string
+	)
+
+	err := tx.QueryRowContext(ctx, scriptGetSubkegiatan, rekinId).Scan(
+		&namaSubkegiatan,
+		&kodeSubkegiatan,
+		&kodeOpd,
+		&tahun,
+		&paguSubkegiatan,
+		&kodeKegiatan,
+		&namaKegiatan,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return []domain.RencanaKinerja{}, "", "", "0", "0", "", "", "0", nil
+		}
+		return nil, "", "", "", "", "", "", "", err
+	}
+
+	// 2. Ambil pagu kegiatan dengan menjumlahkan pagu subkegiatan yang terkait
+	var paguKegiatan string
+	if kodeKegiatan != "" {
+		scriptGetPaguKegiatan := `
+            WITH RECURSIVE hierarchy AS (
+                SELECT DISTINCT
+                    s.kode_subkegiatan,
+                    k.kode_kegiatan
+                FROM tb_subkegiatan_terpilih st
+                JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+                JOIN tb_subkegiatan s ON st.kode_subkegiatan = s.kode_subkegiatan
+                JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+                WHERE rk.kode_opd = ?
+                AND rk.tahun = ?
+            )
+            SELECT COALESCE(SUM(i.pagu_anggaran), 0) as total_pagu_kegiatan
+            FROM hierarchy h
+            JOIN tb_indikator i ON i.kode = h.kode_subkegiatan
+            WHERE h.kode_kegiatan = ?
+            AND i.kode_opd = ?
+            AND i.tahun = ?`
+
+		err = tx.QueryRowContext(ctx, scriptGetPaguKegiatan, kodeOpd, tahun, kodeKegiatan, kodeOpd, tahun).Scan(&paguKegiatan)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, "", "", "", "", "", "", "", err
+		}
+	}
+
+	// 3. Ambil pagu program dengan menjumlahkan pagu subkegiatan yang terkait
+	var paguProgram string
+	if kodeSubkegiatan != "" {
+		kodeProgram := kodeSubkegiatan[:7] // Ambil 5.01.02 dari kode subkegiatan
+
+		scriptGetPaguProgram := `
+            WITH RECURSIVE hierarchy AS (
+                SELECT DISTINCT
+                    s.kode_subkegiatan,
+                    k.kode_kegiatan,
+                    p.kode_program
+                FROM tb_subkegiatan_terpilih st
+                JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+                JOIN tb_subkegiatan s ON st.kode_subkegiatan = s.kode_subkegiatan
+                JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+                JOIN tb_master_program p ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
+                WHERE rk.kode_opd = ?
+                AND rk.tahun = ?
+            )
+            SELECT COALESCE(SUM(i.pagu_anggaran), 0) as total_pagu_program
+            FROM hierarchy h
+            JOIN tb_indikator i ON i.kode = h.kode_subkegiatan
+            WHERE h.kode_program = ?
+            AND i.kode_opd = ?
+            AND i.tahun = ?`
+
+		err = tx.QueryRowContext(ctx, scriptGetPaguProgram, kodeOpd, tahun, kodeProgram, kodeOpd, tahun).Scan(&paguProgram)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, "", "", "", "", "", "", "", err
+		}
+	}
+
+	// 4. Ambil id pohon kinerja
+	scriptGetPokin := `
+        SELECT id_pohon 
+        FROM tb_rencana_kinerja 
+        WHERE id = ?`
+
+	var idPohon int
+	err = tx.QueryRowContext(ctx, scriptGetPokin, rekinId).Scan(&idPohon)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return []domain.RencanaKinerja{}, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
+		}
+		return nil, "", "", "", "", "", "", "", err
+	}
+
+	// 4. Ambil parent dari pohon kinerja
+	scriptGetParent := `
+        SELECT parent 
+        FROM tb_pohon_kinerja 
+        WHERE id = ?`
+
+	var parentId sql.NullInt64
+	err = tx.QueryRowContext(ctx, scriptGetParent, idPohon).Scan(&parentId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return []domain.RencanaKinerja{}, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
+		}
+		return nil, "", "", "", "", "", "", "", err
+	}
+
+	if !parentId.Valid {
+		return []domain.RencanaKinerja{}, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
+	}
+
+	// 5. Ambil data rencana kinerja atasan
+	scriptRekinAtasan := `
+        SELECT 
+            rk.id,
+            rk.nama_rencana_kinerja,
+            rk.id_pohon,
+            rk.tahun,
+            rk.status_rencana_kinerja,
+            rk.catatan,
+            rk.kode_opd,
+            rk.pegawai_id,
+            p.nama as nama_pegawai,
+            p.nip as nip_pegawai,
+            COALESCE(mp.nama_program, '') as nama_program,
+            COALESCE(mp.kode_program, '') as kode_program
+        FROM tb_rencana_kinerja rk
+        INNER JOIN tb_pegawai p ON rk.pegawai_id = p.nip
+        LEFT JOIN tb_master_program mp ON mp.kode_program = LEFT(?, 7)
+        WHERE rk.id_pohon = ?`
+
+	rows, err := tx.QueryContext(ctx, scriptRekinAtasan, kodeSubkegiatan, parentId.Int64)
+	if err != nil {
+		return nil, "", "", "", "", "", "", "", err
+	}
+	defer rows.Close()
+
+	var rekins []domain.RencanaKinerja
+	for rows.Next() {
+		var rekin domain.RencanaKinerja
+		var pegawai domainmaster.Pegawai
+		var namaProgram, kodeProgramRekin string
+
+		err := rows.Scan(
+			&rekin.Id,
+			&rekin.NamaRencanaKinerja,
+			&rekin.IdPohon,
+			&rekin.Tahun,
+			&rekin.StatusRencanaKinerja,
+			&rekin.Catatan,
+			&rekin.KodeOpd,
+			&rekin.PegawaiId,
+			&pegawai.NamaPegawai,
+			&pegawai.Nip,
+			&namaProgram,
+			&kodeProgramRekin,
+		)
+		if err != nil {
+			return nil, "", "", "", "", "", "", "", err
+		}
+
+		rekin.NamaPegawai = pegawai.NamaPegawai
+		rekin.Program = namaProgram
+		rekin.KodeProgram = kodeProgramRekin
+		rekin.PaguProgram = paguProgram
+		rekins = append(rekins, rekin)
+	}
+
+	return rekins, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Context, tx *sql.Tx, rekinId string) error {
+	script := "SELECT id FROM tb_rencana_kinerja WHERE id = ?"
+
+	var existingId string
+	err := tx.QueryRowContext(ctx, script, rekinId).Scan(&existingId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("rencana kinerja dengan id %s tidak ditemukan", rekinId)
+		}
+		return err
+	}
+
+	return nil
 }

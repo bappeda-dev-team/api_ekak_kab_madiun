@@ -1890,3 +1890,41 @@ func (service *PohonKinerjaOpdServiceImpl) CountPokinPemda(ctx context.Context, 
 
 	return response, nil
 }
+
+func (service *PohonKinerjaOpdServiceImpl) FindPokinAtasan(ctx context.Context, id int) (pohonkinerja.PokinAtasanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.PokinAtasanResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi ID pokin
+	err = service.pohonKinerjaOpdRepository.ValidatePokinId(ctx, tx, id)
+	if err != nil {
+		return pohonkinerja.PokinAtasanResponse{}, err
+	}
+
+	// Ambil data pokin atasan dan pegawainya
+	pokinAtasan, pegawaiList, err := service.pohonKinerjaOpdRepository.FindPokinAtasan(ctx, tx, id)
+	if err != nil {
+		return pohonkinerja.PokinAtasanResponse{}, err
+	}
+
+	// Transform ke response
+	var pegawaiResponses []pohonkinerja.PegawaiResponse
+	for _, pegawai := range pegawaiList {
+		pegawaiResponses = append(pegawaiResponses, pohonkinerja.PegawaiResponse{
+			IdPegawai:   pegawai.Id,
+			NipPegawai:  pegawai.Nip,
+			NamaPegawai: pegawai.NamaPegawai,
+		})
+	}
+
+	response := pohonkinerja.PokinAtasanResponse{
+		Id:        pokinAtasan.Id,
+		NamaPohon: pokinAtasan.NamaPohon,
+		Pegawai:   pegawaiResponses,
+	}
+
+	return response, nil
+}

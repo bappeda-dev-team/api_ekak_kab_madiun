@@ -30,17 +30,20 @@ type PohonKinerja struct {
 	CountReview            int
 	IsActive               bool
 	//tambahan
-	RencanaKinerja  []RencanaKinerja
-	KegiatanId      sql.NullString
-	SubkegiatanId   sql.NullString
-	IsDeleted       bool
-	NamaKegiatan    sql.NullString
-	KodeKegiatan    sql.NullString
-	NamaSubkegiatan sql.NullString
-	KodeSubkegiatan sql.NullString
-	Strategi        string
-	PelaksanaIds    string
-	ListOpd         []OpdList
+	RencanaKinerja   []RencanaKinerja
+	KegiatanId       sql.NullString
+	SubkegiatanId    sql.NullString
+	IsDeleted        bool
+	NamaKegiatan     sql.NullString
+	KodeKegiatan     sql.NullString
+	NamaSubkegiatan  sql.NullString
+	KodeSubkegiatan  sql.NullString
+	Strategi         string
+	PelaksanaIds     string
+	ListOpd          []OpdList
+	NamaPohonParent  string
+	JenisPohonParent string
+	LevelPohonParent int
 }
 
 type CSF struct {

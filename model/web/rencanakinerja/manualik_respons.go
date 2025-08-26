@@ -4,6 +4,8 @@ type ManualIKResponse struct {
 	Id                  int           `json:"id,omitempty"`
 	IndikatorId         string        `json:"indikator_id,omitempty"`
 	DataIndikator       RekinResponse `json:"rencana_kinerja,omitempty"`
+	ParentPohon         int           `json:"parent,omitempty"`
+	NamaParent          string        `json:"nama_parent,omitempty"`
 	Perspektif          string        `json:"perspektif,omitempty"`
 	TujuanRekin         string        `json:"tujuan_rekin,omitempty"`
 	Definisi            string        `json:"definisi,omitempty"`

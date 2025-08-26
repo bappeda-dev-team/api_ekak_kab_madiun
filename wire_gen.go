@@ -102,7 +102,7 @@ func InitializeServer() *http.Server {
 	kegiatanControllerImpl := controller.NewKegiatanControllerImpl(kegiatanServiceImpl)
 	userRepositoryImpl := repository.NewUserRepositoryImpl()
 	roleRepositoryImpl := repository.NewRoleRepositoryImpl()
-	userServiceImpl := service.NewUserServiceImpl(userRepositoryImpl, roleRepositoryImpl, pegawaiRepositoryImpl, db)
+	userServiceImpl := service.NewUserServiceImpl(userRepositoryImpl, roleRepositoryImpl, pegawaiRepositoryImpl, opdRepositoryImpl, db)
 	userControllerImpl := controller.NewUserControllerImpl(userServiceImpl)
 	roleServiceImpl := service.NewRoleServiceImpl(roleRepositoryImpl, db)
 	roleControllerImpl := controller.NewRoleControllerImpl(roleServiceImpl)

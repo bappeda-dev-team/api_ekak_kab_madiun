@@ -2943,3 +2943,72 @@ func (repository *PohonKinerjaRepositoryImpl) ValidateParentLevelTarikStrategiOp
 
 	return nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) FindPokinAtasan(ctx context.Context, tx *sql.Tx, id int) (domain.PohonKinerja, []domain.PelaksanaPokin, error) {
+	scriptPokin := `
+        SELECT parent 
+        FROM tb_pohon_kinerja 
+        WHERE id = ?`
+
+	var parentId int
+	err := tx.QueryRowContext(ctx, scriptPokin, id).Scan(&parentId)
+	if err != nil {
+		return domain.PohonKinerja{}, nil, err
+	}
+
+	// Ambil data pokin parent
+	scriptParentPokin := `
+        SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, 
+               kode_opd, keterangan, tahun, status, is_active
+        FROM tb_pohon_kinerja 
+        WHERE id = ?`
+
+	var pokinAtasan domain.PohonKinerja
+	err = tx.QueryRowContext(ctx, scriptParentPokin, parentId).Scan(
+		&pokinAtasan.Id,
+		&pokinAtasan.NamaPohon,
+		&pokinAtasan.Parent,
+		&pokinAtasan.JenisPohon,
+		&pokinAtasan.LevelPohon,
+		&pokinAtasan.KodeOpd,
+		&pokinAtasan.Keterangan,
+		&pokinAtasan.Tahun,
+		&pokinAtasan.Status,
+		&pokinAtasan.IsActive,
+	)
+	if err != nil {
+		return domain.PohonKinerja{}, nil, err
+	}
+
+	// Ambil data pegawai dari pelaksana pokin
+	scriptPegawai := `
+        SELECT DISTINCT 
+            p.id as pegawai_id,
+            p.nip as nip_pegawai,
+            p.nama
+        FROM tb_pelaksana_pokin pp
+        JOIN tb_pegawai p ON pp.pegawai_id = p.id
+        WHERE pp.pohon_kinerja_id = ?`
+
+	rows, err := tx.QueryContext(ctx, scriptPegawai, parentId)
+	if err != nil {
+		return domain.PohonKinerja{}, nil, err
+	}
+	defer rows.Close()
+
+	var pegawaiList []domain.PelaksanaPokin
+	for rows.Next() {
+		var pegawai domain.PelaksanaPokin
+		err := rows.Scan(
+			&pegawai.Id,
+			&pegawai.Nip,
+			&pegawai.NamaPegawai,
+		)
+		if err != nil {
+			return domain.PohonKinerja{}, nil, err
+		}
+		pegawaiList = append(pegawaiList, pegawai)
+	}
+
+	return pokinAtasan, pegawaiList, nil
+}

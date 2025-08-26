@@ -16,14 +16,16 @@ type UserServiceImpl struct {
 	UserRepository    repository.UserRepository
 	RoleRepository    repository.RoleRepository
 	PegawaiRepository repository.PegawaiRepository
+	OpdRepository     repository.OpdRepository
 	DB                *sql.DB
 }
 
-func NewUserServiceImpl(userRepository repository.UserRepository, roleRepository repository.RoleRepository, pegawaiRepository repository.PegawaiRepository, db *sql.DB) *UserServiceImpl {
+func NewUserServiceImpl(userRepository repository.UserRepository, roleRepository repository.RoleRepository, pegawaiRepository repository.PegawaiRepository, opdRepository repository.OpdRepository, db *sql.DB) *UserServiceImpl {
 	return &UserServiceImpl{
 		UserRepository:    userRepository,
 		RoleRepository:    roleRepository,
 		PegawaiRepository: pegawaiRepository,
+		OpdRepository:     opdRepository,
 		DB:                db,
 	}
 }
@@ -395,6 +397,11 @@ func (service *UserServiceImpl) Login(ctx context.Context, request user.UserLogi
 		return user.UserLoginResponse{}, err
 	}
 
+	opdDomain, err := service.OpdRepository.FindByKodeOpd(ctx, tx, pegawaiDomain.KodeOpd)
+	if err != nil {
+		return user.UserLoginResponse{}, err
+	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(userDomain.Password), []byte(request.Password))
 	if err != nil {
 		return user.UserLoginResponse{}, errors.New("nip atau password salah")
@@ -415,6 +422,7 @@ func (service *UserServiceImpl) Login(ctx context.Context, request user.UserLogi
 		userDomain.Email,
 		userDomain.Nip,
 		pegawaiDomain.KodeOpd,
+		opdDomain.NamaOpd,
 		pegawaiDomain.NamaPegawai,
 		roleNames,
 	)

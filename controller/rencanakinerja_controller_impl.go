@@ -343,3 +343,25 @@ func (controller *RencanaKinerjaControllerImpl) FindRekinLevel3(writer http.Resp
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *RencanaKinerjaControllerImpl) FindRekinAtasan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rekinId := params.ByName("rekin_id")
+
+	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.FindRekinAtasan(request.Context(), rekinId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed get rekin atasan",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success get rekin atasan",
+		Data:   rencanaKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
