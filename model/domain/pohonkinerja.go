@@ -44,6 +44,7 @@ type PohonKinerja struct {
 	NamaPohonParent  string
 	JenisPohonParent string
 	LevelPohonParent int
+	TaggingPokin     []TaggingPokin
 }
 
 type CSF struct {

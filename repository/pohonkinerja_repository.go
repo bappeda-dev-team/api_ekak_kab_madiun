@@ -76,4 +76,8 @@ type PohonKinerjaRepository interface {
 
 	//pokin atasan
 	FindPokinAtasan(ctx context.Context, tx *sql.Tx, id int) (domain.PohonKinerja, []domain.PelaksanaPokin, error)
+
+	//tagging
+	UpdateTagging(ctx context.Context, tx *sql.Tx, idPokin int, taggingList []domain.TaggingPokin) ([]domain.TaggingPokin, error)
+	FindTaggingByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.TaggingPokin, error)
 }
