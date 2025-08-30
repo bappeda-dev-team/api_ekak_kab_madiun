@@ -362,7 +362,8 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
             COALESCE(keterangan_crosscutting, '') as keterangan_crosscutting,
             COALESCE(tahun, '') as tahun,
             COALESCE(status, '') as status,
-            COALESCE(is_active) as is_active
+            COALESCE(is_active) as is_active,
+            COALESCE(clone_from, 0) as clone_from
         FROM tb_pohon_kinerja 
         WHERE kode_opd = ? 
         AND tahun = ?
@@ -396,6 +397,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
 			&pokin.Tahun,
 			&pokin.Status,
 			&pokin.IsActive,
+			&pokin.CloneFrom,
 		)
 		if err != nil {
 			return nil, err
@@ -3245,4 +3247,44 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinId(ctx context.C
 		taggings = append(taggings, tagging)
 	}
 	return taggings, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFrom(ctx context.Context, tx *sql.Tx, cloneFromId int) (*domain.PohonKinerja, error) {
+	script := `
+        WITH RECURSIVE parent_tree AS (
+            -- Base case: start from the cloned node
+            SELECT id, parent, nama_pohon, level_pohon
+            FROM tb_pohon_kinerja
+            WHERE id = ?
+            
+            UNION ALL
+            
+            -- Recursive case: get parent nodes
+            SELECT pk.id, pk.parent, pk.nama_pohon, pk.level_pohon
+            FROM tb_pohon_kinerja pk
+            INNER JOIN parent_tree pt ON pk.id = pt.parent
+            WHERE pk.level_pohon >= 0
+        )
+        SELECT id, nama_pohon
+        FROM parent_tree
+        WHERE level_pohon = 0
+        LIMIT 1`
+
+	var tematik struct {
+		Id        int
+		NamaPohon string
+	}
+
+	err := tx.QueryRowContext(ctx, script, cloneFromId).Scan(&tematik.Id, &tematik.NamaPohon)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &domain.PohonKinerja{
+		Id:        tematik.Id,
+		NamaPohon: tematik.NamaPohon,
+	}, nil
 }

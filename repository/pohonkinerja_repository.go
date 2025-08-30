@@ -80,4 +80,6 @@ type PohonKinerjaRepository interface {
 	//tagging
 	UpdateTagging(ctx context.Context, tx *sql.Tx, idPokin int, taggingList []domain.TaggingPokin) ([]domain.TaggingPokin, error)
 	FindTaggingByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.TaggingPokin, error)
+
+	FindTematikByCloneFrom(ctx context.Context, tx *sql.Tx, cloneFromId int) (*domain.PohonKinerja, error)
 }

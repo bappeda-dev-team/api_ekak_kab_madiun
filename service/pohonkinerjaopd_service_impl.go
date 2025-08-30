@@ -900,6 +900,27 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				}
 				indikatorMap[p.Id] = indikatorResponses
 			}
+
+			// Jika ada clone_from, cari tematiknya
+			var idTematik *int
+			var namaTematik *string
+			if p.CloneFrom > 0 {
+				tematik, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFrom(ctx, tx, p.CloneFrom)
+				if err == nil && tematik != nil {
+					idTematik = &tematik.Id
+					namaTematik = &tematik.NamaPohon
+				}
+			}
+
+			// Simpan informasi tematik ke map untuk digunakan di response
+			if p.LevelPohon == 4 {
+				// Build strategic response dengan tematik
+				strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, p, pelaksanaMap, indikatorMap)
+				strategicResp.IdTematik = idTematik
+				strategicResp.NamaTematik = namaTematik
+				response.Strategics = append(response.Strategics, strategicResp)
+			}
+
 		}
 	}
 
@@ -1117,6 +1138,17 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 		}
 	}
 
+	// Cari tematik jika ada clone_from
+	var idTematik *int
+	var namaTematik *string
+	if strategic.CloneFrom > 0 {
+		tematik, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFrom(ctx, tx, strategic.CloneFrom)
+		if err == nil && tematik != nil {
+			idTematik = &tematik.Id
+			namaTematik = &tematik.NamaPohon
+		}
+	}
+
 	strategicResp := pohonkinerja.StrategicOpdResponse{
 		Id:                     strategic.Id,
 		Parent:                 nil,
@@ -1127,6 +1159,8 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 		KeteranganCrosscutting: keteranganCrosscutting,
 		Status:                 strategic.Status,
 		IsActive:               strategic.IsActive,
+		IdTematik:              idTematik,
+		NamaTematik:            namaTematik,
 		KodeOpd: opdmaster.OpdResponseForAll{
 			KodeOpd: strategic.KodeOpd,
 			NamaOpd: strategic.NamaOpd,
@@ -1153,6 +1187,8 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 
 		for _, tactical := range tacticalList {
 			tacticalResp := service.buildTacticalResponse(ctx, tx, pohonMap, tactical, pelaksanaMap, indikatorMap)
+			tacticalResp.IdTematik = idTematik
+			tacticalResp.NamaTematik = namaTematik
 			tacticals = append(tacticals, tacticalResp)
 		}
 		strategicResp.Tacticals = tacticals
@@ -1202,6 +1238,16 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 			})
 		}
 	}
+	// Cari tematik jika ada clone_from
+	var idTematik *int
+	var namaTematik *string
+	if tactical.CloneFrom > 0 {
+		tematik, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFrom(ctx, tx, tactical.CloneFrom)
+		if err == nil && tematik != nil {
+			idTematik = &tematik.Id
+			namaTematik = &tematik.NamaPohon
+		}
+	}
 	tacticalResp := pohonkinerja.TacticalOpdResponse{
 		Id:                     tactical.Id,
 		Parent:                 tactical.Parent,
@@ -1216,6 +1262,8 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 			KodeOpd: tactical.KodeOpd,
 			NamaOpd: tactical.NamaOpd,
 		},
+		IdTematik:   idTematik,
+		NamaTematik: namaTematik,
 		Pelaksana:   pelaksanaMap[tactical.Id],
 		Tagging:     taggingResponses,
 		Indikator:   indikatorMap[tactical.Id],
@@ -1238,6 +1286,8 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 
 		for _, operational := range operationalList {
 			operationalResp := service.buildOperationalResponse(ctx, tx, pohonMap, operational, pelaksanaMap, indikatorMap)
+			operationalResp.IdTematik = idTematik
+			operationalResp.NamaTematik = namaTematik
 			operationals = append(operationals, operationalResp)
 		}
 		tacticalResp.Operationals = operationals
@@ -1288,6 +1338,16 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 			})
 		}
 	}
+	// Cari tematik jika ada clone_from
+	var idTematik *int
+	var namaTematik *string
+	if operational.CloneFrom > 0 {
+		tematik, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFrom(ctx, tx, operational.CloneFrom)
+		if err == nil && tematik != nil {
+			idTematik = &tematik.Id
+			namaTematik = &tematik.NamaPohon
+		}
+	}
 	operationalResp := pohonkinerja.OperationalOpdResponse{
 		Id:                     operational.Id,
 		Parent:                 operational.Parent,
@@ -1302,6 +1362,8 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 			KodeOpd: operational.KodeOpd,
 			NamaOpd: operational.NamaOpd,
 		},
+		IdTematik:   idTematik,
+		NamaTematik: namaTematik,
 		Pelaksana:   pelaksanaMap[operational.Id],
 		Tagging:     taggingResponses,
 		Indikator:   indikatorMap[operational.Id],

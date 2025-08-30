@@ -39,6 +39,8 @@ type StrategicOpdResponse struct {
 	Keterangan             string                      `json:"keterangan"`
 	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
+	IdTematik              *int                        `json:"id_tematik,omitempty"`
+	NamaTematik            *string                     `json:"nama_tematik,omitempty"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
@@ -59,6 +61,8 @@ type TacticalOpdResponse struct {
 	Keterangan             string                      `json:"keterangan"`
 	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
+	IdTematik              *int                        `json:"id_tematik,omitempty"`
+	NamaTematik            *string                     `json:"nama_tematik,omitempty"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
@@ -79,6 +83,8 @@ type OperationalOpdResponse struct {
 	Keterangan             string                      `json:"keterangan"`
 	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
+	IdTematik              *int                        `json:"id_tematik,omitempty"`
+	NamaTematik            *string                     `json:"nama_tematik,omitempty"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
