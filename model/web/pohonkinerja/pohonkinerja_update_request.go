@@ -1,17 +1,18 @@
 package pohonkinerja
 
 type PohonKinerjaUpdateRequest struct {
-	Id          int                      `json:"id"`
-	Parent      int                      `json:"parent"`
-	NamaPohon   string                   `json:"nama_pohon"`
-	JenisPohon  string                   `json:"jenis_pohon"`
-	LevelPohon  int                      `json:"level_pohon"`
-	KodeOpd     string                   `json:"kode_opd"`
-	Keterangan  string                   `json:"keterangan"`
-	Tahun       string                   `json:"tahun"`
-	Status      string                   `json:"status"`
-	PelaksanaId []PelaksanaUpdateRequest `json:"pelaksana"`
-	Indikator   []IndikatorUpdateRequest `json:"indikator"`
+	Id           int                      `json:"id"`
+	Parent       int                      `json:"parent"`
+	NamaPohon    string                   `json:"nama_pohon"`
+	JenisPohon   string                   `json:"jenis_pohon"`
+	LevelPohon   int                      `json:"level_pohon"`
+	KodeOpd      string                   `json:"kode_opd"`
+	Keterangan   string                   `json:"keterangan"`
+	Tahun        string                   `json:"tahun"`
+	Status       string                   `json:"status"`
+	PelaksanaId  []PelaksanaUpdateRequest `json:"pelaksana"`
+	Indikator    []IndikatorUpdateRequest `json:"indikator"`
+	TaggingPokin []TaggingUpdateRequest   `json:"tagging"`
 }
 
 type PelaksanaUpdateRequest struct {
@@ -19,18 +20,19 @@ type PelaksanaUpdateRequest struct {
 }
 
 type PohonKinerjaAdminUpdateRequest struct {
-	Id         int                      `json:"id"`
-	Parent     int                      `json:"parent"`
-	NamaPohon  string                   `json:"nama_pohon"`
-	JenisPohon string                   `json:"jenis_pohon"`
-	KodeOpd    string                   `json:"kode_opd,omitempty"`
-	LevelPohon int                      `json:"level_pohon"`
-	Keterangan string                   `json:"keterangan"`
-	Tahun      string                   `json:"tahun"`
-	Status     string                   `json:"status"`
-	Pelaksana  []PelaksanaUpdateRequest `json:"pelaksana"`
-	Indikator  []IndikatorUpdateRequest `json:"indikator"`
-	CSFRequest `json:",inline"`
+	Id           int                      `json:"id"`
+	Parent       int                      `json:"parent"`
+	NamaPohon    string                   `json:"nama_pohon"`
+	JenisPohon   string                   `json:"jenis_pohon"`
+	KodeOpd      string                   `json:"kode_opd,omitempty"`
+	LevelPohon   int                      `json:"level_pohon"`
+	Keterangan   string                   `json:"keterangan"`
+	Tahun        string                   `json:"tahun"`
+	Status       string                   `json:"status"`
+	TaggingPokin []TaggingUpdateRequest   `json:"tagging"`
+	Pelaksana    []PelaksanaUpdateRequest `json:"pelaksana"`
+	Indikator    []IndikatorUpdateRequest `json:"indikator"`
+	CSFRequest   `json:",inline"`
 }
 
 type IndikatorUpdateRequest struct {
@@ -49,4 +51,10 @@ type TargetUpdateRequest struct {
 
 type PohonKinerjaAdminTolakRequest struct {
 	Id int `json:"id" validate:"required"`
+}
+
+type TaggingUpdateRequest struct {
+	Id                int    `json:"id"`
+	NamaTagging       string `json:"nama_tagging"`
+	KeteranganTagging string `json:"keterangan_tagging"`
 }

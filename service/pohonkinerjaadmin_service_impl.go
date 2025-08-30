@@ -110,17 +110,27 @@ func (service *PohonKinerjaAdminServiceImpl) Create(ctx context.Context, request
 		indikators = append(indikators, indikator)
 	}
 
+	var taggingList []domain.TaggingPokin
+	for _, taggingReq := range request.TaggingPokin {
+		tagging := domain.TaggingPokin{
+			NamaTagging:       taggingReq.NamaTagging,
+			KeteranganTagging: &taggingReq.KeteranganTagging,
+		}
+		taggingList = append(taggingList, tagging)
+	}
+
 	pohonKinerja := domain.PohonKinerja{
-		Parent:     request.Parent,
-		NamaPohon:  request.NamaPohon,
-		JenisPohon: request.JenisPohon,
-		LevelPohon: request.LevelPohon,
-		KodeOpd:    helper.EmptyStringIfNull(request.KodeOpd),
-		Keterangan: request.Keterangan,
-		Tahun:      request.Tahun,
-		Status:     request.Status,
-		Pelaksana:  pelaksanaList,
-		Indikator:  indikators,
+		Parent:       request.Parent,
+		NamaPohon:    request.NamaPohon,
+		JenisPohon:   request.JenisPohon,
+		LevelPohon:   request.LevelPohon,
+		KodeOpd:      helper.EmptyStringIfNull(request.KodeOpd),
+		Keterangan:   request.Keterangan,
+		Tahun:        request.Tahun,
+		Status:       request.Status,
+		Pelaksana:    pelaksanaList,
+		Indikator:    indikators,
+		TaggingPokin: taggingList,
 	}
 
 	log.Printf("Menyimpan PohonKinerja dengan NamaPohon: %s, LevelPohon: %d", request.NamaPohon, request.LevelPohon)
@@ -185,6 +195,17 @@ func (service *PohonKinerjaAdminServiceImpl) Create(ctx context.Context, request
 		}
 	}
 
+	// Konversi tagging ke response
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range result.TaggingPokin {
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                tagging.Id,
+			IdPokin:           tagging.IdPokin,
+			NamaTagging:       tagging.NamaTagging,
+			KeteranganTagging: tagging.KeteranganTagging,
+		})
+	}
+
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, result.Id)
 	helper.PanicIfError(err)
 
@@ -205,6 +226,7 @@ func (service *PohonKinerjaAdminServiceImpl) Create(ctx context.Context, request
 		CountReview: countReview,
 		Pelaksana:   pelaksanaResponses,
 		Indikators:  indikatorResponses,
+		Tagging:     taggingResponses,
 	}
 
 	log.Printf("Proses pembuatan PohonKinerja selesai")
@@ -286,6 +308,33 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 			Target:    targets,
 		}
 		indikators = append(indikators, indikator)
+	}
+
+	// Persiapkan data tagging
+	var taggingList []domain.TaggingPokin
+	for _, taggingReq := range request.TaggingPokin {
+		// Cek apakah ini tagging yang sudah ada
+		var cloneFrom int
+		if taggingReq.Id != 0 {
+			// Ambil clone_from dari tagging yang sudah ada
+			existingTagging, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, request.Id)
+			if err == nil {
+				for _, et := range existingTagging {
+					if et.Id == taggingReq.Id {
+						cloneFrom = et.CloneFrom
+						break
+					}
+				}
+			}
+		}
+
+		tagging := domain.TaggingPokin{
+			Id:                taggingReq.Id,
+			NamaTagging:       taggingReq.NamaTagging,
+			KeteranganTagging: &taggingReq.KeteranganTagging,
+			CloneFrom:         cloneFrom,
+		}
+		taggingList = append(taggingList, tagging)
 	}
 
 	// Update semua pokin yang terkait
@@ -372,19 +421,31 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 			}
 		}
 
+		// Persiapkan data tagging
+		var taggingList []domain.TaggingPokin
+		for _, taggingReq := range request.TaggingPokin {
+			tagging := domain.TaggingPokin{
+				Id:                taggingReq.Id,
+				NamaTagging:       taggingReq.NamaTagging,
+				KeteranganTagging: &taggingReq.KeteranganTagging,
+			}
+			taggingList = append(taggingList, tagging)
+		}
+
 		pohonKinerja := domain.PohonKinerja{
-			Id:         pokin.Id,
-			Parent:     pokin.Parent,
-			NamaPohon:  request.NamaPohon,
-			JenisPohon: request.JenisPohon,
-			LevelPohon: request.LevelPohon,
-			KodeOpd:    helper.EmptyStringIfNull(request.KodeOpd),
-			Keterangan: request.Keterangan,
-			Tahun:      request.Tahun,
-			Status:     pokin.Status,
-			CloneFrom:  pokin.CloneFrom,
-			Pelaksana:  pelaksanaList,
-			Indikator:  pokinIndikators,
+			Id:           pokin.Id,
+			Parent:       pokin.Parent,
+			NamaPohon:    request.NamaPohon,
+			JenisPohon:   request.JenisPohon,
+			LevelPohon:   request.LevelPohon,
+			KodeOpd:      helper.EmptyStringIfNull(request.KodeOpd),
+			Keterangan:   request.Keterangan,
+			Tahun:        request.Tahun,
+			Status:       pokin.Status,
+			CloneFrom:    pokin.CloneFrom,
+			Pelaksana:    pelaksanaList,
+			Indikator:    pokinIndikators,
+			TaggingPokin: taggingList,
 		}
 
 		result, err := service.pohonKinerjaRepository.UpdatePokinAdmin(ctx, tx, pohonKinerja)
@@ -474,6 +535,17 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		KondisiWujud:               updatedCsf.KondisiWujud,
 	}
 
+	// Konversi tagging domain ke TaggingResponse
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range updatedPokin.TaggingPokin {
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                tagging.Id,
+			IdPokin:           tagging.IdPokin,
+			NamaTagging:       tagging.NamaTagging,
+			KeteranganTagging: tagging.KeteranganTagging,
+		})
+	}
+
 	response := pohonkinerja.PohonKinerjaAdminResponseData{
 		Id:         updatedPokin.Id,
 		Parent:     updatedPokin.Parent,
@@ -490,6 +562,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		CountReview: countReview,
 		Pelaksana:   pelaksanaResponses,
 		Indikators:  indikatorResponses,
+		Tagging:     taggingResponses,
 		IsActive:    findidpokin.IsActive,
 		CSFResponse: csfResponse,
 	}
@@ -596,6 +669,23 @@ func (service *PohonKinerjaAdminServiceImpl) FindById(ctx context.Context, id in
 		indikatorResponses = append(indikatorResponses, indikatorResponse)
 	}
 
+	// Ambil data tagging
+	taggingList, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, pokin.Id)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+
+	// Konversi ke response
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range taggingList {
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                tagging.Id,
+			IdPokin:           tagging.IdPokin,
+			NamaTagging:       tagging.NamaTagging,
+			KeteranganTagging: tagging.KeteranganTagging,
+		})
+	}
+
 	response := pohonkinerja.PohonKinerjaAdminResponseData{
 		Id:         pokin.Id,
 		Parent:     pokin.Parent,
@@ -608,6 +698,7 @@ func (service *PohonKinerjaAdminServiceImpl) FindById(ctx context.Context, id in
 		Tahun:      pokin.Tahun,
 		Status:     pokin.Status,
 		Indikators: indikatorResponses,
+		Tagging:    taggingResponses,
 	}
 
 	return response, nil
@@ -807,6 +898,12 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			}
 		}
 
+		// Ambil data tagging untuk setiap pohon kinerja
+		taggings, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, p.Id)
+		if err == nil {
+			p.TaggingPokin = taggings
+		}
+
 		pohonMap[level][p.Parent] = append(pohonMap[level][p.Parent], p)
 	}
 
@@ -853,17 +950,35 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			}
 		}
 
+		// Ambil data tagging
+		taggingList, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, pokin.Id)
+		if err != nil {
+			return pohonkinerja.TematikResponse{}, err
+		}
+
+		// Konversi tagging ke response
+		var taggingResponses []pohonkinerja.TaggingResponse
+		for _, tagging := range taggingList {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                tagging.Id,
+				IdPokin:           tagging.IdPokin,
+				NamaTagging:       tagging.NamaTagging,
+				KeteranganTagging: tagging.KeteranganTagging,
+			})
+		}
+
 		tematikResponse = pohonkinerja.TematikResponse{
-			Id:          tematik[0].Id,
-			Parent:      nil,
-			Tema:        tematik[0].NamaPohon,
-			JenisPohon:  tematik[0].JenisPohon,
-			LevelPohon:  tematik[0].LevelPohon,
-			Keterangan:  tematik[0].Keterangan,
-			IsActive:    tematik[0].IsActive,
-			CountReview: tematik[0].CountReview,
-			Indikators:  uniqueIndikators,
-			Child:       childs,
+			Id:           tematik[0].Id,
+			Parent:       nil,
+			Tema:         tematik[0].NamaPohon,
+			JenisPohon:   tematik[0].JenisPohon,
+			LevelPohon:   tematik[0].LevelPohon,
+			Keterangan:   tematik[0].Keterangan,
+			IsActive:     tematik[0].IsActive,
+			CountReview:  tematik[0].CountReview,
+			Indikators:   uniqueIndikators,
+			Child:        childs,
+			TaggingPokin: taggingResponses,
 		}
 	}
 
@@ -936,6 +1051,36 @@ func (service *PohonKinerjaAdminServiceImpl) CreateStrategicAdmin(ctx context.Co
 		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
 	}
 
+	// Clone tagging
+	existingTaggings, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, request.IdToClone)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+
+	var taggingResponses []pohonkinerja.TaggingResponse // Ubah tipe ke TaggingResponse
+	for _, tagging := range existingTaggings {
+		newTagging := domain.TaggingPokin{
+			IdPokin:           int(newPokinId),
+			NamaTagging:       tagging.NamaTagging,
+			KeteranganTagging: tagging.KeteranganTagging,
+			CloneFrom:         tagging.Id, // Set ID tagging lama sebagai clone_from
+		}
+		savedTaggings, err := service.pohonKinerjaRepository.UpdateTagging(ctx, tx, int(newPokinId), []domain.TaggingPokin{newTagging})
+		if err != nil {
+			return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+		}
+
+		// Konversi setiap TaggingPokin yang disimpan ke TaggingResponse
+		for _, savedTagging := range savedTaggings {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                savedTagging.Id,
+				NamaTagging:       savedTagging.NamaTagging,
+				KeteranganTagging: savedTagging.KeteranganTagging,
+				CloneFrom:         savedTagging.CloneFrom,
+			})
+		}
+	}
+
 	var childs []interface{}
 	if request.Turunan {
 		// Jika turunan true, clone semua child pohon
@@ -959,6 +1104,7 @@ func (service *PohonKinerjaAdminServiceImpl) CreateStrategicAdmin(ctx context.Co
 		IsActive:   existingPokin.IsActive,
 		Indikators: indikatorResponses,
 		Childs:     childs,
+		Tagging:    taggingResponses, // Tambahkan tagging ke response
 		PerangkatDaerah: &opdmaster.OpdResponseForAll{
 			KodeOpd: existingPokin.KodeOpd,
 			NamaOpd: namaOpd,
@@ -1209,6 +1355,30 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 		return nil
 	}
 
+	// Fungsi helper untuk clone tagging
+	cloneTagging := func(ctx context.Context, tx *sql.Tx, oldPokinId int, newPokinId int64) error {
+		// Ambil tagging dari pokin lama
+		taggings, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, oldPokinId)
+		if err != nil {
+			return err
+		}
+
+		// Clone setiap tagging ke pokin baru
+		for _, tagging := range taggings {
+			newTagging := domain.TaggingPokin{
+				IdPokin:           int(newPokinId),
+				NamaTagging:       tagging.NamaTagging,
+				KeteranganTagging: tagging.KeteranganTagging,
+				CloneFrom:         tagging.Id, // Menambahkan referensi ke tagging asli
+			}
+			_, err = service.pohonKinerjaRepository.UpdateTagging(ctx, tx, int(newPokinId), []domain.TaggingPokin{newTagging})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	// Fungsi rekursif untuk clone pokin dan child-nya
 	var clonePokinRecursive func(ctx context.Context, tx *sql.Tx, pokinId int, parentId int, parentKodeOpd string) (int64, error)
 	clonePokinRecursive = func(ctx context.Context, tx *sql.Tx, pokinId int, parentId int, parentKodeOpd string) (int64, error) {
@@ -1260,6 +1430,12 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 					return 0, err
 				}
 			}
+		}
+
+		// Clone tagging
+		err = cloneTagging(ctx, tx, pokinId, newPokinId)
+		if err != nil {
+			return 0, err
 		}
 
 		// Cari dan clone child pokin
@@ -1344,6 +1520,19 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 		}
 	}
 
+	var taggingResponses []pohonkinerja.TaggingResponse
+	taggings, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, int(newPokinId))
+	if err == nil {
+		for _, tag := range taggings {
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                tag.Id,
+				NamaTagging:       tag.NamaTagging,
+				KeteranganTagging: tag.KeteranganTagging,
+				CloneFrom:         tag.CloneFrom,
+			})
+		}
+	}
+
 	response := pohonkinerja.PohonKinerjaAdminResponseData{
 		Id:         int(newPokinId),
 		Parent:     int(result.Parent),
@@ -1357,6 +1546,7 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 		Status:     result.Status,
 		Indikators: indikatorResponses,
 		Pelaksana:  pelaksanaResponses,
+		Tagging:    taggingResponses,
 	}
 
 	return response, nil

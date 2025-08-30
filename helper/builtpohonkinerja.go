@@ -10,15 +10,16 @@ import (
 
 func BuildTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, tematik domain.PohonKinerja) pohonkinerja.TematikResponse {
 	tematikResp := pohonkinerja.TematikResponse{
-		Id:          tematik.Id,
-		Parent:      nil,
-		Tema:        tematik.NamaPohon,
-		JenisPohon:  tematik.JenisPohon,
-		LevelPohon:  tematik.LevelPohon,
-		Keterangan:  tematik.Keterangan,
-		CountReview: tematik.CountReview,
-		IsActive:    tematik.IsActive,
-		Indikators:  ConvertToIndikatorResponses(tematik.Indikator),
+		Id:           tematik.Id,
+		Parent:       nil,
+		Tema:         tematik.NamaPohon,
+		JenisPohon:   tematik.JenisPohon,
+		LevelPohon:   tematik.LevelPohon,
+		Keterangan:   tematik.Keterangan,
+		CountReview:  tematik.CountReview,
+		IsActive:     tematik.IsActive,
+		Indikators:   ConvertToIndikatorResponses(tematik.Indikator),
+		TaggingPokin: ConvertToTaggingResponses(tematik.TaggingPokin), // Tambahkan tagging
 	}
 
 	var childs []interface{}
@@ -45,15 +46,16 @@ func BuildTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, temati
 
 func BuildSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, subTematik domain.PohonKinerja) pohonkinerja.SubtematikResponse {
 	subTematikResp := pohonkinerja.SubtematikResponse{
-		Id:          subTematik.Id,
-		Parent:      subTematik.Parent,
-		Tema:        subTematik.NamaPohon,
-		JenisPohon:  subTematik.JenisPohon,
-		LevelPohon:  subTematik.LevelPohon,
-		Keterangan:  subTematik.Keterangan,
-		CountReview: subTematik.CountReview,
-		IsActive:    subTematik.IsActive,
-		Indikators:  ConvertToIndikatorResponses(subTematik.Indikator),
+		Id:           subTematik.Id,
+		Parent:       subTematik.Parent,
+		Tema:         subTematik.NamaPohon,
+		JenisPohon:   subTematik.JenisPohon,
+		LevelPohon:   subTematik.LevelPohon,
+		Keterangan:   subTematik.Keterangan,
+		CountReview:  subTematik.CountReview,
+		IsActive:     subTematik.IsActive,
+		Indikators:   ConvertToIndikatorResponses(subTematik.Indikator),
+		TaggingPokin: ConvertToTaggingResponses(subTematik.TaggingPokin),
 	}
 
 	var childs []interface{}
@@ -80,15 +82,16 @@ func BuildSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, sub
 
 func BuildSubSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, subSubTematik domain.PohonKinerja) pohonkinerja.SubSubTematikResponse {
 	subSubTematikResp := pohonkinerja.SubSubTematikResponse{
-		Id:          subSubTematik.Id,
-		Parent:      subSubTematik.Parent,
-		Tema:        subSubTematik.NamaPohon,
-		JenisPohon:  subSubTematik.JenisPohon,
-		LevelPohon:  subSubTematik.LevelPohon,
-		Keterangan:  subSubTematik.Keterangan,
-		CountReview: subSubTematik.CountReview,
-		IsActive:    subSubTematik.IsActive,
-		Indikators:  ConvertToIndikatorResponses(subSubTematik.Indikator),
+		Id:           subSubTematik.Id,
+		Parent:       subSubTematik.Parent,
+		Tema:         subSubTematik.NamaPohon,
+		JenisPohon:   subSubTematik.JenisPohon,
+		LevelPohon:   subSubTematik.LevelPohon,
+		Keterangan:   subSubTematik.Keterangan,
+		CountReview:  subSubTematik.CountReview,
+		IsActive:     subSubTematik.IsActive,
+		Indikators:   ConvertToIndikatorResponses(subSubTematik.Indikator),
+		TaggingPokin: ConvertToTaggingResponses(subSubTematik.TaggingPokin),
 	}
 
 	var childs []interface{}
@@ -115,15 +118,16 @@ func BuildSubSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, 
 
 func BuildSuperSubTematikResponse(pohonMap map[int]map[int][]domain.PohonKinerja, superSubTematik domain.PohonKinerja) pohonkinerja.SuperSubTematikResponse {
 	superSubTematikResp := pohonkinerja.SuperSubTematikResponse{
-		Id:          superSubTematik.Id,
-		Parent:      superSubTematik.Parent,
-		Tema:        superSubTematik.NamaPohon,
-		JenisPohon:  superSubTematik.JenisPohon,
-		LevelPohon:  superSubTematik.LevelPohon,
-		Keterangan:  superSubTematik.Keterangan,
-		CountReview: superSubTematik.CountReview,
-		IsActive:    superSubTematik.IsActive,
-		Indikators:  ConvertToIndikatorResponses(superSubTematik.Indikator),
+		Id:           superSubTematik.Id,
+		Parent:       superSubTematik.Parent,
+		Tema:         superSubTematik.NamaPohon,
+		JenisPohon:   superSubTematik.JenisPohon,
+		LevelPohon:   superSubTematik.LevelPohon,
+		Keterangan:   superSubTematik.Keterangan,
+		CountReview:  superSubTematik.CountReview,
+		IsActive:     superSubTematik.IsActive,
+		Indikators:   ConvertToIndikatorResponses(superSubTematik.Indikator),
+		TaggingPokin: ConvertToTaggingResponses(superSubTematik.TaggingPokin),
 	}
 
 	var childs []interface{}
@@ -193,7 +197,8 @@ func BuildStrategicResponse(pohonMap map[int]map[int][]domain.PohonKinerja, stra
 			KodeOpd: strategic.KodeOpd,
 			NamaOpd: strategic.NamaOpd,
 		},
-		Pelaksana: ConvertToPelaksanaResponses(strategic.Pelaksana),
+		Pelaksana:    ConvertToPelaksanaResponses(strategic.Pelaksana),
+		TaggingPokin: ConvertToTaggingResponses(strategic.TaggingPokin),
 	}
 
 	var childs []interface{}
@@ -252,17 +257,18 @@ func BuildTacticalResponse(pohonMap map[int]map[int][]domain.PohonKinerja, tacti
 	}
 
 	tacticalResp := pohonkinerja.TacticalResponse{
-		Id:          tactical.Id,
-		Parent:      tactical.Parent,
-		Strategi:    tactical.NamaPohon,
-		JenisPohon:  tactical.JenisPohon,
-		LevelPohon:  tactical.LevelPohon,
-		Keterangan:  &tactical.Keterangan,
-		Status:      tactical.Status,
-		Indikators:  uniqueIndikators,
-		CountReview: tactical.CountReview,
-		IsActive:    tactical.IsActive,
-		Pelaksana:   ConvertToPelaksanaResponses(tactical.Pelaksana),
+		Id:           tactical.Id,
+		Parent:       tactical.Parent,
+		Strategi:     tactical.NamaPohon,
+		JenisPohon:   tactical.JenisPohon,
+		LevelPohon:   tactical.LevelPohon,
+		Keterangan:   &tactical.Keterangan,
+		Status:       tactical.Status,
+		Indikators:   uniqueIndikators,
+		CountReview:  tactical.CountReview,
+		IsActive:     tactical.IsActive,
+		Pelaksana:    ConvertToPelaksanaResponses(tactical.Pelaksana),
+		TaggingPokin: ConvertToTaggingResponses(tactical.TaggingPokin),
 	}
 
 	// Tambahkan data OPD jika ada
@@ -324,17 +330,18 @@ func BuildOperationalResponse(pohonMap map[int]map[int][]domain.PohonKinerja, op
 	}
 
 	operationalResp := pohonkinerja.OperationalResponse{
-		Id:          operational.Id,
-		Parent:      operational.Parent,
-		Strategi:    operational.NamaPohon,
-		JenisPohon:  operational.JenisPohon,
-		LevelPohon:  operational.LevelPohon,
-		Keterangan:  &operational.Keterangan,
-		Status:      operational.Status,
-		Indikators:  uniqueIndikators,
-		CountReview: operational.CountReview,
-		IsActive:    operational.IsActive,
-		Pelaksana:   ConvertToPelaksanaResponses(operational.Pelaksana),
+		Id:           operational.Id,
+		Parent:       operational.Parent,
+		Strategi:     operational.NamaPohon,
+		JenisPohon:   operational.JenisPohon,
+		LevelPohon:   operational.LevelPohon,
+		Keterangan:   &operational.Keterangan,
+		Status:       operational.Status,
+		Indikators:   uniqueIndikators,
+		CountReview:  operational.CountReview,
+		IsActive:     operational.IsActive,
+		Pelaksana:    ConvertToPelaksanaResponses(operational.Pelaksana),
+		TaggingPokin: ConvertToTaggingResponses(operational.TaggingPokin),
 	}
 
 	// Tambahkan data OPD jika ada
@@ -402,17 +409,18 @@ func BuildOperationalNResponse(pohonMap map[int]map[int][]domain.PohonKinerja, o
 	}
 
 	operationalNResp := pohonkinerja.OperationalNResponse{
-		Id:          operationalN.Id,
-		Parent:      operationalN.Parent,
-		Strategi:    operationalN.NamaPohon,
-		JenisPohon:  operationalN.JenisPohon,
-		LevelPohon:  operationalN.LevelPohon,
-		Keterangan:  &operationalN.Keterangan,
-		Status:      operationalN.Status,
-		Indikators:  uniqueIndikators,
-		CountReview: operationalN.CountReview,
-		IsActive:    operationalN.IsActive,
-		Pelaksana:   ConvertToPelaksanaResponses(operationalN.Pelaksana),
+		Id:           operationalN.Id,
+		Parent:       operationalN.Parent,
+		Strategi:     operationalN.NamaPohon,
+		JenisPohon:   operationalN.JenisPohon,
+		LevelPohon:   operationalN.LevelPohon,
+		Keterangan:   &operationalN.Keterangan,
+		Status:       operationalN.Status,
+		Indikators:   uniqueIndikators,
+		CountReview:  operationalN.CountReview,
+		IsActive:     operationalN.IsActive,
+		Pelaksana:    ConvertToPelaksanaResponses(operationalN.Pelaksana),
+		TaggingPokin: ConvertToTaggingResponses(operationalN.TaggingPokin),
 	}
 
 	// Tambahkan data OPD jika ada

@@ -712,3 +712,16 @@ func ToMisiPemdaResponses(misiPemdaList []domain.MisiPemda) []visimisipemda.Misi
 	}
 	return misiPemdaResponses
 }
+
+func ConvertToTaggingResponses(taggings []domain.TaggingPokin) []pohonkinerja.TaggingResponse {
+	var responses []pohonkinerja.TaggingResponse
+	for _, tagging := range taggings {
+		responses = append(responses, pohonkinerja.TaggingResponse{
+			Id:                tagging.Id,
+			IdPokin:           tagging.IdPokin,
+			NamaTagging:       tagging.NamaTagging,
+			KeteranganTagging: tagging.KeteranganTagging,
+		})
+	}
+	return responses
+}

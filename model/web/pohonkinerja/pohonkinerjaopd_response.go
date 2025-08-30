@@ -18,6 +18,7 @@ type PohonKinerjaOpdResponse struct {
 	Status                 string                 `json:"status"`
 	Pelaksana              []PelaksanaOpdResponse `json:"pelaksana"`
 	Indikator              []IndikatorResponse    `json:"indikator"`
+	Tagging                []TaggingResponse      `json:"tagging"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 }
 
@@ -38,9 +39,12 @@ type StrategicOpdResponse struct {
 	Keterangan             string                      `json:"keterangan"`
 	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
+	IdTematik              *int                        `json:"id_tematik"`
+	NamaTematik            *string                     `json:"nama_tematik"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
+	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
 	Tacticals              []TacticalOpdResponse       `json:"childs,omitempty"`
@@ -57,9 +61,12 @@ type TacticalOpdResponse struct {
 	Keterangan             string                      `json:"keterangan"`
 	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
+	IdTematik              *int                        `json:"id_tematik"`
+	NamaTematik            *string                     `json:"nama_tematik"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
+	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
 	Operationals           []OperationalOpdResponse    `json:"childs,omitempty"`
@@ -76,9 +83,12 @@ type OperationalOpdResponse struct {
 	Keterangan             string                      `json:"keterangan"`
 	KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
 	Status                 string                      `json:"status"`
+	IdTematik              *int                        `json:"id_tematik"`
+	NamaTematik            *string                     `json:"nama_tematik"`
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
+	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
 	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`
@@ -98,6 +108,7 @@ type OperationalNOpdResponse struct {
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
+	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
 	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`

@@ -22,6 +22,7 @@ type PohonKinerjaAdminResponseData struct {
 	JenisPohon      string                       `json:"jenis_pohon"`
 	LevelPohon      int                          `json:"level_pohon"`
 	Status          string                       `json:"status"`
+	Tagging         []TaggingResponse            `json:"tagging"`
 	IsActive        bool                         `json:"is_active"`
 	CountReview     int                          `json:"jumlah_review"`
 	Pelaksana       []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
@@ -41,15 +42,16 @@ type CSFResponse struct {
 
 type TematikResponse struct {
 	// CSF         CSFApiResponse      `json:"csf"`
-	Id          int                 `json:"id"`
-	Parent      *int                `json:"parent"`
-	Tema        string              `json:"tema"`
-	JenisPohon  string              `json:"jenis_pohon"`
-	LevelPohon  int                 `json:"level_pohon"`
-	Keterangan  string              `json:"keterangan"`
-	CountReview int                 `json:"jumlah_review"`
-	IsActive    bool                `json:"is_active"`
-	Indikators  []IndikatorResponse `json:"indikator"`
+	Id           int                 `json:"id"`
+	Parent       *int                `json:"parent"`
+	Tema         string              `json:"tema"`
+	JenisPohon   string              `json:"jenis_pohon"`
+	LevelPohon   int                 `json:"level_pohon"`
+	Keterangan   string              `json:"keterangan"`
+	CountReview  int                 `json:"jumlah_review"`
+	IsActive     bool                `json:"is_active"`
+	TaggingPokin []TaggingResponse   `json:"tagging"`
+	Indikators   []IndikatorResponse `json:"indikator"`
 	// SubTematiks []SubtematikResponse `json:"childs,omitempty"`
 	// Strategics  []StrategicResponse  `json:"strategics,omitempty"`
 	Child []interface{} `json:"childs,omitempty"`
@@ -57,111 +59,118 @@ type TematikResponse struct {
 
 type SubtematikResponse struct {
 	// Outcome     []outcome.OutcomeResponse `json:"outcome"`
-	Id          int                 `json:"id"`
-	Parent      int                 `json:"parent"`
-	Tema        string              `json:"tema"`
-	JenisPohon  string              `json:"jenis_pohon"`
-	LevelPohon  int                 `json:"level_pohon"`
-	Keterangan  string              `json:"keterangan"`
-	Indikators  []IndikatorResponse `json:"indikator"`
-	CountReview int                 `json:"jumlah_review"`
-	IsActive    bool                `json:"is_active"`
+	Id           int                 `json:"id"`
+	Parent       int                 `json:"parent"`
+	Tema         string              `json:"tema"`
+	JenisPohon   string              `json:"jenis_pohon"`
+	LevelPohon   int                 `json:"level_pohon"`
+	Keterangan   string              `json:"keterangan"`
+	Indikators   []IndikatorResponse `json:"indikator"`
+	CountReview  int                 `json:"jumlah_review"`
+	IsActive     bool                `json:"is_active"`
+	TaggingPokin []TaggingResponse   `json:"tagging"`
 	// SubSubTematiks []SubSubTematikResponse `json:"childs,omitempty"`
 	// Strategics     []StrategicResponse     `json:"strategics,omitempty"`
 	Child []interface{} `json:"childs,omitempty"`
 }
 
 type SubSubTematikResponse struct {
-	Id          int                 `json:"id"`
-	Parent      int                 `json:"parent"`
-	Tema        string              `json:"tema"`
-	JenisPohon  string              `json:"jenis_pohon"`
-	LevelPohon  int                 `json:"level_pohon"`
-	Keterangan  string              `json:"keterangan"`
-	CountReview int                 `json:"jumlah_review"`
-	IsActive    bool                `json:"is_active"`
-	Indikators  []IndikatorResponse `json:"indikator"`
+	Id           int                 `json:"id"`
+	Parent       int                 `json:"parent"`
+	Tema         string              `json:"tema"`
+	JenisPohon   string              `json:"jenis_pohon"`
+	LevelPohon   int                 `json:"level_pohon"`
+	Keterangan   string              `json:"keterangan"`
+	CountReview  int                 `json:"jumlah_review"`
+	IsActive     bool                `json:"is_active"`
+	TaggingPokin []TaggingResponse   `json:"tagging"`
+	Indikators   []IndikatorResponse `json:"indikator"`
 	// SuperSubTematiks []SuperSubTematikResponse `json:"childs,omitempty"`
 	// Strategics       []StrategicResponse       `json:"strategics,omitempty"`
 	Child []interface{} `json:"childs,omitempty"`
 }
 
 type SuperSubTematikResponse struct {
-	Id          int                 `json:"id"`
-	Parent      int                 `json:"parent"`
-	Tema        string              `json:"tema"`
-	JenisPohon  string              `json:"jenis_pohon"`
-	LevelPohon  int                 `json:"level_pohon"`
-	Keterangan  string              `json:"keterangan"`
-	CountReview int                 `json:"jumlah_review"`
-	IsActive    bool                `json:"is_active"`
-	Indikators  []IndikatorResponse `json:"indikator"`
-	Childs      []interface{}       `json:"childs,omitempty"`
+	Id           int                 `json:"id"`
+	Parent       int                 `json:"parent"`
+	Tema         string              `json:"tema"`
+	JenisPohon   string              `json:"jenis_pohon"`
+	LevelPohon   int                 `json:"level_pohon"`
+	Keterangan   string              `json:"keterangan"`
+	CountReview  int                 `json:"jumlah_review"`
+	IsActive     bool                `json:"is_active"`
+	TaggingPokin []TaggingResponse   `json:"tagging"`
+	Indikators   []IndikatorResponse `json:"indikator"`
+	Childs       []interface{}       `json:"childs,omitempty"`
 }
 
 type StrategicResponse struct {
 	// Intermediate []intermediate.IntermediateResponse `json:"intermediate"`
-	Id          int                          `json:"id"`
-	Parent      int                          `json:"parent"`
-	Strategi    string                       `json:"tema"`
-	JenisPohon  string                       `json:"jenis_pohon"`
-	LevelPohon  int                          `json:"level_pohon"`
-	Keterangan  string                       `json:"keterangan"`
-	Status      string                       `json:"status"`
-	CountReview int                          `json:"jumlah_review"`
-	IsActive    bool                         `json:"is_active"`
-	KodeOpd     *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
-	Pelaksana   []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
-	Indikators  []IndikatorResponse          `json:"indikator"`
-	Childs      []interface{}                `json:"childs,omitempty"`
+	Id           int                          `json:"id"`
+	Parent       int                          `json:"parent"`
+	Strategi     string                       `json:"tema"`
+	JenisPohon   string                       `json:"jenis_pohon"`
+	LevelPohon   int                          `json:"level_pohon"`
+	Keterangan   string                       `json:"keterangan"`
+	Status       string                       `json:"status"`
+	CountReview  int                          `json:"jumlah_review"`
+	IsActive     bool                         `json:"is_active"`
+	TaggingPokin []TaggingResponse            `json:"tagging"`
+	KodeOpd      *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
+	Pelaksana    []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
+	Indikators   []IndikatorResponse          `json:"indikator"`
+	Childs       []interface{}                `json:"childs,omitempty"`
 }
 
 type TacticalResponse struct {
-	Id          int                          `json:"id"`
-	Parent      int                          `json:"parent"`
-	Strategi    string                       `json:"tema"`
-	JenisPohon  string                       `json:"jenis_pohon"`
-	LevelPohon  int                          `json:"level_pohon"`
-	Keterangan  *string                      `json:"keterangan"`
-	Status      string                       `json:"status"`
-	CountReview int                          `json:"jumlah_review"`
-	IsActive    bool                         `json:"is_active"`
-	KodeOpd     *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
-	Pelaksana   []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
-	Indikators  []IndikatorResponse          `json:"indikator"`
-	Childs      []interface{}                `json:"childs,omitempty"`
+	Id           int                          `json:"id"`
+	Parent       int                          `json:"parent"`
+	Strategi     string                       `json:"tema"`
+	JenisPohon   string                       `json:"jenis_pohon"`
+	LevelPohon   int                          `json:"level_pohon"`
+	Keterangan   *string                      `json:"keterangan"`
+	Status       string                       `json:"status"`
+	CountReview  int                          `json:"jumlah_review"`
+	IsActive     bool                         `json:"is_active"`
+	TaggingPokin []TaggingResponse            `json:"tagging"`
+	KodeOpd      *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
+	Pelaksana    []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
+	Indikators   []IndikatorResponse          `json:"indikator"`
+	Childs       []interface{}                `json:"childs,omitempty"`
 }
 
 type OperationalResponse struct {
-	Id          int                          `json:"id"`
-	Parent      int                          `json:"parent"`
-	Strategi    string                       `json:"tema"`
-	JenisPohon  string                       `json:"jenis_pohon"`
-	LevelPohon  int                          `json:"level_pohon"`
-	Keterangan  *string                      `json:"keterangan"`
-	Status      string                       `json:"status"`
-	CountReview int                          `json:"jumlah_review"`
-	IsActive    bool                         `json:"is_active"`
-	KodeOpd     *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
-	Pelaksana   []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
-	Indikators  []IndikatorResponse          `json:"indikator"`
-	Childs      []interface{}                `json:"childs,omitempty"`
+	Id           int                          `json:"id"`
+	Parent       int                          `json:"parent"`
+	Strategi     string                       `json:"tema"`
+	JenisPohon   string                       `json:"jenis_pohon"`
+	LevelPohon   int                          `json:"level_pohon"`
+	Keterangan   *string                      `json:"keterangan"`
+	Status       string                       `json:"status"`
+	CountReview  int                          `json:"jumlah_review"`
+	IsActive     bool                         `json:"is_active"`
+	TaggingPokin []TaggingResponse            `json:"tagging"`
+	KodeOpd      *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
+	Pelaksana    []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
+	Indikators   []IndikatorResponse          `json:"indikator"`
+	Childs       []interface{}                `json:"childs,omitempty"`
 }
 
 type OperationalNResponse struct {
-	Id          int                          `json:"id"`
-	Parent      int                          `json:"parent"`
-	Strategi    string                       `json:"tema"`
-	JenisPohon  string                       `json:"jenis_pohon"`
-	LevelPohon  int                          `json:"level_pohon"`
-	Keterangan  *string                      `json:"keterangan"`
-	Status      string                       `json:"status"`
-	CountReview int                          `json:"jumlah_review"`
-	IsActive    bool                         `json:"is_active"`
-	KodeOpd     *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
-	Pelaksana   []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
-	Indikators  []IndikatorResponse          `json:"indikator"`
-	Childs      []OperationalNResponse       `json:"childs,omitempty"`
+	Id           int                          `json:"id"`
+	Parent       int                          `json:"parent"`
+	Strategi     string                       `json:"tema"`
+	JenisPohon   string                       `json:"jenis_pohon"`
+	LevelPohon   int                          `json:"level_pohon"`
+	Keterangan   *string                      `json:"keterangan"`
+	Status       string                       `json:"status"`
+	CountReview  int                          `json:"jumlah_review"`
+	IsActive     bool                         `json:"is_active"`
+	TaggingPokin []TaggingResponse            `json:"tagging"`
+	KodeOpd      *opdmaster.OpdResponseForAll `json:"perangkat_daerah,omitempty"`
+	Pelaksana    []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
+	Indikators   []IndikatorResponse          `json:"indikator"`
+	Childs       []OperationalNResponse       `json:"childs,omitempty"`
 }
 
 type TematikListOpdResponse struct {
