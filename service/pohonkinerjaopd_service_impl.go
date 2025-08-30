@@ -926,38 +926,36 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 	// Build response untuk strategic (level 4)
 	if strategicList := pohonMap[4]; len(strategicList) > 0 {
-		for _, strategicsByParent := range strategicList {
-			// Ubah pengurutan di sini
-			sort.Slice(strategicsByParent, func(i, j int) bool {
-				// Prioritaskan status "pokin dari pemda"
-				if strategicsByParent[i].Status == "pokin dari pemda" && strategicsByParent[j].Status != "pokin dari pemda" {
-					return true
-				}
-				if strategicsByParent[i].Status != "pokin dari pemda" && strategicsByParent[j].Status == "pokin dari pemda" {
-					return false
-				}
-				// Jika status sama, urutkan berdasarkan Id
-				return strategicsByParent[i].Id < strategicsByParent[j].Id
-			})
+		// Buat slice untuk menampung semua strategic
+		var allStrategics []domain.PohonKinerja
 
-			for _, strategic := range strategicsByParent {
-				strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, strategic, pelaksanaMap, indikatorMap)
-				response.Strategics = append(response.Strategics, strategicResp)
-			}
+		// Gabungkan semua strategic dari berbagai parent
+		for _, strategicsByParent := range strategicList {
+			allStrategics = append(allStrategics, strategicsByParent...)
 		}
 
-		// Ubah pengurutan final di sini juga
-		sort.Slice(response.Strategics, func(i, j int) bool {
-			// Prioritaskan status "pokin dari pemda"
-			if response.Strategics[i].Status == "pokin dari pemda" && response.Strategics[j].Status != "pokin dari pemda" {
+		// Urutkan semua strategic sekaligus
+		sort.Slice(allStrategics, func(i, j int) bool {
+			if allStrategics[i].Status == "pokin dari pemda" && allStrategics[j].Status != "pokin dari pemda" {
 				return true
 			}
-			if response.Strategics[i].Status != "pokin dari pemda" && response.Strategics[j].Status == "pokin dari pemda" {
+			if allStrategics[i].Status != "pokin dari pemda" && allStrategics[j].Status == "pokin dari pemda" {
 				return false
 			}
-			// Jika status sama, urutkan berdasarkan Id
-			return response.Strategics[i].Id < response.Strategics[j].Id
+			return allStrategics[i].Id < allStrategics[j].Id
 		})
+
+		// Gunakan map untuk mencegah duplikasi
+		processedIds := make(map[int]bool)
+
+		// Build response hanya untuk strategic yang belum diproses
+		for _, strategic := range allStrategics {
+			if !processedIds[strategic.Id] {
+				strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, strategic, pelaksanaMap, indikatorMap)
+				response.Strategics = append(response.Strategics, strategicResp)
+				processedIds[strategic.Id] = true
+			}
+		}
 	}
 
 	return response, nil
