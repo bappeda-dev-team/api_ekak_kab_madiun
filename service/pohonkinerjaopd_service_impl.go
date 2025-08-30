@@ -771,11 +771,10 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdByTahun(ctx, tx, kodeOpd, tahun, "RPJMD")
 	if err != nil {
 		log.Printf("Error getting tujuan OPD: %v", err)
-		// Kembalikan response dengan array kosong jika terjadi error
 		return response, nil
 	}
 
-	// Konversi tujuan OPD ke format response
+	// Proses data tujuan OPD
 	for _, tujuan := range tujuanOpds {
 		indikators, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuan.Id)
 		if err != nil {
@@ -785,7 +784,6 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 		var indikatorResponses []pohonkinerja.IndikatorTujuanResponse
 		for _, indikator := range indikators {
-			// Ambil target untuk setiap indikator dengan filter tahun
 			targets, err := service.tujuanOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id, tahun)
 			if err != nil {
 				log.Printf("Error getting targets for indikator ID %s: %v", indikator.Id, err)
@@ -818,16 +816,14 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	// Ambil data pohon kinerja
 	pokins, err := service.pohonKinerjaOpdRepository.FindAll(ctx, tx, kodeOpd, tahun)
 	if err != nil {
-		// Kembalikan response dengan data yang sudah ada jika terjadi error
 		return response, nil
 	}
 
-	// Jika tidak ada data pohon kinerja, kembalikan response dengan array kosong
 	if len(pokins) == 0 {
 		return response, nil
 	}
 
-	// Proses data pohon kinerja seperti sebelumnya
+	// Proses data pohon kinerja
 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
 	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
 	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
@@ -836,12 +832,10 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	maxLevel := 0
 	for _, p := range pokins {
 		if p.LevelPohon >= 4 {
-			// Update max level jika ditemukan level yang lebih tinggi
 			if p.LevelPohon > maxLevel {
 				maxLevel = p.LevelPohon
 			}
 
-			// Inisialisasi map untuk level jika belum ada
 			if pohonMap[p.LevelPohon] == nil {
 				pohonMap[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
 			}
@@ -870,12 +864,11 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				pelaksanaMap[p.Id] = pelaksanaResponses
 			}
 
-			// Ambil data indikator dan target
+			// Ambil data indikator
 			indikatorList, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(p.Id))
 			if err == nil {
 				var indikatorResponses []pohonkinerja.IndikatorResponse
 				for _, indikator := range indikatorList {
-					// Ambil target untuk setiap indikator
 					targetList, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
 					if err != nil {
 						continue
@@ -900,41 +893,25 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				}
 				indikatorMap[p.Id] = indikatorResponses
 			}
-
-			// Jika ada clone_from, cari tematiknya
-			var idTematik *int
-			var namaTematik *string
-			if p.CloneFrom > 0 {
-				tematik, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFrom(ctx, tx, p.CloneFrom)
-				if err == nil && tematik != nil {
-					idTematik = &tematik.Id
-					namaTematik = &tematik.NamaPohon
-				}
-			}
-
-			// Simpan informasi tematik ke map untuk digunakan di response
-			if p.LevelPohon == 4 {
-				// Build strategic response dengan tematik
-				strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, p, pelaksanaMap, indikatorMap)
-				strategicResp.IdTematik = idTematik
-				strategicResp.NamaTematik = namaTematik
-				response.Strategics = append(response.Strategics, strategicResp)
-			}
-
 		}
 	}
 
-	// Build response untuk strategic (level 4)
+	// Proses khusus untuk level 4 (Strategic)
 	if strategicList := pohonMap[4]; len(strategicList) > 0 {
-		// Buat slice untuk menampung semua strategic
 		var allStrategics []domain.PohonKinerja
+		processedIds := make(map[int]bool)
 
-		// Gabungkan semua strategic dari berbagai parent
+		// Kumpulkan semua strategic
 		for _, strategicsByParent := range strategicList {
-			allStrategics = append(allStrategics, strategicsByParent...)
+			for _, strategic := range strategicsByParent {
+				if !processedIds[strategic.Id] {
+					allStrategics = append(allStrategics, strategic)
+					processedIds[strategic.Id] = true
+				}
+			}
 		}
 
-		// Urutkan semua strategic sekaligus
+		// Urutkan strategic
 		sort.Slice(allStrategics, func(i, j int) bool {
 			if allStrategics[i].Status == "pokin dari pemda" && allStrategics[j].Status != "pokin dari pemda" {
 				return true
@@ -945,16 +922,10 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 			return allStrategics[i].Id < allStrategics[j].Id
 		})
 
-		// Gunakan map untuk mencegah duplikasi
-		processedIds := make(map[int]bool)
-
-		// Build response hanya untuk strategic yang belum diproses
+		// Build response untuk setiap strategic
 		for _, strategic := range allStrategics {
-			if !processedIds[strategic.Id] {
-				strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, strategic, pelaksanaMap, indikatorMap)
-				response.Strategics = append(response.Strategics, strategicResp)
-				processedIds[strategic.Id] = true
-			}
+			strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, strategic, pelaksanaMap, indikatorMap)
+			response.Strategics = append(response.Strategics, strategicResp)
 		}
 	}
 
