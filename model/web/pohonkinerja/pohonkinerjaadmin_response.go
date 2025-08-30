@@ -22,11 +22,11 @@ type PohonKinerjaAdminResponseData struct {
 	JenisPohon      string                       `json:"jenis_pohon"`
 	LevelPohon      int                          `json:"level_pohon"`
 	Status          string                       `json:"status"`
+	Tagging         []TaggingResponse            `json:"tagging"`
 	IsActive        bool                         `json:"is_active"`
 	CountReview     int                          `json:"jumlah_review"`
 	Pelaksana       []PelaksanaOpdResponse       `json:"pelaksana,omitempty"`
 	Indikators      []IndikatorResponse          `json:"indikator,omitempty"`
-	TaggingPokin    []TaggingResponse            `json:"tagging"`
 	Childs          []interface{}                `json:"childs,omitempty"`
 	CSFResponse     `json:",inline"`
 	// SubTematiks []SubtematikResponse `json:"sub_tematiks,omitempty"`

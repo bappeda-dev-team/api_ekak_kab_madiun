@@ -7,6 +7,7 @@ type TaggingPokin struct {
 	IdPokin           int
 	NamaTagging       string
 	KeteranganTagging *string
+	CloneFrom         int
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

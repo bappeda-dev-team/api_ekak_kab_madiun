@@ -67,7 +67,7 @@ type TematikStatusRequest struct {
 }
 
 type PohonKinerjaCloneRequest struct {
-	KodeOpd     string `json:"kode_opd" validate:"required"`
+	KodeOpd     string `json:"kode_opd"`
 	TahunSumber string `json:"tahun_sumber" validate:"required"`
 	TahunTujuan string `json:"tahun_tujuan" validate:"required"`
 }

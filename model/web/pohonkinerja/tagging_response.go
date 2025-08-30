@@ -5,4 +5,5 @@ type TaggingResponse struct {
 	IdPokin           int     `json:"id_pokin,omitempty"`
 	NamaTagging       string  `json:"nama_tagging"`
 	KeteranganTagging *string `json:"keterangan_tagging"`
+	CloneFrom         int     `json:"clone_from"`
 }

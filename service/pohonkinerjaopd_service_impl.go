@@ -404,20 +404,69 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 	var taggingList []domain.TaggingPokin
 	var taggingResponses []pohonkinerja.TaggingResponse
 
+	// Update untuk tagging asli
 	for _, taggingReq := range request.TaggingPokin {
 		tagging := domain.TaggingPokin{
-			Id: taggingReq.Id,
-
+			Id:                taggingReq.Id,
+			IdPokin:           existingPokin.Id,
 			NamaTagging:       taggingReq.NamaTagging,
 			KeteranganTagging: &taggingReq.KeteranganTagging,
 		}
 		taggingList = append(taggingList, tagging)
 	}
 
-	// Update tagging
+	// Update tagging untuk pohon asli
 	taggingResults, err := service.pohonKinerjaOpdRepository.UpdateTagging(ctx, tx, existingPokin.Id, taggingList)
 	if err != nil {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	// Cari dan update tagging untuk pohon yang di-clone
+	clonedPokins, err = service.pohonKinerjaOpdRepository.FindPokinByCloneFrom(ctx, tx, request.Id)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	// Update tagging untuk setiap pohon yang di-clone
+	for _, clonedPokin := range clonedPokins {
+		var clonedTaggingList []domain.TaggingPokin
+
+		// Ambil tagging yang ada di pohon yang di-clone
+		existingClonedTaggings, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, clonedPokin.Id)
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
+
+		// Buat map untuk mempermudah pencarian tagging berdasarkan clone_from
+		clonedTaggingMap := make(map[int]domain.TaggingPokin)
+		for _, tag := range existingClonedTaggings {
+			clonedTaggingMap[tag.CloneFrom] = tag
+		}
+
+		// Update setiap tagging yang sesuai
+		for _, originalTagging := range taggingResults {
+			if clonedTagging, exists := clonedTaggingMap[originalTagging.Id]; exists {
+				// Update tagging yang sudah ada
+				clonedTagging.NamaTagging = originalTagging.NamaTagging
+				clonedTagging.KeteranganTagging = originalTagging.KeteranganTagging
+				clonedTaggingList = append(clonedTaggingList, clonedTagging)
+			} else {
+				// Buat tagging baru jika belum ada
+				newClonedTagging := domain.TaggingPokin{
+					IdPokin:           clonedPokin.Id,
+					NamaTagging:       originalTagging.NamaTagging,
+					KeteranganTagging: originalTagging.KeteranganTagging,
+					CloneFrom:         originalTagging.Id,
+				}
+				clonedTaggingList = append(clonedTaggingList, newClonedTagging)
+			}
+		}
+
+		// Update tagging untuk pohon yang di-clone
+		_, err = service.pohonKinerjaOpdRepository.UpdateTagging(ctx, tx, clonedPokin.Id, clonedTaggingList)
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
 	}
 
 	// Konversi ke response

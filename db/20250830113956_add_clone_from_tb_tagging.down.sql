@@ -1,0 +1,1 @@
+ALTER TABLE tb_tagging_pokin DROP COLUMN clone_from;

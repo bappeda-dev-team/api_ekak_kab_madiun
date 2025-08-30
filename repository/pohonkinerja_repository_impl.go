@@ -2743,6 +2743,30 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context,
 		}
 	}
 
+	// Clone tagging untuk setiap pohon kinerja
+	for oldId, newId := range idMapping {
+		// Clone tagging dengan menambahkan clone_from
+		scriptTagging := `
+		INSERT INTO tb_tagging_pokin (
+			id_pokin,
+			nama_tagging,
+			keterangan_tagging,
+			clone_from
+		)
+		SELECT 
+			?,  -- new pokin_id
+			nama_tagging,
+			keterangan_tagging,
+			id  -- menyimpan id lama sebagai clone_from
+		FROM tb_tagging_pokin
+		WHERE id_pokin = ?  -- old pokin_id
+	`
+		_, err := tx.ExecContext(ctx, scriptTagging, newId, oldId)
+		if err != nil {
+			return fmt.Errorf("gagal mengkloning tagging: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -3176,13 +3200,22 @@ func (repository *PohonKinerjaRepositoryImpl) UpdateTagging(ctx context.Context,
 		}
 	}
 
-	// Update atau insert tagging
 	var results []domain.TaggingPokin
+
+	// Update atau insert tagging
 	for _, tagging := range taggings {
 		if tagging.Id != 0 {
-			// Update existing tagging
+			// Dapatkan clone_from yang ada jika ada
+			var existingCloneFrom int
+			scriptGetCloneFrom := "SELECT COALESCE(clone_from, 0) FROM tb_tagging_pokin WHERE id = ?"
+			err := tx.QueryRowContext(ctx, scriptGetCloneFrom, tagging.Id).Scan(&existingCloneFrom)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+
+			// Update existing tagging dengan mempertahankan clone_from
 			script := "UPDATE tb_tagging_pokin SET nama_tagging = ?, keterangan_tagging = ? WHERE id = ? AND id_pokin = ?"
-			_, err := tx.ExecContext(ctx, script,
+			_, err = tx.ExecContext(ctx, script,
 				tagging.NamaTagging,
 				tagging.KeteranganTagging,
 				tagging.Id,
@@ -3190,19 +3223,22 @@ func (repository *PohonKinerjaRepositoryImpl) UpdateTagging(ctx context.Context,
 			if err != nil {
 				return nil, err
 			}
+
 			results = append(results, domain.TaggingPokin{
 				Id:                tagging.Id,
 				IdPokin:           pokinId,
 				NamaTagging:       tagging.NamaTagging,
 				KeteranganTagging: tagging.KeteranganTagging,
+				CloneFrom:         existingCloneFrom,
 			})
 		} else {
 			// Insert new tagging
-			script := "INSERT INTO tb_tagging_pokin (id_pokin, nama_tagging, keterangan_tagging) VALUES (?, ?, ?)"
+			script := "INSERT INTO tb_tagging_pokin (id_pokin, nama_tagging, keterangan_tagging, clone_from) VALUES (?, ?, ?, ?)"
 			result, err := tx.ExecContext(ctx, script,
 				pokinId,
 				tagging.NamaTagging,
-				tagging.KeteranganTagging)
+				tagging.KeteranganTagging,
+				tagging.CloneFrom)
 			if err != nil {
 				return nil, err
 			}
@@ -3217,13 +3253,13 @@ func (repository *PohonKinerjaRepositoryImpl) UpdateTagging(ctx context.Context,
 				IdPokin:           pokinId,
 				NamaTagging:       tagging.NamaTagging,
 				KeteranganTagging: tagging.KeteranganTagging,
+				CloneFrom:         tagging.CloneFrom,
 			})
 		}
 	}
 
 	return results, nil
 }
-
 func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.TaggingPokin, error) {
 	script := "SELECT id, id_pokin, nama_tagging, keterangan_tagging FROM tb_tagging_pokin WHERE id_pokin = ?"
 	rows, err := tx.QueryContext(ctx, script, pokinId)
