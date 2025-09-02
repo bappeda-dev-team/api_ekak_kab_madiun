@@ -2052,7 +2052,10 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinFromPemda(ctx context.Cont
 
 	var result []pohonkinerja.PohonKinerjaAdminResponseData
 	for _, pokin := range pokins {
-		if pokin.Status != "menunggu_disetujui" && pokin.Status != "ditolak" {
+		// if pokin.Status != "menunggu_disetujui" && pokin.Status != "ditolak" {
+		// 	continue
+		// }
+		if pokin.Status != "menunggu_disetujui" {
 			continue
 		}
 
