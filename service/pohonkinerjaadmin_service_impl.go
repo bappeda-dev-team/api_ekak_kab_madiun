@@ -446,6 +446,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 			Pelaksana:    pelaksanaList,
 			Indikator:    pokinIndikators,
 			TaggingPokin: taggingList,
+			UpdatedBy:    request.UpdatedBy,
 		}
 
 		result, err := service.pohonKinerjaRepository.UpdatePokinAdmin(ctx, tx, pohonKinerja)
@@ -565,6 +566,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		Tagging:     taggingResponses,
 		IsActive:    findidpokin.IsActive,
 		CSFResponse: csfResponse,
+		UpdatedBy:   updatedPokin.UpdatedBy,
 	}
 
 	return response, nil

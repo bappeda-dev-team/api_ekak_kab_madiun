@@ -29,6 +29,7 @@ type PohonKinerjaAdminResponseData struct {
 	Indikators      []IndikatorResponse          `json:"indikator,omitempty"`
 	Childs          []interface{}                `json:"childs,omitempty"`
 	CSFResponse     `json:",inline"`
+	UpdatedBy       string `json:"updated_by"`
 	// SubTematiks []SubtematikResponse `json:"sub_tematiks,omitempty"`
 }
 

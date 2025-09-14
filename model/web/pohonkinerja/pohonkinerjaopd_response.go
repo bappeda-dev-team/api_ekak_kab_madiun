@@ -20,6 +20,7 @@ type PohonKinerjaOpdResponse struct {
 	Indikator              []IndikatorResponse    `json:"indikator"`
 	Tagging                []TaggingResponse      `json:"tagging"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
+	UpdatedBy              string                 `json:"updated_by"`
 }
 
 type PohonKinerjaOpdAllResponse struct {

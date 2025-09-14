@@ -385,6 +385,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 			Pelaksana:              pelaksanaList,
 			Indikator:              indikatorList,
 			KeteranganCrosscutting: pokin.KeteranganCrosscutting,
+			UpdatedBy:              request.UpdatedBy,
 		}
 
 		result, err := service.pohonKinerjaOpdRepository.Update(ctx, tx, pohonKinerjaUpdate)
@@ -494,6 +495,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		Indikator:              indikatorResponses,
 		Tagging:                taggingResponses,
 		KeteranganCrosscutting: updatedPokin.KeteranganCrosscutting,
+		UpdatedBy:              updatedPokin.UpdatedBy,
 	}, nil
 }
 

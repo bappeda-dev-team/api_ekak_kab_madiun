@@ -113,7 +113,8 @@ func (repository *PohonKinerjaRepositoryImpl) Update(ctx context.Context, tx *sq
             level_pohon = ?, 
             kode_opd = ?, 
             keterangan = ?, 
-            tahun = ?
+            tahun = ?,
+			updated_by = ?
         WHERE id = ?`
 
 	_, err := tx.ExecContext(ctx, scriptPokin,
@@ -124,6 +125,7 @@ func (repository *PohonKinerjaRepositoryImpl) Update(ctx context.Context, tx *sq
 		pohonKinerja.KodeOpd,
 		pohonKinerja.Keterangan,
 		pohonKinerja.Tahun,
+		pohonKinerja.UpdatedBy,
 		pohonKinerja.Id)
 	if err != nil {
 		return pohonKinerja, err
@@ -764,7 +766,8 @@ func (repository *PohonKinerjaRepositoryImpl) UpdatePokinAdmin(ctx context.Conte
             level_pohon = ?, 
             kode_opd = ?, 
             keterangan = ?, 
-            tahun = ?
+            tahun = ?,
+			updated_by = ?
         WHERE id = ?`
 
 	_, err := tx.ExecContext(ctx, scriptPokin,
@@ -775,6 +778,7 @@ func (repository *PohonKinerjaRepositoryImpl) UpdatePokinAdmin(ctx context.Conte
 		pokinAdmin.KodeOpd,
 		pokinAdmin.Keterangan,
 		pokinAdmin.Tahun,
+		pokinAdmin.UpdatedBy,
 		pokinAdmin.Id)
 	if err != nil {
 		return pokinAdmin, err
