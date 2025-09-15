@@ -402,13 +402,13 @@ var isustrategisSet = wire.NewSet(
 	controller.NewCSFControllerImpl,
 )
 
-var taggingPokinSet = wire.NewSet(
-	repository.NewTaggingPokinRepositoryImpl,
-	wire.Bind(new(repository.TaggingPokinRepository), new(*repository.TaggingPokinRepositoryImpl)),
-	service.NewTaggingPokinServiceImpl,
-	wire.Bind(new(service.TaggingPokinService), new(*service.TaggingPokinServiceImpl)),
-	controller.NewTaggingPokinControllerImpl,
-	wire.Bind(new(controller.TaggingPokinController), new(*controller.TaggingPokinControllerImpl)),
+var programUnggulanSet = wire.NewSet(
+	repository.NewProgramUnggulanRepositoryImpl,
+	wire.Bind(new(repository.ProgramUnggulanRepository), new(*repository.ProgramUnggulanRepositoryImpl)),
+	service.NewProgramUnggulanServiceImpl,
+	wire.Bind(new(service.ProgramUnggulanService), new(*service.ProgramUnggulanServiceImpl)),
+	controller.NewProgramUnggulanControllerImpl,
+	wire.Bind(new(controller.ProgramUnggulanController), new(*controller.ProgramUnggulanControllerImpl)),
 )
 
 func InitializeServer() *http.Server {
@@ -459,7 +459,7 @@ func InitializeServer() *http.Server {
 		rincianBelanjaSet,
 		kelompokAnggaranSet,
 		isustrategisSet,
-		taggingPokinSet,
+		programUnggulanSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

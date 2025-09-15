@@ -140,13 +140,36 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		})
 	}
 
+	// Persiapkan data tagging
 	var taggingList []domain.TaggingPokin
+	var taggingResponses []pohonkinerja.TaggingResponse
+
 	for _, taggingReq := range request.TaggingPokin {
+		// Persiapkan keterangan program unggulan
+		var keteranganList []domain.KeteranganTagging
+		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+
+		for _, keteranganReq := range taggingReq.KeteranganTaggingProgram {
+			keterangan := domain.KeteranganTagging{
+				KodeProgramUnggulan: keteranganReq.KodeProgramUnggulan,
+			}
+			keteranganList = append(keteranganList, keterangan)
+
+			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+				KodeProgramUnggulan: keteranganReq.KodeProgramUnggulan,
+			})
+		}
+
 		tagging := domain.TaggingPokin{
-			NamaTagging:       taggingReq.NamaTagging,
-			KeteranganTagging: &taggingReq.KeteranganTagging,
+			NamaTagging:              taggingReq.NamaTagging,
+			KeteranganTaggingProgram: keteranganList,
 		}
 		taggingList = append(taggingList, tagging)
+
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganResponses,
+		})
 	}
 
 	pohonKinerja := domain.PohonKinerja{
@@ -168,13 +191,20 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		return pohonkinerja.PohonKinerjaOpdResponse{}, err
 	}
 
-	// Siapkan response tagging
-	var taggingResponses []pohonkinerja.TaggingResponse
-	for _, tagging := range result.TaggingPokin {
-		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-			NamaTagging:       tagging.NamaTagging,
-			KeteranganTagging: tagging.KeteranganTagging,
-		})
+	// Update tagging responses dengan ID yang sudah di-generate
+	for i, tagging := range result.TaggingPokin {
+		if i < len(taggingResponses) {
+			taggingResponses[i].Id = tagging.Id
+			taggingResponses[i].IdPokin = tagging.IdPokin
+
+			// Update keterangan responses dengan ID yang sudah di-generate
+			for j, keterangan := range tagging.KeteranganTaggingProgram {
+				if j < len(taggingResponses[i].KeteranganTaggingProgram) {
+					taggingResponses[i].KeteranganTaggingProgram[j].Id = keterangan.Id
+					taggingResponses[i].KeteranganTaggingProgram[j].IdTagging = keterangan.IdTagging
+				}
+			}
+		}
 	}
 
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, result.Id)
@@ -407,11 +437,19 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 
 	// Update untuk tagging asli
 	for _, taggingReq := range request.TaggingPokin {
+		var keteranganList []domain.KeteranganTagging
+		for _, keteranganReq := range taggingReq.KeteranganTaggingProgram {
+			keteranganList = append(keteranganList, domain.KeteranganTagging{
+				KodeProgramUnggulan: keteranganReq.KodeProgramUnggulan,
+				Tahun:               keteranganReq.Tahun,
+			})
+		}
+
 		tagging := domain.TaggingPokin{
-			Id:                taggingReq.Id,
-			IdPokin:           existingPokin.Id,
-			NamaTagging:       taggingReq.NamaTagging,
-			KeteranganTagging: &taggingReq.KeteranganTagging,
+			Id:                       taggingReq.Id,
+			IdPokin:                  existingPokin.Id,
+			NamaTagging:              taggingReq.NamaTagging,
+			KeteranganTaggingProgram: keteranganList,
 		}
 		taggingList = append(taggingList, tagging)
 	}
@@ -448,16 +486,31 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		for _, originalTagging := range taggingResults {
 			if clonedTagging, exists := clonedTaggingMap[originalTagging.Id]; exists {
 				// Update tagging yang sudah ada
+				var keteranganList []domain.KeteranganTagging
+				for _, keterangan := range originalTagging.KeteranganTaggingProgram {
+					keteranganList = append(keteranganList, domain.KeteranganTagging{
+						KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+						Tahun:               keterangan.Tahun,
+					})
+				}
+
 				clonedTagging.NamaTagging = originalTagging.NamaTagging
-				clonedTagging.KeteranganTagging = originalTagging.KeteranganTagging
+				clonedTagging.KeteranganTaggingProgram = keteranganList
 				clonedTaggingList = append(clonedTaggingList, clonedTagging)
 			} else {
 				// Buat tagging baru jika belum ada
+				var keteranganList []domain.KeteranganTagging
+				for _, keterangan := range originalTagging.KeteranganTaggingProgram {
+					keteranganList = append(keteranganList, domain.KeteranganTagging{
+						KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					})
+				}
+
 				newClonedTagging := domain.TaggingPokin{
-					IdPokin:           clonedPokin.Id,
-					NamaTagging:       originalTagging.NamaTagging,
-					KeteranganTagging: originalTagging.KeteranganTagging,
-					CloneFrom:         originalTagging.Id,
+					IdPokin:                  clonedPokin.Id,
+					NamaTagging:              originalTagging.NamaTagging,
+					KeteranganTaggingProgram: keteranganList,
+					CloneFrom:                originalTagging.Id,
 				}
 				clonedTaggingList = append(clonedTaggingList, newClonedTagging)
 			}
@@ -472,11 +525,21 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 
 	// Konversi ke response
 	for _, tagging := range taggingResults {
+		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+				Id:                  keterangan.Id,
+				IdTagging:           keterangan.IdTagging,
+				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				Tahun:               keterangan.Tahun,
+			})
+		}
+
 		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-			Id:                tagging.Id,
-			IdPokin:           updatedPokin.Id,
-			NamaTagging:       tagging.NamaTagging,
-			KeteranganTagging: tagging.KeteranganTagging,
+			Id:                       tagging.Id,
+			IdPokin:                  tagging.IdPokin,
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganResponses,
 		})
 	}
 	return pohonkinerja.PohonKinerjaOpdResponse{
@@ -602,16 +665,27 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, pokin.Id)
 	if err == nil {
 		for _, tagging := range taggingList {
+			// Konversi keterangan program ke response
+			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					Tahun:               keterangan.Tahun,
+				})
+			}
+
 			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-				Id:                tagging.Id,
-				IdPokin:           tagging.IdPokin,
-				NamaTagging:       tagging.NamaTagging,
-				KeteranganTagging: tagging.KeteranganTagging,
+				Id:                       tagging.Id,
+				IdPokin:                  tagging.IdPokin,
+				NamaTagging:              tagging.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
 			})
 		}
 	}
 
-	// 7. Susun response
+	// Susun response
 	response := pohonkinerja.PohonKinerjaOpdResponse{
 		Id:         pokin.Id,
 		Parent:     strconv.Itoa(pokin.Parent),
@@ -1050,10 +1124,20 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponse(ctx context
 	var taggingResponses []pohonkinerja.TaggingResponse
 	if err == nil {
 		for _, tagging := range taggingList {
+			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				})
+			}
+
 			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-				Id:                tagging.Id,
-				NamaTagging:       tagging.NamaTagging,
-				KeteranganTagging: tagging.KeteranganTagging,
+				Id:                       tagging.Id,
+				IdPokin:                  tagging.IdPokin,
+				NamaTagging:              tagging.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
 			})
 		}
 	}
@@ -1129,10 +1213,20 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, strategic.Id)
 	if err == nil {
 		for _, tagging := range taggingList {
+			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				})
+			}
+
 			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-				Id:                tagging.Id,
-				NamaTagging:       tagging.NamaTagging,
-				KeteranganTagging: tagging.KeteranganTagging,
+				Id:                       tagging.Id,
+				IdPokin:                  tagging.IdPokin,
+				NamaTagging:              tagging.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
 			})
 		}
 	}
@@ -1231,10 +1325,20 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, tactical.Id)
 	if err == nil {
 		for _, tagging := range taggingList {
+			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				})
+			}
+
 			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-				Id:                tagging.Id,
-				NamaTagging:       tagging.NamaTagging,
-				KeteranganTagging: tagging.KeteranganTagging,
+				Id:                       tagging.Id,
+				IdPokin:                  tagging.IdPokin,
+				NamaTagging:              tagging.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
 			})
 		}
 	}
@@ -1334,10 +1438,20 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, operational.Id)
 	if err == nil {
 		for _, tagging := range taggingList {
+			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				})
+			}
+
 			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-				Id:                tagging.Id,
-				NamaTagging:       tagging.NamaTagging,
-				KeteranganTagging: tagging.KeteranganTagging,
+				Id:                       tagging.Id,
+				IdPokin:                  tagging.IdPokin,
+				NamaTagging:              tagging.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
 			})
 		}
 	}

@@ -56,7 +56,13 @@ type PohonKinerjaAdminTolakRequest struct {
 }
 
 type TaggingUpdateRequest struct {
-	Id                int    `json:"id"`
-	NamaTagging       string `json:"nama_tagging"`
-	KeteranganTagging string `json:"keterangan_tagging"`
+	Id                       int                              `json:"id"`
+	NamaTagging              string                           `json:"nama_tagging"`
+	KeteranganTaggingProgram []KeteranganTaggingUpdateRequest `json:"keterangan_tagging_program"`
+	Tahun                    string                           `json:"tahun"`
+}
+
+type KeteranganTaggingUpdateRequest struct {
+	KodeProgramUnggulan string `json:"kode_program_unggulan"`
+	Tahun               string `json:"tahun"`
 }
