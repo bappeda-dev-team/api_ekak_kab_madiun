@@ -76,7 +76,7 @@ func (repository *ProgramUnggulanRepositoryImpl) FindById(ctx context.Context, t
 
 func (repository *ProgramUnggulanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string) ([]domain.ProgramUnggulan, error) {
 	script := "SELECT id, nama_tagging, kode_program_unggulan, keterangan_program_unggulan, keterangan, tahun_awal, tahun_akhir FROM tb_program_unggulan WHERE tahun_awal >= ? AND tahun_akhir <= ?"
-	rows, err := tx.QueryContext(ctx, script)
+	rows, err := tx.QueryContext(ctx, script, tahunAwal, tahunAkhir)
 	if err != nil {
 		return []domain.ProgramUnggulan{}, err
 	}
