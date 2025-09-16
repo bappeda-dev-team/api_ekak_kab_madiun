@@ -27,9 +27,10 @@ type PohonKinerjaOpdServiceImpl struct {
 	reviewRepository          repository.ReviewRepository
 	DB                        *sql.DB
 	Validate                  *validator.Validate
+	ProgramUnggulanRepository repository.ProgramUnggulanRepository
 }
 
-func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate) *PohonKinerjaOpdServiceImpl {
+func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -39,6 +40,7 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		reviewRepository:          reviewRepository,
 		DB:                        DB,
 		Validate:                  validate,
+		ProgramUnggulanRepository: programUnggulanRepository,
 	}
 }
 
@@ -144,27 +146,19 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	var taggingList []domain.TaggingPokin
 	var taggingResponses []pohonkinerja.TaggingResponse
 
-	for _, taggingReq := range request.TaggingPokin {
-		// Persiapkan keterangan program unggulan
-		var keteranganList []domain.KeteranganTagging
+	for _, tagging := range request.TaggingPokin {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
-
-		for _, keteranganReq := range taggingReq.KeteranganTaggingProgram {
-			keterangan := domain.KeteranganTagging{
-				KodeProgramUnggulan: keteranganReq.KodeProgramUnggulan,
+		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			// Ambil detail program unggulan
+			programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+			if err != nil {
+				continue
 			}
-			keteranganList = append(keteranganList, keterangan)
-
 			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
-				KodeProgramUnggulan: keteranganReq.KodeProgramUnggulan,
+				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 			})
 		}
-
-		tagging := domain.TaggingPokin{
-			NamaTagging:              taggingReq.NamaTagging,
-			KeteranganTaggingProgram: keteranganList,
-		}
-		taggingList = append(taggingList, tagging)
 
 		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
 			NamaTagging:              tagging.NamaTagging,
@@ -527,10 +521,15 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 	for _, tagging := range taggingResults {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+			if err != nil {
+				continue
+			}
 			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 				Id:                  keterangan.Id,
 				IdTagging:           keterangan.IdTagging,
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				Tahun:               keterangan.Tahun,
 			})
 		}
@@ -668,10 +667,15 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 			// Konversi keterangan program ke response
 			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
 				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 					Id:                  keterangan.Id,
 					IdTagging:           keterangan.IdTagging,
 					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 					Tahun:               keterangan.Tahun,
 				})
 			}
@@ -1126,10 +1130,15 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponse(ctx context
 		for _, tagging := range taggingList {
 			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
 				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 					Id:                  keterangan.Id,
 					IdTagging:           keterangan.IdTagging,
 					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				})
 			}
 
@@ -1215,10 +1224,16 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 		for _, tagging := range taggingList {
 			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+
+				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
 				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 					Id:                  keterangan.Id,
 					IdTagging:           keterangan.IdTagging,
 					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				})
 			}
 
@@ -1327,10 +1342,15 @@ func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponse(ctx context.Con
 		for _, tagging := range taggingList {
 			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
 				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 					Id:                  keterangan.Id,
 					IdTagging:           keterangan.IdTagging,
 					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				})
 			}
 
@@ -1440,10 +1460,15 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 		for _, tagging := range taggingList {
 			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
 				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 					Id:                  keterangan.Id,
 					IdTagging:           keterangan.IdTagging,
 					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				})
 			}
 
