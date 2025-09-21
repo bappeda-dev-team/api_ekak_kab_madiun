@@ -147,6 +147,7 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	var taggingResponses []pohonkinerja.TaggingResponse
 
 	for _, tagging := range request.TaggingPokin {
+		var keteranganList []domain.KeteranganTagging
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
 			// Ambil detail program unggulan
@@ -154,12 +155,28 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 			if err != nil {
 				continue
 			}
+
+			// Tambahkan ke list domain
+			keteranganList = append(keteranganList, domain.KeteranganTagging{
+				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				Tahun:               keterangan.Tahun,
+			})
+
+			// Tambahkan ke response
 			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
 				RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
+				Tahun:               request.Tahun, // Tambahkan tahun ke response
 			})
 		}
 
+		// Tambahkan ke list domain
+		taggingList = append(taggingList, domain.TaggingPokin{
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganList,
+		})
+
+		// Tambahkan ke response
 		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
 			NamaTagging:              tagging.NamaTagging,
 			KeteranganTaggingProgram: keteranganResponses,

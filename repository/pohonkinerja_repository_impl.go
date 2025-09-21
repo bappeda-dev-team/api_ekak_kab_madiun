@@ -103,7 +103,7 @@ func (repository *PohonKinerjaRepositoryImpl) Create(ctx context.Context, tx *sq
 			_, err := tx.ExecContext(ctx, scriptKeterangan,
 				tagging.Id,
 				keterangan.KodeProgramUnggulan,
-				keterangan.Tahun)
+				keterangan.Tahun) // Gunakan tahun yang sudah diset di service
 			if err != nil {
 				return pohonKinerja, err
 			}
@@ -3338,13 +3338,13 @@ func (repository *PohonKinerjaRepositoryImpl) UpdateTagging(ctx context.Context,
 				return nil, err
 			}
 
-			// Insert keterangan baru
+			// Insert keterangan baru dengan tahun
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
 				scriptInsertKeterangan := "INSERT INTO tb_keterangan_tagging_program_unggulan (id_tagging, kode_program_unggulan, tahun) VALUES (?, ?, ?)"
 				_, err = tx.ExecContext(ctx, scriptInsertKeterangan,
 					tagging.Id,
 					keterangan.KodeProgramUnggulan,
-					keterangan.Tahun)
+					keterangan.Tahun) // Pastikan tahun dimasukkan
 				if err != nil {
 					return nil, err
 				}
@@ -3366,13 +3366,13 @@ func (repository *PohonKinerjaRepositoryImpl) UpdateTagging(ctx context.Context,
 				return nil, err
 			}
 
-			// Insert keterangan untuk tagging baru
+			// Insert keterangan untuk tagging baru dengan tahun
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
 				scriptInsertKeterangan := "INSERT INTO tb_keterangan_tagging_program_unggulan (id_tagging, kode_program_unggulan, tahun) VALUES (?, ?, ?)"
 				_, err = tx.ExecContext(ctx, scriptInsertKeterangan,
 					newId,
 					keterangan.KodeProgramUnggulan,
-					keterangan.Tahun)
+					keterangan.Tahun) // Pastikan tahun dimasukkan
 				if err != nil {
 					return nil, err
 				}
