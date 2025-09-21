@@ -16,6 +16,7 @@ type KeteranganTagging struct {
 	Id                  int
 	IdTagging           int
 	KodeProgramUnggulan string
+	RencanaImplementasi *string
 	Tahun               string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time

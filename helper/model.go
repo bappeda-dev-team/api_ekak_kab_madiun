@@ -722,6 +722,7 @@ func ConvertToTaggingResponses(taggings []domain.TaggingPokin) []pohonkinerja.Ta
 				Id:                  keterangan.Id,
 				IdTagging:           keterangan.IdTagging,
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				RencanaImplementasi: keterangan.RencanaImplementasi,
 			})
 		}
 

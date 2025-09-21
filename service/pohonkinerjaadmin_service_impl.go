@@ -22,22 +22,24 @@ import (
 )
 
 type PohonKinerjaAdminServiceImpl struct {
-	pohonKinerjaRepository repository.PohonKinerjaRepository
-	opdRepository          repository.OpdRepository
-	pegawaiRepository      repository.PegawaiRepository
-	reviewRepository       repository.ReviewRepository
-	csfRepository          repository.CSFRepository
-	DB                     *sql.DB
+	pohonKinerjaRepository    repository.PohonKinerjaRepository
+	opdRepository             repository.OpdRepository
+	pegawaiRepository         repository.PegawaiRepository
+	reviewRepository          repository.ReviewRepository
+	csfRepository             repository.CSFRepository
+	DB                        *sql.DB
+	programUnggulanRepository repository.ProgramUnggulanRepository
 }
 
-func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, csfRepository repository.CSFRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository) *PohonKinerjaAdminServiceImpl {
+func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, csfRepository repository.CSFRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaAdminServiceImpl {
 	return &PohonKinerjaAdminServiceImpl{
-		pohonKinerjaRepository: pohonKinerjaRepository,
-		opdRepository:          opdRepository,
-		pegawaiRepository:      pegawaiRepository,
-		DB:                     DB,
-		reviewRepository:       reviewRepository,
-		csfRepository:          csfRepository,
+		pohonKinerjaRepository:    pohonKinerjaRepository,
+		opdRepository:             opdRepository,
+		pegawaiRepository:         pegawaiRepository,
+		DB:                        DB,
+		reviewRepository:          reviewRepository,
+		csfRepository:             csfRepository,
+		programUnggulanRepository: programUnggulanRepository,
 	}
 }
 
@@ -210,10 +212,15 @@ func (service *PohonKinerjaAdminServiceImpl) Create(ctx context.Context, request
 	for _, tagging := range result.TaggingPokin {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+			if err != nil {
+				continue
+			}
 			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 				Id:                  keterangan.Id,
 				IdTagging:           keterangan.IdTagging,
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				Tahun:               keterangan.Tahun,
 			})
 		}
@@ -597,10 +604,15 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 	for _, tagging := range updatedPokin.TaggingPokin {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+			if err != nil {
+				continue
+			}
 			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 				Id:                  keterangan.Id,
 				IdTagging:           keterangan.IdTagging,
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				Tahun:               keterangan.Tahun,
 			})
 		}
@@ -748,10 +760,15 @@ func (service *PohonKinerjaAdminServiceImpl) FindById(ctx context.Context, id in
 	for _, tagging := range taggingList {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+			if err != nil {
+				continue
+			}
 			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 				Id:                  keterangan.Id,
 				IdTagging:           keterangan.IdTagging,
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
 				Tahun:               keterangan.Tahun,
 			})
 		}
@@ -939,7 +956,7 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 	// Buat map untuk menyimpan data berdasarkan level dan parent
 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
 
-	// Kelompokkan data
+	// Kelompokkan data dan proses setiap node
 	for _, p := range pokins {
 		level := p.LevelPohon
 
@@ -956,17 +973,17 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			}
 		}
 
+		// Ambil count review
 		countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, p.Id)
 		if err == nil {
 			p.CountReview = countReview
 		}
 
-		// Ambil data pelaksana untuk level 4 ke atas (strategic, tactical, operational)
+		// Ambil data pelaksana untuk level 4 ke atas
 		if p.LevelPohon >= 4 {
 			pelaksanas, err := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(p.Id))
 			if err == nil {
 				for i := range pelaksanas {
-					// Ambil detail pegawai untuk setiap pelaksana
 					pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksanas[i].PegawaiId)
 					if err == nil {
 						pelaksanas[i].NamaPegawai = pegawai.NamaPegawai
@@ -976,17 +993,29 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			}
 		}
 
-		// Ambil data tagging untuk setiap pohon kinerja
+		// Ambil dan proses data tagging
 		taggings, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, p.Id)
 		if err == nil {
+			// Proses setiap tagging untuk mendapatkan data program unggulan
+			for i := range taggings {
+				if len(taggings[i].KeteranganTaggingProgram) > 0 {
+					for j := range taggings[i].KeteranganTaggingProgram {
+						programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(
+							ctx,
+							tx,
+							taggings[i].KeteranganTaggingProgram[j].KodeProgramUnggulan,
+						)
+						if err == nil && programUnggulan.KeteranganProgramUnggulan != nil {
+							taggings[i].KeteranganTaggingProgram[j].RencanaImplementasi = programUnggulan.KeteranganProgramUnggulan
+						}
+					}
+				}
+			}
 			p.TaggingPokin = taggings
 		}
 
 		pohonMap[level][p.Parent] = append(pohonMap[level][p.Parent], p)
 	}
-
-	// Tambahkan map untuk melacak indikator yang sudah diproses
-	processedIndikators := make(map[string]bool)
 
 	// Bangun response hierarki
 	var tematikResponse pohonkinerja.TematikResponse
@@ -1019,39 +1048,13 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 
 		// Konversi indikator dengan pengecekan duplikasi
 		var uniqueIndikators []pohonkinerja.IndikatorResponse
+		processedIndikators := make(map[string]bool)
 		for _, ind := range tematik[0].Indikator {
-			// Cek apakah indikator sudah diproses
 			if !processedIndikators[ind.Id] {
 				processedIndikators[ind.Id] = true
 				indResp := helper.ConvertToIndikatorResponse(ind)
 				uniqueIndikators = append(uniqueIndikators, indResp)
 			}
-		}
-
-		// Ambil data tagging
-		taggingList, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, pokin.Id)
-		if err != nil {
-			return pohonkinerja.TematikResponse{}, err
-		}
-
-		// Konversi tagging ke response
-		var taggingResponses []pohonkinerja.TaggingResponse
-		for _, tagging := range taggingList {
-			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
-			for _, keterangan := range tagging.KeteranganTaggingProgram {
-				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
-					Id:                  keterangan.Id,
-					IdTagging:           keterangan.IdTagging,
-					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
-				})
-			}
-
-			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
-				Id:                       tagging.Id,
-				IdPokin:                  tagging.IdPokin,
-				NamaTagging:              tagging.NamaTagging,
-				KeteranganTaggingProgram: keteranganResponses,
-			})
 		}
 
 		tematikResponse = pohonkinerja.TematikResponse{
@@ -1065,7 +1068,7 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			CountReview:  tematik[0].CountReview,
 			Indikators:   uniqueIndikators,
 			Child:        childs,
-			TaggingPokin: taggingResponses,
+			TaggingPokin: helper.ConvertToTaggingResponses(tematik[0].TaggingPokin),
 		}
 	}
 
