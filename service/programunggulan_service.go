@@ -13,4 +13,5 @@ type ProgramUnggulanService interface {
 	FindAll(ctx context.Context, tahunAwal string, tahunAkhir string) ([]programunggulan.ProgramUnggulanResponse, error)
 	FindByKodeProgramUnggulan(ctx context.Context, kodeProgramUnggulan string) (programunggulan.ProgramUnggulanResponse, error)
 	FindByTahun(ctx context.Context, tahun string) ([]programunggulan.ProgramUnggulanResponse, error)
+	FindUnusedByTahun(ctx context.Context, tahun string) ([]programunggulan.ProgramUnggulanResponse, error)
 }

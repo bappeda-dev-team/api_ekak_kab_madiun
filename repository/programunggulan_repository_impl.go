@@ -146,3 +146,51 @@ func (repository *ProgramUnggulanRepositoryImpl) FindByTahun(ctx context.Context
 	}
 	return programUnggulanList, nil
 }
+
+func (repository *ProgramUnggulanRepositoryImpl) FindUnusedByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.ProgramUnggulan, error) {
+	script := `
+        SELECT DISTINCT 
+            pu.id, 
+            pu.nama_tagging, 
+            pu.kode_program_unggulan, 
+            pu.keterangan_program_unggulan, 
+            pu.keterangan, 
+            pu.tahun_awal, 
+            pu.tahun_akhir
+        FROM 
+            tb_program_unggulan pu
+        WHERE 
+            ? BETWEEN pu.tahun_awal AND pu.tahun_akhir
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM tb_keterangan_tagging_program_unggulan ktpu 
+                WHERE ktpu.kode_program_unggulan = pu.kode_program_unggulan 
+                AND ktpu.tahun = ?
+            )
+        ORDER BY pu.tahun_awal ASC`
+
+	rows, err := tx.QueryContext(ctx, script, tahun, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var programUnggulanList []domain.ProgramUnggulan
+	for rows.Next() {
+		var programUnggulan domain.ProgramUnggulan
+		err = rows.Scan(
+			&programUnggulan.Id,
+			&programUnggulan.NamaTagging,
+			&programUnggulan.KodeProgramUnggulan,
+			&programUnggulan.KeteranganProgramUnggulan,
+			&programUnggulan.Keterangan,
+			&programUnggulan.TahunAwal,
+			&programUnggulan.TahunAkhir,
+		)
+		if err != nil {
+			return nil, err
+		}
+		programUnggulanList = append(programUnggulanList, programUnggulan)
+	}
+	return programUnggulanList, nil
+}

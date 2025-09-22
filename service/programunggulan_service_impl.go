@@ -234,3 +234,37 @@ func (service *ProgramUnggulanServiceImpl) FindByTahun(ctx context.Context, tahu
 
 	return responses, nil
 }
+
+func (service *ProgramUnggulanServiceImpl) FindUnusedByTahun(ctx context.Context, tahun string) ([]programunggulan.ProgramUnggulanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi format tahun
+	_, err = strconv.Atoi(tahun)
+	if err != nil {
+		return nil, errors.New("format tahun tidak valid")
+	}
+
+	results, err := service.ProgramUnggulanRepository.FindUnusedByTahun(ctx, tx, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []programunggulan.ProgramUnggulanResponse
+	for _, result := range results {
+		responses = append(responses, programunggulan.ProgramUnggulanResponse{
+			Id:                        result.Id,
+			NamaTagging:               result.NamaTagging,
+			KodeProgramUnggulan:       result.KodeProgramUnggulan,
+			KeteranganProgramUnggulan: result.KeteranganProgramUnggulan,
+			Keterangan:                result.Keterangan,
+			TahunAwal:                 result.TahunAwal,
+			TahunAkhir:                result.TahunAkhir,
+		})
+	}
+
+	return responses, nil
+}

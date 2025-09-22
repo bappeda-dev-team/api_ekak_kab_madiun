@@ -14,4 +14,5 @@ type ProgramUnggulanController interface {
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByKodeProgramUnggulan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindUnusedByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

@@ -197,3 +197,22 @@ func (controller *ProgramUnggulanControllerImpl) FindByTahun(writer http.Respons
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *ProgramUnggulanControllerImpl) FindUnusedByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	programUnggulanResponse, err := controller.ProgramUnggulanService.FindUnusedByTahun(request.Context(), params.ByName("tahun"))
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Found Program Unggulan",
+		Data:   programUnggulanResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
