@@ -289,15 +289,6 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 	}
 
 	// Persiapkan data pelaksana
-	var pelaksanaList []domain.PelaksanaPokin
-	for _, p := range request.Pelaksana {
-		pelaksanaId := "PLKS-" + uuid.New().String()[:8]
-		pelaksana := domain.PelaksanaPokin{
-			Id:        pelaksanaId,
-			PegawaiId: p.PegawaiId,
-		}
-		pelaksanaList = append(pelaksanaList, pelaksana)
-	}
 
 	// Persiapkan data indikator dan target untuk pokin asli
 	var indikators []domain.Indikator
@@ -506,7 +497,6 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 			Tahun:        request.Tahun,
 			Status:       pokin.Status,
 			CloneFrom:    pokin.CloneFrom,
-			Pelaksana:    pelaksanaList,
 			Indikator:    pokinIndikators,
 			TaggingPokin: taggingList,
 			UpdatedBy:    request.UpdatedBy,

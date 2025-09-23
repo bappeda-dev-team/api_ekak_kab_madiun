@@ -711,17 +711,17 @@ func (repository *PohonKinerjaRepositoryImpl) CreatePokinAdmin(ctx context.Conte
 	}
 	pokinAdmin.Id = int(lastInsertId)
 
-	// Tambahkan insert pelaksana
-	scriptPelaksana := "INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id) VALUES (?, ?, ?)"
-	for _, pelaksana := range pokinAdmin.Pelaksana {
-		_, err = tx.ExecContext(ctx, scriptPelaksana,
-			pelaksana.Id,
-			fmt.Sprint(pokinAdmin.Id),
-			pelaksana.PegawaiId)
-		if err != nil {
-			return pokinAdmin, err
-		}
-	}
+	// // Tambahkan insert pelaksana
+	// scriptPelaksana := "INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id) VALUES (?, ?, ?)"
+	// for _, pelaksana := range pokinAdmin.Pelaksana {
+	// 	_, err = tx.ExecContext(ctx, scriptPelaksana,
+	// 		pelaksana.Id,
+	// 		fmt.Sprint(pokinAdmin.Id),
+	// 		pelaksana.PegawaiId)
+	// 	if err != nil {
+	// 		return pokinAdmin, err
+	// 	}
+	// }
 
 	// Insert indikator
 	for _, indikator := range pokinAdmin.Indikator {
@@ -809,23 +809,23 @@ func (repository *PohonKinerjaRepositoryImpl) UpdatePokinAdmin(ctx context.Conte
 		return pokinAdmin, err
 	}
 
-	// Update pelaksana
-	scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
-	_, err = tx.ExecContext(ctx, scriptDeletePelaksana, fmt.Sprint(pokinAdmin.Id))
-	if err != nil {
-		return pokinAdmin, err
-	}
+	// // Update pelaksana
+	// scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
+	// _, err = tx.ExecContext(ctx, scriptDeletePelaksana, fmt.Sprint(pokinAdmin.Id))
+	// if err != nil {
+	// 	return pokinAdmin, err
+	// }
 
-	for _, pelaksana := range pokinAdmin.Pelaksana {
-		scriptPelaksana := "INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id) VALUES (?, ?, ?)"
-		_, err := tx.ExecContext(ctx, scriptPelaksana,
-			pelaksana.Id,
-			fmt.Sprint(pokinAdmin.Id),
-			pelaksana.PegawaiId)
-		if err != nil {
-			return pokinAdmin, err
-		}
-	}
+	// for _, pelaksana := range pokinAdmin.Pelaksana {
+	// 	scriptPelaksana := "INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id) VALUES (?, ?, ?)"
+	// 	_, err := tx.ExecContext(ctx, scriptPelaksana,
+	// 		pelaksana.Id,
+	// 		fmt.Sprint(pokinAdmin.Id),
+	// 		pelaksana.PegawaiId)
+	// 	if err != nil {
+	// 		return pokinAdmin, err
+	// 	}
+	// }
 
 	// Proses indikator
 	for _, indikator := range pokinAdmin.Indikator {
