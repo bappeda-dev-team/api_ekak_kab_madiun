@@ -809,23 +809,23 @@ func (repository *PohonKinerjaRepositoryImpl) UpdatePokinAdmin(ctx context.Conte
 		return pokinAdmin, err
 	}
 
-	// // Update pelaksana
-	// scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
-	// _, err = tx.ExecContext(ctx, scriptDeletePelaksana, fmt.Sprint(pokinAdmin.Id))
-	// if err != nil {
-	// 	return pokinAdmin, err
-	// }
+	// Update pelaksana
+	scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
+	_, err = tx.ExecContext(ctx, scriptDeletePelaksana, fmt.Sprint(pokinAdmin.Id))
+	if err != nil {
+		return pokinAdmin, err
+	}
 
-	// for _, pelaksana := range pokinAdmin.Pelaksana {
-	// 	scriptPelaksana := "INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id) VALUES (?, ?, ?)"
-	// 	_, err := tx.ExecContext(ctx, scriptPelaksana,
-	// 		pelaksana.Id,
-	// 		fmt.Sprint(pokinAdmin.Id),
-	// 		pelaksana.PegawaiId)
-	// 	if err != nil {
-	// 		return pokinAdmin, err
-	// 	}
-	// }
+	for _, pelaksana := range pokinAdmin.Pelaksana {
+		scriptPelaksana := "INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id) VALUES (?, ?, ?)"
+		_, err := tx.ExecContext(ctx, scriptPelaksana,
+			pelaksana.Id,
+			fmt.Sprint(pokinAdmin.Id),
+			pelaksana.PegawaiId)
+		if err != nil {
+			return pokinAdmin, err
+		}
+	}
 
 	// Proses indikator
 	for _, indikator := range pokinAdmin.Indikator {
@@ -1014,6 +1014,28 @@ func (repository *PohonKinerjaRepositoryImpl) UpdatePokinAdmin(ctx context.Conte
 	return pokinAdmin, nil
 }
 
+func (repository *PohonKinerjaRepositoryImpl) UpdatePelaksanaOnly(ctx context.Context, tx *sql.Tx, pokin domain.PohonKinerja) (domain.PohonKinerja, error) {
+	// Update pelaksana
+	scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
+	_, err := tx.ExecContext(ctx, scriptDeletePelaksana, fmt.Sprint(pokin.Id))
+	if err != nil {
+		return pokin, err
+	}
+
+	for _, pelaksana := range pokin.Pelaksana {
+		scriptPelaksana := "INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id) VALUES (?, ?, ?)"
+		_, err := tx.ExecContext(ctx, scriptPelaksana,
+			pelaksana.Id,
+			fmt.Sprint(pokin.Id),
+			pelaksana.PegawaiId)
+		if err != nil {
+			return pokin, err
+		}
+	}
+
+	return pokin, nil
+}
+
 func (repository *PohonKinerjaRepositoryImpl) DeletePokinAdmin(ctx context.Context, tx *sql.Tx, id int) error {
 	// Query untuk mendapatkan semua ID yang akan dihapus
 	findIdsScript := `
@@ -1137,7 +1159,8 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
             pk.keterangan, 
             pk.tahun,
             pk.status,
-			pk.is_active
+			pk.is_active,
+			pk.clone_from
         FROM 
             tb_pohon_kinerja pk 
         WHERE 
@@ -1155,6 +1178,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 		&pokin.Tahun,
 		&pokin.Status,
 		&pokin.IsActive,
+		&pokin.CloneFrom,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
