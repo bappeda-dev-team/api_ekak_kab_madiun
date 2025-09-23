@@ -512,23 +512,6 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		}
 	}
 
-	// Konversi pelaksana domain ke PelaksanaResponse
-	var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
-	for _, p := range updatedPokin.Pelaksana {
-		// Ambil data pegawai
-		pegawai, err := service.pegawaiRepository.FindById(ctx, tx, p.PegawaiId)
-		if err != nil {
-			continue // Skip jika pegawai tidak ditemukan
-		}
-
-		pelaksanaResponse := pohonkinerja.PelaksanaOpdResponse{
-			Id:          p.Id,
-			PegawaiId:   pegawai.Id,
-			NamaPegawai: pegawai.NamaPegawai,
-		}
-		pelaksanaResponses = append(pelaksanaResponses, pelaksanaResponse)
-	}
-
 	// Konversi indikator domain ke IndikatorResponse
 	var indikatorResponses []pohonkinerja.IndikatorResponse
 	for _, ind := range updatedPokin.Indikator {
@@ -629,7 +612,6 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		Tahun:       updatedPokin.Tahun,
 		Status:      updatedPokin.Status,
 		CountReview: countReview,
-		Pelaksana:   pelaksanaResponses,
 		Indikators:  indikatorResponses,
 		Tagging:     taggingResponses,
 		IsActive:    findidpokin.IsActive,
