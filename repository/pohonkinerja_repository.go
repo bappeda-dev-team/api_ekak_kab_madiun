@@ -24,6 +24,7 @@ type PohonKinerjaRepository interface {
 	//admin pokin
 	CreatePokinAdmin(ctx context.Context, tx *sql.Tx, pokinAdmin domain.PohonKinerja) (domain.PohonKinerja, error)
 	UpdatePokinAdmin(ctx context.Context, tx *sql.Tx, pokinAdmin domain.PohonKinerja) (domain.PohonKinerja, error)
+	UpdatePelaksanaOnly(ctx context.Context, tx *sql.Tx, pokin domain.PohonKinerja) (domain.PohonKinerja, error)
 	DeletePokinAdmin(ctx context.Context, tx *sql.Tx, id int) error
 	FindPokinAdminById(ctx context.Context, tx *sql.Tx, id int) (domain.PohonKinerja, error)
 	FindPokinAdminAll(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)

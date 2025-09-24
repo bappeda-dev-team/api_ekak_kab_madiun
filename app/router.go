@@ -52,6 +52,7 @@ func NewRouter(
 	rincianBelanjaController controller.RincianBelanjaController,
 	kelompokAnggaranController controller.KelompokAnggaranController,
 	csfController controller.CSFController,
+	programUnggulanController controller.ProgramUnggulanController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -428,6 +429,17 @@ func NewRouter(
 	router.GET("/tematik_pemda/:tahun", pohonKinerjaAdminController.FindAllTematik)
 	router.GET("/rekap_outcome/:tahun", pohonKinerjaAdminController.FindSubTematik)
 	router.GET("/rekap_intermediate/:tahun", pohonKinerjaAdminController.RekapIntermediate)
+
+	//Master Program Unggulan
+	router.GET("/program_unggulan/findall", programUnggulanController.FindAll)
+	router.GET("/program_unggulan/detail/:id", programUnggulanController.FindById)
+	router.POST("/program_unggulan/create", programUnggulanController.Create)
+	router.PUT("/program_unggulan/update/:id", programUnggulanController.Update)
+	router.DELETE("/program_unggulan/delete/:id", programUnggulanController.Delete)
+	router.GET("/program_unggulan/findall/:tahun_awal/:tahun_akhir", programUnggulanController.FindAll)
+	router.GET("/program_unggulan/findbykodeprogramunggulan/:kode_program_unggulan", programUnggulanController.FindByKodeProgramUnggulan)
+	router.GET("/program_unggulan/findbytahun/:tahun", programUnggulanController.FindByTahun)
+	router.GET("/program_unggulan/findunusedbytahun/:tahun", programUnggulanController.FindUnusedByTahun)
 
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)

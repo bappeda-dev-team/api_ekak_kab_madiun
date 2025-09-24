@@ -181,6 +181,28 @@ func BuildStrategicResponse(pohonMap map[int]map[int][]domain.PohonKinerja, stra
 			uniqueIndikators = append(uniqueIndikators, indResp)
 		}
 	}
+	// Modifikasi bagian tagging
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range strategic.TaggingPokin {
+		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+				Id:                  keterangan.Id,
+				IdTagging:           keterangan.IdTagging,
+				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+				RencanaImplementasi: keterangan.RencanaImplementasi,
+				Tahun:               keterangan.Tahun,
+			})
+		}
+
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                       tagging.Id,
+			IdPokin:                  tagging.IdPokin,
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganResponses,
+			CloneFrom:                tagging.CloneFrom,
+		})
+	}
 
 	strategicResp := pohonkinerja.StrategicResponse{
 		Id:          strategic.Id,
@@ -198,7 +220,7 @@ func BuildStrategicResponse(pohonMap map[int]map[int][]domain.PohonKinerja, stra
 			NamaOpd: strategic.NamaOpd,
 		},
 		Pelaksana:    ConvertToPelaksanaResponses(strategic.Pelaksana),
-		TaggingPokin: ConvertToTaggingResponses(strategic.TaggingPokin),
+		TaggingPokin: taggingResponses,
 	}
 
 	var childs []interface{}
