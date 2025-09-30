@@ -49,15 +49,6 @@ func (service *SubKegiatanServiceImpl) Create(ctx context.Context, request subke
 
 	uuId := fmt.Sprintf("SUB-KEG-%s", request.KodeSubkegiatan)
 
-	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOpd)
-	if err != nil {
-		return subkegiatan.SubKegiatanResponse{}, fmt.Errorf("kode OPD tidak valid: %v", err)
-	}
-
-	if opd.KodeOpd == "" {
-		return subkegiatan.SubKegiatanResponse{}, fmt.Errorf("kode OPD tidak ditemukan")
-	}
-
 	var indikators []domain.Indikator
 
 	for _, indikatorReq := range request.Indikator {
@@ -81,7 +72,6 @@ func (service *SubKegiatanServiceImpl) Create(ctx context.Context, request subke
 				IndikatorId: indikatorId,
 				Target:      targetReq.TargetIndikator,
 				Satuan:      targetReq.SatuanIndikator,
-				Tahun:       request.Tahun,
 			}
 			targets = append(targets, target)
 		}
@@ -90,7 +80,6 @@ func (service *SubKegiatanServiceImpl) Create(ctx context.Context, request subke
 			Id:            indikatorId,
 			SubKegiatanId: uuId,
 			Indikator:     indikatorReq.NamaIndikator,
-			Tahun:         request.Tahun,
 			Target:        targets,
 		}
 		indikators = append(indikators, indikator)
@@ -148,7 +137,6 @@ func (service *SubKegiatanServiceImpl) Update(ctx context.Context, request subke
 				IndikatorId: indikatorId,
 				Target:      targetReq.TargetIndikator,
 				Satuan:      targetReq.SatuanIndikator,
-				Tahun:       request.Tahun,
 			}
 			targets = append(targets, target)
 		}
@@ -158,7 +146,6 @@ func (service *SubKegiatanServiceImpl) Update(ctx context.Context, request subke
 			SubKegiatanId:    request.Id,
 			RencanaKinerjaId: indikatorReq.RencanaKinerjaId,
 			Indikator:        indikatorReq.NamaIndikator,
-			Tahun:            request.Tahun,
 			Target:           targets,
 		}
 		indikators = append(indikators, indikator)
