@@ -172,6 +172,7 @@ func (service *ProgramUnggulanServiceImpl) FindAll(ctx context.Context, tahunAwa
 			Keterangan:                result.Keterangan,
 			TahunAwal:                 result.TahunAwal,
 			TahunAkhir:                result.TahunAkhir,
+			IsActive:                  result.IsActive,
 		})
 	}
 

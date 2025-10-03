@@ -74,17 +74,67 @@ func (repository *ProgramUnggulanRepositoryImpl) FindById(ctx context.Context, t
 	return programUnggulan, nil
 }
 
+// func (repository *ProgramUnggulanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string) ([]domain.ProgramUnggulan, error) {
+// 	script := "SELECT id, nama_tagging, kode_program_unggulan, keterangan_program_unggulan, keterangan, tahun_awal, tahun_akhir FROM tb_program_unggulan WHERE tahun_awal >= ? AND tahun_akhir <= ?"
+// 	rows, err := tx.QueryContext(ctx, script, tahunAwal, tahunAkhir)
+// 	if err != nil {
+// 		return []domain.ProgramUnggulan{}, err
+// 	}
+// 	defer rows.Close()
+// 	var programUnggulanList []domain.ProgramUnggulan
+// 	for rows.Next() {
+// 		var programUnggulan domain.ProgramUnggulan
+// 		err = rows.Scan(&programUnggulan.Id, &programUnggulan.NamaTagging, &programUnggulan.KodeProgramUnggulan, &programUnggulan.KeteranganProgramUnggulan, &programUnggulan.Keterangan, &programUnggulan.TahunAwal, &programUnggulan.TahunAkhir)
+// 		if err != nil {
+// 			return []domain.ProgramUnggulan{}, err
+// 		}
+// 		programUnggulanList = append(programUnggulanList, programUnggulan)
+// 	}
+// 	return programUnggulanList, nil
+// }
+
 func (repository *ProgramUnggulanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string) ([]domain.ProgramUnggulan, error) {
-	script := "SELECT id, nama_tagging, kode_program_unggulan, keterangan_program_unggulan, keterangan, tahun_awal, tahun_akhir FROM tb_program_unggulan WHERE tahun_awal >= ? AND tahun_akhir <= ?"
+	// Query untuk mengambil program unggulan beserta status aktifnya
+	script := `
+        SELECT 
+            pu.id, 
+            pu.nama_tagging, 
+            pu.kode_program_unggulan, 
+            pu.keterangan_program_unggulan, 
+            pu.keterangan, 
+            pu.tahun_awal, 
+            pu.tahun_akhir,
+            CASE 
+                WHEN EXISTS (
+                    SELECT 1 
+                    FROM tb_keterangan_tagging_program_unggulan ktpu
+                    JOIN tb_tagging_pokin tp ON ktpu.id_tagging = tp.id
+                    WHERE ktpu.kode_program_unggulan = pu.kode_program_unggulan
+                ) THEN TRUE 
+                ELSE FALSE 
+            END as is_active
+        FROM tb_program_unggulan pu
+        WHERE pu.tahun_awal >= ? AND pu.tahun_akhir <= ?`
+
 	rows, err := tx.QueryContext(ctx, script, tahunAwal, tahunAkhir)
 	if err != nil {
 		return []domain.ProgramUnggulan{}, err
 	}
 	defer rows.Close()
+
 	var programUnggulanList []domain.ProgramUnggulan
 	for rows.Next() {
 		var programUnggulan domain.ProgramUnggulan
-		err = rows.Scan(&programUnggulan.Id, &programUnggulan.NamaTagging, &programUnggulan.KodeProgramUnggulan, &programUnggulan.KeteranganProgramUnggulan, &programUnggulan.Keterangan, &programUnggulan.TahunAwal, &programUnggulan.TahunAkhir)
+		err = rows.Scan(
+			&programUnggulan.Id,
+			&programUnggulan.NamaTagging,
+			&programUnggulan.KodeProgramUnggulan,
+			&programUnggulan.KeteranganProgramUnggulan,
+			&programUnggulan.Keterangan,
+			&programUnggulan.TahunAwal,
+			&programUnggulan.TahunAkhir,
+			&programUnggulan.IsActive,
+		)
 		if err != nil {
 			return []domain.ProgramUnggulan{}, err
 		}

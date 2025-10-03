@@ -10,6 +10,7 @@ type ProgramUnggulan struct {
 	Keterangan                *string
 	TahunAwal                 string
 	TahunAkhir                string
+	IsActive                  bool
 	CreatedAt                 time.Time
 	UpdatedAt                 time.Time
 }
