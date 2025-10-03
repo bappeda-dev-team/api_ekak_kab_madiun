@@ -8,4 +8,5 @@ type ProgramUnggulanResponse struct {
 	Keterangan                *string `json:"keterangan"`
 	TahunAwal                 string  `json:"tahun_awal"`
 	TahunAkhir                string  `json:"tahun_akhir"`
+	IsActive                  bool    `json:"is_active"`
 }
