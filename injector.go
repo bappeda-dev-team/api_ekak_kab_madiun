@@ -402,6 +402,15 @@ var isustrategisSet = wire.NewSet(
 	controller.NewCSFControllerImpl,
 )
 
+var programUnggulanSet = wire.NewSet(
+	repository.NewProgramUnggulanRepositoryImpl,
+	wire.Bind(new(repository.ProgramUnggulanRepository), new(*repository.ProgramUnggulanRepositoryImpl)),
+	service.NewProgramUnggulanServiceImpl,
+	wire.Bind(new(service.ProgramUnggulanService), new(*service.ProgramUnggulanServiceImpl)),
+	controller.NewProgramUnggulanControllerImpl,
+	wire.Bind(new(controller.ProgramUnggulanController), new(*controller.ProgramUnggulanControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -450,6 +459,7 @@ func InitializeServer() *http.Server {
 		rincianBelanjaSet,
 		kelompokAnggaranSet,
 		isustrategisSet,
+		programUnggulanSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

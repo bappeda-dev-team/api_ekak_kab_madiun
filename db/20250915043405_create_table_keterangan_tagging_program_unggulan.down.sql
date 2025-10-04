@@ -1,0 +1,1 @@
+DROP TABLE tb_keterangan_tagging_program_unggulan;

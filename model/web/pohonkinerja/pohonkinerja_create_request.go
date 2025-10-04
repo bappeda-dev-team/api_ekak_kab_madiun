@@ -73,6 +73,12 @@ type PohonKinerjaCloneRequest struct {
 }
 
 type TaggingCreateRequest struct {
-	NamaTagging       string `json:"nama_tagging"`
-	KeteranganTagging string `json:"keterangan_tagging"`
+	NamaTagging              string                           `json:"nama_tagging"`
+	KeteranganTaggingProgram []KeteranganTaggingCreateRequest `json:"keterangan_tagging_program"`
+	Tahun                    string                           `json:"tahun"`
+}
+
+type KeteranganTaggingCreateRequest struct {
+	KodeProgramUnggulan string `json:"kode_program_unggulan"`
+	Tahun               string `json:"tahun"`
 }
