@@ -208,3 +208,25 @@ func (controller *SubKegiatanControllerImpl) FindAllByRekin(writer http.Response
 		Action: buttonActions,
 	})
 }
+
+func (controller *SubKegiatanControllerImpl) FindSubKegiatanKAK(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeSubKegiatan := params.ByName("kode_subkegiatan")
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	subKegiatanKAKResponse, err := controller.SubKegiatanService.FindSubKegiatanKAK(request.Context(), kodeOpd, kodeSubKegiatan, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success find sub kegiatan kak",
+		Data:   subKegiatanKAKResponse,
+	})
+}
