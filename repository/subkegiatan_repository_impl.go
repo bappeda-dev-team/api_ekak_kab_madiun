@@ -262,3 +262,81 @@ func (repository *SubKegiatanRepositoryImpl) FindByKodeSubKegiatan(ctx context.C
 
 	return domain.SubKegiatan{}, fmt.Errorf("subkegiatan dengan kode %s tidak ditemukan", kodeSubKegiatan)
 }
+
+func (repository *SubKegiatanRepositoryImpl) FindSubKegiatanKAK(ctx context.Context, tx *sql.Tx, kodeOpd string, kode string, tahun string) (domain.SubKegiatanKAKQuery, error) {
+	query := `
+	SELECT DISTINCT
+		i.kode_opd,
+		o.nama_opd,
+		p.kode_program,
+		p.nama_program,
+		COALESCE(ip.indikator, '') as indikator_program,
+		COALESCE(tp.target, '') as target_program,
+		COALESCE(tp.satuan, '') as satuan_program,
+		k.kode_kegiatan,
+		k.nama_kegiatan,
+		COALESCE(ik.indikator, '') as indikator_kegiatan,
+		COALESCE(tk.target, '') as target_kegiatan,
+		COALESCE(tk.satuan, '') as satuan_kegiatan,
+		s.kode_subkegiatan,
+		s.nama_subkegiatan,
+		COALESCE(i.indikator, '') as indikator_subkegiatan,
+		COALESCE(t.target, '') as target_subkegiatan,
+		COALESCE(t.satuan, '') as satuan_subkegiatan,
+		COALESCE(i.pagu_anggaran, 0) as pagu_anggaran,
+		i.tahun as tahun_indikator
+	FROM tb_indikator i
+	-- Join ke OPD untuk mendapatkan nama OPD
+	LEFT JOIN tb_operasional_daerah o ON o.kode_opd = i.kode_opd
+	-- Join ke subkegiatan berdasarkan kode dari indikator
+	JOIN tb_subkegiatan s ON s.kode_subkegiatan = i.kode
+	-- Join ke kegiatan
+	JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+	-- Join ke program
+	JOIN tb_master_program p ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
+	-- Join target untuk subkegiatan
+	LEFT JOIN tb_target t ON t.indikator_id = i.id
+	-- Join indikator program
+	LEFT JOIN tb_indikator ip ON ip.kode = p.kode_program AND ip.kode_opd = i.kode_opd AND ip.tahun = i.tahun
+	LEFT JOIN tb_target tp ON tp.indikator_id = ip.id
+	-- Join indikator kegiatan
+	LEFT JOIN tb_indikator ik ON ik.kode = k.kode_kegiatan AND ik.kode_opd = i.kode_opd AND ik.tahun = i.tahun
+	LEFT JOIN tb_target tk ON tk.indikator_id = ik.id
+	WHERE i.kode_opd = ?
+		AND i.kode = ?
+		AND i.tahun = ?
+	LIMIT 1
+	`
+
+	var result domain.SubKegiatanKAKQuery
+	err := tx.QueryRowContext(ctx, query, kodeOpd, kode, tahun).Scan(
+		&result.KodeOpd,
+		&result.NamaOpd,
+		&result.KodeProgram,
+		&result.NamaProgram,
+		&result.IndikatorProgram,
+		&result.TargetProgram,
+		&result.SatuanProgram,
+		&result.KodeKegiatan,
+		&result.NamaKegiatan,
+		&result.IndikatorKegiatan,
+		&result.TargetKegiatan,
+		&result.SatuanKegiatan,
+		&result.KodeSubKegiatan,
+		&result.NamaSubKegiatan,
+		&result.IndikatorSubKegiatan,
+		&result.TargetSubKegiatan,
+		&result.SatuanSubKegiatan,
+		&result.PaguAnggaran,
+		&result.TahunIndikator,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.SubKegiatanKAKQuery{}, fmt.Errorf("data tidak ditemukan untuk kode_opd: %s, kode: %s, tahun: %s", kodeOpd, kode, tahun)
+		}
+		return domain.SubKegiatanKAKQuery{}, fmt.Errorf("gagal mengambil data subkegiatan KAK: %v", err)
+	}
+
+	return result, nil
+}

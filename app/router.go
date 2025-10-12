@@ -160,6 +160,7 @@ func NewRouter(
 	router.GET("/sub_kegiatan/pilihan/:kode_opd", subKegiatanController.FindAll)
 	router.GET("/sub_kegiatan/byrekinid/:rencana_kinerja_id", subKegiatanController.FindAll)
 	router.DELETE("/sub_kegiatan/delete/:id", subKegiatanController.Delete)
+	router.GET("/sub_kegiatan/kak/:kode_opd/:kode_subkegiatan/:tahun", subKegiatanController.FindSubKegiatanKAK)
 
 	//sub kegiatan terpilih
 	router.POST("/sub_kegiatan/create_rekin/:rencana_kinerja_id", subKegiatanTerpilihController.CreateRekin)
