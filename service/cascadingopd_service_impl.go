@@ -168,7 +168,7 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 			pelaksanaList, err := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(p.Id))
 			if err == nil {
 				pelaksanaMap := make(map[string]*domainmaster.Pegawai)
-				rekinMap := make(map[string]bool)
+				rekinMap := make(map[string]bool) // Ubah dari PegawaiId ke Id rencana kinerja untuk deduplication
 
 				for _, pelaksana := range pelaksanaList {
 					pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
@@ -179,15 +179,24 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 
 				for _, rk := range rencanaKinerjaList {
 					if pegawai, exists := pelaksanaMap[rk.PegawaiId]; exists {
-						rk.NamaPegawai = pegawai.NamaPegawai
-						validRencanaKinerja = append(validRencanaKinerja, rk)
-						rekinMap[rk.PegawaiId] = true
+						// Cek apakah rencana kinerja ini sudah ditambahkan (deduplication)
+						if !rekinMap[rk.Id] {
+							rk.NamaPegawai = pegawai.NamaPegawai
+							validRencanaKinerja = append(validRencanaKinerja, rk)
+							rekinMap[rk.Id] = true // Simpan ID rencana kinerja, bukan PegawaiId
+						}
 					}
+				}
+
+				// Track pegawai yang sudah memiliki rencana kinerja
+				pegawaiWithRekinMap := make(map[string]bool)
+				for _, rk := range validRencanaKinerja {
+					pegawaiWithRekinMap[rk.PegawaiId] = true
 				}
 
 				// Tambahkan pelaksana yang belum memiliki rencana kinerja
 				for _, pegawai := range pelaksanaMap {
-					if !rekinMap[pegawai.Nip] {
+					if !pegawaiWithRekinMap[pegawai.Nip] {
 						validRencanaKinerja = append(validRencanaKinerja, domain.RencanaKinerja{
 							IdPohon:     p.Id,
 							NamaPohon:   p.NamaPohon,
