@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -66,4 +67,80 @@ func (controller *CascadingOpdControllerImpl) FindAll(writer http.ResponseWriter
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 
+}
+
+func (controller *CascadingOpdControllerImpl) FindByRekinPegawaiAndId(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rekinId := params.ByName("rekin_id")
+
+	cascadingOpdResponse, err := controller.CascadingOpdService.FindByRekinPegawaiAndId(request.Context(), rekinId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get By Rekin Pegawai And Id",
+		Data:   cascadingOpdResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *CascadingOpdControllerImpl) FindByIdPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	pokinId, err := strconv.Atoi(params.ByName("pokin_id"))
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   "ID harus berupa angka",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	cascadingOpdResponse, err := controller.CascadingOpdService.FindByIdPokin(request.Context(), pokinId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get By Id Pokin",
+		Data:   cascadingOpdResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *CascadingOpdControllerImpl) FindByNip(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	nip := params.ByName("nip")
+	tahun := params.ByName("tahun")
+
+	cascadingOpdResponse, err := controller.CascadingOpdService.FindByNip(request.Context(), nip, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get By Nip",
+		Data:   cascadingOpdResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
 }

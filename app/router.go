@@ -449,5 +449,10 @@ func NewRouter(
 	router.GET("/rekin/atasan/:rekin_id", rencanaKinerjaController.FindRekinAtasan)
 	router.GET("/api_internal/rencana_kinerja/findall", rencanaKinerjaController.FindAll)
 
+	//findcascadingopd by
+	router.GET("/cascading_opd/findbyrekin/:rekin_id", cascadingOpdController.FindByRekinPegawaiAndId)
+	router.GET("/cascading_opd/findbypokin/:pokin_id", cascadingOpdController.FindByIdPokin)
+	router.GET("/cascading_opd/findbynip/:nip/:tahun", cascadingOpdController.FindByNip)
+
 	return router
 }
