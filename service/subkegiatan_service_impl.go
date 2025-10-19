@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -288,4 +289,56 @@ func (service *SubKegiatanServiceImpl) Delete(ctx context.Context, subKegiatanId
 	}
 
 	return nil
+}
+
+func (service *SubKegiatanServiceImpl) FindSubKegiatanKAK(ctx context.Context, kodeOpd string, kode string, tahun string) (subkegiatan.SubKegiatanKAKResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Println("Gagal memulai transaksi:", err)
+		return subkegiatan.SubKegiatanKAKResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil data dari repository dengan parameter kode_opd, kode, dan tahun
+	data, err := service.subKegiatanRepository.FindSubKegiatanKAK(ctx, tx, kodeOpd, kode, tahun)
+	if err != nil {
+		log.Println("Gagal mengambil data subkegiatan KAK:", err)
+		return subkegiatan.SubKegiatanKAKResponse{}, err
+	}
+
+	// Transform ke response
+	response := subkegiatan.SubKegiatanKAKResponse{
+		KodeOpd: data.KodeOpd,
+		NamaOpd: data.NamaOpd,
+		Program: subkegiatan.ProgramKAKResponse{
+			Kode: data.KodeProgram,
+			Nama: data.NamaProgram,
+			IndikatorKinerjaProgram: subkegiatan.IndikatorKinerjaKAKResponse{
+				Nama:   data.IndikatorProgram,
+				Target: data.TargetProgram,
+				Satuan: data.SatuanProgram,
+			},
+		},
+		Kegiatan: subkegiatan.KegiatanKAKResponse{
+			Kode: data.KodeKegiatan,
+			Nama: data.NamaKegiatan,
+			IndikatorKinerjaKegiatan: subkegiatan.IndikatorKinerjaKAKResponse{
+				Nama:   data.IndikatorKegiatan,
+				Target: data.TargetKegiatan,
+				Satuan: data.SatuanKegiatan,
+			},
+		},
+		SubKegiatan: subkegiatan.SubKegiatanDetailKAKResponse{
+			Subkegiatan: data.KodeSubKegiatan,
+			Nama:        data.NamaSubKegiatan,
+			IndikatorKinerjaSubKegiatan: subkegiatan.IndikatorKinerjaKAKResponse{
+				Nama:   data.IndikatorSubKegiatan,
+				Target: data.TargetSubKegiatan,
+				Satuan: data.SatuanSubKegiatan,
+			},
+		},
+		PaguAnggaran: strconv.FormatInt(data.PaguAnggaran, 10),
+	}
+
+	return response, nil
 }

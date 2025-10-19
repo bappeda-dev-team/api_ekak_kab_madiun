@@ -57,3 +57,25 @@ type SubKegiatanQuery struct {
 	TargetId         string
 	PaguAnggaran     sql.NullInt64
 }
+
+type SubKegiatanKAKQuery struct {
+	KodeOpd              string
+	NamaOpd              string
+	KodeProgram          string
+	NamaProgram          string
+	IndikatorProgram     string
+	TargetProgram        string
+	SatuanProgram        string
+	KodeKegiatan         string
+	NamaKegiatan         string
+	IndikatorKegiatan    string
+	TargetKegiatan       string
+	SatuanKegiatan       string
+	KodeSubKegiatan      string
+	NamaSubKegiatan      string
+	IndikatorSubKegiatan string
+	TargetSubKegiatan    string
+	SatuanSubKegiatan    string
+	PaguAnggaran         int64
+	TahunIndikator       string
+}
