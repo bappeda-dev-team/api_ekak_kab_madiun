@@ -17,7 +17,7 @@ type RencanaKinerjaRepository interface {
 	FindAllRincianKak(ctx context.Context, tx *sql.Tx, rencanakinerjaid, pegawaiId string) ([]domain.RencanaKinerja, error)
 	FindRekinLevel3(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RencanaKinerja, error)
 	// FindRekinAtasan(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.RencanaKinerja, error)
-	FindRekinAtasan(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.RencanaKinerja, string, string, string, string, string, string, string, error)
+	FindParentPokin(ctx context.Context, tx *sql.Tx, pokinId int) (domain.PohonKinerja, error)
 	ValidateRekinId(ctx context.Context, tx *sql.Tx, rekinId string) error
 	//sasaran opd
 	CreateRekinLevel1(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error)

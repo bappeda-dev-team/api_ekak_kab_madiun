@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
-	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
 	"log"
 )
@@ -619,6 +618,76 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIdRekinLevel1(ctx context.Co
 	return rencanaKinerja, nil
 }
 
+// func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error) {
+// 	SQL := `
+//     SELECT
+//         rk.id,
+//         rk.nama_rencana_kinerja,
+//         rk.pegawai_id,
+//         p.nama as nama_pegawai,
+//         rk.id_pohon,
+//         st.kode_subkegiatan,
+//         sk.nama_subkegiatan,
+//         -- Menggunakan SUBSTRING_INDEX untuk mengambil kode kegiatan dari kode_subkegiatan
+//         SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5) as kode_kegiatan,
+//         k.nama_kegiatan
+//     FROM tb_rencana_kinerja rk
+//     LEFT JOIN tb_pegawai p ON p.nip = rk.pegawai_id
+//     LEFT JOIN tb_subkegiatan_terpilih st ON st.rekin_id = rk.id
+//     LEFT JOIN tb_subkegiatan sk ON sk.kode_subkegiatan = st.kode_subkegiatan
+//     LEFT JOIN tb_master_kegiatan k ON k.kode_kegiatan = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5)
+//     WHERE rk.id_pohon = ?
+//     ORDER BY rk.id ASC
+//     `
+
+// 	rows, err := tx.QueryContext(ctx, SQL, pokinId)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var rencanaKinerjas []domain.RencanaKinerja
+// 	for rows.Next() {
+// 		var rk domain.RencanaKinerja
+// 		var namaPegawai, kodeSubkegiatan, namaSubkegiatan, kodeKegiatan, namaKegiatan sql.NullString
+// 		err := rows.Scan(
+// 			&rk.Id,
+// 			&rk.NamaRencanaKinerja,
+// 			&rk.PegawaiId,
+// 			&namaPegawai,
+// 			&rk.IdPohon,
+// 			&kodeSubkegiatan,
+// 			&namaSubkegiatan,
+// 			&kodeKegiatan,
+// 			&namaKegiatan,
+// 		)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		// Handle null values
+// 		if namaPegawai.Valid {
+// 			rk.NamaPegawai = namaPegawai.String
+// 		}
+// 		if kodeSubkegiatan.Valid {
+// 			rk.KodeSubKegiatan = kodeSubkegiatan.String
+// 		}
+// 		if namaSubkegiatan.Valid {
+// 			rk.NamaSubKegiatan = namaSubkegiatan.String
+// 		}
+// 		if kodeKegiatan.Valid {
+// 			rk.KodeKegiatan = kodeKegiatan.String
+// 		}
+// 		if namaKegiatan.Valid {
+// 			rk.NamaKegiatan = namaKegiatan.String
+// 		}
+
+// 		rencanaKinerjas = append(rencanaKinerjas, rk)
+// 	}
+
+// 	return rencanaKinerjas, nil
+// }
+
 func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error) {
 	SQL := `
     SELECT 
@@ -627,6 +696,10 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Contex
         rk.pegawai_id,
         p.nama as nama_pegawai,
         rk.id_pohon,
+        rk.tahun,
+        COALESCE(rk.status_rencana_kinerja, '') as status_rencana_kinerja,
+        COALESCE(rk.catatan, '') as catatan,
+        rk.kode_opd,
         st.kode_subkegiatan,
         sk.nama_subkegiatan,
         -- Menggunakan SUBSTRING_INDEX untuk mengambil kode kegiatan dari kode_subkegiatan
@@ -650,13 +723,17 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Contex
 	var rencanaKinerjas []domain.RencanaKinerja
 	for rows.Next() {
 		var rk domain.RencanaKinerja
-		var namaPegawai, kodeSubkegiatan, namaSubkegiatan, kodeKegiatan, namaKegiatan sql.NullString
+		var namaPegawai, tahun, statusRekin, catatan, kodeOpd, kodeSubkegiatan, namaSubkegiatan, kodeKegiatan, namaKegiatan sql.NullString
 		err := rows.Scan(
 			&rk.Id,
 			&rk.NamaRencanaKinerja,
 			&rk.PegawaiId,
 			&namaPegawai,
 			&rk.IdPohon,
+			&tahun,
+			&statusRekin,
+			&catatan,
+			&kodeOpd,
 			&kodeSubkegiatan,
 			&namaSubkegiatan,
 			&kodeKegiatan,
@@ -669,6 +746,18 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Contex
 		// Handle null values
 		if namaPegawai.Valid {
 			rk.NamaPegawai = namaPegawai.String
+		}
+		if tahun.Valid {
+			rk.Tahun = tahun.String
+		}
+		if statusRekin.Valid {
+			rk.StatusRencanaKinerja = statusRekin.String
+		}
+		if catatan.Valid {
+			rk.Catatan = catatan.String
+		}
+		if kodeOpd.Valid {
+			rk.KodeOpd = kodeOpd.String
 		}
 		if kodeSubkegiatan.Valid {
 			rk.KodeSubKegiatan = kodeSubkegiatan.String
@@ -833,206 +922,45 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinLevel3(ctx context.Cont
 // 	return rekins, nil
 // }
 
-func (repository *RencanaKinerjaRepositoryImpl) FindRekinAtasan(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.RencanaKinerja, string, string, string, string, string, string, string, error) {
-	// 1. Ambil data subkegiatan, kegiatan dan rencana kinerja
-	scriptGetSubkegiatan := `
-        SELECT 
-            s.nama_subkegiatan, 
-            s.kode_subkegiatan,
-            rk.kode_opd,
-            rk.tahun,
-            COALESCE(i.pagu_anggaran, 0) as pagu_subkegiatan,
-            k.kode_kegiatan,
-            k.nama_kegiatan
-        FROM tb_subkegiatan_terpilih st
-        JOIN tb_subkegiatan s ON st.subkegiatan_id = s.id
-        JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
-        JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
-        LEFT JOIN tb_indikator i ON i.kode = s.kode_subkegiatan 
-            AND i.kode_opd = rk.kode_opd 
-            AND i.tahun = rk.tahun
-        WHERE st.rekin_id = ?`
+func (repository *RencanaKinerjaRepositoryImpl) FindParentPokin(ctx context.Context, tx *sql.Tx, pokinId int) (domain.PohonKinerja, error) {
+	script := `
+		SELECT 
+			parent_pk.id,
+			COALESCE(parent_pk.nama_pohon, '') as nama_pohon,
+			COALESCE(parent_pk.parent, 0) as parent,
+			COALESCE(parent_pk.jenis_pohon, '') as jenis_pohon,
+			COALESCE(parent_pk.level_pohon, 0) as level_pohon,
+			COALESCE(parent_pk.kode_opd, '') as kode_opd,
+			COALESCE(parent_pk.keterangan, '') as keterangan,
+			COALESCE(parent_pk.keterangan_crosscutting, '') as keterangan_crosscutting,
+			COALESCE(parent_pk.tahun, '') as tahun,
+			COALESCE(parent_pk.status, '') as status,
+			COALESCE(parent_pk.is_active) as is_active
+		FROM tb_pohon_kinerja pk
+		INNER JOIN tb_pohon_kinerja parent_pk ON pk.parent = parent_pk.id
+		WHERE pk.id = ?
+	`
 
-	var (
-		namaSubkegiatan string
-		kodeSubkegiatan string
-		kodeOpd         string
-		tahun           string
-		paguSubkegiatan string
-		kodeKegiatan    string
-		namaKegiatan    string
-	)
-
-	err := tx.QueryRowContext(ctx, scriptGetSubkegiatan, rekinId).Scan(
-		&namaSubkegiatan,
-		&kodeSubkegiatan,
-		&kodeOpd,
-		&tahun,
-		&paguSubkegiatan,
-		&kodeKegiatan,
-		&namaKegiatan,
+	var pokin domain.PohonKinerja
+	err := tx.QueryRowContext(ctx, script, pokinId).Scan(
+		&pokin.Id,
+		&pokin.NamaPohon,
+		&pokin.Parent,
+		&pokin.JenisPohon,
+		&pokin.LevelPohon,
+		&pokin.KodeOpd,
+		&pokin.Keterangan,
+		&pokin.KeteranganCrosscutting,
+		&pokin.Tahun,
+		&pokin.Status,
+		&pokin.IsActive,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return []domain.RencanaKinerja{}, "", "", "0", "0", "", "", "0", nil
-		}
-		return nil, "", "", "", "", "", "", "", err
+		return domain.PohonKinerja{}, err
 	}
 
-	// 2. Ambil pagu kegiatan dengan menjumlahkan pagu subkegiatan yang terkait
-	var paguKegiatan string
-	if kodeKegiatan != "" {
-		scriptGetPaguKegiatan := `
-            WITH RECURSIVE hierarchy AS (
-                SELECT DISTINCT
-                    s.kode_subkegiatan,
-                    k.kode_kegiatan
-                FROM tb_subkegiatan_terpilih st
-                JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
-                JOIN tb_subkegiatan s ON st.kode_subkegiatan = s.kode_subkegiatan
-                JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
-                WHERE rk.kode_opd = ?
-                AND rk.tahun = ?
-            )
-            SELECT COALESCE(SUM(i.pagu_anggaran), 0) as total_pagu_kegiatan
-            FROM hierarchy h
-            JOIN tb_indikator i ON i.kode = h.kode_subkegiatan
-            WHERE h.kode_kegiatan = ?
-            AND i.kode_opd = ?
-            AND i.tahun = ?`
-
-		err = tx.QueryRowContext(ctx, scriptGetPaguKegiatan, kodeOpd, tahun, kodeKegiatan, kodeOpd, tahun).Scan(&paguKegiatan)
-		if err != nil && err != sql.ErrNoRows {
-			return nil, "", "", "", "", "", "", "", err
-		}
-	}
-
-	// 3. Ambil pagu program dengan menjumlahkan pagu subkegiatan yang terkait
-	var paguProgram string
-	if kodeSubkegiatan != "" {
-		kodeProgram := kodeSubkegiatan[:7] // Ambil 5.01.02 dari kode subkegiatan
-
-		scriptGetPaguProgram := `
-            WITH RECURSIVE hierarchy AS (
-                SELECT DISTINCT
-                    s.kode_subkegiatan,
-                    k.kode_kegiatan,
-                    p.kode_program
-                FROM tb_subkegiatan_terpilih st
-                JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
-                JOIN tb_subkegiatan s ON st.kode_subkegiatan = s.kode_subkegiatan
-                JOIN tb_master_kegiatan k ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
-                JOIN tb_master_program p ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
-                WHERE rk.kode_opd = ?
-                AND rk.tahun = ?
-            )
-            SELECT COALESCE(SUM(i.pagu_anggaran), 0) as total_pagu_program
-            FROM hierarchy h
-            JOIN tb_indikator i ON i.kode = h.kode_subkegiatan
-            WHERE h.kode_program = ?
-            AND i.kode_opd = ?
-            AND i.tahun = ?`
-
-		err = tx.QueryRowContext(ctx, scriptGetPaguProgram, kodeOpd, tahun, kodeProgram, kodeOpd, tahun).Scan(&paguProgram)
-		if err != nil && err != sql.ErrNoRows {
-			return nil, "", "", "", "", "", "", "", err
-		}
-	}
-
-	// 4. Ambil id pohon kinerja
-	scriptGetPokin := `
-        SELECT id_pohon 
-        FROM tb_rencana_kinerja 
-        WHERE id = ?`
-
-	var idPohon int
-	err = tx.QueryRowContext(ctx, scriptGetPokin, rekinId).Scan(&idPohon)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return []domain.RencanaKinerja{}, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
-		}
-		return nil, "", "", "", "", "", "", "", err
-	}
-
-	// 4. Ambil parent dari pohon kinerja
-	scriptGetParent := `
-        SELECT parent 
-        FROM tb_pohon_kinerja 
-        WHERE id = ?`
-
-	var parentId sql.NullInt64
-	err = tx.QueryRowContext(ctx, scriptGetParent, idPohon).Scan(&parentId)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return []domain.RencanaKinerja{}, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
-		}
-		return nil, "", "", "", "", "", "", "", err
-	}
-
-	if !parentId.Valid {
-		return []domain.RencanaKinerja{}, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
-	}
-
-	// 5. Ambil data rencana kinerja atasan
-	scriptRekinAtasan := `
-        SELECT 
-            rk.id,
-            rk.nama_rencana_kinerja,
-            rk.id_pohon,
-            rk.tahun,
-            rk.status_rencana_kinerja,
-            rk.catatan,
-            rk.kode_opd,
-            rk.pegawai_id,
-            p.nama as nama_pegawai,
-            p.nip as nip_pegawai,
-            COALESCE(mp.nama_program, '') as nama_program,
-            COALESCE(mp.kode_program, '') as kode_program
-        FROM tb_rencana_kinerja rk
-        INNER JOIN tb_pegawai p ON rk.pegawai_id = p.nip
-        LEFT JOIN tb_master_program mp ON mp.kode_program = LEFT(?, 7)
-        WHERE rk.id_pohon = ?`
-
-	rows, err := tx.QueryContext(ctx, scriptRekinAtasan, kodeSubkegiatan, parentId.Int64)
-	if err != nil {
-		return nil, "", "", "", "", "", "", "", err
-	}
-	defer rows.Close()
-
-	var rekins []domain.RencanaKinerja
-	for rows.Next() {
-		var rekin domain.RencanaKinerja
-		var pegawai domainmaster.Pegawai
-		var namaProgram, kodeProgramRekin string
-
-		err := rows.Scan(
-			&rekin.Id,
-			&rekin.NamaRencanaKinerja,
-			&rekin.IdPohon,
-			&rekin.Tahun,
-			&rekin.StatusRencanaKinerja,
-			&rekin.Catatan,
-			&rekin.KodeOpd,
-			&rekin.PegawaiId,
-			&pegawai.NamaPegawai,
-			&pegawai.Nip,
-			&namaProgram,
-			&kodeProgramRekin,
-		)
-		if err != nil {
-			return nil, "", "", "", "", "", "", "", err
-		}
-
-		rekin.NamaPegawai = pegawai.NamaPegawai
-		rekin.Program = namaProgram
-		rekin.KodeProgram = kodeProgramRekin
-		rekin.PaguProgram = paguProgram
-		rekins = append(rekins, rekin)
-	}
-
-	return rekins, namaSubkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, nil
+	return pokin, nil
 }
-
 func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Context, tx *sql.Tx, rekinId string) error {
 	script := "SELECT id FROM tb_rencana_kinerja WHERE id = ?"
 
