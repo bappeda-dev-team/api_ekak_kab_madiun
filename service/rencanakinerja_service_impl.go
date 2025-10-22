@@ -1725,8 +1725,16 @@ func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, r
 				}
 			}
 
+			// ✅ TAMBAHKAN MAP UNTUK DEDUPLICATION
+			rekinMap := make(map[string]bool)
+
 			// Filter rencana kinerja hanya yang pelaksana valid
 			for _, rk := range rekinList {
+				// ✅ SKIP JIKA SUDAH ADA (DEDUPLICATION)
+				if rekinMap[rk.Id] {
+					continue
+				}
+
 				if pegawai, exists := pelaksanaMap[rk.PegawaiId]; exists {
 					rekinAtasanList = append(rekinAtasanList, rencanakinerja.RekinAtasanDetail{
 						Id:                   rk.Id,
@@ -1739,6 +1747,9 @@ func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, r
 						PegawaiId:            rk.PegawaiId,
 						NamaPegawai:          pegawai.NamaPegawai,
 					})
+
+					// ✅ MARK SEBAGAI SUDAH DIPROSES
+					rekinMap[rk.Id] = true
 				}
 			}
 		}
