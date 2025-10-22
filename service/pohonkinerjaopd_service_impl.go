@@ -1573,8 +1573,8 @@ func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponse(ctx context.
 	return operationalResp
 }
 
-func (service *PohonKinerjaOpdServiceImpl) FindPokinByPelaksana(ctx context.Context, pegawaiId string, tahun string) ([]pohonkinerja.PohonKinerjaOpdResponse, error) {
-	log.Printf("Memulai proses FindPokinByPelaksana untuk pegawai ID: %s", pegawaiId)
+func (service *PohonKinerjaOpdServiceImpl) FindPokinByPelaksana(ctx context.Context, nip string, tahun string) ([]pohonkinerja.PohonKinerjaOpdResponse, error) {
+	log.Printf("Memulai proses FindPokinByPelaksana untuk NIP: %s", nip)
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -1583,18 +1583,18 @@ func (service *PohonKinerjaOpdServiceImpl) FindPokinByPelaksana(ctx context.Cont
 	}
 	defer helper.CommitOrRollback(tx)
 
-	// Validasi pegawai
-	pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pegawaiId)
+	// ✅ VALIDASI PEGAWAI BERDASARKAN NIP
+	pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, nip) // ✅ GUNAKAN FindByNip
 	if err != nil {
-		log.Printf("Pegawai tidak ditemukan: %v", err)
-		return nil, fmt.Errorf("pegawai tidak ditemukan: %v", err)
+		log.Printf("Pegawai dengan NIP %s tidak ditemukan: %v", nip, err)
+		return nil, fmt.Errorf("pegawai dengan NIP %s tidak ditemukan: %v", nip, err)
 	}
 
-	// Ambil data pohon kinerja berdasarkan pegawai
-	pokinList, err := service.pohonKinerjaOpdRepository.FindPokinByPelaksana(ctx, tx, pegawaiId, tahun)
+	// ✅ AMBIL DATA POHON KINERJA BERDASARKAN NIP
+	pokinList, err := service.pohonKinerjaOpdRepository.FindPokinByPelaksana(ctx, tx, nip, tahun) // ✅ PARAMETER NIP
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Printf("Tidak ada pohon kinerja untuk pegawai ID: %s", pegawaiId)
+			log.Printf("Tidak ada pohon kinerja untuk NIP: %s", nip)
 			return []pohonkinerja.PohonKinerjaOpdResponse{}, nil
 		}
 		log.Printf("Gagal mengambil data pohon kinerja: %v", err)
@@ -1633,12 +1633,12 @@ func (service *PohonKinerjaOpdServiceImpl) FindPokinByPelaksana(ctx context.Cont
 			}
 		}
 
-		// Buat response pelaksana hanya untuk pegawai yang bersangkutan
+		// ✅ BUAT RESPONSE PELAKSANA BERDASARKAN DATA YANG SUDAH ADA
 		pelaksanaResponse := pohonkinerja.PelaksanaOpdResponse{
-			Id:             pokin.Pelaksana[0].Id, // Mengambil ID pelaksana pertama karena sudah difilter di repository
+			Id:             pokin.Pelaksana[0].Id,
 			PohonKinerjaId: fmt.Sprint(pokin.Id),
-			PegawaiId:      pegawaiId,
-			NamaPegawai:    pegawai.NamaPegawai,
+			PegawaiId:      pokin.Pelaksana[0].PegawaiId,   // ✅ GUNAKAN ID PEGAWAI DARI DATABASE
+			NamaPegawai:    pokin.Pelaksana[0].NamaPegawai, // ✅ GUNAKAN NAMA DARI DATABASE
 		}
 
 		responses = append(responses, pohonkinerja.PohonKinerjaOpdResponse{
@@ -1652,11 +1652,11 @@ func (service *PohonKinerjaOpdServiceImpl) FindPokinByPelaksana(ctx context.Cont
 			Keterangan: pokin.Keterangan,
 			Tahun:      pokin.Tahun,
 			Indikator:  indikatorResponses,
-			Pelaksana:  []pohonkinerja.PelaksanaOpdResponse{pelaksanaResponse}, // Hanya menampilkan pelaksana yang sesuai
+			Pelaksana:  []pohonkinerja.PelaksanaOpdResponse{pelaksanaResponse},
 		})
 	}
 
-	log.Printf("Berhasil mengambil %d pohon kinerja untuk pegawai %s", len(responses), pegawai.NamaPegawai)
+	log.Printf("Berhasil mengambil %d pohon kinerja untuk NIP %s (%s)", len(responses), nip, pegawai.NamaPegawai)
 	return responses, nil
 }
 
