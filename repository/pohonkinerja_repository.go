@@ -24,6 +24,7 @@ type PohonKinerjaRepository interface {
 	//admin pokin
 	CreatePokinAdmin(ctx context.Context, tx *sql.Tx, pokinAdmin domain.PohonKinerja) (domain.PohonKinerja, error)
 	UpdatePokinAdmin(ctx context.Context, tx *sql.Tx, pokinAdmin domain.PohonKinerja) (domain.PohonKinerja, error)
+	UpdatePelaksanaOnly(ctx context.Context, tx *sql.Tx, pokin domain.PohonKinerja) (domain.PohonKinerja, error)
 	DeletePokinAdmin(ctx context.Context, tx *sql.Tx, id int) error
 	FindPokinAdminById(ctx context.Context, tx *sql.Tx, id int) (domain.PohonKinerja, error)
 	FindPokinAdminAll(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)
@@ -56,7 +57,7 @@ type PohonKinerjaRepository interface {
 
 	//find pokin for dropdown
 	FindPokinByJenisPohon(ctx context.Context, tx *sql.Tx, jenisPohon string, levelPohon int, tahun string, kodeOpd string, status string) ([]domain.PohonKinerja, error)
-	FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, pelaksanaId string, tahun string) ([]domain.PohonKinerja, error)
+	FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.PohonKinerja, error)
 	FindPokinByStatus(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, status string) ([]domain.PohonKinerja, error)
 	FindPokinByCrosscuttingStatus(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.PohonKinerja, error)
 
@@ -80,4 +81,6 @@ type PohonKinerjaRepository interface {
 	//tagging
 	UpdateTagging(ctx context.Context, tx *sql.Tx, idPokin int, taggingList []domain.TaggingPokin) ([]domain.TaggingPokin, error)
 	FindTaggingByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.TaggingPokin, error)
+
+	FindTematikByCloneFrom(ctx context.Context, tx *sql.Tx, cloneFromId int) (*domain.PohonKinerja, error)
 }

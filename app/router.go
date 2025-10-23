@@ -52,6 +52,7 @@ func NewRouter(
 	rincianBelanjaController controller.RincianBelanjaController,
 	kelompokAnggaranController controller.KelompokAnggaranController,
 	csfController controller.CSFController,
+	programUnggulanController controller.ProgramUnggulanController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -159,6 +160,7 @@ func NewRouter(
 	router.GET("/sub_kegiatan/pilihan/:kode_opd", subKegiatanController.FindAll)
 	router.GET("/sub_kegiatan/byrekinid/:rencana_kinerja_id", subKegiatanController.FindAll)
 	router.DELETE("/sub_kegiatan/delete/:id", subKegiatanController.Delete)
+	router.GET("/sub_kegiatan/kak/:kode_opd/:kode_subkegiatan/:tahun", subKegiatanController.FindSubKegiatanKAK)
 
 	//sub kegiatan terpilih
 	router.POST("/sub_kegiatan/create_rekin/:rencana_kinerja_id", subKegiatanTerpilihController.CreateRekin)
@@ -429,12 +431,28 @@ func NewRouter(
 	router.GET("/rekap_outcome/:tahun", pohonKinerjaAdminController.FindSubTematik)
 	router.GET("/rekap_intermediate/:tahun", pohonKinerjaAdminController.RekapIntermediate)
 
+	//Master Program Unggulan
+	router.GET("/program_unggulan/findall", programUnggulanController.FindAll)
+	router.GET("/program_unggulan/detail/:id", programUnggulanController.FindById)
+	router.POST("/program_unggulan/create", programUnggulanController.Create)
+	router.PUT("/program_unggulan/update/:id", programUnggulanController.Update)
+	router.DELETE("/program_unggulan/delete/:id", programUnggulanController.Delete)
+	router.GET("/program_unggulan/findall/:tahun_awal/:tahun_akhir", programUnggulanController.FindAll)
+	router.GET("/program_unggulan/findbykodeprogramunggulan/:kode_program_unggulan", programUnggulanController.FindByKodeProgramUnggulan)
+	router.GET("/program_unggulan/findbytahun/:tahun", programUnggulanController.FindByTahun)
+	router.GET("/program_unggulan/findunusedbytahun/:tahun", programUnggulanController.FindUnusedByTahun)
+
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)
 	router.GET("/api/pokin_pemda/subtematik/:tahun", pohonKinerjaAdminController.FindSubTematik)
 	router.GET("/pohon_kinerja/pokin_atasan/:id", pohonKinerjaOpdController.FindPokinAtasan)
 	router.GET("/rekin/atasan/:rekin_id", rencanaKinerjaController.FindRekinAtasan)
 	router.GET("/api_internal/rencana_kinerja/findall", rencanaKinerjaController.FindAll)
+
+	//findcascadingopd by
+	router.GET("/cascading_opd/findbyrekin/:rekin_id", cascadingOpdController.FindByRekinPegawaiAndId)
+	router.GET("/cascading_opd/findbypokin/:pokin_id", cascadingOpdController.FindByIdPokin)
+	router.GET("/cascading_opd/findbynip/:nip/:tahun", cascadingOpdController.FindByNip)
 
 	return router
 }

@@ -211,10 +211,6 @@ func (service *RincianBelanjaServiceImpl) FindRincianBelanjaAsn(ctx context.Cont
 
 			// Sort rencana aksi berdasarkan ID
 			if rk.RencanaAksi != nil {
-				sort.Slice(rk.RencanaAksi, func(i, j int) bool {
-					return rk.RencanaAksi[i].RenaksiId < rk.RencanaAksi[j].RenaksiId
-				})
-
 				for _, ra := range rk.RencanaAksi {
 					rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
 						RenaksiId: ra.RenaksiId,

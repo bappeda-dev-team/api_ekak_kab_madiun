@@ -29,6 +29,7 @@ type PohonKinerja struct {
 	CrosscuttingTo         int
 	CountReview            int
 	IsActive               bool
+	UpdatedBy              string
 	//tambahan
 	RencanaKinerja   []RencanaKinerja
 	KegiatanId       sql.NullString

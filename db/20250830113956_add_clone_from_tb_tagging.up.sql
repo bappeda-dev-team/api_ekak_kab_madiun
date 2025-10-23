@@ -1,0 +1,1 @@
+ALTER TABLE tb_tagging_pokin ADD COLUMN clone_from INT DEFAULT 0;

@@ -5,17 +5,20 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/permasalahan"
 	"ekak_kabupaten_madiun/model/web/rencanaaksi"
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 	"ekak_kabupaten_madiun/model/web/subkegiatan"
 	"ekak_kabupaten_madiun/repository"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -45,9 +48,15 @@ type RencanaKinerjaServiceImpl struct {
 	SubKegiatanService               *SubKegiatanServiceImpl
 	PeriodeRepository                repository.PeriodeRepository
 	SasaranOpdRepository             repository.SasaranOpdRepository
+	CascadingOpdService              *CascadingOpdServiceImpl
+	// TAMBAHKAN REPOSITORY BARU:
+	cascadingOpdRepository   repository.CascadingOpdRepository
+	programRepository        repository.ProgramRepository
+	rincianBelanjaRepository repository.RincianBelanjaRepository
+	rencanaAksiRepository    repository.RencanaAksiRepository
 }
 
-func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, rencanaAksiRepository repository.RencanaAksiRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository, sasaranOpdRepository repository.SasaranOpdRepository) *RencanaKinerjaServiceImpl {
+func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository, sasaranOpdRepository repository.SasaranOpdRepository, cascadingOpdService *CascadingOpdServiceImpl, cascadingOpdRepository repository.CascadingOpdRepository, programRepository repository.ProgramRepository, rincianBelanjaRepository repository.RincianBelanjaRepository, rencanaAksiRepository repository.RencanaAksiRepository) *RencanaKinerjaServiceImpl {
 	return &RencanaKinerjaServiceImpl{
 		rencanaKinerjaRepository:         rencanaKinerjaRepository,
 		DB:                               DB,
@@ -71,6 +80,12 @@ func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKin
 		SubKegiatanService:               subKegiatanService,
 		PeriodeRepository:                periodeRepository,
 		SasaranOpdRepository:             sasaranOpdRepository,
+		CascadingOpdService:              cascadingOpdService,
+		// TAMBAHKAN ASSIGNMENT BARU:
+		cascadingOpdRepository:   cascadingOpdRepository,
+		programRepository:        programRepository,
+		rincianBelanjaRepository: rincianBelanjaRepository,
+		rencanaAksiRepository:    rencanaAksiRepository,
 	}
 }
 
@@ -1630,6 +1645,7 @@ func (service *RencanaKinerjaServiceImpl) FindRekinLevel3(ctx context.Context, k
 	return responses, nil
 }
 
+// rekinatasan
 func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, rekinId string) (rencanakinerja.RekinAtasanResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -1637,46 +1653,325 @@ func (service *RencanaKinerjaServiceImpl) FindRekinAtasan(ctx context.Context, r
 	}
 	defer helper.CommitOrRollback(tx)
 
-	// Validasi ID rencana kinerja
+	// 1. Validasi ID rencana kinerja
 	err = service.rencanaKinerjaRepository.ValidateRekinId(ctx, tx, rekinId)
 	if err != nil {
 		return rencanakinerja.RekinAtasanResponse{}, err
 	}
 
-	// Ambil semua data rencana kinerja atasan dan subkegiatan
-	rekins, subkegiatan, kodeSubkegiatan, paguSubkegiatan, paguProgram, kodeKegiatan, namaKegiatan, paguKegiatan, err := service.rencanaKinerjaRepository.FindRekinAtasan(ctx, tx, rekinId)
+	// 2. Cari pohon kinerja dari rencana kinerja ini
+	pokinChild, err := service.CascadingOpdService.cascadingOpdRepository.FindPokinByRekinId(ctx, tx, rekinId)
 	if err != nil {
-		return rencanakinerja.RekinAtasanResponse{}, err
-	}
-	// Transform ke response
-	var rekinDetails []rencanakinerja.RekinAtasanDetail
-	for _, rekin := range rekins {
-		detail := rencanakinerja.RekinAtasanDetail{
-			Id:                   rekin.Id,
-			NamaRencanaKinerja:   rekin.NamaRencanaKinerja,
-			IdPohon:              rekin.IdPohon,
-			Tahun:                rekin.Tahun,
-			StatusRencanaKinerja: rekin.StatusRencanaKinerja,
-			Catatan:              rekin.Catatan,
-			KodeOpd:              rekin.KodeOpd,
-			PegawaiId:            rekin.PegawaiId,
-			NamaPegawai:          rekin.NamaPegawai,
-			Program:              rekin.Program,
-			KodeProgram:          rekin.KodeProgram,
-			PaguProgram:          paguProgram,
-		}
-		rekinDetails = append(rekinDetails, detail)
+		log.Printf("Error: Pohon kinerja not found for rekin_id=%s: %v", rekinId, err)
+		return rencanakinerja.RekinAtasanResponse{}, errors.New("pohon kinerja tidak ditemukan")
 	}
 
+	log.Printf("Found pohon kinerja: ID=%d, Level=%d, Parent=%d", pokinChild.Id, pokinChild.LevelPohon, pokinChild.Parent)
+
+	// 3. Cari parent pohon kinerja
+	if pokinChild.Parent == 0 {
+		log.Printf("Pohon kinerja tidak memiliki parent (sudah di root)")
+		return rencanakinerja.RekinAtasanResponse{}, errors.New("pohon kinerja tidak memiliki parent")
+	}
+
+	pokinParent, err := service.CascadingOpdService.cascadingOpdRepository.FindPokinById(ctx, tx, pokinChild.Parent)
+	if err != nil {
+		log.Printf("Error: Parent pohon kinerja not found: %v", err)
+		return rencanakinerja.RekinAtasanResponse{}, errors.New("parent pohon kinerja tidak ditemukan")
+	}
+
+	log.Printf("Found parent pohon kinerja: ID=%d, Level=%d, Nama=%s", pokinParent.Id, pokinParent.LevelPohon, pokinParent.NamaPohon)
+
+	// 4. Validasi OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, pokinParent.KodeOpd)
+	if err != nil {
+		log.Printf("Error: OPD not found for kode_opd=%s: %v", pokinParent.KodeOpd, err)
+		return rencanakinerja.RekinAtasanResponse{}, errors.New("kode opd tidak ditemukan")
+	}
+
+	// 5. Hitung pagu anggaran parent dari semua children-nya
+	var paguAnggaran int64
+
+	if pokinParent.LevelPohon == 5 {
+		// Tactical: sum dari semua operational children
+		paguAnggaran, err = service.CascadingOpdService.calculateAnggaranForTacticalWithPelaksana(ctx, tx, pokinParent.Id)
+	} else if pokinParent.LevelPohon == 4 {
+		// Strategic: sum dari semua tactical children
+		paguAnggaran, err = service.CascadingOpdService.calculateAnggaranForStrategicWithPelaksana(ctx, tx, pokinParent.Id)
+	} else if pokinParent.LevelPohon == 6 {
+		// Operational: sum dari rencana kinerja di pohon ini
+		paguAnggaran, err = service.CascadingOpdService.calculateAnggaranForOperationalWithPelaksana(ctx, tx, pokinParent.Id)
+	} else {
+		paguAnggaran = 0
+	}
+
+	if err != nil {
+		log.Printf("Warning: Failed to calculate pagu anggaran: %v", err)
+		paguAnggaran = 0
+	}
+
+	// 6. Ambil rencana kinerja atasan (pelaksana di pohon parent)
+	var rekinAtasanList []rencanakinerja.RekinAtasanDetail
+	rekinList, err := service.rencanaKinerjaRepository.FindByPokinId(ctx, tx, pokinParent.Id)
+	if err == nil {
+		// Ambil pelaksana parent
+		pelaksanaList, err := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(pokinParent.Id))
+		if err == nil {
+			pelaksanaMap := make(map[string]*domainmaster.Pegawai)
+			for _, pelaksana := range pelaksanaList {
+				pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
+				if err == nil {
+					pelaksanaMap[pegawai.Nip] = &pegawai
+				}
+			}
+
+			// ✅ TAMBAHKAN MAP UNTUK DEDUPLICATION
+			rekinMap := make(map[string]bool)
+
+			// Filter rencana kinerja hanya yang pelaksana valid
+			for _, rk := range rekinList {
+				// ✅ SKIP JIKA SUDAH ADA (DEDUPLICATION)
+				if rekinMap[rk.Id] {
+					continue
+				}
+
+				if pegawai, exists := pelaksanaMap[rk.PegawaiId]; exists {
+					rekinAtasanList = append(rekinAtasanList, rencanakinerja.RekinAtasanDetail{
+						Id:                   rk.Id,
+						NamaRencanaKinerja:   rk.NamaRencanaKinerja,
+						IdPohon:              rk.IdPohon,
+						Tahun:                rk.Tahun,
+						StatusRencanaKinerja: rk.StatusRencanaKinerja,
+						Catatan:              rk.Catatan,
+						KodeOpd:              rk.KodeOpd,
+						PegawaiId:            rk.PegawaiId,
+						NamaPegawai:          pegawai.NamaPegawai,
+					})
+
+					// ✅ MARK SEBAGAI SUDAH DIPROSES
+					rekinMap[rk.Id] = true
+				}
+			}
+		}
+	}
+
+	// 7. Ambil Program/Kegiatan/Subkegiatan berdasarkan level parent
+	var programList []rencanakinerja.ProgramAtasanResponse
+	var kegiatanList []rencanakinerja.KegiatanAtasanResponse
+	var subkegiatanList []rencanakinerja.SubKegiatanAtasanResponse
+
+	if pokinParent.LevelPohon == 4 || pokinParent.LevelPohon == 5 {
+		// Parent level 4 atau 5: Tampilkan program dari children
+		programList = service.getProgramForRekinAtasan(ctx, tx, pokinParent)
+	} else if pokinParent.LevelPohon == 6 {
+		// Parent level 6: Tampilkan kegiatan dan subkegiatan
+		kegiatanList, subkegiatanList = service.getKegiatanSubkegiatanForRekinAtasan(ctx, tx, pokinParent)
+	}
+
+	// 8. Build response
 	response := rencanakinerja.RekinAtasanResponse{
-		Subkegiatan:     subkegiatan,
-		KodeSubkegiatan: kodeSubkegiatan,
-		RekinAtasan:     rekinDetails,
-		PaguSubkegiatan: paguSubkegiatan,
-		KodeKegiatan:    kodeKegiatan,
-		Kegiatan:        namaKegiatan,
-		PaguKegiatan:    paguKegiatan,
+		PokinParent: rencanakinerja.PokinParentInfo{
+			Id:         pokinParent.Id,
+			NamaPohon:  pokinParent.NamaPohon,
+			LevelPohon: pokinParent.LevelPohon,
+			KodeOpd:    pokinParent.KodeOpd,
+			NamaOpd:    opd.NamaOpd,
+		},
+		RekinAtasan:       rekinAtasanList,
+		Program:           programList,
+		Kegiatan:          kegiatanList,
+		Subkegiatan:       subkegiatanList,
+		PaguAnggaranTotal: paguAnggaran,
 	}
 
 	return response, nil
+}
+
+// Helper: Get program untuk rekin atasan (level 4 & 5)
+func (service *RencanaKinerjaServiceImpl) getProgramForRekinAtasan(
+	ctx context.Context,
+	tx *sql.Tx,
+	pokinParent domain.PohonKinerja) []rencanakinerja.ProgramAtasanResponse {
+
+	var programList []rencanakinerja.ProgramAtasanResponse
+
+	// Ambil operational children
+	var operationalIds []int
+	var err error
+
+	if pokinParent.LevelPohon == 5 {
+		// Tactical: ambil operational children langsung
+		operationalIds, err = service.CascadingOpdService.cascadingOpdRepository.FindOperationalChildrenByTacticalId(ctx, tx, pokinParent.Id)
+	} else if pokinParent.LevelPohon == 4 {
+		// Strategic: ambil tactical children dulu, lalu operational dari setiap tactical
+		tacticalIds, err := service.CascadingOpdService.cascadingOpdRepository.FindTacticalChildrenByStrategicId(ctx, tx, pokinParent.Id)
+		if err == nil {
+			for _, tacticalId := range tacticalIds {
+				ops, err := service.CascadingOpdService.cascadingOpdRepository.FindOperationalChildrenByTacticalId(ctx, tx, tacticalId)
+				if err == nil {
+					operationalIds = append(operationalIds, ops...)
+				}
+			}
+		}
+	}
+
+	if err != nil {
+		log.Printf("Error getting operational children: %v", err)
+		return programList
+	}
+
+	// Map untuk program unik
+	programMap := make(map[string]*rencanakinerja.ProgramAtasanResponse)
+
+	// Loop operational dan kumpulkan program
+	for _, operationalId := range operationalIds {
+		rekinList, err := service.rencanaKinerjaRepository.FindByPokinId(ctx, tx, operationalId)
+		if err == nil {
+			// Filter hanya pelaksana valid
+			pelaksanaList, _ := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(operationalId))
+			pelaksanaMap := make(map[string]bool)
+			for _, pelaksana := range pelaksanaList {
+				pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
+				if err == nil {
+					pelaksanaMap[pegawai.Nip] = true
+				}
+			}
+
+			for _, rk := range rekinList {
+				// Skip jika bukan pelaksana
+				if !pelaksanaMap[rk.PegawaiId] {
+					continue
+				}
+
+				if rk.KodeSubKegiatan != "" {
+					segments := strings.Split(rk.KodeSubKegiatan, ".")
+					if len(segments) >= 3 {
+						kodeProgram := strings.Join(segments[:3], ".")
+
+						if _, exists := programMap[kodeProgram]; !exists {
+							program, err := service.CascadingOpdService.programRepository.FindByKodeProgram(ctx, tx, kodeProgram)
+							if err == nil {
+								programMap[kodeProgram] = &rencanakinerja.ProgramAtasanResponse{
+									KodeProgram: kodeProgram,
+									NamaProgram: program.NamaProgram,
+									PaguProgram: 0,
+								}
+							}
+						}
+
+						// Hitung pagu untuk program ini
+						if programData, exists := programMap[kodeProgram]; exists {
+							var totalAnggaranRenkin int64 = 0
+							if rk.Id != "" {
+								rencanaAksiList, err := service.RencanaAksiRepository.FindAll(ctx, tx, rk.Id)
+								if err == nil {
+									for _, ra := range rencanaAksiList {
+										rincianBelanja, err := service.CascadingOpdService.rincianBelanjaRepository.FindAnggaranByRenaksiId(ctx, tx, ra.Id)
+										if err == nil {
+											totalAnggaranRenkin += rincianBelanja.Anggaran
+										}
+									}
+								}
+							}
+							programData.PaguProgram += totalAnggaranRenkin
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Convert map ke slice
+	for _, prog := range programMap {
+		programList = append(programList, *prog)
+	}
+
+	return programList
+}
+
+// Helper: Get kegiatan dan subkegiatan untuk rekin atasan (level 6)
+func (service *RencanaKinerjaServiceImpl) getKegiatanSubkegiatanForRekinAtasan(
+	ctx context.Context,
+	tx *sql.Tx,
+	pokinParent domain.PohonKinerja) ([]rencanakinerja.KegiatanAtasanResponse, []rencanakinerja.SubKegiatanAtasanResponse) {
+
+	var kegiatanList []rencanakinerja.KegiatanAtasanResponse
+	var subkegiatanList []rencanakinerja.SubKegiatanAtasanResponse
+
+	// Ambil rencana kinerja dari pohon parent
+	rekinList, err := service.rencanaKinerjaRepository.FindByPokinId(ctx, tx, pokinParent.Id)
+	if err != nil {
+		log.Printf("Error getting rencana kinerja: %v", err)
+		return kegiatanList, subkegiatanList
+	}
+
+	// Filter pelaksana valid
+	pelaksanaList, _ := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(pokinParent.Id))
+	pelaksanaMap := make(map[string]bool)
+	for _, pelaksana := range pelaksanaList {
+		pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
+		if err == nil {
+			pelaksanaMap[pegawai.Nip] = true
+		}
+	}
+
+	// Map untuk kegiatan dan subkegiatan
+	kegiatanMap := make(map[string]*rencanakinerja.KegiatanAtasanResponse)
+	subkegiatanMap := make(map[string]*rencanakinerja.SubKegiatanAtasanResponse)
+
+	// Loop rencana kinerja
+	for _, rk := range rekinList {
+		// Skip jika bukan pelaksana
+		if !pelaksanaMap[rk.PegawaiId] {
+			continue
+		}
+
+		// Hitung anggaran dari rencana kinerja ini
+		var totalAnggaranRenkin int64 = 0
+		if rk.Id != "" {
+			rencanaAksiList, err := service.RencanaAksiRepository.FindAll(ctx, tx, rk.Id)
+			if err == nil {
+				for _, ra := range rencanaAksiList {
+					rincianBelanja, err := service.CascadingOpdService.rincianBelanjaRepository.FindAnggaranByRenaksiId(ctx, tx, ra.Id)
+					if err == nil {
+						totalAnggaranRenkin += rincianBelanja.Anggaran
+					}
+				}
+			}
+		}
+
+		// Kumpulkan kegiatan
+		if rk.KodeKegiatan != "" {
+			if _, exists := kegiatanMap[rk.KodeKegiatan]; !exists {
+				kegiatanMap[rk.KodeKegiatan] = &rencanakinerja.KegiatanAtasanResponse{
+					KodeKegiatan: rk.KodeKegiatan,
+					NamaKegiatan: rk.NamaKegiatan,
+					PaguKegiatan: 0,
+				}
+			}
+			kegiatanMap[rk.KodeKegiatan].PaguKegiatan += totalAnggaranRenkin
+		}
+
+		// Kumpulkan subkegiatan
+		if rk.KodeSubKegiatan != "" {
+			if _, exists := subkegiatanMap[rk.KodeSubKegiatan]; !exists {
+				subkegiatanMap[rk.KodeSubKegiatan] = &rencanakinerja.SubKegiatanAtasanResponse{
+					KodeSubkegiatan: rk.KodeSubKegiatan,
+					NamaSubkegiatan: rk.NamaSubKegiatan,
+					PaguSubkegiatan: 0,
+				}
+			}
+			subkegiatanMap[rk.KodeSubKegiatan].PaguSubkegiatan += totalAnggaranRenkin
+		}
+	}
+
+	// Convert map ke slice
+	for _, keg := range kegiatanMap {
+		kegiatanList = append(kegiatanList, *keg)
+	}
+	for _, sub := range subkegiatanMap {
+		subkegiatanList = append(subkegiatanList, *sub)
+	}
+
+	return kegiatanList, subkegiatanList
 }

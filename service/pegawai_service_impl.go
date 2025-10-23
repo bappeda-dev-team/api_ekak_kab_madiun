@@ -34,6 +34,18 @@ func (service *PegawaiServiceImpl) Create(ctx context.Context, request pegawai.P
 	}
 	defer helper.CommitOrRollback(tx)
 
+	// ✅ VALIDASI NIP TIDAK DUPLIKAT
+	existingPegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, request.Nip)
+	if err == nil {
+		// Jika tidak ada error, berarti NIP sudah ada
+		return pegawai.PegawaiResponse{}, fmt.Errorf("NIP %s sudah digunakan oleh pegawai %s", request.Nip, existingPegawai.NamaPegawai)
+	}
+	// Jika error adalah sql.ErrNoRows, berarti NIP belum ada (OK)
+	if err != sql.ErrNoRows {
+		// Jika error lain, return error
+		return pegawai.PegawaiResponse{}, fmt.Errorf("gagal validasi NIP: %v", err)
+	}
+
 	// Generate UUID dan timestamp untuk ID yang lebih unik
 	currentTime := time.Now().Format("20060102")
 	uuid := uuid.New().String()
@@ -64,9 +76,24 @@ func (service *PegawaiServiceImpl) Update(ctx context.Context, request pegawai.P
 	}
 	defer helper.CommitOrRollback(tx)
 
+	// Ambil data pegawai yang akan diupdate
 	pegawaiData, err := service.pegawaiRepository.FindById(ctx, tx, request.Id)
 	if err != nil {
 		return pegawai.PegawaiResponse{}, err
+	}
+
+	// ✅ VALIDASI NIP TIDAK DUPLIKAT (hanya jika NIP berubah)
+	if pegawaiData.Nip != request.Nip {
+		existingPegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, request.Nip)
+		if err == nil {
+			// Jika tidak ada error, berarti NIP sudah digunakan oleh pegawai lain
+			return pegawai.PegawaiResponse{}, fmt.Errorf("NIP %s sudah digunakan oleh pegawai %s", request.Nip, existingPegawai.NamaPegawai)
+		}
+		// Jika error adalah sql.ErrNoRows, berarti NIP belum ada (OK)
+		if err != sql.ErrNoRows {
+			// Jika error lain, return error
+			return pegawai.PegawaiResponse{}, fmt.Errorf("gagal validasi NIP: %v", err)
+		}
 	}
 
 	pegawaiData.NamaPegawai = request.NamaPegawai
