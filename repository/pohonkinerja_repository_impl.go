@@ -1862,7 +1862,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.
 	return pokins, nil
 }
 
-func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, pegawaiId string, tahun string) ([]domain.PohonKinerja, error) {
+func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.PohonKinerja, error) {
 	script := `
         SELECT DISTINCT
             pk.id,
@@ -1875,19 +1875,23 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.C
             pk.tahun,
             pk.created_at,
             pp.id as pelaksana_id,
-            pp.pegawai_id
+            pp.pegawai_id,
+            p.nip,
+            p.nama as nama_pegawai
         FROM 
             tb_pohon_kinerja pk
         INNER JOIN 
             tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
+        INNER JOIN 
+            tb_pegawai p ON pp.pegawai_id = p.id
         WHERE 
-            pp.pegawai_id = ?
+            p.nip = ?  -- ✅ FILTER BERDASARKAN NIP
             AND pk.tahun = ?
         ORDER BY 
             pk.level_pohon, pk.id, pk.created_at ASC
     `
 
-	rows, err := tx.QueryContext(ctx, script, pegawaiId, tahun)
+	rows, err := tx.QueryContext(ctx, script, nip, tahun) // ✅ PARAMETER NIP
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil data pohon kinerja: %v", err)
 	}
@@ -1911,6 +1915,8 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.C
 			&pokin.CreatedAt,
 			&pelaksana.Id,
 			&pelaksana.PegawaiId,
+			&pelaksana.Nip,         // ✅ TAMBAHKAN NIP
+			&pelaksana.NamaPegawai, // ✅ TAMBAHKAN NAMA PEGAWAI
 		)
 		if err != nil {
 			return nil, fmt.Errorf("gagal scan data pohon kinerja: %v", err)

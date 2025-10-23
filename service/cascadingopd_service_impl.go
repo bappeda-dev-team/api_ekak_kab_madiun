@@ -1041,7 +1041,15 @@ func (service *CascadingOpdServiceImpl) getRencanaKinerjaForRekin(
 		}
 	}
 
+	rekinMap := make(map[string]bool)
+
 	for _, rk := range rekinList {
+
+		if rekinMap[rk.Id] {
+			log.Printf("[DEBUG] Skip duplicate rekin ID: %s", rk.Id)
+			continue
+		}
+
 		if pegawai, exists := pelaksanaMap[rk.PegawaiId]; exists {
 			var indikatorResponses []pohonkinerja.IndikatorResponse
 			if rk.Id != "" {
@@ -1080,6 +1088,8 @@ func (service *CascadingOpdServiceImpl) getRencanaKinerjaForRekin(
 				NamaPegawai:        pegawai.NamaPegawai,
 				Indikator:          indikatorResponses,
 			})
+
+			rekinMap[rk.Id] = true
 		}
 	}
 
