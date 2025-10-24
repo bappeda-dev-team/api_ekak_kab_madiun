@@ -43,9 +43,9 @@ func GetConnection() *sql.DB {
 	}
 
 	// Set konfigurasi koneksi
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(100)
-	db.SetConnMaxIdleTime(5 * time.Minute)
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxIdleTime(10 * time.Minute)
 	db.SetConnMaxLifetime(60 * time.Minute)
 
 	// Cek koneksi dengan timeout
