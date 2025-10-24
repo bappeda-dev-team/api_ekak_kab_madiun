@@ -140,12 +140,12 @@ func (controller *SubKegiatanTerpilihControllerImpl) DeleteSubKegiatanTerpilih(w
 }
 
 func (controller *SubKegiatanTerpilihControllerImpl) CreateOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	SubKegiatanOpdCreateRequest := subkegiatan.SubKegiatanOpdCreateRequest{}
-	helper.ReadFromRequestBody(request, &SubKegiatanOpdCreateRequest)
+	SubKegiatanOpdMultipleCreateRequest := subkegiatan.SubKegiatanOpdMultipleCreateRequest{}
+	helper.ReadFromRequestBody(request, &SubKegiatanOpdMultipleCreateRequest)
 
-	subKegiatanOpdResponse, err := controller.SubKegiatanTerpilihService.CreateOpd(request.Context(), SubKegiatanOpdCreateRequest)
+	subKegiatanOpdResponse, err := controller.SubKegiatanTerpilihService.CreateOpdMultiple(request.Context(), SubKegiatanOpdMultipleCreateRequest)
 	if err != nil {
-		webResponse := web.WebUsulanInisiatifResponse{
+		webResponse := web.WebResponse{
 			Code:   http.StatusBadRequest,
 			Status: "BAD REQUEST",
 			Data:   err.Error(),
