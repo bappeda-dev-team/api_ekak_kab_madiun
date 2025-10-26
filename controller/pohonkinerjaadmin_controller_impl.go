@@ -723,3 +723,33 @@ func (controller *PohonKinerjaAdminControllerImpl) FindAllTematik(writer http.Re
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaAdminControllerImpl) ClonePokinPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	pohonKinerjaCloneRequest := pohonkinerja.PohonKinerjaCloneHierarchyRequest{}
+	helper.ReadFromRequestBody(request, &pohonKinerjaCloneRequest)
+
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	helper.PanicIfError(err)
+
+	pohonKinerjaCloneRequest.IdPokinSource = id
+
+	result, err := controller.pohonKinerjaAdminService.ClonePokinPemda(request.Context(), pohonKinerjaCloneRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "Success Clone Pokin Pemda",
+		Data:   result,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
