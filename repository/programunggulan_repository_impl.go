@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 type ProgramUnggulanRepositoryImpl struct {
@@ -243,4 +245,55 @@ func (repository *ProgramUnggulanRepositoryImpl) FindUnusedByTahun(ctx context.C
 		programUnggulanList = append(programUnggulanList, programUnggulan)
 	}
 	return programUnggulanList, nil
+}
+
+func (repository *ProgramUnggulanRepositoryImpl) FindByIdTerkait(ctx context.Context, tx *sql.Tx, ids []int) ([]domain.ProgramUnggulan, error) {
+	if len(ids) == 0 {
+		return []domain.ProgramUnggulan{}, errors.New("ids tidak boleh kosong")
+	}
+
+	// Buat placeholder untuk IN clause
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT id, nama_tagging, kode_program_unggulan, 
+		       keterangan_program_unggulan, keterangan, tahun_awal, tahun_akhir 
+		FROM tb_program_unggulan 
+		WHERE id IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return []domain.ProgramUnggulan{}, err
+	}
+	defer rows.Close()
+
+	var result []domain.ProgramUnggulan
+	for rows.Next() {
+		var programUnggulan domain.ProgramUnggulan
+		err := rows.Scan(
+			&programUnggulan.Id,
+			&programUnggulan.NamaTagging,
+			&programUnggulan.KodeProgramUnggulan,
+			&programUnggulan.KeteranganProgramUnggulan,
+			&programUnggulan.Keterangan,
+			&programUnggulan.TahunAwal,
+			&programUnggulan.TahunAkhir,
+		)
+		if err != nil {
+			return []domain.ProgramUnggulan{}, err
+		}
+		result = append(result, programUnggulan)
+	}
+
+	if err = rows.Err(); err != nil {
+		return []domain.ProgramUnggulan{}, err
+	}
+
+	return result, nil
 }

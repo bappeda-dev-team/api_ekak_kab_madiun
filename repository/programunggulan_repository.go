@@ -15,4 +15,5 @@ type ProgramUnggulanRepository interface {
 	FindByKodeProgramUnggulan(ctx context.Context, tx *sql.Tx, kodeProgramUnggulan string) (domain.ProgramUnggulan, error)
 	FindByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.ProgramUnggulan, error)
 	FindUnusedByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.ProgramUnggulan, error)
+	FindByIdTerkait(ctx context.Context, tx *sql.Tx, ids []int) ([]domain.ProgramUnggulan, error)
 }

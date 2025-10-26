@@ -269,3 +269,31 @@ func (service *ProgramUnggulanServiceImpl) FindUnusedByTahun(ctx context.Context
 
 	return responses, nil
 }
+
+func (service *ProgramUnggulanServiceImpl) FindByIdTerkait(ctx context.Context, request programunggulan.FindByIdTerkaitRequest) ([]programunggulan.ProgramUnggulanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return []programunggulan.ProgramUnggulanResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	results, err := service.ProgramUnggulanRepository.FindByIdTerkait(ctx, tx, request.Ids)
+	if err != nil {
+		return []programunggulan.ProgramUnggulanResponse{}, err
+	}
+
+	var responses []programunggulan.ProgramUnggulanResponse
+	for _, result := range results {
+		responses = append(responses, programunggulan.ProgramUnggulanResponse{
+			Id:                        result.Id,
+			NamaTagging:               result.NamaTagging,
+			KodeProgramUnggulan:       result.KodeProgramUnggulan,
+			KeteranganProgramUnggulan: result.KeteranganProgramUnggulan,
+			Keterangan:                result.Keterangan,
+			TahunAwal:                 result.TahunAwal,
+			TahunAkhir:                result.TahunAkhir,
+		})
+	}
+
+	return responses, nil
+}
