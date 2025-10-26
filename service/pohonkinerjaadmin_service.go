@@ -23,6 +23,7 @@ type PohonKinerjaAdminService interface {
 	FindListOpdAllTematik(ctx context.Context, tahun string) ([]pohonkinerja.TematikListOpdResponse, error)
 	RekapIntermediate(ctx context.Context, tahun string) (pohonkinerja.IntermediateResponse, error)
 	FindAllTematik(ctx context.Context, tahun string) (pohonkinerja.PohonKinerjaAdminResponse, error)
+	ClonePokinPemda(ctx context.Context, request pohonkinerja.PohonKinerjaCloneHierarchyRequest) (pohonkinerja.PohonKinerjaAdminResponseData, error)
 
 	//find pokin for dropdown
 	FindPokinByTematik(ctx context.Context, tahun string) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
