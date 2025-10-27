@@ -53,6 +53,7 @@ func NewRouter(
 	kelompokAnggaranController controller.KelompokAnggaranController,
 	csfController controller.CSFController,
 	programUnggulanController controller.ProgramUnggulanController,
+	matrixRenjaController controller.MatrixRenjaController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -300,6 +301,7 @@ func NewRouter(
 	router.DELETE("/tujuan_opd/delete/:tujuanOpdId", tujuanOpdController.Delete)
 	router.GET("/tujuan_opd/findall/:kode_opd/tahunawal/:tahun_awal/tahunakhir/:tahun_akhir/jenisperiode/:jenis_periode", tujuanOpdController.FindAll)
 	router.GET("/tujuan_opd/findall_only_name/:kode_opd/tahunawal/:tahun_awal/tahunakhir/:tahun_akhir/jenisperiode/:jenis_periode", tujuanOpdController.FindTujuanOpdOnlyName)
+	router.GET("/tujuan_opd/renja/:kode_opd/:tahun/:jenis_periode", tujuanOpdController.FindTujuanOpdByTahun)
 
 	//crosscutting opd
 	router.POST("/crosscutting_opd/create/:parentId", crosscuttingOpdController.Create)
@@ -371,6 +373,7 @@ func NewRouter(
 	router.PUT("/sasaran_opd/update/:id", sasaranOpdController.Update)
 	router.DELETE("/sasaran_opd/delete/:id", sasaranOpdController.Delete)
 	router.GET("/sasaran_opd/pokin/:id_pokin/tahun/:tahun", sasaranOpdController.FindByIdPokin)
+	router.GET("/sasaran_opd/renja/:kode_opd/:tahun/:jenis_periode", sasaranOpdController.FindByTahun)
 
 	//visi pemda
 	router.POST("/visi_pemda/create", visiPemdaController.Create)
@@ -443,6 +446,9 @@ func NewRouter(
 	router.GET("/program_unggulan/findbytahun/:tahun", programUnggulanController.FindByTahun)
 	router.GET("/program_unggulan/findunusedbytahun/:tahun", programUnggulanController.FindUnusedByTahun)
 	router.POST("/program_unggulan/findbyidterkait", programUnggulanController.FindByIdTerkait)
+
+	//matrix renja
+	router.GET("/matrix_renja/opd/:kode_opd/:tahun", matrixRenjaController.GetByKodeOpdAndTahun)
 
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)

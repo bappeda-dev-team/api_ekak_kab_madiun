@@ -12,4 +12,5 @@ type TujuanOpdService interface {
 	FindById(ctx context.Context, tujuanOpdId int) (tujuanopd.TujuanOpdResponse, error)
 	FindAll(ctx context.Context, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]tujuanopd.TujuanOpdwithBidangUrusanResponse, error)
 	FindTujuanOpdOnlyName(ctx context.Context, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]tujuanopd.TujuanOpdResponse, error)
+	FindTujuanOpdByTahun(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]tujuanopd.TujuanOpdResponse, error)
 }

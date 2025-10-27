@@ -671,3 +671,98 @@ func (service *TujuanOpdServiceImpl) FindTujuanOpdOnlyName(ctx context.Context, 
 
 	return responses, nil
 }
+
+func (service *TujuanOpdServiceImpl) FindTujuanOpdByTahun(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]tujuanopd.TujuanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi tahun
+	if len(tahun) != 4 {
+		return nil, fmt.Errorf("format tahun tidak valid")
+	}
+	if _, err := strconv.Atoi(tahun); err != nil {
+		return nil, fmt.Errorf("tahun harus berupa angka")
+	}
+
+	// Ambil data OPD
+	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ambil tujuan OPD berdasarkan tahun
+	tujuanOpds, err := service.TujuanOpdRepository.FindTujuanOpdByTahun(ctx, tx, kodeOpd, tahun, jenisPeriode)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return make([]tujuanopd.TujuanOpdResponse, 0), nil
+		}
+		return nil, err
+	}
+
+	var responses []tujuanopd.TujuanOpdResponse
+	for _, tujuan := range tujuanOpds {
+		// Ambil data bidang urusan
+		bidangUrusan, err := service.BidangUrusanRepository.FindByKodeBidangUrusan(ctx, tx, tujuan.KodeBidangUrusan)
+		if err != nil {
+			return nil, err
+		}
+
+		tujuanResponse := tujuanopd.TujuanOpdResponse{
+			Id:               tujuan.Id,
+			KodeBidangUrusan: tujuan.KodeBidangUrusan,
+			NamaBidangUrusan: bidangUrusan.NamaBidangUrusan,
+			KodeOpd:          tujuan.KodeOpd,
+			NamaOpd:          opd.NamaOpd,
+			Tujuan:           tujuan.Tujuan,
+			TahunAwal:        tujuan.TahunAwal,
+			TahunAkhir:       tujuan.TahunAkhir,
+			JenisPeriode:     tujuan.JenisPeriode,
+			Indikator:        make([]tujuanopd.IndikatorResponse, 0),
+		}
+
+		// Proses indikator
+		for _, indikator := range tujuan.Indikator {
+			indikatorResponse := tujuanopd.IndikatorResponse{
+				Id:               indikator.Id,
+				IdTujuanOpd:      tujuan.Id,
+				NamaIndikator:    indikator.Indikator,
+				RumusPerhitungan: indikator.RumusPerhitungan.String,
+				SumberData:       indikator.SumberData.String,
+				Target:           make([]tujuanopd.TargetResponse, 0),
+			}
+
+			// Proses target
+			for _, target := range indikator.Target {
+				if target.Tahun == tahun { // Hanya ambil target untuk tahun yang diminta
+					targetResponse := tujuanopd.TargetResponse{
+						Id:              target.Id,
+						IndikatorId:     indikator.Id,
+						Tahun:           target.Tahun,
+						TargetIndikator: target.Target,
+						SatuanIndikator: target.Satuan,
+					}
+					indikatorResponse.Target = append(indikatorResponse.Target, targetResponse)
+				}
+			}
+
+			tujuanResponse.Indikator = append(tujuanResponse.Indikator, indikatorResponse)
+		}
+
+		responses = append(responses, tujuanResponse)
+	}
+
+	// Jika tidak ada data, kembalikan slice kosong
+	if len(responses) == 0 {
+		responses = make([]tujuanopd.TujuanOpdResponse, 0)
+	}
+
+	// Urutkan berdasarkan ID
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].Id < responses[j].Id
+	})
+
+	return responses, nil
+}

@@ -34,6 +34,7 @@ type UrusanDetailResponse struct {
 	TahunAkhir        string                      `json:"tahun_akhir"`
 	PaguAnggaranTotal []PaguAnggaranTotalResponse `json:"pagu_total"`
 	Urusan            []UrusanResponse            `json:"urusan"`
+	Tahun             string                      `json:"tahun,omitempty"`
 }
 
 type UrusanResponse struct {

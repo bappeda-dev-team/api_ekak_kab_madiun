@@ -13,4 +13,5 @@ type TujuanOpdController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindTujuanOpdOnlyName(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindTujuanOpdByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
