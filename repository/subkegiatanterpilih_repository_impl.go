@@ -126,21 +126,7 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) FindAll(ctx context.Context
 }
 
 func (repository *SubKegiatanTerpilihRepositoryImpl) CreateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error) {
-	// Cek apakah kombinasi kode_subkegiatan dan kode_opd sudah ada
-	checkScript := "SELECT COUNT(*) FROM tb_subkegiatan_opd WHERE kode_subkegiatan = ? AND kode_opd = ? AND tahun = ?"
-	var count int
-	err := tx.QueryRowContext(ctx, checkScript, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun).Scan(&count)
-	if err != nil {
-		return domain.SubKegiatanOpd{}, fmt.Errorf("error saat memeriksa duplikasi: %v", err)
-	}
-
-	// Jika sudah ada kombinasi yang sama, kembalikan error
-	if count > 0 {
-		return domain.SubKegiatanOpd{}, fmt.Errorf("subkegiatan dengan kode %s sudah ada di OPD %s untuk tahun %s",
-			subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun)
-	}
-
-	// Jika belum ada, lanjutkan dengan insert
+	// Langsung insert tanpa cek duplikasi (sudah dicek di service)
 	script := "INSERT INTO tb_subkegiatan_opd (id, kode_subkegiatan, kode_opd, tahun) VALUES (?,?,?,?)"
 	result, err := tx.ExecContext(ctx, script, subkegiatanOpd.Id, subkegiatanOpd.KodeSubKegiatan, subkegiatanOpd.KodeOpd, subkegiatanOpd.Tahun)
 	if err != nil {
@@ -155,6 +141,7 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) CreateOPD(ctx context.Conte
 
 	return subkegiatanOpd, nil
 }
+
 func (repository *SubKegiatanTerpilihRepositoryImpl) UpdateOPD(ctx context.Context, tx *sql.Tx, subkegiatanOpd domain.SubKegiatanOpd) (domain.SubKegiatanOpd, error) {
 	checkScript := "SELECT COUNT(*) FROM tb_subkegiatan_opd WHERE kode_subkegiatan = ? AND kode_opd = ? AND tahun = ?"
 	var count int
@@ -305,4 +292,13 @@ func (repository *SubKegiatanTerpilihRepositoryImpl) FindByKodeSubKegiatan(ctx c
 		return domain.SubKegiatan{}, fmt.Errorf("error saat mencari subkegiatan: %v", err)
 	}
 	return sub, nil
+}
+func (repository *SubKegiatanTerpilihRepositoryImpl) CheckExists(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun string) (bool, error) {
+	checkScript := "SELECT COUNT(*) FROM tb_subkegiatan_opd WHERE kode_subkegiatan = ? AND kode_opd = ? AND tahun = ?"
+	var count int
+	err := tx.QueryRowContext(ctx, checkScript, kodeSubkegiatan, kodeOpd, tahun).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("error saat memeriksa duplikasi: %v", err)
+	}
+	return count > 0, nil
 }

@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type PohonKinerjaRepositoryImpl struct {
@@ -3544,4 +3546,265 @@ func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFrom(ctx context
 		Id:        tematik.Id,
 		NamaPohon: tematik.NamaPohon,
 	}, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Context, tx *sql.Tx, sourceId int, targetTahun string) (int64, error) {
+	// 1. Ambil data pohon kinerja source
+	scriptGetSource := `
+		SELECT 
+			nama_pohon, parent, jenis_pohon, level_pohon, 
+			kode_opd, keterangan, status, is_active
+		FROM tb_pohon_kinerja
+		WHERE id = ? AND status != 'tarik pokin opd'
+	`
+
+	var source struct {
+		NamaPohon  string
+		Parent     int
+		JenisPohon string
+		LevelPohon int
+		KodeOpd    string
+		Keterangan string
+		Status     string
+		IsActive   bool
+	}
+
+	err := tx.QueryRowContext(ctx, scriptGetSource, sourceId).Scan(
+		&source.NamaPohon, &source.Parent, &source.JenisPohon, &source.LevelPohon,
+		&source.KodeOpd, &source.Keterangan, &source.Status, &source.IsActive,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("gagal mengambil data source: %w", err)
+	}
+
+	// 2. Tentukan status untuk clone
+	var newStatus string
+	if source.LevelPohon <= 3 {
+		newStatus = source.Status
+	} else {
+		newStatus = "menunggu_disetujui"
+	}
+
+	// 3. Insert pohon kinerja baru
+	scriptInsert := `
+		INSERT INTO tb_pohon_kinerja 
+		(nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from, is_active)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	result, err := tx.ExecContext(ctx, scriptInsert,
+		source.NamaPohon,
+		0, // Parent akan diupdate dalam recursive
+		source.JenisPohon,
+		source.LevelPohon,
+		source.KodeOpd,
+		source.Keterangan,
+		targetTahun,
+		newStatus,
+		0, // ✅ clone_from = 0 (default)
+		source.IsActive,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("gagal insert pohon kinerja: %w", err)
+	}
+
+	newPokinId, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("gagal mendapatkan ID baru: %w", err)
+	}
+
+	// 4. Clone indikator dan target
+	err = repository.cloneIndikatorAndTarget(ctx, tx, sourceId, newPokinId)
+	if err != nil {
+		fmt.Printf("Warning: Gagal clone indikator: %v\n", err)
+	}
+
+	// 5. Clone pelaksana
+	err = repository.clonePelaksana(ctx, tx, sourceId, newPokinId)
+	if err != nil {
+		fmt.Printf("Warning: Gagal clone pelaksana: %v\n", err)
+	}
+
+	return newPokinId, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) cloneIndikatorAndTarget(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error {
+	// Gunakan CTE untuk 1 query saja - TIDAK ADA NESTED LOOP
+	query := `
+		WITH source_data AS (
+			SELECT 
+				i.id as old_indikator_id,
+				i.indikator,
+				i.tahun,
+				t.id as old_target_id,
+				t.target,
+				t.satuan,
+				t.tahun as target_tahun
+			FROM tb_indikator i
+			LEFT JOIN tb_target t ON t.indikator_id = i.id
+			WHERE i.pokin_id = ?
+		)
+		SELECT * FROM source_data
+	`
+
+	rows, err := tx.QueryContext(ctx, query, sourceId)
+	if err != nil {
+		return fmt.Errorf("query error: %w", err)
+	}
+	defer rows.Close()
+
+	// Collect all data first
+	type dataRow struct {
+		OldIndikatorId sql.NullString
+		Indikator      sql.NullString
+		Tahun          sql.NullString
+		OldTargetId    sql.NullString
+		Target         sql.NullString
+		Satuan         sql.NullString
+		TargetTahun    sql.NullString
+	}
+
+	var allData []dataRow
+	for rows.Next() {
+		var d dataRow
+		if err := rows.Scan(&d.OldIndikatorId, &d.Indikator, &d.Tahun,
+			&d.OldTargetId, &d.Target, &d.Satuan, &d.TargetTahun); err == nil {
+			allData = append(allData, d)
+		}
+	}
+
+	// Process all data
+	indikatorMap := make(map[string]string)
+	for _, d := range allData {
+		if !d.OldIndikatorId.Valid {
+			continue
+		}
+
+		// Insert indikator jika belum ada di map
+		if _, exists := indikatorMap[d.OldIndikatorId.String]; !exists {
+			newIndikatorId := fmt.Sprintf("IND-POKIN-%s", uuid.New().String()[:8])
+
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO tb_indikator (id, pokin_id, indikator, tahun, clone_from)
+				VALUES (?, ?, ?, ?, ?)
+			`, newIndikatorId, newPokinId, d.Indikator.String, d.Tahun.String, d.OldIndikatorId.String)
+
+			if err == nil {
+				indikatorMap[d.OldIndikatorId.String] = newIndikatorId
+			}
+		}
+
+		// Insert target
+		if d.OldTargetId.Valid && d.Target.Valid {
+			newTargetId := fmt.Sprintf("TRGT-IND-%s", uuid.New().String()[:8])
+
+			_, _ = tx.ExecContext(ctx, `
+				INSERT INTO tb_target (id, indikator_id, target, satuan, tahun, clone_from)
+				VALUES (?, ?, ?, ?, ?, ?)
+			`, newTargetId, indikatorMap[d.OldIndikatorId.String], d.Target.String,
+				d.Satuan.String, d.TargetTahun.String, d.OldTargetId.String)
+		}
+	}
+
+	return nil
+}
+
+// REPLACEMENT UNTUK clonePelaksana - Lebih sederhana
+func (repository *PohonKinerjaRepositoryImpl) clonePelaksana(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error {
+	// Gunakan cara sederhana dengan SELECT dan INSERT
+	query := `
+		INSERT INTO tb_pelaksana_pokin (id, pohon_kinerja_id, pegawai_id)
+		SELECT CONCAT('PLKS-', UUID()), ?, pegawai_id
+		FROM tb_pelaksana_pokin
+		WHERE pohon_kinerja_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, query, newPokinId, sourceId)
+	if err != nil {
+		return fmt.Errorf("gagal clone pelaksana: %w", err)
+	}
+
+	return nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) CloneHierarchyRecursive(ctx context.Context, tx *sql.Tx, sourceId int, newParentId int64, targetTahun string) (int64, error) {
+	// Ambil data source
+	scriptGetSource := `
+		SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, 
+		       kode_opd, keterangan, tahun, status, is_active
+		FROM tb_pohon_kinerja
+		WHERE id = ? AND status != 'tarik pokin opd'
+	`
+
+	var source struct {
+		Id         int
+		NamaPohon  string
+		Parent     int
+		JenisPohon string
+		LevelPohon int
+		KodeOpd    string
+		Keterangan string
+		Tahun      string
+		Status     string
+		IsActive   bool
+	}
+
+	err := tx.QueryRowContext(ctx, scriptGetSource, sourceId).Scan(
+		&source.Id, &source.NamaPohon, &source.Parent, &source.JenisPohon, &source.LevelPohon,
+		&source.KodeOpd, &source.Keterangan, &source.Tahun, &source.Status, &source.IsActive,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("gagal mengambil data source: %w", err)
+	}
+
+	// Clone pohon kinerja ini
+	newId, err := repository.ClonePokinPemda(ctx, tx, sourceId, targetTahun)
+	if err != nil {
+		return 0, fmt.Errorf("gagal clone pohon kinerja: %w", err)
+	}
+
+	// Update parent ID hanya jika newParentId > 0
+	if newParentId > 0 {
+		_, err = tx.ExecContext(ctx, `
+			UPDATE tb_pohon_kinerja SET parent = ? WHERE id = ?
+		`, newParentId, newId)
+		if err != nil {
+			return 0, fmt.Errorf("gagal update parent: %w", err)
+		}
+	}
+
+	// Ambil semua child dari source
+	scriptGetChildren := `
+		SELECT id FROM tb_pohon_kinerja 
+		WHERE parent = ? AND status != 'tarik pokin opd'
+	`
+	rows, err := tx.QueryContext(ctx, scriptGetChildren, sourceId)
+	if err != nil {
+		return 0, fmt.Errorf("gagal mengambil child: %w", err)
+	}
+	defer rows.Close()
+
+	var childIds []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			continue
+		}
+		childIds = append(childIds, id)
+	}
+
+	// ✅ CHECK ERROR DARI ROWS
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("error iterating child rows: %w", err)
+	}
+
+	// Clone setiap child secara rekursif
+	for _, childId := range childIds {
+		_, err := repository.CloneHierarchyRecursive(ctx, tx, childId, newId, targetTahun)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return newId, nil
 }

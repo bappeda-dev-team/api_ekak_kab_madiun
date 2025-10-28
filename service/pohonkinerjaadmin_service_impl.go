@@ -2996,3 +2996,114 @@ func (service *PohonKinerjaAdminServiceImpl) FindAllTematik(ctx context.Context,
 		Tematik: tematiks,
 	}, nil
 }
+
+func (service *PohonKinerjaAdminServiceImpl) ClonePokinPemda(ctx context.Context, request pohonkinerja.PohonKinerjaCloneHierarchyRequest) (pohonkinerja.PohonKinerjaAdminResponseData, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+	defer func() {
+		// Defer function yang lebih aman
+		if r := recover(); r != nil {
+			// Rollback jika ada panic
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				fmt.Printf("Error rollback: %v\n", rollbackErr)
+			}
+			panic(r)
+		} else if err != nil {
+			// Rollback jika ada error
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				fmt.Printf("Error rollback: %v\n", rollbackErr)
+			}
+		} else {
+			// Commit jika berhasil
+			if commitErr := tx.Commit(); commitErr != nil {
+				fmt.Printf("Error commit: %v\n", commitErr)
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					fmt.Printf("Error rollback: %v\n", rollbackErr)
+				}
+				err = fmt.Errorf("gagal commit: %w", commitErr)
+			}
+		}
+	}()
+
+	// 1. Ambil data pohon kinerja source untuk validasi
+	sourcePokin, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, request.IdPokinSource)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, fmt.Errorf("gagal mengambil data source: %v", err)
+	}
+
+	// 2. Validasi - source tidak boleh berstatus 'tarik pokin opd'
+	if sourcePokin.Status == "tarik pokin opd" {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, fmt.Errorf("tidak dapat clone pohon kinerja dengan status 'tarik pokin opd'")
+	}
+
+	// 3. Clone secara rekursif dan dapatkan ID root
+	rootId, err := service.pohonKinerjaRepository.CloneHierarchyRecursive(ctx, tx, request.IdPokinSource, 0, request.TahunTarget)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, fmt.Errorf("gagal clone hierarki: %v", err)
+	}
+
+	// 4. Ambil data lengkap untuk response
+	result, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, int(rootId))
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, fmt.Errorf("gagal mengambil data hasil: %v", err)
+	}
+
+	// Build response
+	var indikatorResponses []pohonkinerja.IndikatorResponse
+	indikators, err := service.pohonKinerjaRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(rootId))
+	if err == nil {
+		for _, ind := range indikators {
+			var targetResponses []pohonkinerja.TargetResponse
+			targets, err := service.pohonKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+			if err == nil {
+				for _, t := range targets {
+					targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+						Id:              t.Id,
+						IndikatorId:     t.IndikatorId,
+						TargetIndikator: t.Target,
+						SatuanIndikator: t.Satuan,
+					})
+				}
+			}
+
+			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+				Id:            ind.Id,
+				IdPokin:       fmt.Sprint(rootId),
+				NamaIndikator: ind.Indikator,
+				Target:        targetResponses,
+			})
+		}
+	}
+
+	var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
+	for _, p := range result.Pelaksana {
+		pegawai, err := service.pegawaiRepository.FindById(ctx, tx, p.PegawaiId)
+		if err == nil {
+			pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
+				Id:             p.Id,
+				PohonKinerjaId: fmt.Sprint(rootId),
+				PegawaiId:      p.PegawaiId,
+				NamaPegawai:    pegawai.NamaPegawai,
+			})
+		}
+	}
+
+	response := pohonkinerja.PohonKinerjaAdminResponseData{
+		Id:         result.Id,
+		Parent:     result.Parent,
+		NamaPohon:  result.NamaPohon,
+		JenisPohon: result.JenisPohon,
+		LevelPohon: result.LevelPohon,
+		KodeOpd:    result.KodeOpd,
+		NamaOpd:    result.NamaOpd,
+		Keterangan: result.Keterangan,
+		Tahun:      result.Tahun,
+		Status:     result.Status,
+		Indikators: indikatorResponses,
+		Pelaksana:  pelaksanaResponses,
+	}
+
+	return response, nil
+}
