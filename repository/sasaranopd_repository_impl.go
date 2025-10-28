@@ -1093,3 +1093,198 @@ func (repository *SasaranOpdRepositoryImpl) FindIdPokinSasaran(ctx context.Conte
 
 	return pohonKinerja, nil
 }
+
+func (repository *SasaranOpdRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.SasaranOpd, error) {
+	script := `
+    WITH RECURSIVE hierarchy AS (
+        SELECT DISTINCT
+            pk.id as pokin_id,
+            pk.nama_pohon,
+            pk.jenis_pohon,
+            pk.level_pohon,
+            pk.tahun as tahun_pohon,
+            pp.id as pelaksana_id,
+            pp.pegawai_id,
+            p.nip as pelaksana_nip,
+            p.nama as nama_pegawai,
+            so.id as sasaran_id,
+            so.nama_sasaran_opd,
+            so.tahun_awal,
+            so.tahun_akhir,
+            so.jenis_periode,
+            so.id_tujuan_opd,
+            i.id as indikator_id,
+            i.indikator,
+            i.rumus_perhitungan,
+            i.sumber_data,
+            t.id as target_id,
+            t.tahun as target_tahun,
+            t.target,
+            t.satuan
+        FROM tb_pohon_kinerja pk
+        LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
+        LEFT JOIN tb_pegawai p ON pp.pegawai_id = p.id
+        INNER JOIN tb_sasaran_opd so ON pk.id = so.pokin_id  -- Ubah LEFT JOIN jadi INNER JOIN
+        LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id
+        LEFT JOIN tb_target t ON i.id = t.indikator_id AND t.tahun = ?
+        WHERE pk.level_pohon = 4 
+        AND pk.parent = 0
+        AND pk.kode_opd = ?
+        AND CAST(pk.tahun AS SIGNED) >= CAST(so.tahun_awal AS SIGNED)  -- Tahun pokin harus >= tahun awal sasaran
+        AND CAST(pk.tahun AS SIGNED) <= CAST(so.tahun_akhir AS SIGNED)  -- Tahun pokin harus <= tahun akhir sasaran
+        AND CAST(? AS SIGNED) BETWEEN CAST(so.tahun_awal AS SIGNED) AND CAST(so.tahun_akhir AS SIGNED)
+        AND so.jenis_periode = ?
+    )
+    SELECT * FROM hierarchy
+    ORDER BY 
+        nama_pohon ASC,
+        nama_sasaran_opd ASC
+    `
+
+	rows, err := tx.QueryContext(ctx, script,
+		tahun, // untuk filter target
+		kodeOpd,
+		tahun, // untuk cek range sasaran
+		jenisPeriode,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	pokinMap := make(map[int]*domain.SasaranOpd)
+	pelaksanaMap := make(map[string]bool)
+
+	for rows.Next() {
+		var (
+			pokinId, levelPohon                  int
+			namaPohon, jenisPohon, tahunPohon    string
+			pelaksanaId, pegawaiId, pelaksanaNip sql.NullString
+			namaPegawai                          sql.NullString
+			sasaranId                            sql.NullInt64
+			namaSasaranOpd                       sql.NullString
+			idTujuanOpd                          sql.NullInt64
+			tahunAwalSasaran, tahunAkhirSasaran  sql.NullString
+			jenisPeriodeSasaran                  sql.NullString
+			indikatorId, indikator               sql.NullString
+			rumusPerhitungan, sumberData         sql.NullString
+			targetId, targetTahun                sql.NullString
+			targetValue, targetSatuan            sql.NullString
+		)
+
+		err := rows.Scan(
+			&pokinId, &namaPohon, &jenisPohon, &levelPohon, &tahunPohon,
+			&pelaksanaId, &pegawaiId, &pelaksanaNip, &namaPegawai,
+			&sasaranId, &namaSasaranOpd,
+			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
+			&idTujuanOpd,
+			&indikatorId, &indikator,
+			&rumusPerhitungan, &sumberData,
+			&targetId, &targetTahun, &targetValue, &targetSatuan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Proses Pohon Kinerja
+		sasaranOpd, exists := pokinMap[pokinId]
+		if !exists {
+			sasaranOpd = &domain.SasaranOpd{
+				Id:         pokinId,
+				IdPohon:    pokinId,
+				NamaPohon:  namaPohon,
+				JenisPohon: jenisPohon,
+				LevelPohon: levelPohon,
+				TahunPohon: tahunPohon,
+				Pelaksana:  make([]domain.PelaksanaPokin, 0),
+				SasaranOpd: make([]domain.SasaranOpdDetail, 0),
+			}
+			pokinMap[pokinId] = sasaranOpd
+		}
+
+		// Proses Pelaksana
+		if pelaksanaId.Valid && !pelaksanaMap[pelaksanaId.String] {
+			pelaksanaMap[pelaksanaId.String] = true
+			sasaranOpd.Pelaksana = append(sasaranOpd.Pelaksana, domain.PelaksanaPokin{
+				Id:          pelaksanaId.String,
+				PegawaiId:   pegawaiId.String,
+				Nip:         pelaksanaNip.String,
+				NamaPegawai: namaPegawai.String,
+			})
+		}
+
+		// Proses Sasaran
+		if sasaranId.Valid {
+			var sasaranExists bool
+			var existingSasaran *domain.SasaranOpdDetail
+
+			for i := range sasaranOpd.SasaranOpd {
+				if sasaranOpd.SasaranOpd[i].Id == int(sasaranId.Int64) {
+					sasaranExists = true
+					existingSasaran = &sasaranOpd.SasaranOpd[i]
+					break
+				}
+			}
+
+			if !sasaranExists {
+				newSasaran := domain.SasaranOpdDetail{
+					Id:             int(sasaranId.Int64),
+					IdPohon:        pokinId,
+					NamaSasaranOpd: namaSasaranOpd.String,
+					IdTujuanOpd:    int(idTujuanOpd.Int64),
+					TahunAwal:      tahunAwalSasaran.String,
+					TahunAkhir:     tahunAkhirSasaran.String,
+					JenisPeriode:   jenisPeriodeSasaran.String,
+					Indikator:      make([]domain.Indikator, 0),
+				}
+				sasaranOpd.SasaranOpd = append(sasaranOpd.SasaranOpd, newSasaran)
+				existingSasaran = &sasaranOpd.SasaranOpd[len(sasaranOpd.SasaranOpd)-1]
+			}
+
+			// Proses Indikator
+			if indikatorId.Valid {
+				var indikatorExists bool
+				var existingIndikator *domain.Indikator
+
+				for i := range existingSasaran.Indikator {
+					if existingSasaran.Indikator[i].Id == indikatorId.String {
+						indikatorExists = true
+						existingIndikator = &existingSasaran.Indikator[i]
+						break
+					}
+				}
+
+				if !indikatorExists {
+					newIndikator := domain.Indikator{
+						Id:               indikatorId.String,
+						Indikator:        indikator.String,
+						RumusPerhitungan: rumusPerhitungan,
+						SumberData:       sumberData,
+						Target:           make([]domain.Target, 0),
+					}
+					existingSasaran.Indikator = append(existingSasaran.Indikator, newIndikator)
+					existingIndikator = &existingSasaran.Indikator[len(existingSasaran.Indikator)-1]
+				}
+
+				// Proses Target
+				if targetId.Valid && targetTahun.Valid {
+					target := domain.Target{
+						Id:          targetId.String,
+						IndikatorId: indikatorId.String,
+						Tahun:       targetTahun.String,
+						Target:      targetValue.String,
+						Satuan:      targetSatuan.String,
+					}
+					existingIndikator.Target = append(existingIndikator.Target, target)
+				}
+			}
+		}
+	}
+
+	var result []domain.SasaranOpd
+	for _, sasaranOpd := range pokinMap {
+		result = append(result, *sasaranOpd)
+	}
+
+	return result, nil
+}
