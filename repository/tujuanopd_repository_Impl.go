@@ -557,96 +557,152 @@ func (repository *TujuanOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.
 }
 
 func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error) {
-	script := `
-		SELECT
-			t.id,
-			t.kode_opd,
-			t.tujuan,
-			t.tahun_awal,
-			t.tahun_akhir,
-			t.jenis_periode
-		FROM tb_tujuan_opd t
-		INNER JOIN tb_periode p ON 
-			t.tahun_awal = p.tahun_awal 
-			AND t.tahun_akhir = p.tahun_akhir 
-			AND t.jenis_periode = p.jenis_periode
-		WHERE t.kode_opd = ?
-		AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
-		AND t.jenis_periode = ?
-		ORDER BY t.id ASC
+	scriptTujuan := `
+        SELECT 
+            t.id, 
+            t.kode_opd,
+            COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
+            t.tujuan, 
+            t.tahun_awal,
+            t.tahun_akhir,
+            t.jenis_periode,
+            i.id as indikator_id,
+            i.indikator,
+            i.rumus_perhitungan, 
+            i.sumber_data,
+            tg.id as target_id,
+            tg.target as target_value,
+            tg.satuan,
+            tg.tahun as tahun_target
+        FROM tb_tujuan_opd t
+        LEFT JOIN tb_indikator i ON t.id = i.tujuan_opd_id
+        LEFT JOIN tb_target tg ON i.id = tg.indikator_id
+        WHERE t.kode_opd = ? 
+        AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
+        AND t.jenis_periode = ?
+        AND (tg.tahun IS NULL OR tg.tahun = ?)
+        ORDER BY t.id ASC, i.id ASC, tg.tahun ASC
     `
 
-	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun, jenisPeriode)
+	rows, err := tx.QueryContext(ctx, scriptTujuan,
+		kodeOpd,
+		tahun,
+		jenisPeriode,
+		tahun,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var tujuanOpds []domain.TujuanOpd
+	tujuanOpdMap := make(map[int]*domain.TujuanOpd)
+	indikatorMap := make(map[string]*domain.Indikator)
+
 	for rows.Next() {
-		var tujuanOpd domain.TujuanOpd
+		var (
+			tujuanId         int
+			kodeOpd          string
+			kodeBidangUrusan string
+			tujuan           string
+			tahunAwalData    string
+			tahunAkhirData   string
+			jenisPeriodeData string
+			indikatorId      sql.NullString
+			indikatorNama    sql.NullString
+			rumusPerhitungan sql.NullString
+			sumberData       sql.NullString
+			targetId         sql.NullString
+			targetValue      sql.NullString
+			satuan           sql.NullString
+			tahunTarget      sql.NullString
+		)
+
 		err := rows.Scan(
-			&tujuanOpd.Id,
-			&tujuanOpd.KodeOpd,
-			&tujuanOpd.Tujuan,
-			&tujuanOpd.TahunAwal,
-			&tujuanOpd.TahunAkhir,
-			&tujuanOpd.JenisPeriode,
+			&tujuanId,
+			&kodeOpd,
+			&kodeBidangUrusan,
+			&tujuan,
+			&tahunAwalData,
+			&tahunAkhirData,
+			&jenisPeriodeData,
+			&indikatorId,
+			&indikatorNama,
+			&rumusPerhitungan,
+			&sumberData,
+			&targetId,
+			&targetValue,
+			&satuan,
+			&tahunTarget,
 		)
 		if err != nil {
 			return nil, err
 		}
-		tujuanOpds = append(tujuanOpds, tujuanOpd)
-	}
 
-	// Untuk setiap tujuan OPD, ambil indikatornya
-	for i := range tujuanOpds {
-		indikators, err := repository.FindIndikatorByTujuanOpdId(ctx, tx, tujuanOpds[i].Id)
-		if err != nil {
-			return nil, err
+		// Buat atau ambil TujuanOpd
+		if _, exists := tujuanOpdMap[tujuanId]; !exists {
+			tujuanOpdMap[tujuanId] = &domain.TujuanOpd{
+				Id:               tujuanId,
+				KodeOpd:          kodeOpd,
+				KodeBidangUrusan: kodeBidangUrusan,
+				Tujuan:           tujuan,
+				TahunAwal:        tahunAwalData,
+				TahunAkhir:       tahunAkhirData,
+				JenisPeriode:     jenisPeriodeData,
+				Indikator:        []domain.Indikator{},
+			}
 		}
-		tujuanOpds[i].Indikator = indikators
 
-		// Generate target untuk setiap indikator
-		for j := range tujuanOpds[i].Indikator {
-			// Ambil target yang sudah ada dari database
-			existingTargets, err := repository.FindTargetByIndikatorId(ctx, tx, tujuanOpds[i].Indikator[j].Id, tujuanOpds[i].TahunAwal)
-			if err != nil {
-				return nil, err
+		// Buat atau ambil Indikator jika ada
+		if indikatorId.Valid {
+			if _, exists := indikatorMap[indikatorId.String]; !exists {
+				indikatorMap[indikatorId.String] = &domain.Indikator{
+					Id:               indikatorId.String,
+					Indikator:        indikatorNama.String,
+					RumusPerhitungan: rumusPerhitungan,
+					SumberData:       sumberData,
+					Target:           []domain.Target{},
+				}
+				tujuanOpdMap[tujuanId].Indikator = append(tujuanOpdMap[tujuanId].Indikator, *indikatorMap[indikatorId.String])
 			}
 
-			// Buat map untuk target yang sudah ada
-			targetMap := make(map[string]domain.Target)
-			for _, target := range existingTargets {
-				targetMap[target.Tahun] = target
-			}
-
-			// Generate target untuk semua tahun dalam periode
-			tahunAwalInt, _ := strconv.Atoi(tujuanOpds[i].TahunAwal)
-			tahunAkhirInt, _ := strconv.Atoi(tujuanOpds[i].TahunAkhir)
-
-			var targets []domain.Target
-			for tahun := tahunAwalInt; tahun <= tahunAkhirInt; tahun++ {
-				tahunStr := strconv.Itoa(tahun)
-				// Jika target untuk tahun ini sudah ada, gunakan yang ada
-				if existingTarget, exists := targetMap[tahunStr]; exists {
-					targets = append(targets, existingTarget)
-				} else {
-					// Jika belum ada, buat target kosong
-					targets = append(targets, domain.Target{
-						Id:          "",
-						IndikatorId: tujuanOpds[i].Indikator[j].Id,
-						Target:      "",
-						Satuan:      "",
-						Tahun:       tahunStr,
-					})
+			// Tambahkan target jika ada
+			if targetId.Valid && tahunTarget.Valid {
+				target := domain.Target{
+					Id:          targetId.String,
+					IndikatorId: indikatorId.String,
+					Target:      targetValue.String,
+					Satuan:      satuan.String,
+					Tahun:       tahunTarget.String,
+				}
+				// Update target langsung ke indikator di map
+				for i := range tujuanOpdMap[tujuanId].Indikator {
+					if tujuanOpdMap[tujuanId].Indikator[i].Id == indikatorId.String {
+						tujuanOpdMap[tujuanId].Indikator[i].Target = append(tujuanOpdMap[tujuanId].Indikator[i].Target, target)
+						break
+					}
 				}
 			}
-			tujuanOpds[i].Indikator[j].Target = targets
 		}
 	}
 
-	return tujuanOpds, nil
+	var result []domain.TujuanOpd
+	for _, tujuanOpd := range tujuanOpdMap {
+		// Sort target berdasarkan tahun untuk setiap indikator
+		for i := range tujuanOpd.Indikator {
+			sort.Slice(tujuanOpd.Indikator[i].Target, func(x, y int) bool {
+				tahunX, _ := strconv.Atoi(tujuanOpd.Indikator[i].Target[x].Tahun)
+				tahunY, _ := strconv.Atoi(tujuanOpd.Indikator[i].Target[y].Tahun)
+				return tahunX < tahunY
+			})
+		}
+		result = append(result, *tujuanOpd)
+	}
+
+	if len(result) == 0 {
+		return make([]domain.TujuanOpd, 0), nil
+	}
+
+	return result, nil
 }
 
 // Perbaikan pada FindIndikatorByTujuanOpdId untuk menyertakan rumus_perhitungan dan sumber_data

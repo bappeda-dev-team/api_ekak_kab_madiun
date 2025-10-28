@@ -672,7 +672,7 @@ func (service *TujuanOpdServiceImpl) FindTujuanOpdOnlyName(ctx context.Context, 
 	return responses, nil
 }
 
-func (service *TujuanOpdServiceImpl) FindTujuanOpdByTahun(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]tujuanopd.TujuanOpdResponse, error) {
+func (service *TujuanOpdServiceImpl) FindTujuanOpdByTahun(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]tujuanopd.TujuanOpdwithBidangUrusanResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
@@ -697,12 +697,14 @@ func (service *TujuanOpdServiceImpl) FindTujuanOpdByTahun(ctx context.Context, k
 	tujuanOpds, err := service.TujuanOpdRepository.FindTujuanOpdByTahun(ctx, tx, kodeOpd, tahun, jenisPeriode)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return make([]tujuanopd.TujuanOpdResponse, 0), nil
+			return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0), nil
 		}
 		return nil, err
 	}
 
-	var responses []tujuanopd.TujuanOpdResponse
+	// Buat map untuk mengelompokkan response berdasarkan kode_bidang_urusan
+	responseMap := make(map[string]*tujuanopd.TujuanOpdwithBidangUrusanResponse)
+
 	for _, tujuan := range tujuanOpds {
 		// Ambil data bidang urusan
 		bidangUrusan, err := service.BidangUrusanRepository.FindByKodeBidangUrusan(ctx, tx, tujuan.KodeBidangUrusan)
@@ -711,16 +713,12 @@ func (service *TujuanOpdServiceImpl) FindTujuanOpdByTahun(ctx context.Context, k
 		}
 
 		tujuanResponse := tujuanopd.TujuanOpdResponse{
-			Id:               tujuan.Id,
-			KodeBidangUrusan: tujuan.KodeBidangUrusan,
-			NamaBidangUrusan: bidangUrusan.NamaBidangUrusan,
-			KodeOpd:          tujuan.KodeOpd,
-			NamaOpd:          opd.NamaOpd,
-			Tujuan:           tujuan.Tujuan,
-			TahunAwal:        tujuan.TahunAwal,
-			TahunAkhir:       tujuan.TahunAkhir,
-			JenisPeriode:     tujuan.JenisPeriode,
-			Indikator:        make([]tujuanopd.IndikatorResponse, 0),
+			Id:           tujuan.Id,
+			Tujuan:       tujuan.Tujuan,
+			TahunAwal:    tujuan.TahunAwal,
+			TahunAkhir:   tujuan.TahunAkhir,
+			JenisPeriode: tujuan.JenisPeriode,
+			Indikator:    make([]tujuanopd.IndikatorResponse, 0),
 		}
 
 		// Proses indikator
@@ -734,9 +732,9 @@ func (service *TujuanOpdServiceImpl) FindTujuanOpdByTahun(ctx context.Context, k
 				Target:           make([]tujuanopd.TargetResponse, 0),
 			}
 
-			// Proses target
+			// Proses target untuk tahun yang diminta
 			for _, target := range indikator.Target {
-				if target.Tahun == tahun { // Hanya ambil target untuk tahun yang diminta
+				if target.Tahun == tahun {
 					targetResponse := tujuanopd.TargetResponse{
 						Id:              target.Id,
 						IndikatorId:     indikator.Id,
@@ -748,21 +746,59 @@ func (service *TujuanOpdServiceImpl) FindTujuanOpdByTahun(ctx context.Context, k
 				}
 			}
 
-			tujuanResponse.Indikator = append(tujuanResponse.Indikator, indikatorResponse)
+			// Hanya tambahkan indikator jika ada target
+			if len(indikatorResponse.Target) > 0 {
+				tujuanResponse.Indikator = append(tujuanResponse.Indikator, indikatorResponse)
+			}
 		}
 
-		responses = append(responses, tujuanResponse)
+		// Cek apakah sudah ada entry untuk kode_bidang_urusan ini
+		mapKey := tujuan.KodeBidangUrusan
+		if mapKey == "" {
+			mapKey = "000" // Gunakan key default untuk bidang urusan kosong
+		}
+
+		if existing, exists := responseMap[mapKey]; exists {
+			// Jika sudah ada dan tujuan memiliki indikator, tambahkan ke array yang ada
+			if len(tujuanResponse.Indikator) > 0 {
+				existing.TujuanOpd = append(existing.TujuanOpd, tujuanResponse)
+			}
+		} else {
+			// Jika belum ada dan tujuan memiliki indikator, buat entry baru
+			if len(tujuanResponse.Indikator) > 0 {
+				// Ambil data urusan berdasarkan kode urusan dari bidang urusan
+				var kodeUrusan string
+				if len(bidangUrusan.KodeBidangUrusan) > 0 {
+					kodeUrusan = bidangUrusan.KodeBidangUrusan[:1]
+				}
+
+				responseMap[mapKey] = &tujuanopd.TujuanOpdwithBidangUrusanResponse{
+					Urusan:           bidangUrusan.NamaUrusan, // Menggunakan NamaUrusan dari BidangUrusan
+					KodeUrusan:       kodeUrusan,
+					KodeBidangUrusan: bidangUrusan.KodeBidangUrusan,
+					NamaBidangUrusan: bidangUrusan.NamaBidangUrusan,
+					KodeOpd:          tujuan.KodeOpd,
+					NamaOpd:          opd.NamaOpd,
+					TujuanOpd:        []tujuanopd.TujuanOpdResponse{tujuanResponse},
+				}
+			}
+		}
 	}
 
-	// Jika tidak ada data, kembalikan slice kosong
-	if len(responses) == 0 {
-		responses = make([]tujuanopd.TujuanOpdResponse, 0)
+	// Convert map to slice
+	var responses []tujuanopd.TujuanOpdwithBidangUrusanResponse
+	for _, response := range responseMap {
+		responses = append(responses, *response)
 	}
 
-	// Urutkan berdasarkan ID
+	// Sort responses berdasarkan kode_bidang_urusan
 	sort.Slice(responses, func(i, j int) bool {
-		return responses[i].Id < responses[j].Id
+		return responses[i].KodeBidangUrusan < responses[j].KodeBidangUrusan
 	})
+
+	if len(responses) == 0 {
+		responses = make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0)
+	}
 
 	return responses, nil
 }
