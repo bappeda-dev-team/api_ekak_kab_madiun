@@ -461,6 +461,7 @@ func NewRouter(
 	router.GET("/cascading_opd/findbyrekin/:rekin_id", cascadingOpdController.FindByRekinPegawaiAndId)
 	router.GET("/cascading_opd/findbypokin/:pokin_id", cascadingOpdController.FindByIdPokin)
 	router.GET("/cascading_opd/findbynip/:nip/:tahun", cascadingOpdController.FindByNip)
+	router.POST("/cascading_opd/findbymultiplerekin", cascadingOpdController.FindByMultipleRekinPegawai)
 
 	return router
 }
