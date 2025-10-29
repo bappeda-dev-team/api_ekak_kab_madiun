@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
 	"strconv"
@@ -140,6 +141,29 @@ func (controller *CascadingOpdControllerImpl) FindByNip(writer http.ResponseWrit
 	webResponse := web.WebResponse{
 		Code:   200,
 		Status: "Success Get By Nip",
+		Data:   cascadingOpdResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *CascadingOpdControllerImpl) FindByMultipleRekinPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rekinRequest := pohonkinerja.FindByMultipleRekinRequest{}
+	helper.ReadFromRequestBody(request, &rekinRequest)
+
+	cascadingOpdResponse, err := controller.CascadingOpdService.FindByMultipleRekinPegawai(request.Context(), rekinRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get By Multiple Rekin Pegawai",
 		Data:   cascadingOpdResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)

@@ -671,3 +671,113 @@ func (service *SasaranOpdServiceImpl) FindIdPokinSasaran(ctx context.Context, id
 
 	return response, nil
 }
+
+func (service *SasaranOpdServiceImpl) FindByTahun(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi tahun
+	tahunInt, err := strconv.Atoi(tahun)
+	if err != nil {
+		return nil, fmt.Errorf("format tahun tidak valid")
+	}
+
+	// Ambil data
+	sasaranOpds, err := service.sasaranOpdRepository.FindByTahun(ctx, tx, kodeOpd, tahun, jenisPeriode)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return make([]sasaranopd.SasaranOpdResponse, 0), nil
+		}
+		return nil, err
+	}
+
+	var responses []sasaranopd.SasaranOpdResponse
+	for _, sasaranOpd := range sasaranOpds {
+		// Validasi tahun pokin terhadap range sasaran
+		// tahunPokinInt, _ := strconv.Atoi(sasaranOpd.TahunPohon)
+
+		response := sasaranopd.SasaranOpdResponse{
+			IdPohon:    sasaranOpd.IdPohon,
+			NamaPohon:  sasaranOpd.NamaPohon,
+			JenisPohon: sasaranOpd.JenisPohon,
+			LevelPohon: sasaranOpd.LevelPohon,
+			TahunPohon: sasaranOpd.TahunPohon,
+			Pelaksana:  make([]sasaranopd.PelaksanaOpdResponse, 0),
+			SasaranOpd: make([]sasaranopd.SasaranOpdDetailResponse, 0),
+		}
+
+		// Convert Pelaksana
+		for _, pelaksana := range sasaranOpd.Pelaksana {
+			response.Pelaksana = append(response.Pelaksana, sasaranopd.PelaksanaOpdResponse{
+				Id:          pelaksana.Id,
+				PegawaiId:   pelaksana.PegawaiId,
+				Nip:         pelaksana.Nip,
+				NamaPegawai: pelaksana.NamaPegawai,
+			})
+		}
+
+		// Convert SasaranOpd
+		for _, sasaran := range sasaranOpd.SasaranOpd {
+			tahunAwalInt, _ := strconv.Atoi(sasaran.TahunAwal)
+			tahunAkhirInt, _ := strconv.Atoi(sasaran.TahunAkhir)
+
+			// Validasi tahun parameter dalam range sasaran
+			if tahunInt < tahunAwalInt || tahunInt > tahunAkhirInt {
+				continue
+			}
+
+			TujuanOpd, _ := service.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
+
+			sasaranResponse := sasaranopd.SasaranOpdDetailResponse{
+				Id:             strconv.Itoa(sasaran.Id),
+				NamaSasaranOpd: sasaran.NamaSasaranOpd,
+				IdTujuanOpd:    TujuanOpd.Id,
+				NamaTujuanOpd:  TujuanOpd.Tujuan,
+				TahunAwal:      sasaran.TahunAwal,
+				TahunAkhir:     sasaran.TahunAkhir,
+				JenisPeriode:   sasaran.JenisPeriode,
+				Indikator:      make([]sasaranopd.IndikatorResponse, 0),
+			}
+
+			// Convert Indikator
+			for _, indikator := range sasaran.Indikator {
+				indResponse := sasaranopd.IndikatorResponse{
+					Id:               indikator.Id,
+					Indikator:        indikator.Indikator,
+					RumusPerhitungan: indikator.RumusPerhitungan.String,
+					SumberData:       indikator.SumberData.String,
+					Target:           make([]sasaranopd.TargetResponse, 0),
+				}
+
+				// Hanya ambil target untuk tahun yang diminta
+				for _, target := range indikator.Target {
+					if target.Tahun == tahun {
+						indResponse.Target = append(indResponse.Target, sasaranopd.TargetResponse{
+							Id:     target.Id,
+							Tahun:  target.Tahun,
+							Target: target.Target,
+							Satuan: target.Satuan,
+						})
+					}
+				}
+
+				if len(indResponse.Target) > 0 {
+					sasaranResponse.Indikator = append(sasaranResponse.Indikator, indResponse)
+				}
+			}
+
+			if len(sasaranResponse.Indikator) > 0 {
+				response.SasaranOpd = append(response.SasaranOpd, sasaranResponse)
+			}
+		}
+
+		if len(response.SasaranOpd) > 0 {
+			responses = append(responses, response)
+		}
+	}
+
+	return responses, nil
+}

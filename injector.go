@@ -411,6 +411,15 @@ var programUnggulanSet = wire.NewSet(
 	wire.Bind(new(controller.ProgramUnggulanController), new(*controller.ProgramUnggulanControllerImpl)),
 )
 
+var matrixRenjaSet = wire.NewSet(
+	repository.NewMatrixRenjaRepositoryImpl,
+	wire.Bind(new(repository.MatrixRenjaRepository), new(*repository.MatrixRenjaRepositoryImpl)),
+	service.NewMatrixRenjaServiceImpl,
+	wire.Bind(new(service.MatrixRenjaService), new(*service.MatrixRenjaServiceImpl)),
+	controller.NewMatrixRenjaControllerImpl,
+	wire.Bind(new(controller.MatrixRenjaController), new(*controller.MatrixRenjaControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -460,6 +469,7 @@ func InitializeServer() *http.Server {
 		kelompokAnggaranSet,
 		isustrategisSet,
 		programUnggulanSet,
+		matrixRenjaSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

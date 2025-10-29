@@ -11,4 +11,5 @@ type CascadingOpdController interface {
 	FindByRekinPegawaiAndId(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByIdPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByNip(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindByMultipleRekinPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
