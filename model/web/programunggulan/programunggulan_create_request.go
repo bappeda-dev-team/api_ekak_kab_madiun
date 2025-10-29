@@ -8,3 +8,7 @@ type ProgramUnggulanCreateRequest struct {
 	TahunAwal                 string `json:"tahun_awal" validate:"required"`
 	TahunAkhir                string `json:"tahun_akhir" validate:"required"`
 }
+
+type FindByIdTerkaitRequest struct {
+	Ids []int `json:"id_prorgramunggulan" validate:"required,min=1"`
+}

@@ -83,4 +83,9 @@ type PohonKinerjaRepository interface {
 	FindTaggingByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.TaggingPokin, error)
 
 	FindTematikByCloneFrom(ctx context.Context, tx *sql.Tx, cloneFromId int) (*domain.PohonKinerja, error)
+
+	ClonePokinPemda(ctx context.Context, tx *sql.Tx, sourceId int, targetTahun string) (int64, error)
+	CloneHierarchyRecursive(ctx context.Context, tx *sql.Tx, sourceId int, newParentId int64, targetTahun string) (int64, error) // ✅ RETURN int64
+	cloneIndikatorAndTarget(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
+	clonePelaksana(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
 }
