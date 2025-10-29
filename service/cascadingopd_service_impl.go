@@ -1969,3 +1969,132 @@ func (service *CascadingOpdServiceImpl) calculateAnggaranForStrategicWithPelaksa
 
 	return totalAnggaran, nil
 }
+
+func (service *CascadingOpdServiceImpl) FindByMultipleRekinPegawai(ctx context.Context, request pohonkinerja.FindByMultipleRekinRequest) ([]pohonkinerja.CascadingRekinPegawaiResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi request
+	if len(request.RekinIds) == 0 {
+		return nil, errors.New("rekin_ids tidak boleh kosong")
+	}
+
+	var responses []pohonkinerja.CascadingRekinPegawaiResponse
+	var errors []string
+
+	// Loop untuk setiap rekin ID
+	for _, rekinId := range request.RekinIds {
+		if rekinId == "" {
+			log.Printf("Warning: Skip empty rekin_id")
+			continue
+		}
+
+		// Gunakan logika yang sama dengan FindByRekinPegawaiAndId
+		response, err := service.processSingleRekin(ctx, tx, rekinId)
+		if err != nil {
+			log.Printf("Error processing rekin_id=%s: %v", rekinId, err)
+			errors = append(errors, fmt.Sprintf("rekin_id %s: %s", rekinId, err.Error()))
+			continue
+		}
+
+		responses = append(responses, response)
+	}
+
+	// Jika ada error dan tidak ada response yang berhasil, return error
+	if len(responses) == 0 && len(errors) > 0 {
+		return nil, fmt.Errorf("gagal memproses semua rencana kinerja: %v", errors)
+	}
+
+	// Log summary
+	log.Printf("Successfully processed %d/%d rencana kinerja", len(responses), len(request.RekinIds))
+	if len(errors) > 0 {
+		log.Printf("Errors encountered: %v", errors)
+	}
+
+	return responses, nil
+}
+
+// Helper function untuk memproses single rekin (extracted from FindByRekinPegawaiAndId)
+func (service *CascadingOpdServiceImpl) processSingleRekin(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinId string,
+) (pohonkinerja.CascadingRekinPegawaiResponse, error) {
+	// 1. Cari pohon kinerja berdasarkan rencana kinerja ID
+	pokinRekin, err := service.cascadingOpdRepository.FindPokinByRekinId(ctx, tx, rekinId)
+	if err != nil {
+		log.Printf("Error: Pohon kinerja not found for rekin_id=%s: %v", rekinId, err)
+		return pohonkinerja.CascadingRekinPegawaiResponse{}, errors.New("rencana kinerja tidak ditemukan")
+	}
+
+	// 2. Ambil data rencana kinerja
+	rekin, err := service.rencanaKinerjaRepository.FindById(ctx, tx, rekinId, "", "")
+	if err != nil {
+		log.Printf("Error: Rencana kinerja not found: %v", err)
+		return pohonkinerja.CascadingRekinPegawaiResponse{}, errors.New("rencana kinerja tidak ditemukan")
+	}
+
+	// 3. Validasi pegawai
+	pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, rekin.PegawaiId)
+	if err != nil {
+		log.Printf("Error: Pegawai not found for NIP=%s: %v", rekin.PegawaiId, err)
+		return pohonkinerja.CascadingRekinPegawaiResponse{}, errors.New("pegawai tidak ditemukan")
+	}
+
+	// 4. CHECK: Apakah pegawai adalah pelaksana di pohon ini?
+	isPelaksana, err := service.isPegawaiPelaksanaPokin(ctx, tx, pokinRekin.Id, pegawai.Id)
+	if err != nil {
+		log.Printf("Error checking pelaksana: %v", err)
+		return pohonkinerja.CascadingRekinPegawaiResponse{}, err
+	}
+
+	if !isPelaksana {
+		log.Printf("Error: Pegawai ID %s (NIP %s) bukan pelaksana di pohon %d", pegawai.Id, pegawai.Nip, pokinRekin.Id)
+		return pohonkinerja.CascadingRekinPegawaiResponse{}, errors.New("rencana kinerja tidak dipakai di cascading opd")
+	}
+
+	log.Printf("Pegawai ID %s is pelaksana of pokin %d", pegawai.Id, pokinRekin.Id)
+
+	// 5. Validasi OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, pokinRekin.KodeOpd)
+	if err != nil {
+		log.Printf("Error: OPD not found for kode_opd=%s: %v", pokinRekin.KodeOpd, err)
+		return pohonkinerja.CascadingRekinPegawaiResponse{}, errors.New("kode opd tidak ditemukan")
+	}
+
+	// 6. Hitung total anggaran berdasarkan level - DENGAN FILTER PELAKSANA
+	var totalAnggaran int64
+
+	if pokinRekin.LevelPohon == 6 {
+		totalAnggaran, err = service.calculateAnggaranForOperationalWithPelaksana(ctx, tx, pokinRekin.Id)
+		if err != nil {
+			log.Printf("Warning: Failed to calculate anggaran for operational: %v", err)
+			totalAnggaran = 0
+		}
+	} else if pokinRekin.LevelPohon == 5 {
+		totalAnggaran, err = service.calculateAnggaranForTacticalWithPelaksana(ctx, tx, pokinRekin.Id)
+		if err != nil {
+			log.Printf("ERROR: Failed to calculate anggaran for tactical: %v", err)
+			totalAnggaran = 0
+		} else {
+			log.Printf("SUCCESS: Total anggaran for tactical ID %d = %d", pokinRekin.Id, totalAnggaran)
+		}
+	} else if pokinRekin.LevelPohon == 4 {
+		totalAnggaran, err = service.calculateAnggaranForStrategicWithPelaksana(ctx, tx, pokinRekin.Id)
+		if err != nil {
+			log.Printf("Warning: Failed to calculate anggaran for strategic: %v", err)
+			totalAnggaran = 0
+		}
+	} else {
+		totalAnggaran = 0
+	}
+
+	// 7. Build response
+	response := service.buildCascadingRekinResponse(ctx, tx, pokinRekin, opd, totalAnggaran)
+
+	return response, nil
+}
