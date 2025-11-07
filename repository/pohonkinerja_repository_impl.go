@@ -3808,3 +3808,54 @@ func (repository *PohonKinerjaRepositoryImpl) CloneHierarchyRecursive(ctx contex
 
 	return newId, nil
 }
+
+type ControlPokinLevel struct {
+	LevelPohon                int
+	JumlahPokin               int
+	JumlahPelaksana           int
+	JumlahPokinTanpaPelaksana int
+}
+
+func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error) {
+	query := `
+		SELECT 
+			pk.level_pohon,
+			COUNT(DISTINCT pk.id) as jumlah_pokin,
+			COUNT(DISTINCT pp.pegawai_id) as jumlah_pelaksana,
+			COUNT(DISTINCT CASE WHEN pp.pegawai_id IS NULL THEN pk.id END) as jumlah_pokin_tanpa_pelaksana
+		FROM tb_pohon_kinerja pk
+		LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
+		WHERE pk.kode_opd = ? 
+		AND pk.tahun = ?
+		AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+		GROUP BY pk.level_pohon
+		ORDER BY pk.level_pohon
+	`
+
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data control pokin: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[int]ControlPokinLevel)
+	for rows.Next() {
+		var data ControlPokinLevel
+		err := rows.Scan(
+			&data.LevelPohon,
+			&data.JumlahPokin,
+			&data.JumlahPelaksana,
+			&data.JumlahPokinTanpaPelaksana,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("gagal scan data: %w", err)
+		}
+		result[data.LevelPohon] = data
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return result, nil
+}

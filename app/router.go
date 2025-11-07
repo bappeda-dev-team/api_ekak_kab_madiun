@@ -463,5 +463,9 @@ func NewRouter(
 	router.GET("/cascading_opd/findbynip/:nip/:tahun", cascadingOpdController.FindByNip)
 	router.POST("/cascading_opd/findbymultiplerekin", cascadingOpdController.FindByMultipleRekinPegawai)
 
+	//control pokin opd
+	router.GET("/pohon_kinerja_opd/control_pokin_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ControlPokinOpd)
+	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
+
 	return router
 }

@@ -512,3 +512,55 @@ func (service *UserServiceImpl) FindByNip(ctx context.Context, nip string) (user
 
 	return userResponse, nil
 }
+
+func (service *UserServiceImpl) CekAdminOpd(ctx context.Context) ([]user.CekAdminOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil semua OPD
+	allOpd, err := service.OpdRepository.FindAll(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ambil semua user dengan role admin_opd
+	adminUsers, err := service.UserRepository.CekAdminOpd(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Buat map untuk grouping user berdasarkan kode_opd
+	adminByOpd := make(map[string][]user.AdminOpdUserDetail)
+	for _, u := range adminUsers {
+		adminDetail := user.AdminOpdUserDetail{
+			UserId:      u.Id,
+			Nip:         u.Nip,
+			NamaPegawai: u.NamaPegawai,
+			Email:       u.Email,
+			IsActive:    u.IsActive,
+		}
+		adminByOpd[u.KodeOpd] = append(adminByOpd[u.KodeOpd], adminDetail)
+	}
+
+	// Build response: semua OPD dengan admin users (atau array kosong jika tidak ada)
+	var response []user.CekAdminOpdResponse
+	for _, opd := range allOpd {
+		opdResponse := user.CekAdminOpdResponse{
+			KodeOpd:    opd.KodeOpd,
+			NamaOpd:    opd.NamaOpd,
+			AdminUsers: []user.AdminOpdUserDetail{}, // inisialisasi dengan array kosong
+		}
+
+		// Jika ada admin di OPD ini, masukkan datanya
+		if admins, exists := adminByOpd[opd.KodeOpd]; exists {
+			opdResponse.AdminUsers = admins
+		}
+
+		response = append(response, opdResponse)
+	}
+
+	return response, nil
+}

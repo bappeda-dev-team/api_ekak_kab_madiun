@@ -2223,3 +2223,99 @@ func (service *PohonKinerjaOpdServiceImpl) FindPokinAtasan(ctx context.Context, 
 
 	return response, nil
 }
+
+func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.ControlPokinOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.ControlPokinOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil data per level
+	dataPerLevel, err := service.pohonKinerjaOpdRepository.ControlPokinOpdByLevel(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return pohonkinerja.ControlPokinOpdResponse{}, err
+	}
+
+	// Cari level maksimum yang ada di data
+	maxLevel := 6 // Minimal sampai Operational (level 6)
+	for level := range dataPerLevel {
+		if level > maxLevel {
+			maxLevel = level
+		}
+	}
+
+	// Map nama level
+	levelNames := map[int]string{
+		4: "Strategic",
+		5: "Tactical",
+		6: "Operational",
+	}
+
+	// Build response data per level
+	var responseData []pohonkinerja.ControlPokinOpdData
+	var totalPokin, totalPelaksana, totalPokinTanpaPelaksana int
+
+	// Iterasi dari level 4 sampai maxLevel
+	for level := 4; level <= maxLevel; level++ {
+		var namaLevel string
+
+		// Tentukan nama level
+		if level >= 7 {
+			// Level 7+ adalah Operational N (Operational 1, 2, 3, dst)
+			operationalN := level - 6 // Level 7 = Operational 1, Level 8 = Operational 2, dst
+			namaLevel = fmt.Sprintf("Operational %d", operationalN)
+		} else {
+			namaLevel = levelNames[level]
+		}
+
+		if data, exists := dataPerLevel[level]; exists {
+			// Hitung persentase untuk level ini
+			persentase := 0.0
+			if data.JumlahPokin > 0 {
+				persentase = (float64(data.JumlahPokinTanpaPelaksana) / float64(data.JumlahPokin)) * 100
+			}
+
+			responseData = append(responseData, pohonkinerja.ControlPokinOpdData{
+				LevelPohon:                level,
+				NamaLevel:                 namaLevel,
+				JumlahPokin:               data.JumlahPokin,
+				JumlahPelaksana:           data.JumlahPelaksana,
+				JumlahPokinTanpaPelaksana: data.JumlahPokinTanpaPelaksana,
+				Persentase:                fmt.Sprintf("%.0f%%", persentase),
+			})
+
+			// Akumulasi total
+			totalPokin += data.JumlahPokin
+			totalPelaksana += data.JumlahPelaksana
+			totalPokinTanpaPelaksana += data.JumlahPokinTanpaPelaksana
+		}
+		// Jika level tidak ada data, skip (tidak perlu ditampilkan)
+	}
+
+	// Hitung persentase total
+	persentaseTotal := 0.0
+	if totalPokin > 0 {
+		persentaseTotal = (float64(totalPokinTanpaPelaksana) / float64(totalPokin)) * 100
+	}
+
+	// Hitung persentase penyelesaian
+	// Persentase penyelesaian = (Total Pokin yang sudah ada pelaksana) / Total Pokin * 100
+	// persentasePenyelesaian := 0.0
+	// if totalPokin > 0 {
+	// 	persentasePenyelesaian = (float64(totalPokin-totalPokinTanpaPelaksana) / float64(totalPokin)) * 100
+	// }
+
+	response := pohonkinerja.ControlPokinOpdResponse{
+		Data: responseData,
+		Total: pohonkinerja.ControlPokinOpdTotal{
+			TotalPokin:               totalPokin,
+			TotalPelaksana:           totalPelaksana,
+			TotalPokinTanpaPelaksana: totalPokinTanpaPelaksana,
+			Persentase:               fmt.Sprintf("%.0f%%", persentaseTotal),
+		},
+		// PersentasePenyelesaian: fmt.Sprintf("%.0f%%", persentasePenyelesaian),
+	}
+
+	return response, nil
+}

@@ -233,3 +233,24 @@ func (controller *UserControllerImpl) FindByNip(writer http.ResponseWriter, requ
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *UserControllerImpl) CekAdminOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	response, err := controller.userService.CekAdminOpd(request.Context())
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "success cek admin opd",
+		Data:   response,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
