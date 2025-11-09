@@ -9,4 +9,6 @@ type Users struct {
 	Role        []Roles
 	PegawaiId   string
 	NamaPegawai string
+	KodeOpd     string
+	NamaOpd     string
 }

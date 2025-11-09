@@ -442,3 +442,59 @@ func (repository *UserRepositoryImpl) FindByKodeOpdAndRole(ctx context.Context, 
 
 	return sortedUsers, nil
 }
+
+func (repository *UserRepositoryImpl) CekAdminOpd(ctx context.Context, tx *sql.Tx) ([]domain.Users, error) {
+	script := `
+		SELECT 
+			u.id as user_id,
+			u.nip,
+			u.email,
+			u.is_active,
+			p.id as pegawai_id,
+			p.nama as nama_pegawai,
+			p.kode_opd,
+			o.nama_opd,
+			r.id as role_id,
+			r.role
+		FROM tb_users u
+		INNER JOIN tb_user_role ur ON u.id = ur.user_id
+		INNER JOIN tb_role r ON ur.role_id = r.id
+		INNER JOIN tb_pegawai p ON u.nip = p.nip
+		INNER JOIN tb_operasional_daerah o ON p.kode_opd = o.kode_opd
+		WHERE r.role = 'admin_opd'
+		ORDER BY o.kode_opd, u.id
+	`
+
+	rows, err := tx.QueryContext(ctx, script)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []domain.Users
+	for rows.Next() {
+		var user domain.Users
+		var role domain.Roles
+
+		err := rows.Scan(
+			&user.Id,
+			&user.Nip,
+			&user.Email,
+			&user.IsActive,
+			&user.PegawaiId,
+			&user.NamaPegawai,
+			&user.KodeOpd,
+			&user.NamaOpd,
+			&role.Id,
+			&role.Role,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		user.Role = []domain.Roles{role}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
