@@ -2254,7 +2254,7 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 
 	// Build response data per level
 	var responseData []pohonkinerja.ControlPokinOpdData
-	var totalPokin, totalPelaksana, totalPokinTanpaPelaksana int
+	var totalPokin, totalPelaksana, totalPokinAdaPelaksana, totalPokinTanpaPelaksana int
 
 	// Iterasi dari level 4 sampai maxLevel
 	for level := 4; level <= maxLevel; level++ {
@@ -2270,10 +2270,10 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 		}
 
 		if data, exists := dataPerLevel[level]; exists {
-			// Hitung persentase untuk level ini
+			// ✅ UBAH LOGIC: Hitung persentase = (pokin ada pelaksana / total pokin) * 100
 			persentase := 0.0
 			if data.JumlahPokin > 0 {
-				persentase = (float64(data.JumlahPokinTanpaPelaksana) / float64(data.JumlahPokin)) * 100
+				persentase = (float64(data.JumlahPokinAdaPelaksana) / float64(data.JumlahPokin)) * 100
 			}
 
 			responseData = append(responseData, pohonkinerja.ControlPokinOpdData{
@@ -2281,6 +2281,7 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 				NamaLevel:                 namaLevel,
 				JumlahPokin:               data.JumlahPokin,
 				JumlahPelaksana:           data.JumlahPelaksana,
+				JumlahPokinAdaPelaksana:   data.JumlahPokinAdaPelaksana, // ← TAMBAHKAN
 				JumlahPokinTanpaPelaksana: data.JumlahPokinTanpaPelaksana,
 				Persentase:                fmt.Sprintf("%.0f%%", persentase),
 			})
@@ -2288,33 +2289,26 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 			// Akumulasi total
 			totalPokin += data.JumlahPokin
 			totalPelaksana += data.JumlahPelaksana
+			totalPokinAdaPelaksana += data.JumlahPokinAdaPelaksana // ← AKUMULASI BARU
 			totalPokinTanpaPelaksana += data.JumlahPokinTanpaPelaksana
 		}
-		// Jika level tidak ada data, skip (tidak perlu ditampilkan)
 	}
 
-	// Hitung persentase total
+	// ✅ UBAH LOGIC: Hitung persentase total = (total pokin ada pelaksana / total pokin) * 100
 	persentaseTotal := 0.0
 	if totalPokin > 0 {
-		persentaseTotal = (float64(totalPokinTanpaPelaksana) / float64(totalPokin)) * 100
+		persentaseTotal = (float64(totalPokinAdaPelaksana) / float64(totalPokin)) * 100
 	}
-
-	// Hitung persentase penyelesaian
-	// Persentase penyelesaian = (Total Pokin yang sudah ada pelaksana) / Total Pokin * 100
-	// persentasePenyelesaian := 0.0
-	// if totalPokin > 0 {
-	// 	persentasePenyelesaian = (float64(totalPokin-totalPokinTanpaPelaksana) / float64(totalPokin)) * 100
-	// }
 
 	response := pohonkinerja.ControlPokinOpdResponse{
 		Data: responseData,
 		Total: pohonkinerja.ControlPokinOpdTotal{
 			TotalPokin:               totalPokin,
 			TotalPelaksana:           totalPelaksana,
+			TotalPokinAdaPelaksana:   totalPokinAdaPelaksana, // ← TAMBAHKAN
 			TotalPokinTanpaPelaksana: totalPokinTanpaPelaksana,
 			Persentase:               fmt.Sprintf("%.0f%%", persentaseTotal),
 		},
-		// PersentasePenyelesaian: fmt.Sprintf("%.0f%%", persentasePenyelesaian),
 	}
 
 	return response, nil

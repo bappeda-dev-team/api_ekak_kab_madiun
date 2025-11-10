@@ -3813,24 +3813,26 @@ type ControlPokinLevel struct {
 	LevelPohon                int
 	JumlahPokin               int
 	JumlahPelaksana           int
+	JumlahPokinAdaPelaksana   int
 	JumlahPokinTanpaPelaksana int
 }
 
 func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error) {
 	query := `
-		SELECT 
-			pk.level_pohon,
-			COUNT(DISTINCT pk.id) as jumlah_pokin,
-			COUNT(DISTINCT pp.pegawai_id) as jumlah_pelaksana,
-			COUNT(DISTINCT CASE WHEN pp.pegawai_id IS NULL THEN pk.id END) as jumlah_pokin_tanpa_pelaksana
-		FROM tb_pohon_kinerja pk
-		LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
-		WHERE pk.kode_opd = ? 
-		AND pk.tahun = ?
-		AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-		GROUP BY pk.level_pohon
-		ORDER BY pk.level_pohon
-	`
+	SELECT 
+		pk.level_pohon,
+		COUNT(DISTINCT pk.id) as jumlah_pokin,
+		COUNT(DISTINCT pp.pegawai_id) as jumlah_pelaksana,
+		COUNT(DISTINCT CASE WHEN pp.pegawai_id IS NOT NULL THEN pk.id END) as jumlah_pokin_ada_pelaksana,
+		COUNT(DISTINCT CASE WHEN pp.pegawai_id IS NULL THEN pk.id END) as jumlah_pokin_tanpa_pelaksana
+	FROM tb_pohon_kinerja pk
+	LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
+	WHERE pk.kode_opd = ? 
+	AND pk.tahun = ?
+	AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+	GROUP BY pk.level_pohon
+	ORDER BY pk.level_pohon
+`
 
 	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
 	if err != nil {
@@ -3845,6 +3847,7 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 			&data.LevelPohon,
 			&data.JumlahPokin,
 			&data.JumlahPelaksana,
+			&data.JumlahPokinAdaPelaksana,
 			&data.JumlahPokinTanpaPelaksana,
 		)
 		if err != nil {
