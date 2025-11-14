@@ -2255,6 +2255,7 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 	// Build response data per level
 	var responseData []pohonkinerja.ControlPokinOpdData
 	var totalPokin, totalPelaksana, totalPokinAdaPelaksana, totalPokinTanpaPelaksana int
+	var totalRencanaKinerja, totalPokinAdaRekin, totalPokinTanpaRekin int // ← TAMBAH VARIABEL BARU
 
 	// Iterasi dari level 4 sampai maxLevel
 	for level := 4; level <= maxLevel; level++ {
@@ -2270,10 +2271,16 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 		}
 
 		if data, exists := dataPerLevel[level]; exists {
-			// ✅ UBAH LOGIC: Hitung persentase = (pokin ada pelaksana / total pokin) * 100
-			persentase := 0.0
+			// Hitung persentase pelaksana = (pokin ada pelaksana / total pokin) * 100
+			persentasePelaksana := 0.0
 			if data.JumlahPokin > 0 {
-				persentase = (float64(data.JumlahPokinAdaPelaksana) / float64(data.JumlahPokin)) * 100
+				persentasePelaksana = (float64(data.JumlahPokinAdaPelaksana) / float64(data.JumlahPokin)) * 100
+			}
+
+			// ✅ Hitung persentase cascading = (pokin ada rekin / total pokin) * 100
+			persentaseCascading := 0.0
+			if data.JumlahPokin > 0 {
+				persentaseCascading = (float64(data.JumlahPokinAdaRekin) / float64(data.JumlahPokin)) * 100
 			}
 
 			responseData = append(responseData, pohonkinerja.ControlPokinOpdData{
@@ -2281,23 +2288,36 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 				NamaLevel:                 namaLevel,
 				JumlahPokin:               data.JumlahPokin,
 				JumlahPelaksana:           data.JumlahPelaksana,
-				JumlahPokinAdaPelaksana:   data.JumlahPokinAdaPelaksana, // ← TAMBAHKAN
+				JumlahPokinAdaPelaksana:   data.JumlahPokinAdaPelaksana,
 				JumlahPokinTanpaPelaksana: data.JumlahPokinTanpaPelaksana,
-				Persentase:                fmt.Sprintf("%.0f%%", persentase),
+				JumlahRencanaKinerja:      data.JumlahRencanaKinerja,
+				JumlahPokinAdaRekin:       data.JumlahPokinAdaRekin,
+				JumlahPokinTanpaRekin:     data.JumlahPokinTanpaRekin,
+				Persentase:                fmt.Sprintf("%.0f%%", persentasePelaksana),
+				PersentaseCascading:       fmt.Sprintf("%.0f%%", persentaseCascading),
 			})
 
 			// Akumulasi total
 			totalPokin += data.JumlahPokin
 			totalPelaksana += data.JumlahPelaksana
-			totalPokinAdaPelaksana += data.JumlahPokinAdaPelaksana // ← AKUMULASI BARU
+			totalPokinAdaPelaksana += data.JumlahPokinAdaPelaksana
 			totalPokinTanpaPelaksana += data.JumlahPokinTanpaPelaksana
+			totalRencanaKinerja += data.JumlahRencanaKinerja
+			totalPokinAdaRekin += data.JumlahPokinAdaRekin
+			totalPokinTanpaRekin += data.JumlahPokinTanpaRekin
 		}
 	}
 
-	// ✅ UBAH LOGIC: Hitung persentase total = (total pokin ada pelaksana / total pokin) * 100
-	persentaseTotal := 0.0
+	// Hitung persentase total pelaksana
+	persentaseTotalPelaksana := 0.0
 	if totalPokin > 0 {
-		persentaseTotal = (float64(totalPokinAdaPelaksana) / float64(totalPokin)) * 100
+		persentaseTotalPelaksana = (float64(totalPokinAdaPelaksana) / float64(totalPokin)) * 100
+	}
+
+	// ✅ Hitung persentase total cascading
+	persentaseTotalCascading := 0.0
+	if totalPokin > 0 {
+		persentaseTotalCascading = (float64(totalPokinAdaRekin) / float64(totalPokin)) * 100
 	}
 
 	response := pohonkinerja.ControlPokinOpdResponse{
@@ -2305,9 +2325,13 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 		Total: pohonkinerja.ControlPokinOpdTotal{
 			TotalPokin:               totalPokin,
 			TotalPelaksana:           totalPelaksana,
-			TotalPokinAdaPelaksana:   totalPokinAdaPelaksana, // ← TAMBAHKAN
+			TotalPokinAdaPelaksana:   totalPokinAdaPelaksana,
 			TotalPokinTanpaPelaksana: totalPokinTanpaPelaksana,
-			Persentase:               fmt.Sprintf("%.0f%%", persentaseTotal),
+			TotalRencanaKinerja:      totalRencanaKinerja,
+			TotalPokinAdaRekin:       totalPokinAdaRekin,
+			TotalPokinTanpaRekin:     totalPokinTanpaRekin,
+			Persentase:               fmt.Sprintf("%.0f%%", persentaseTotalPelaksana),
+			PersentaseCascading:      fmt.Sprintf("%.0f%%", persentaseTotalCascading),
 		},
 	}
 

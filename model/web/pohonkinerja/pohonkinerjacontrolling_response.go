@@ -12,7 +12,11 @@ type ControlPokinOpdData struct {
 	JumlahPelaksana           int    `json:"jumlah_pelaksana"`
 	JumlahPokinAdaPelaksana   int    `json:"jumlah_pokin_ada_pelaksana"`
 	JumlahPokinTanpaPelaksana int    `json:"jumlah_pokin_tanpa_pelaksana"`
-	Persentase                string `json:"persentase"`
+	JumlahRencanaKinerja      int    `json:"jumlah_rencana_kinerja"`   // ← BARU
+	JumlahPokinAdaRekin       int    `json:"jumlah_pokin_ada_rekin"`   // ← BARU
+	JumlahPokinTanpaRekin     int    `json:"jumlah_pokin_tanpa_rekin"` // ← BARU
+	Persentase                string `json:"persentase"`               // pelaksana
+	PersentaseCascading       string `json:"persentase_cascading"`     // ← BARU: cascading
 }
 
 type ControlPokinOpdTotal struct {
@@ -20,5 +24,9 @@ type ControlPokinOpdTotal struct {
 	TotalPelaksana           int    `json:"total_pelaksana"`
 	TotalPokinAdaPelaksana   int    `json:"total_pokin_ada_pelaksana"`
 	TotalPokinTanpaPelaksana int    `json:"total_pokin_tanpa_pelaksana"`
-	Persentase               string `json:"persentase"`
+	TotalRencanaKinerja      int    `json:"total_rencana_kinerja"`   // ← BARU
+	TotalPokinAdaRekin       int    `json:"total_pokin_ada_rekin"`   // ← BARU
+	TotalPokinTanpaRekin     int    `json:"total_pokin_tanpa_rekin"` // ← BARU
+	Persentase               string `json:"persentase"`              // pelaksana
+	PersentaseCascading      string `json:"persentase_cascading"`    // ← BARU: cascading
 }
