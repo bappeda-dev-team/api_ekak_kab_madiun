@@ -100,7 +100,28 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		return
 	}
 
+	clientId, hasClientId := claims["client_id"].(string)
+	if hasClientId {
+		allowedService := os.Getenv("ALLOWED_SERVICE_CLIENT_ID")
+
+		if clientId != allowedService {
+			writeForbidden(writer, "client not allowed")
+			return
+		}
+	} else {
+		sessionId := request.Header.Get("X-Session-Id")
+		if sessionId == "" {
+			writeUnauthorized(writer, "User session not found")
+			return
+		}
+	}
+
 	ctx := context.WithValue(request.Context(), helper.UserInfoKey, claims)
+	ctx = context.WithValue(ctx, "client_id", clientId)
+    ctx = context.WithValue(ctx, "is_service_token", hasClientId)
+
+	ctx = context.WithValue(ctx, "user_session_id", request.Header.Get("X-Session-Id"))
+
 	request = request.WithContext(ctx)
 
 	middleware.Handler.ServeHTTP(writer, request)
@@ -112,6 +133,16 @@ func writeUnauthorized(w http.ResponseWriter, message string) {
 	helper.WriteToResponseBody(w, web.WebResponse{
 		Code:   http.StatusUnauthorized,
 		Status: "UNAUTHORIZED",
+		Data:   message,
+	})
+}
+
+func writeForbidden(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	helper.WriteToResponseBody(w, web.WebResponse{
+		Code:   http.StatusForbidden,
+		Status: "ACCESS NOT ALLOWED",
 		Data:   message,
 	})
 }
