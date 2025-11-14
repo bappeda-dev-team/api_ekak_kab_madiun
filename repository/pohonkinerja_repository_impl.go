@@ -3815,26 +3815,109 @@ type ControlPokinLevel struct {
 	JumlahPelaksana           int
 	JumlahPokinAdaPelaksana   int
 	JumlahPokinTanpaPelaksana int
+	JumlahRencanaKinerja      int
+	JumlahPokinAdaRekin       int
+	JumlahPokinTanpaRekin     int
 }
 
 func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error) {
 	query := `
-	SELECT 
-		pk.level_pohon,
-		COUNT(DISTINCT pk.id) as jumlah_pokin,
-		COUNT(DISTINCT pp.pegawai_id) as jumlah_pelaksana,
-		COUNT(DISTINCT CASE WHEN pp.pegawai_id IS NOT NULL THEN pk.id END) as jumlah_pokin_ada_pelaksana,
-		COUNT(DISTINCT CASE WHEN pp.pegawai_id IS NULL THEN pk.id END) as jumlah_pokin_tanpa_pelaksana
-	FROM tb_pohon_kinerja pk
-	LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
-	WHERE pk.kode_opd = ? 
-	AND pk.tahun = ?
-	AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-	GROUP BY pk.level_pohon
-	ORDER BY pk.level_pohon
-`
+		WITH RECURSIVE valid_pokin AS (
+			-- ✅ BASE CASE: Strategic (level 4) dengan parent = 0 atau parent level 0-3
+			SELECT 
+				pk.id,
+				pk.level_pohon,
+				pk.parent,
+				pk.tahun
+			FROM tb_pohon_kinerja pk
+			WHERE pk.kode_opd = ? 
+			AND pk.tahun = ?
+			AND pk.level_pohon = 4
+			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND (
+				pk.parent = 0 
+				OR EXISTS (
+					-- Parent adalah level 0-3 (tematik dari tahun berbeda)
+					SELECT 1 FROM tb_pohon_kinerja p2 
+					WHERE p2.id = pk.parent 
+					AND p2.level_pohon BETWEEN 0 AND 3
+				)
+			)
+			
+			UNION ALL
+			
+			-- ✅ RECURSIVE: Level 5+ harus punya parent valid dengan tahun yang sama
+			SELECT 
+				child.id,
+				child.level_pohon,
+				child.parent,
+				child.tahun
+			FROM tb_pohon_kinerja child
+			INNER JOIN valid_pokin vp ON child.parent = vp.id
+			WHERE child.kode_opd = ?
+			AND child.tahun = ?
+			AND child.level_pohon > 4
+			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			-- ✅ PENTING: Parent harus tahun yang sama
+			AND child.tahun = vp.tahun
+		),
+		pokin_pelaksana AS (
+			SELECT 
+				vp.level_pohon,
+				COUNT(DISTINCT vp.id) as total_pokin,
+				COUNT(DISTINCT pp.pegawai_id) as total_pelaksana,
+				COUNT(DISTINCT CASE WHEN pp.pegawai_id IS NOT NULL THEN vp.id END) as pokin_ada_pelaksana
+			FROM valid_pokin vp
+			LEFT JOIN tb_pelaksana_pokin pp ON vp.id = pp.pohon_kinerja_id
+			GROUP BY vp.level_pohon
+		),
+		pokin_rekin AS (
+			SELECT 
+				vp.level_pohon,
+				-- Total rencana kinerja yang pegawai-nya adalah pelaksana pohon kinerja
+				COUNT(DISTINCT CASE 
+					WHEN rk.id IS NOT NULL 
+					AND EXISTS (
+						SELECT 1 
+						FROM tb_pelaksana_pokin pp2 
+						INNER JOIN tb_pegawai pg ON pp2.pegawai_id = pg.id
+						WHERE pp2.pohon_kinerja_id = vp.id 
+						AND pg.nip = rk.pegawai_id
+					) 
+					THEN rk.id 
+				END) as total_rencana_kinerja,
+				-- Pokin yang punya minimal 1 rencana kinerja (dari pelaksananya)
+				COUNT(DISTINCT CASE 
+					WHEN EXISTS (
+						SELECT 1 
+						FROM tb_rencana_kinerja rk2
+						INNER JOIN tb_pelaksana_pokin pp3 ON pp3.pohon_kinerja_id = vp.id
+						INNER JOIN tb_pegawai pg2 ON pp3.pegawai_id = pg2.id
+						WHERE rk2.id_pohon = vp.id 
+						AND pg2.nip = rk2.pegawai_id
+					) 
+					THEN vp.id 
+				END) as pokin_ada_rekin_pelaksana
+			FROM valid_pokin vp
+			LEFT JOIN tb_rencana_kinerja rk ON vp.id = rk.id_pohon
+			GROUP BY vp.level_pohon
+		)
+		SELECT 
+			pp.level_pohon,
+			pp.total_pokin as jumlah_pokin,
+			pp.total_pelaksana as jumlah_pelaksana,
+			pp.pokin_ada_pelaksana as jumlah_pokin_ada_pelaksana,
+			(pp.total_pokin - pp.pokin_ada_pelaksana) as jumlah_pokin_tanpa_pelaksana,
+			COALESCE(pr.total_rencana_kinerja, 0) as jumlah_rencana_kinerja,
+			COALESCE(pr.pokin_ada_rekin_pelaksana, 0) as jumlah_pokin_ada_rekin,
+			(pp.total_pokin - COALESCE(pr.pokin_ada_rekin_pelaksana, 0)) as jumlah_pokin_tanpa_rekin
+		FROM pokin_pelaksana pp
+		LEFT JOIN pokin_rekin pr ON pp.level_pohon = pr.level_pohon
+		ORDER BY pp.level_pohon
+	`
 
-	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	// ✅ PARAMETER: kodeOpd, tahun (untuk base case), kodeOpd, tahun (untuk recursive)
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun, kodeOpd, tahun)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil data control pokin: %w", err)
 	}
@@ -3849,6 +3932,9 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 			&data.JumlahPelaksana,
 			&data.JumlahPokinAdaPelaksana,
 			&data.JumlahPokinTanpaPelaksana,
+			&data.JumlahRencanaKinerja,
+			&data.JumlahPokinAdaRekin,
+			&data.JumlahPokinTanpaRekin,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("gagal scan data: %w", err)
