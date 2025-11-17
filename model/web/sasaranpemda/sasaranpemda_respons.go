@@ -62,6 +62,7 @@ type IndikatorSubtematikResponse struct {
 type TematikResponse struct {
 	TematikId   int                  `json:"tematik_id"`
 	NamaTematik string               `json:"nama_tematik"`
+	Tahun       string               `json:"tahun"`
 	Subtematik  []SubtematikResponse `json:"subtematik"`
 }
 
@@ -70,6 +71,7 @@ type SubtematikResponse struct {
 	NamaSubtematik string                          `json:"nama_subtematik"`
 	JenisPohon     string                          `json:"jenis_pohon"`
 	LevelPohon     int                             `json:"level_pohon"`
+	Tahun          string                          `json:"tahun"`
 	IsActive       bool                            `json:"is_active"`
 	SasaranPemda   []SasaranPemdaWithpokinResponse `json:"sasaran_pemda"`
 }

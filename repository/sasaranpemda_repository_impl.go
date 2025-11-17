@@ -713,6 +713,7 @@ func (repository *SasaranPemdaRepositoryImpl) FindAllWithPokin(ctx context.Conte
 			tematik = &domain.PohonKinerjaWithSasaran{
 				TematikId:   tematikId,
 				NamaTematik: namaTematik,
+				Tahun:       pohonTahun,
 				Subtematik:  []domain.SubtematikWithSasaran{},
 			}
 			tematikMap[tematikId] = tematik
@@ -734,6 +735,7 @@ func (repository *SasaranPemdaRepositoryImpl) FindAllWithPokin(ctx context.Conte
 				NamaSubtematik:   namaSubtematik,
 				JenisPohon:       jenisPohon,
 				LevelPohon:       levelPohon,
+				Tahun:            pohonTahun,
 				IsActive:         is_active,
 				SasaranPemdaList: []domain.SasaranPemdaDetail{},
 			}
