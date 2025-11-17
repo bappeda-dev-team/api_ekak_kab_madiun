@@ -14,6 +14,7 @@ type SubtematikWithSasaran struct {
 	NamaSubtematik   string
 	JenisPohon       string
 	LevelPohon       int
+	Tahun            string
 	Keterangan       string
 	IsActive         bool
 	SasaranPemdaList []SasaranPemdaDetail

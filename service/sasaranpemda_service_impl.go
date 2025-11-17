@@ -496,6 +496,7 @@ func (service *SasaranPemdaServiceImpl) FindAllWithPokin(ctx context.Context, ta
 		tematikResponse := sasaranpemda.TematikResponse{
 			TematikId:   tematik.TematikId,
 			NamaTematik: tematik.NamaTematik,
+			Tahun:       tematik.Tahun,
 			Subtematik:  []sasaranpemda.SubtematikResponse{},
 		}
 
@@ -510,6 +511,7 @@ func (service *SasaranPemdaServiceImpl) FindAllWithPokin(ctx context.Context, ta
 				NamaSubtematik: subtematik.NamaSubtematik,
 				JenisPohon:     subtematik.JenisPohon,
 				LevelPohon:     subtematik.LevelPohon,
+				Tahun:          subtematik.Tahun,
 				IsActive:       subtematik.IsActive,
 				SasaranPemda:   []sasaranpemda.SasaranPemdaWithpokinResponse{},
 			}
