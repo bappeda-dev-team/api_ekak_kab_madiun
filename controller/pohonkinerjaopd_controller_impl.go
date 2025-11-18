@@ -510,3 +510,27 @@ func (controller *PohonKinerjaOpdControllerImpl) FindPokinAtasan(writer http.Res
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaOpdControllerImpl) ControlPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	controlPokinOpd, err := controller.PohonKinerjaOpdService.ControlPokinOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   err.Error(),
+		}
+		writer.WriteHeader(http.StatusBadRequest)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get Control Pokin Opd",
+		Data:   controlPokinOpd,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

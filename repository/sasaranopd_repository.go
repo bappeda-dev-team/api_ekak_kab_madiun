@@ -15,4 +15,5 @@ type SasaranOpdRepository interface {
 	Update(ctx context.Context, tx *sql.Tx, sasaranOpd domain.SasaranOpdDetail) (domain.SasaranOpdDetail, error)
 	Delete(ctx context.Context, tx *sql.Tx, id string) error
 	FindByIdPokin(ctx context.Context, tx *sql.Tx, idPokin int, tahun string) (*domain.SasaranOpd, error)
+	FindByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.SasaranOpd, error)
 }

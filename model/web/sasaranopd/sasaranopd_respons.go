@@ -2,6 +2,8 @@ package sasaranopd
 
 type SasaranOpdResponse struct {
 	IdPohon    int                        `json:"id_pohon"`
+	KodeOpd    string                     `json:"kode_opd,omitempty"`
+	NamaOpd    string                     `json:"nama_opd,omitempty"`
 	NamaPohon  string                     `json:"nama_pohon"`
 	JenisPohon string                     `json:"jenis_pohon"`
 	TahunPohon string                     `json:"tahun_pohon"`

@@ -10,4 +10,5 @@ type CascadingOpdService interface {
 	FindByRekinPegawaiAndId(ctx context.Context, rekinId string) (pohonkinerja.CascadingRekinPegawaiResponse, error)
 	FindByIdPokin(ctx context.Context, pokinId int) (pohonkinerja.CascadingRekinPegawaiResponse, error)
 	FindByNip(ctx context.Context, nip string, tahun string) ([]pohonkinerja.CascadingRekinPegawaiResponse, error)
+	FindByMultipleRekinPegawai(ctx context.Context, request pohonkinerja.FindByMultipleRekinRequest) ([]pohonkinerja.CascadingRekinPegawaiResponse, error)
 }
