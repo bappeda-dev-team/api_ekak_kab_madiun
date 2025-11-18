@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type RencanaKinerjaRepositoryImpl struct {
@@ -974,4 +975,93 @@ func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Cont
 	}
 
 	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekins(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinIds []string,
+) ([]domain.DetailRekins, error) {
+
+	if len(rekinIds) == 0 {
+		return []domain.DetailRekins{}, nil
+	}
+
+	// Build placeholders
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+        SELECT
+            r.id,
+            r.id_pohon,
+            p.level_pohon,
+            p.parent,
+            r.nama_rencana_kinerja,
+            r.tahun,
+            r.pegawai_id,
+            r.kode_opd,
+            sub.kode_subkegiatan
+        FROM tb_rencana_kinerja r
+        JOIN tb_pohon_kinerja p ON r.id_pohon = p.id
+        LEFT JOIN tb_subkegiatan_terpilih sub ON r.id = sub.rekin_id
+        WHERE r.id IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.DetailRekins
+
+	for rows.Next() {
+		var (
+			rk domain.DetailRekins
+
+			idPohon    sql.NullInt64
+			levelPohon sql.NullInt64
+			parent     sql.NullInt64
+			kodeSub    sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&idPohon,
+			&levelPohon,
+			&parent,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.PegawaiId,
+			&rk.KodeOpd,
+			&kodeSub,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// mapping nullable → struct
+		if idPohon.Valid {
+			rk.IdPohon = int(idPohon.Int64)
+		}
+		if levelPohon.Valid {
+			rk.LevelPohon = int(levelPohon.Int64)
+		}
+		if parent.Valid {
+			rk.Parent = int(parent.Int64)
+		}
+		if kodeSub.Valid {
+			rk.KodeSubKegiatan = kodeSub.String
+		}
+
+		results = append(results, rk)
+	}
+
+	return results, nil
 }

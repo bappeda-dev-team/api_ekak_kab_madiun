@@ -168,3 +168,27 @@ func (controller *CascadingOpdControllerImpl) FindByMultipleRekinPegawai(writer 
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *CascadingOpdControllerImpl) MultiRekinDetail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	// id rekin list
+	rekinRequest := pohonkinerja.FindByMultipleRekinRequest{}
+	helper.ReadFromRequestBody(r, &rekinRequest)
+
+	detailRekinResponses, err := controller.CascadingOpdService.MultiRekinDetails(r.Context(), rekinRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get By Multiple Rekin Pegawai",
+		Data:   detailRekinResponses,
+	}
+	helper.WriteToResponseBody(w, webResponse)
+}

@@ -23,11 +23,14 @@ type CascadingOpdServiceImpl struct {
 	tujuanOpdRepository      repository.TujuanOpdRepository
 	rencanaKinerjaRepository repository.RencanaKinerjaRepository
 	DB                       *sql.DB
-	programRepository        repository.ProgramRepository
 	cascadingOpdRepository   repository.CascadingOpdRepository
-	bidangUrusanRepository   repository.BidangUrusanRepository
 	rincianBelanjaRepository repository.RincianBelanjaRepository
 	rencanaAksiRepository    repository.RencanaAksiRepository
+	urusanRepository         repository.UrusanRepository
+	bidangUrusanRepository   repository.BidangUrusanRepository
+	programRepository        repository.ProgramRepository
+	kegiatanRepository       repository.KegiatanRepository
+	subKegiatanRepository    repository.SubKegiatanRepository
 }
 
 func NewCascadingOpdServiceImpl(
@@ -2097,4 +2100,56 @@ func (service *CascadingOpdServiceImpl) processSingleRekin(
 	response := service.buildCascadingRekinResponse(ctx, tx, pokinRekin, opd, totalAnggaran)
 
 	return response, nil
+}
+
+func (service *CascadingOpdServiceImpl) MultiRekinDetails(
+	ctx context.Context,
+	request pohonkinerja.FindByMultipleRekinRequest,
+) ([]pohonkinerja.DetailRekinResponse, error) {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi request
+	if len(request.RekinIds) == 0 {
+		return nil, errors.New("rekin_ids tidak boleh kosong")
+	}
+
+	// Ambil data dasar rencana kinerja
+	detailRekins, err := service.rencanaKinerjaRepository.FindDetailRekins(ctx, tx, request.RekinIds)
+	if err != nil {
+		log.Printf("Error find multiple rekins: %v", err)
+		return nil, err
+	}
+
+	var responses []pohonkinerja.DetailRekinResponse
+	var errs []string
+
+	for _, rk := range detailRekins {
+
+		// Response dasar
+		resp := pohonkinerja.DetailRekinResponse{
+			Id:                 rk.Id,
+			IdPohon:            rk.IdPohon,
+			NamaRencanaKinerja: rk.NamaRencanaKinerja,
+			Tahun:              rk.Tahun,
+			PegawaiId:          rk.PegawaiId,
+		}
+
+		// Tambah ke result
+		responses = append(responses, resp)
+	}
+
+	log.Printf("Successfully processed %d/%d rencana kinerja",
+		len(responses), len(request.RekinIds))
+
+	if len(errs) > 0 {
+		log.Printf("Errors encountered: %v", errs)
+	}
+
+	return responses, nil
 }

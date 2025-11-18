@@ -20,6 +20,31 @@ type CascadingRekinPegawaiResponse struct {
 	PaguAnggaran    int64                               `json:"pagu_anggaran_total"`
 }
 
+type DetailRekinResponse struct {
+	Id                 string                               `json:"id_rencana_kinerja,omitempty"`
+	IdPohon            int                                  `json:"id_pohon,omitempty"`
+	NamaRencanaKinerja string                               `json:"nama_rencana_kinerja,omitempty"`
+	Tahun              string                               `json:"tahun,omitempty"`
+	PegawaiId          string                               `json:"pegawai_id,omitempty"`
+	Urusan             []UrusanCascadingRekinResponse       `json:"urusan"`        // Untuk level 4
+	BidangUrusan       []BidangUrusanCascadingRekinResponse `json:"bidang_urusan"` // Untuk level 4
+	Program            []ProgramCascadingRekinResponse      `json:"program"`       // Untuk level 4 & 5
+	Kegiatan           []KegiatanCascadingRekinResponse     `json:"kegiatan"`      // Untuk level 6
+	SubKegiatan        []SubKegiatanCascadingRekinResponse  `json:"sub_kegiatan"`  // Untuk level 6
+}
+
+// Urusan response untuk level 4
+type UrusanCascadingRekinResponse struct {
+	KodeUrusan string `json:"kode_urusan"`
+	NamaUrusan string `json:"nama_urusan"`
+}
+
+// Bidang Urusan response untuk level 4
+type BidangUrusanCascadingRekinResponse struct {
+	KodeBidangUrusan string `json:"kode_bidang_urusan"`
+	NamaBidangUrusan string `json:"nama_bidang_urusan"`
+}
+
 // Program response untuk level 4 & 5
 type ProgramCascadingRekinResponse struct {
 	KodeProgram string              `json:"kode_program"`

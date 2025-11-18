@@ -284,3 +284,51 @@ func contains(slice []string, value string) bool {
 	}
 	return false
 }
+
+func (repository *UrusanRepositoryImpl) FindByKodeUrusan(ctx context.Context, tx *sql.Tx, kodeUrusan string) (domainmaster.Urusan, error) {
+	script := "SELECT id, kode_urusan, nama_urusan FROM tb_urusan WHERE kode_urusan = ?"
+	rows, err := tx.QueryContext(ctx, script, kodeUrusan)
+	if err != nil {
+		return domainmaster.Urusan{}, err
+	}
+	defer rows.Close()
+
+	urusan := domainmaster.Urusan{}
+
+	if rows.Next() {
+		err := rows.Scan(&urusan.Id, &urusan.KodeUrusan, &urusan.NamaUrusan, &urusan.CreatedAt)
+		if err != nil {
+			return domainmaster.Urusan{}, err
+		}
+	} else {
+		return domainmaster.Urusan{}, fmt.Errorf("urusan dengan id %s tidak ditemukan", kodeUrusan)
+	}
+
+	return urusan, nil
+}
+
+func (repository *UrusanRepositoryImpl) FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domainmaster.Urusan, error) {
+	if kodeSubKegiatan == "" {
+		return domainmaster.Urusan{}, fmt.Errorf("Kode Subkegiatan tidak ditemukan")
+	}
+	kodeUrusan := kodeSubKegiatan[:1]
+	script := "SELECT id, kode_urusan, nama_urusan FROM tb_urusan WHERE kode_urusan = ?"
+	rows, err := tx.QueryContext(ctx, script, kodeUrusan)
+	if err != nil {
+		return domainmaster.Urusan{}, err
+	}
+	defer rows.Close()
+
+	urusan := domainmaster.Urusan{}
+
+	if rows.Next() {
+		err := rows.Scan(&urusan.Id, &urusan.KodeUrusan, &urusan.NamaUrusan)
+		if err != nil {
+			return domainmaster.Urusan{}, err
+		}
+	} else {
+		return domainmaster.Urusan{}, fmt.Errorf("urusan dengan kode %s tidak ditemukan", kodeUrusan)
+	}
+
+	return urusan, nil
+}

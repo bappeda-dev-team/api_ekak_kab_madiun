@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
+	"fmt"
 )
 
 type BidangUrusanRepositoryImpl struct {
@@ -217,4 +218,29 @@ func (repository *BidangUrusanRepositoryImpl) FindByKodeBidangUrusan(ctx context
 	}
 
 	return bidangUrusan, nil
+}
+
+func (repository *BidangUrusanRepositoryImpl) FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domainmaster.BidangUrusan, error) {
+	if kodeSubKegiatan == "" {
+		return domainmaster.BidangUrusan{}, fmt.Errorf("Kode Subkegiatan tidak ditemukan")
+	}
+	kodeBidangUrusan := kodeSubKegiatan[:4]
+	script := "SELECT id, kode_bidang_urusan, nama_bidang_urusan FROM tb_bidang_urusan WHERE kode_bidang_urusan = ?"
+	rows, err := tx.QueryContext(ctx, script, kodeBidangUrusan)
+	if err != nil {
+		return domainmaster.BidangUrusan{}, err
+	}
+	defer rows.Close()
+
+	bidangurusan := domainmaster.BidangUrusan{}
+
+	if rows.Next() {
+		err := rows.Scan(&bidangurusan.Id, &bidangurusan.KodeBidangUrusan, &bidangurusan.NamaBidangUrusan)
+		if err != nil {
+			return domainmaster.BidangUrusan{}, err
+		}
+	} else {
+		return domainmaster.BidangUrusan{}, fmt.Errorf("bidang urusan dengan kode %s tidak ditemukan", kodeBidangUrusan)
+	}
+	return bidangurusan, nil
 }
