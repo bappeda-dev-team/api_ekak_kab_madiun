@@ -2204,22 +2204,87 @@ func (service *CascadingOpdServiceImpl) preloadAnggaran(
 	rks []domain.DetailRekins,
 ) (map[string]int64, error) {
 
-	allIds := make([]string, len(rks))
-	for i := range rks {
-		allIds[i] = rks[i].Id
+	// ---- Ambil anggaran mentah (level 6) ----
+	rawAnggaran := make(map[string]int64)
+	{
+		allIds := make([]string, len(rks))
+		for i := range rks {
+			allIds[i] = rks[i].Id
+		}
+
+		list, err := service.rincianBelanjaRepository.FindAnggaranByRekinIds(ctx, tx, allIds)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, a := range list {
+			rawAnggaran[a.RekinId] = a.TotalAnggaran
+		}
 	}
 
-	list, err := service.rincianBelanjaRepository.FindAnggaranByRekinIds(ctx, tx, allIds)
-	if err != nil {
-		return nil, err
+	// ---- Siapkan map anak2 untuk roll-up ----
+	level5map := make(map[string][]string) // rekin5 -> anak2 level6
+	level4map := make(map[string][]string) // rekin4 -> anak2 level5
+
+	for _, rk := range rks {
+
+		switch rk.LevelPohon {
+
+		case 5:
+			// rekin level 5 anak level 6 langsung di table pohon_kinerja
+			children, _ := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(rk.IdPohon))
+			pokinIds := make([]int, len(children))
+			for i := range children {
+				pokinIds[i] = children[i].Id
+			}
+
+			rb, _ := service.rencanaKinerjaRepository.FindByPokinIds(ctx, tx, pokinIds)
+			for _, child := range rb {
+				level5map[rk.Id] = append(level5map[rk.Id], child.Id)
+			}
+
+		case 4:
+			// rekin level 4 -> anak level 5
+			children5, _ := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(rk.IdPohon))
+			pokin5Ids := make([]int, len(children5))
+			for i := range children5 {
+				pokin5Ids[i] = children5[i].Id
+			}
+
+			rb5, _ := service.rencanaKinerjaRepository.FindByPokinIds(ctx, tx, pokin5Ids)
+			for _, child := range rb5 {
+				level4map[rk.Id] = append(level4map[rk.Id], child.Id)
+			}
+		}
 	}
 
-	m := make(map[string]int64, len(list))
-	for _, a := range list {
-		m[a.RekinId] = a.TotalAnggaran
+	// ---- ROLL UP ----
+	final := make(map[string]int64)
+
+	// level 6 fixed
+	for id, val := range rawAnggaran {
+		final[id] = val
 	}
 
-	return m, nil
+	// level 5 rollup
+	for rekin5, children6 := range level5map {
+		var total int64 = 0
+		for _, r6 := range children6 {
+			total += rawAnggaran[r6]
+		}
+		final[rekin5] = total
+	}
+
+	// level 4 rollup (sum dari total level 5)
+	for rekin4, children5 := range level4map {
+		var total int64 = 0
+		for _, r5 := range children5 {
+			total += final[r5]
+		}
+		final[rekin4] = total
+	}
+
+	return final, nil
 }
 
 func (service *CascadingOpdServiceImpl) preloadAllHierarchies(
