@@ -252,15 +252,17 @@ func (repository *SubKegiatanRepositoryImpl) FindByKodeSubKegiatan(ctx context.C
 	defer rows.Close()
 
 	subKegiatan := domain.SubKegiatan{}
+
 	if rows.Next() {
 		err := rows.Scan(&subKegiatan.Id, &subKegiatan.KodeSubKegiatan, &subKegiatan.NamaSubKegiatan)
 		if err != nil {
 			return domain.SubKegiatan{}, err
 		}
-		return subKegiatan, nil
+	} else {
+		return domain.SubKegiatan{}, fmt.Errorf("subkegiatan dengan kode %s tidak ditemukan", kodeSubKegiatan)
 	}
 
-	return domain.SubKegiatan{}, fmt.Errorf("subkegiatan dengan kode %s tidak ditemukan", kodeSubKegiatan)
+	return subKegiatan, nil
 }
 
 func (repository *SubKegiatanRepositoryImpl) FindSubKegiatanKAK(ctx context.Context, tx *sql.Tx, kodeOpd string, kode string, tahun string) (domain.SubKegiatanKAKQuery, error) {

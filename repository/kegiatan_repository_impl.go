@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
+	"fmt"
+	"log"
 )
 
 type KegiatanRepositoryImpl struct {
@@ -148,4 +150,32 @@ func (repository *KegiatanRepositoryImpl) FindTargetByIndikatorId(ctx context.Co
 		targets = append(targets, target)
 	}
 	return targets, nil
+}
+
+func (repository *KegiatanRepositoryImpl) FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domainmaster.Kegiatan, error) {
+	if kodeSubKegiatan == "" {
+		return domainmaster.Kegiatan{}, fmt.Errorf("Kode Subkegiatan kosong")
+	}
+	if len(kodeSubKegiatan) < 17 {
+		return domainmaster.Kegiatan{}, fmt.Errorf("kode_subkegiatan '%s' terlalu pendek untuk ekstraksi kode kegiatan", kodeSubKegiatan)
+	}
+	kodeKegiatan := kodeSubKegiatan[:12]
+	log.Printf("KodeKegiatan: %s", kodeKegiatan)
+	script := "SELECT kg.nama_kegiatan, kg.kode_kegiatan FROM tb_master_kegiatan kg WHERE kg.kode_kegiatan = ?"
+	rows, err := tx.QueryContext(ctx, script, kodeKegiatan)
+	if err != nil {
+		return domainmaster.Kegiatan{}, err
+	}
+	defer rows.Close()
+
+	kegiatan := domainmaster.Kegiatan{}
+
+	if rows.Next() {
+		if err := rows.Scan(&kegiatan.NamaKegiatan, &kegiatan.KodeKegiatan); err != nil {
+			return domainmaster.Kegiatan{}, fmt.Errorf("gagal scan kegiatan: %w", err)
+		}
+		return kegiatan, nil
+	}
+
+	return domainmaster.Kegiatan{}, fmt.Errorf("kegiatan dengan kode %s tidak ditemukan", kodeKegiatan)
 }

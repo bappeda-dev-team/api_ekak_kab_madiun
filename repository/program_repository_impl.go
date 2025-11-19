@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
+	"strings"
 )
 
 type ProgramRepositoryImpl struct {
@@ -215,4 +216,49 @@ func (repository *ProgramRepositoryImpl) FindByKodeProgram(ctx context.Context, 
 	}
 
 	return program, nil
+}
+
+func (repository *ProgramRepositoryImpl) FindByKodeSubKegiatans(ctx context.Context, tx *sql.Tx, kodeSubKegiatans []string) ([]domainmaster.ProgramKegiatan, error) {
+	if len(kodeSubKegiatans) <= 0 {
+		return []domainmaster.ProgramKegiatan{}, nil
+	}
+
+	placeholders := make([]string, len(kodeSubKegiatans))
+	args := make([]any, len(kodeSubKegiatans))
+	for i, kodeSub := range kodeSubKegiatans {
+		placeholders[i] = "?"
+		args[i] = kodeSub[:7]
+	}
+	query := fmt.Sprintf(`
+    SELECT
+        prg.kode_program,
+        prg.nama_program
+    FROM tb_master_program prg
+    WHERE prg.kode_program = IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domainmaster.ProgramKegiatan
+
+	for rows.Next() {
+		// pr = program
+		var pr domainmaster.ProgramKegiatan
+		err := rows.Scan(
+			&pr.KodeProgram,
+			&pr.NamaProgram,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, pr)
+	}
+
+	return results, nil
 }

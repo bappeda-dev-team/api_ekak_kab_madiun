@@ -39,11 +39,16 @@ func NewCascadingOpdServiceImpl(
 	pegawaiRepository repository.PegawaiRepository,
 	tujuanOpdRepository repository.TujuanOpdRepository,
 	rencanaKinerjaRepository repository.RencanaKinerjaRepository,
-	DB *sql.DB, programRepository repository.ProgramRepository,
+	DB *sql.DB,
 	cascadingOpdRepository repository.CascadingOpdRepository,
-	bidangUrusanRepository repository.BidangUrusanRepository,
 	rincianBelanjaRepository repository.RincianBelanjaRepository,
-	rencanaAksiRepository repository.RencanaAksiRepository) *CascadingOpdServiceImpl {
+	rencanaAksiRepository repository.RencanaAksiRepository,
+	urusanRepository repository.UrusanRepository,
+	bidangUrusanRepository repository.BidangUrusanRepository,
+	programRepository repository.ProgramRepository,
+	kegiatanRepository repository.KegiatanRepository,
+	subKegiatanRepository repository.SubKegiatanRepository,
+) *CascadingOpdServiceImpl {
 	return &CascadingOpdServiceImpl{
 		pohonKinerjaRepository:   pohonKinerjaRepository,
 		opdRepository:            opdRepository,
@@ -51,11 +56,14 @@ func NewCascadingOpdServiceImpl(
 		tujuanOpdRepository:      tujuanOpdRepository,
 		rencanaKinerjaRepository: rencanaKinerjaRepository,
 		DB:                       DB,
-		programRepository:        programRepository,
 		cascadingOpdRepository:   cascadingOpdRepository,
-		bidangUrusanRepository:   bidangUrusanRepository,
 		rincianBelanjaRepository: rincianBelanjaRepository,
 		rencanaAksiRepository:    rencanaAksiRepository,
+		urusanRepository:         urusanRepository,
+		bidangUrusanRepository:   bidangUrusanRepository,
+		programRepository:        programRepository,
+		kegiatanRepository:       kegiatanRepository,
+		subKegiatanRepository:    subKegiatanRepository,
 	}
 }
 
@@ -2106,7 +2114,6 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 	ctx context.Context,
 	request pohonkinerja.FindByMultipleRekinRequest,
 ) ([]pohonkinerja.DetailRekinResponse, error) {
-
 	tx, err := service.DB.Begin()
 	if err != nil {
 		log.Printf("Error starting transaction: %v", err)
@@ -2138,6 +2145,111 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 			NamaRencanaKinerja: rk.NamaRencanaKinerja,
 			Tahun:              rk.Tahun,
 			PegawaiId:          rk.PegawaiId,
+			LevelPohon:         rk.LevelPohon,
+			Urusan:             make([]pohonkinerja.UrusanCascadingRekinResponse, 0),
+			BidangUrusan:       make([]pohonkinerja.BidangUrusanCascadingRekinResponse, 0),
+			Program:            make([]pohonkinerja.ProgramRekinResponse, 0),
+			Kegiatan:           make([]pohonkinerja.KegiatanRekinResponse, 0),
+			SubKegiatan:        make([]pohonkinerja.SubKegiatanRekinResponse, 0),
+		}
+
+		// susun level
+		switch rk.LevelPohon {
+		case 6:
+			if rk.KodeSubKegiatan == "" {
+				resp.SubKegiatan = []pohonkinerja.SubKegiatanRekinResponse{}
+				resp.Kegiatan = []pohonkinerja.KegiatanRekinResponse{}
+				break
+			}
+
+			kegiatan, err := service.kegiatanRepository.FindByKodeSubKegiatan(ctx, tx, rk.KodeSubKegiatan)
+			if err != nil {
+				log.Printf("Kegiatan tidak bisa diambil untuk rekin id: %s", rk.Id)
+				resp.Kegiatan = []pohonkinerja.KegiatanRekinResponse{}
+			} else {
+				resp.Kegiatan = []pohonkinerja.KegiatanRekinResponse{
+					{
+						KodeKegiatan: kegiatan.KodeKegiatan,
+						NamaKegiatan: kegiatan.NamaKegiatan,
+					},
+				}
+			}
+
+			subkegiatan, err := service.subKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, rk.KodeSubKegiatan)
+			if err != nil {
+				log.Printf("Subkegiatan tidak bisa diambil untuk rekin id: %s", rk.Id)
+				resp.SubKegiatan = []pohonkinerja.SubKegiatanRekinResponse{}
+			} else {
+				resp.SubKegiatan = []pohonkinerja.SubKegiatanRekinResponse{
+					{
+						KodeSubkegiatan: subkegiatan.KodeSubKegiatan,
+						NamaSubkegiatan: subkegiatan.NamaSubKegiatan,
+					},
+				}
+			}
+
+		case 5:
+			pokinBawahans, err := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(rk.IdPohon))
+			if err != nil {
+				log.Printf("Pokin bawahan tidak bisa diambil untuk pokin: %d", rk.IdPohon)
+				resp.Program = []pohonkinerja.ProgramRekinResponse{}
+				break
+			}
+
+			// Kumpulkan ID pokin bawahans dengan benar
+			idPokinBawahans := make([]int, 0, len(pokinBawahans))
+			for _, pk := range pokinBawahans {
+				idPokinBawahans = append(idPokinBawahans, pk.Id)
+			}
+
+			rekinBawahans, err := service.rencanaKinerjaRepository.FindByPokinIds(ctx, tx, idPokinBawahans)
+			if err != nil {
+				log.Printf("Rekin bawahan tidak bisa diambil untuk id rekin: %s", rk.Id)
+				resp.Program = []pohonkinerja.ProgramRekinResponse{}
+				break
+			}
+
+			// Ambil kode subkegiatan bawahan (unique)
+			uniq := map[string]bool{}
+			kodeSubKegiatans := make([]string, 0, len(rekinBawahans))
+
+			for _, rba := range rekinBawahans {
+				if rba.KodeSubKegiatan == "" {
+					continue
+				}
+				if !uniq[rba.KodeSubKegiatan] {
+					uniq[rba.KodeSubKegiatan] = true
+					kodeSubKegiatans = append(kodeSubKegiatans, rba.KodeSubKegiatan)
+				}
+			}
+
+			// Jika kosong, return slice kosong
+			if len(kodeSubKegiatans) == 0 {
+				resp.Program = []pohonkinerja.ProgramRekinResponse{}
+				break
+			}
+
+			// Ambil program
+			programs, err := service.programRepository.FindByKodeSubKegiatans(ctx, tx, kodeSubKegiatans)
+			if err != nil {
+				log.Printf("Program tidak bisa diambil untuk rekin id: %s", rk.Id)
+				resp.Program = []pohonkinerja.ProgramRekinResponse{}
+				break
+			}
+
+			// Mapping program
+			mappedPrograms := make([]pohonkinerja.ProgramRekinResponse, len(programs))
+			for i, p := range programs {
+				mappedPrograms[i] = pohonkinerja.ProgramRekinResponse{
+					KodeProgram: p.KodeProgram,
+					NamaProgram: p.NamaProgram,
+				}
+			}
+
+			resp.Program = mappedPrograms
+
+		default:
+			log.Printf("Level pohon %d tidak dikenali, id: %s", rk.LevelPohon, rk.Id)
 		}
 
 		// Tambah ke result

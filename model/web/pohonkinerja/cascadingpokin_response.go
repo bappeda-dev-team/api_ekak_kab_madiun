@@ -26,11 +26,12 @@ type DetailRekinResponse struct {
 	NamaRencanaKinerja string                               `json:"nama_rencana_kinerja,omitempty"`
 	Tahun              string                               `json:"tahun,omitempty"`
 	PegawaiId          string                               `json:"pegawai_id,omitempty"`
-	Urusan             []UrusanCascadingRekinResponse       `json:"urusan"`        // Untuk level 4
-	BidangUrusan       []BidangUrusanCascadingRekinResponse `json:"bidang_urusan"` // Untuk level 4
-	Program            []ProgramCascadingRekinResponse      `json:"program"`       // Untuk level 4 & 5
-	Kegiatan           []KegiatanCascadingRekinResponse     `json:"kegiatan"`      // Untuk level 6
-	SubKegiatan        []SubKegiatanCascadingRekinResponse  `json:"sub_kegiatan"`  // Untuk level 6
+	LevelPohon         int                                  `json:"level_pohon"`
+	Urusan             []UrusanCascadingRekinResponse       `json:"urusan,omitempty"`        // Untuk level 4
+	BidangUrusan       []BidangUrusanCascadingRekinResponse `json:"bidang_urusan,omitempty"` // Untuk level 4
+	Program            []ProgramRekinResponse               `json:"program,omitempty"`       // Untuk level 4 & 5
+	Kegiatan           []KegiatanRekinResponse              `json:"kegiatan,omitempty"`      // Untuk level 6
+	SubKegiatan        []SubKegiatanRekinResponse           `json:"sub_kegiatan,omitempty"`  // Untuk level 6
 }
 
 // Urusan response untuk level 4
@@ -64,4 +65,22 @@ type SubKegiatanCascadingRekinResponse struct {
 	KodeSubkegiatan string              `json:"kode_subkegiatan"`
 	NamaSubkegiatan string              `json:"nama_subkegiatan"`
 	Indikator       []IndikatorResponse `json:"indikator"`
+}
+
+// Program response untuk level 4 & 5
+type ProgramRekinResponse struct {
+	KodeProgram string `json:"kode_program"`
+	NamaProgram string `json:"nama_program"`
+}
+
+// Kegiatan response untuk level 6
+type KegiatanRekinResponse struct {
+	KodeKegiatan string `json:"kode_kegiatan"`
+	NamaKegiatan string `json:"nama_kegiatan"`
+}
+
+// SubKegiatan response untuk level 6
+type SubKegiatanRekinResponse struct {
+	KodeSubkegiatan string `json:"kode_subkegiatan"`
+	NamaSubkegiatan string `json:"nama_subkegiatan"`
 }
