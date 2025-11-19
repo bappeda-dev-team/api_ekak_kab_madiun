@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type KegiatanRepositoryImpl struct {
@@ -178,4 +179,101 @@ func (repository *KegiatanRepositoryImpl) FindByKodeSubKegiatan(ctx context.Cont
 	}
 
 	return domainmaster.Kegiatan{}, fmt.Errorf("kegiatan dengan kode %s tidak ditemukan", kodeKegiatan)
+}
+
+func (repository *KegiatanRepositoryImpl) FindByKodeSubs(
+    ctx context.Context,
+    tx *sql.Tx,
+    kodeSubs []string,
+) (map[string]domainmaster.Kegiatan, error) {
+
+    resultMap := make(map[string]domainmaster.Kegiatan)
+
+    if len(kodeSubs) == 0 {
+        return resultMap, nil
+    }
+
+    // Step 1. Extract unique kode_kegiatan from kode_sub
+    uniqKegiatan := make(map[string]struct{})
+    kodeKegiatanList := make([]string, 0)
+
+    // Map kode_kegiatan → list kode_sub_kegiatan yg punya prefix itu
+    kodeSubGroup := make(map[string][]string)
+
+    for _, ks := range kodeSubs {
+        if len(ks) < 12 {
+            // skip invalid kode_sub
+            continue
+        }
+
+        kodeKegiatan := ks[:12]
+
+        // group kodeSub by kodeKegiatan
+        kodeSubGroup[kodeKegiatan] = append(kodeSubGroup[kodeKegiatan], ks)
+
+        if _, exists := uniqKegiatan[kodeKegiatan]; !exists {
+            uniqKegiatan[kodeKegiatan] = struct{}{}
+            kodeKegiatanList = append(kodeKegiatanList, kodeKegiatan)
+        }
+    }
+
+    if len(kodeKegiatanList) == 0 {
+        return resultMap, nil
+    }
+
+    // Step 2. Build placeholders
+    placeholders := make([]string, len(kodeKegiatanList))
+    args := make([]any, len(kodeKegiatanList))
+
+    for i, kode := range kodeKegiatanList {
+        placeholders[i] = "?"
+        args[i] = kode
+    }
+
+    query := fmt.Sprintf(`
+        SELECT
+            kg.nama_kegiatan,
+            kg.kode_kegiatan
+        FROM tb_master_kegiatan kg
+        WHERE kg.kode_kegiatan IN (%s)
+    `, strings.Join(placeholders, ","))
+
+    rows, err := tx.QueryContext(ctx, query, args...)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    // Step 3. Scan DB → generate map
+    kegiatanByKode := make(map[string]domainmaster.Kegiatan)
+
+    for rows.Next() {
+        var k domainmaster.Kegiatan
+        if err := rows.Scan(&k.NamaKegiatan, &k.KodeKegiatan); err != nil {
+            return nil, err
+        }
+        kegiatanByKode[k.KodeKegiatan] = k
+    }
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    // Step 4. Map kembali ke kode_subkegiatan asli
+    for kodeKegiatan, subs := range kodeSubGroup {
+        baseKeg, ok := kegiatanByKode[kodeKegiatan]
+        if !ok {
+            // Tidak ditemukan di DB → skip
+            continue
+        }
+
+        for _, kodeSub := range subs {
+            resultMap[kodeSub] = domainmaster.Kegiatan{
+                NamaKegiatan:    baseKeg.NamaKegiatan,
+                KodeKegiatan:    baseKeg.KodeKegiatan,
+                KodeSubKegiatan: kodeSub, // ★ aslinya disimpan di struct
+            }
+        }
+    }
+
+    return resultMap, nil
 }

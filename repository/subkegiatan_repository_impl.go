@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type SubKegiatanRepositoryImpl struct {
@@ -341,4 +342,47 @@ func (repository *SubKegiatanRepositoryImpl) FindSubKegiatanKAK(ctx context.Cont
 	}
 
 	return result, nil
+}
+
+func (repository *SubKegiatanRepositoryImpl) FindByKodeSubs(ctx context.Context, tx *sql.Tx, kodeSubKegiatans []string) ([]domain.SubKegiatan, error) {
+	if len(kodeSubKegiatans) <= 0 {
+		return []domain.SubKegiatan{}, nil
+	}
+	placeholders := make([]string, len(kodeSubKegiatans))
+	args := make([]any, len(kodeSubKegiatans))
+	for i, kodeSub := range kodeSubKegiatans {
+		placeholders[i] = "?"
+		args[i] = kodeSub
+	}
+	query := fmt.Sprintf(`
+    SELECT
+        sub.kode_subkegiatan,
+        sub.nama_subkegiatan
+    FROM tb_subkegiatan sub
+    WHERE sub.kode_subkegiatan IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.SubKegiatan
+
+	for rows.Next() {
+		var sub domain.SubKegiatan
+		err := rows.Scan(
+			&sub.KodeSubKegiatan,
+			&sub.NamaSubKegiatan,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, sub)
+	}
+
+	return results, nil
 }
