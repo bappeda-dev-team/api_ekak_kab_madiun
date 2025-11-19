@@ -16,4 +16,5 @@ type RincianBelanjaRepository interface {
 	FindIndikatorSubkegiatanByKodeAndOpd(ctx context.Context, tx *sql.Tx, kodeSubkegiatan string, kodeOpd string, tahun string) ([]domain.Indikator, error)
 	LaporanRincianBelanjaOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RincianBelanjaAsn, error)
 	LaporanRincianBelanjaPegawai(ctx context.Context, tx *sql.Tx, pegawaiId string, tahun string) ([]domain.RincianBelanjaAsn, error)
+	FindAnggaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.TotalAnggaranRekin, error)
 }

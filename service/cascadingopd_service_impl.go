@@ -2114,31 +2114,70 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 	ctx context.Context,
 	request pohonkinerja.FindByMultipleRekinRequest,
 ) ([]pohonkinerja.DetailRekinResponse, error) {
+
+	// --- safety check ----
+	if service == nil {
+		return nil, errors.New("service is nil")
+	}
+	if service.rencanaKinerjaRepository == nil ||
+		service.pohonKinerjaRepository == nil ||
+		service.urusanRepository == nil ||
+		service.bidangUrusanRepository == nil ||
+		service.programRepository == nil ||
+		service.kegiatanRepository == nil ||
+		service.subKegiatanRepository == nil {
+		return nil, errors.New("missing repository dependency")
+	}
+
+	// --- start TX ---
 	tx, err := service.DB.Begin()
 	if err != nil {
-		log.Printf("Error starting transaction: %v", err)
 		return nil, err
 	}
-	defer helper.CommitOrRollback(tx)
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			log.Printf("panic recovered: %v", r)
+			panic(r)
+		}
+		helper.CommitOrRollback(tx)
+	}()
 
-	// Validasi request
+	// --- validate ---
 	if len(request.RekinIds) == 0 {
 		return nil, errors.New("rekin_ids tidak boleh kosong")
 	}
 
-	// Ambil data dasar rencana kinerja
+	// --- load rekin details ---
 	detailRekins, err := service.rencanaKinerjaRepository.FindDetailRekins(ctx, tx, request.RekinIds)
 	if err != nil {
-		log.Printf("Error find multiple rekins: %v", err)
 		return nil, err
 	}
 
-	var responses []pohonkinerja.DetailRekinResponse
-	var errs []string
+	// --- preallocate response slice ---
+	responses := make([]pohonkinerja.DetailRekinResponse, len(detailRekins))
+	errs := []string{}
 
-	for _, rk := range detailRekins {
+	// --- preload all rekin_ids for anggaran ---
+	allRekinIds := make([]string, len(detailRekins))
+	for i := range detailRekins {
+		allRekinIds[i] = detailRekins[i].Id
+	}
 
-		// Response dasar
+	// --- batch load anggaran ---
+	anggaranList, err := service.rincianBelanjaRepository.FindAnggaranByRekinIds(ctx, tx, allRekinIds)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("Gagal mengambil anggaran: %v", err))
+	}
+	anggaranMap := make(map[string]int64, len(anggaranList))
+	for _, a := range anggaranList {
+		anggaranMap[a.RekinId] = a.TotalAnggaran
+	}
+
+	// --- MAIN LOOP ---
+	for i := range detailRekins {
+		rk := &detailRekins[i]
+
 		resp := pohonkinerja.DetailRekinResponse{
 			Id:                 rk.Id,
 			IdPohon:            rk.IdPohon,
@@ -2151,117 +2190,109 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 			Program:            make([]pohonkinerja.ProgramRekinResponse, 0),
 			Kegiatan:           make([]pohonkinerja.KegiatanRekinResponse, 0),
 			SubKegiatan:        make([]pohonkinerja.SubKegiatanRekinResponse, 0),
+			PaguAnggaranRekin:  anggaranMap[rk.Id], // ★ lookup cepat
 		}
 
-		// susun level
-		switch rk.LevelPohon {
-		case 6:
-			if rk.KodeSubKegiatan == "" {
-				resp.SubKegiatan = []pohonkinerja.SubKegiatanRekinResponse{}
-				resp.Kegiatan = []pohonkinerja.KegiatanRekinResponse{}
-				break
-			}
+		// *** panggil helper ***
+		service.fillProgramKegiatanSubKegiatan(ctx, tx, rk, &resp, &errs)
 
-			kegiatan, err := service.kegiatanRepository.FindByKodeSubKegiatan(ctx, tx, rk.KodeSubKegiatan)
-			if err != nil {
-				log.Printf("Kegiatan tidak bisa diambil untuk rekin id: %s", rk.Id)
-				resp.Kegiatan = []pohonkinerja.KegiatanRekinResponse{}
-			} else {
-				resp.Kegiatan = []pohonkinerja.KegiatanRekinResponse{
-					{
-						KodeKegiatan: kegiatan.KodeKegiatan,
-						NamaKegiatan: kegiatan.NamaKegiatan,
-					},
-				}
-			}
-
-			subkegiatan, err := service.subKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, rk.KodeSubKegiatan)
-			if err != nil {
-				log.Printf("Subkegiatan tidak bisa diambil untuk rekin id: %s", rk.Id)
-				resp.SubKegiatan = []pohonkinerja.SubKegiatanRekinResponse{}
-			} else {
-				resp.SubKegiatan = []pohonkinerja.SubKegiatanRekinResponse{
-					{
-						KodeSubkegiatan: subkegiatan.KodeSubKegiatan,
-						NamaSubkegiatan: subkegiatan.NamaSubKegiatan,
-					},
-				}
-			}
-
-		case 5:
-			pokinBawahans, err := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(rk.IdPohon))
-			if err != nil {
-				log.Printf("Pokin bawahan tidak bisa diambil untuk pokin: %d", rk.IdPohon)
-				resp.Program = []pohonkinerja.ProgramRekinResponse{}
-				break
-			}
-
-			// Kumpulkan ID pokin bawahans dengan benar
-			idPokinBawahans := make([]int, 0, len(pokinBawahans))
-			for _, pk := range pokinBawahans {
-				idPokinBawahans = append(idPokinBawahans, pk.Id)
-			}
-
-			rekinBawahans, err := service.rencanaKinerjaRepository.FindByPokinIds(ctx, tx, idPokinBawahans)
-			if err != nil {
-				log.Printf("Rekin bawahan tidak bisa diambil untuk id rekin: %s", rk.Id)
-				resp.Program = []pohonkinerja.ProgramRekinResponse{}
-				break
-			}
-
-			// Ambil kode subkegiatan bawahan (unique)
-			uniq := map[string]bool{}
-			kodeSubKegiatans := make([]string, 0, len(rekinBawahans))
-
-			for _, rba := range rekinBawahans {
-				if rba.KodeSubKegiatan == "" {
-					continue
-				}
-				if !uniq[rba.KodeSubKegiatan] {
-					uniq[rba.KodeSubKegiatan] = true
-					kodeSubKegiatans = append(kodeSubKegiatans, rba.KodeSubKegiatan)
-				}
-			}
-
-			// Jika kosong, return slice kosong
-			if len(kodeSubKegiatans) == 0 {
-				resp.Program = []pohonkinerja.ProgramRekinResponse{}
-				break
-			}
-
-			// Ambil program
-			programs, err := service.programRepository.FindByKodeSubKegiatans(ctx, tx, kodeSubKegiatans)
-			if err != nil {
-				log.Printf("Program tidak bisa diambil untuk rekin id: %s", rk.Id)
-				resp.Program = []pohonkinerja.ProgramRekinResponse{}
-				break
-			}
-
-			// Mapping program
-			mappedPrograms := make([]pohonkinerja.ProgramRekinResponse, len(programs))
-			for i, p := range programs {
-				mappedPrograms[i] = pohonkinerja.ProgramRekinResponse{
-					KodeProgram: p.KodeProgram,
-					NamaProgram: p.NamaProgram,
-				}
-			}
-
-			resp.Program = mappedPrograms
-
-		default:
-			log.Printf("Level pohon %d tidak dikenali, id: %s", rk.LevelPohon, rk.Id)
-		}
-
-		// Tambah ke result
-		responses = append(responses, resp)
+		// simpan
+		responses[i] = resp
 	}
-
-	log.Printf("Successfully processed %d/%d rencana kinerja",
-		len(responses), len(request.RekinIds))
 
 	if len(errs) > 0 {
 		log.Printf("Errors encountered: %v", errs)
 	}
 
 	return responses, nil
+}
+
+func (service *CascadingOpdServiceImpl) fillProgramKegiatanSubKegiatan(
+	ctx context.Context,
+	tx *sql.Tx,
+	rk *domain.DetailRekins,
+	resp *pohonkinerja.DetailRekinResponse,
+	errs *[]string,
+) {
+	switch rk.LevelPohon {
+
+	case 6:
+		// SUBKEGIATAN & KEGIATAN
+		if rk.KodeSubKegiatan == "" {
+			return
+		}
+
+		// kegiatan
+		keg, err := service.kegiatanRepository.FindByKodeSubKegiatan(ctx, tx, rk.KodeSubKegiatan)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("Gagal kegiatan untuk rekin %s: %v", rk.Id, err))
+		} else {
+			resp.Kegiatan = []pohonkinerja.KegiatanRekinResponse{
+				{KodeKegiatan: keg.KodeKegiatan, NamaKegiatan: keg.NamaKegiatan},
+			}
+		}
+
+		// sub kegiatan
+		sub, err := service.subKegiatanRepository.FindByKodeSubKegiatan(ctx, tx, rk.KodeSubKegiatan)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("Gagal sub kegiatan untuk rekin %s: %v", rk.Id, err))
+		} else {
+			resp.SubKegiatan = []pohonkinerja.SubKegiatanRekinResponse{
+				{KodeSubkegiatan: sub.KodeSubKegiatan, NamaSubkegiatan: sub.NamaSubKegiatan},
+			}
+		}
+
+	case 5:
+		// PROGRAM
+		pokins, err := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(rk.IdPohon))
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("Gagal load pokin bawahan untuk %s: %v", rk.Id, err))
+			return
+		}
+
+		pokinIds := make([]int, len(pokins))
+		for i, pk := range pokins {
+			pokinIds[i] = pk.Id
+		}
+
+		rekinBawahans, err := service.rencanaKinerjaRepository.FindByPokinIds(ctx, tx, pokinIds)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("Gagal load rekin bawahan untuk %s: %v", rk.Id, err))
+			return
+		}
+
+		uniq := make(map[string]struct{})
+		kodeSub := []string{}
+
+		for _, rb := range rekinBawahans {
+			if rb.KodeSubKegiatan == "" {
+				continue
+			}
+			if _, ok := uniq[rb.KodeSubKegiatan]; !ok {
+				uniq[rb.KodeSubKegiatan] = struct{}{}
+				kodeSub = append(kodeSub, rb.KodeSubKegiatan)
+			}
+		}
+
+		if len(kodeSub) == 0 {
+			return
+		}
+
+		programs, err := service.programRepository.FindByKodeSubKegiatans(ctx, tx, kodeSub)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("Gagal load program untuk %s: %v", rk.Id, err))
+			return
+		}
+
+		resp.Program = make([]pohonkinerja.ProgramRekinResponse, len(programs))
+		for i, p := range programs {
+			resp.Program[i] = pohonkinerja.ProgramRekinResponse{
+				KodeProgram: p.KodeProgram,
+				NamaProgram: p.NamaProgram,
+			}
+		}
+
+	default:
+		log.Printf("Level pohon %d tidak dikenali untuk id %s", rk.LevelPohon, rk.Id)
+	}
 }

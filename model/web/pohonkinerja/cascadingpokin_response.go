@@ -32,6 +32,7 @@ type DetailRekinResponse struct {
 	Program            []ProgramRekinResponse               `json:"program,omitempty"`       // Untuk level 4 & 5
 	Kegiatan           []KegiatanRekinResponse              `json:"kegiatan,omitempty"`      // Untuk level 6
 	SubKegiatan        []SubKegiatanRekinResponse           `json:"sub_kegiatan,omitempty"`  // Untuk level 6
+	PaguAnggaranRekin  int64                                `json:"pagu_anggaran_total"`
 }
 
 // Urusan response untuk level 4
