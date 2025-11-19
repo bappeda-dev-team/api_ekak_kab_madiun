@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
+	"strings"
 )
 
 type BidangUrusanRepositoryImpl struct {
@@ -243,4 +244,91 @@ func (repository *BidangUrusanRepositoryImpl) FindByKodeSubKegiatan(ctx context.
 		return domainmaster.BidangUrusan{}, fmt.Errorf("bidang urusan dengan kode %s tidak ditemukan", kodeBidangUrusan)
 	}
 	return bidangurusan, nil
+}
+
+func (repository *BidangUrusanRepositoryImpl) FindByKodeSubKegiatans(ctx context.Context, tx *sql.Tx, kodeSubKegiatans []string) (map[string]domainmaster.BidangUrusan, error) {
+
+	resultMap := make(map[string]domainmaster.BidangUrusan)
+
+	if len(kodeSubKegiatans) == 0 {
+		return resultMap, nil
+	}
+
+	uniqBidangUrusan := make(map[string]struct{})
+	kodeBidangUrusanList := make([]string, 0)
+
+	subGroup := make(map[string][]string)
+
+	for _, ks := range kodeSubKegiatans {
+		if len(ks) < 7 {
+			// Skip kode sub yang invalid
+			continue
+		}
+
+		kodeBidangUrusan := ks[:4]
+
+		subGroup[kodeBidangUrusan] = append(subGroup[kodeBidangUrusan], ks)
+
+		if _, exists := uniqBidangUrusan[kodeBidangUrusan]; !exists {
+			uniqBidangUrusan[kodeBidangUrusan] = struct{}{}
+			kodeBidangUrusanList = append(kodeBidangUrusanList, kodeBidangUrusan)
+		}
+	}
+
+	if len(kodeBidangUrusanList) == 0 {
+		return resultMap, nil
+	}
+
+	placeholders := make([]string, len(kodeBidangUrusanList))
+	args := make([]any, len(kodeBidangUrusanList))
+
+	for i, kode := range kodeBidangUrusanList {
+		placeholders[i] = "?"
+		args[i] = kode
+	}
+
+	query := fmt.Sprintf(`
+      SELECT kode_bidang_urusan, nama_bidang_urusan
+      FROM tb_bidang_urusan
+      WHERE kode_bidang_urusan IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	bidangUrusanByKode := make(map[string]domainmaster.BidangUrusan)
+
+	if rows.Next() {
+		var bu domainmaster.BidangUrusan
+
+		err := rows.Scan(&bu.KodeBidangUrusan, &bu.NamaBidangUrusan)
+		if err != nil {
+			return nil, err
+		}
+		bidangUrusanByKode[bu.KodeBidangUrusan] = bu
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Step 4. Mapping kembali ke kode_sub_kegiatan asli
+	for kodeBidangUrusan, subs := range subGroup {
+		base, ok := bidangUrusanByKode[kodeBidangUrusan]
+		if !ok {
+			continue // bidang urusan tidak ditemukan di DB
+		}
+
+		for _, kodeSub := range subs {
+			resultMap[kodeSub] = domainmaster.BidangUrusan{
+				KodeBidangUrusan: base.KodeBidangUrusan,
+				NamaBidangUrusan: base.NamaBidangUrusan,
+				KodeSubKegiatan:  kodeSub, // ★ simpan kode_sub asli
+			}
+		}
+	}
+
+	return resultMap, nil
 }
