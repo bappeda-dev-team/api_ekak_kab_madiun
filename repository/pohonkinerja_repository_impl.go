@@ -3948,3 +3948,150 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 
 	return result, nil
 }
+
+type LeaderboardOpdData struct {
+	KodeOpd             string
+	NamaOpd             string
+	TotalPokin          int
+	TotalPokinAdaRekin  int
+	PersentaseCascading float64
+	TematikNames        []string
+}
+
+func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error) {
+	query := `
+		WITH RECURSIVE 
+		valid_pokin AS (
+			SELECT 
+				pk.id,
+				pk.level_pohon,
+				pk.kode_opd,
+				pk.clone_from,
+				pk.status
+			FROM tb_pohon_kinerja pk
+			WHERE pk.tahun = ?
+			AND pk.level_pohon = 4
+			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND (pk.parent = 0 OR pk.parent IN (SELECT id FROM tb_pohon_kinerja WHERE level_pohon BETWEEN 0 AND 3))
+			
+			UNION ALL
+			
+			SELECT 
+				child.id,
+				child.level_pohon,
+				child.kode_opd,
+				child.clone_from,
+				child.status
+			FROM tb_pohon_kinerja child
+			INNER JOIN valid_pokin vp ON child.parent = vp.id
+			WHERE child.tahun = ?
+			AND child.level_pohon > 4
+			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+		),
+		opd_cascading AS (
+			SELECT 
+				vp.kode_opd,
+				COUNT(DISTINCT vp.id) as total_pokin,
+				COUNT(DISTINCT CASE 
+					WHEN EXISTS (
+						SELECT 1 
+						FROM tb_rencana_kinerja rk2
+						INNER JOIN tb_pelaksana_pokin pp3 ON pp3.pohon_kinerja_id = vp.id
+						INNER JOIN tb_pegawai pg2 ON pp3.pegawai_id = pg2.id
+						WHERE rk2.id_pohon = vp.id 
+						AND pg2.nip = rk2.pegawai_id
+					) 
+					THEN vp.id 
+				END) as total_pokin_ada_rekin
+			FROM valid_pokin vp
+			GROUP BY vp.kode_opd
+		),
+		-- ✅ OPTIMASI: Recursive yang lebih efisien dengan early termination
+		tematik_trace AS (
+			-- Base: ambil source dari clone_from
+			SELECT 
+				vp.kode_opd,
+				pk_src.id,
+				pk_src.parent,
+				pk_src.level_pohon,
+				pk_src.nama_pohon,
+				1 as depth
+			FROM valid_pokin vp
+			INNER JOIN tb_pohon_kinerja pk_src ON vp.clone_from = pk_src.id
+			WHERE vp.status = 'pokin dari pemda'
+			AND vp.clone_from > 0
+			
+			UNION ALL
+			
+			-- Recursive: trace parent sampai level 0
+			SELECT 
+				tt.kode_opd,
+				pk_parent.id,
+				pk_parent.parent,
+				pk_parent.level_pohon,
+				pk_parent.nama_pohon,
+				tt.depth + 1
+			FROM tematik_trace tt
+			INNER JOIN tb_pohon_kinerja pk_parent ON tt.parent = pk_parent.id
+			WHERE tt.level_pohon > 0  -- ✅ Stop jika sudah level 0
+			AND tt.depth < 5  -- ✅ Safety limit (max 5 levels)
+		),
+		tematik_root AS (
+			SELECT DISTINCT
+				kode_opd,
+				nama_pohon as tematik_nama
+			FROM tematik_trace
+			WHERE level_pohon = 0
+			AND parent = 0
+		)
+		SELECT 
+			oc.kode_opd,
+			opd.nama_opd,
+			oc.total_pokin,
+			oc.total_pokin_ada_rekin,
+			CASE 
+				WHEN oc.total_pokin > 0 
+				THEN ROUND((oc.total_pokin_ada_rekin * 100.0 / oc.total_pokin), 2)
+				ELSE 0 
+			END as persentase_cascading,
+			GROUP_CONCAT(DISTINCT tr.tematik_nama ORDER BY tr.tematik_nama SEPARATOR '|||') as tematik_names
+		FROM opd_cascading oc
+		INNER JOIN tb_operasional_daerah opd ON oc.kode_opd = opd.kode_opd
+		LEFT JOIN tematik_root tr ON oc.kode_opd = tr.kode_opd
+		GROUP BY oc.kode_opd, opd.nama_opd, oc.total_pokin, oc.total_pokin_ada_rekin
+		ORDER BY persentase_cascading DESC, opd.nama_opd ASC
+	`
+
+	rows, err := tx.QueryContext(ctx, query, tahun, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data leaderboard: %w", err)
+	}
+	defer rows.Close()
+
+	var result []LeaderboardOpdData
+	for rows.Next() {
+		var data LeaderboardOpdData
+		var tematikNamesStr sql.NullString
+
+		err := rows.Scan(
+			&data.KodeOpd,
+			&data.NamaOpd,
+			&data.TotalPokin,
+			&data.TotalPokinAdaRekin,
+			&data.PersentaseCascading,
+			&tematikNamesStr,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("gagal scan data: %w", err)
+		}
+
+		// Parse tematik names
+		if tematikNamesStr.Valid && tematikNamesStr.String != "" {
+			data.TematikNames = strings.Split(tematikNamesStr.String, "|||")
+		}
+
+		result = append(result, data)
+	}
+
+	return result, nil
+}
