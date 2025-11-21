@@ -466,6 +466,7 @@ func NewRouter(
 	//control pokin opd
 	router.GET("/pohon_kinerja_opd/control_pokin_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ControlPokinOpd)
 	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
+	router.GET("/pohon_kinerja_opd/leaderboard_pokin_opd/:tahun", pohonKinerjaOpdController.LeaderboardPokinOpd)
 
 	return router
 }

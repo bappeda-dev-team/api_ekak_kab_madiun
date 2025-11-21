@@ -2337,3 +2337,74 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 
 	return response, nil
 }
+
+// func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+
+// 	// Ambil data leaderboard dari repository
+// 	leaderboardData, err := service.pohonKinerjaOpdRepository.LeaderboardPokinOpd(ctx, tx, tahun)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Convert ke response format
+// 	var response []pohonkinerja.LeaderboardPokinResponse
+// 	for _, data := range leaderboardData {
+// 		// Ambil detail tematik
+// 		var tematikItems []pohonkinerja.LeaderboardTematikItem
+// 		for _, tematikId := range data.TematikIds {
+// 			pokin, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, tematikId)
+// 			if err == nil {
+// 				tematikItems = append(tematikItems, pohonkinerja.LeaderboardTematikItem{
+// 					Nama: pokin.NamaPohon,
+// 				})
+// 			}
+// 		}
+
+// 		response = append(response, pohonkinerja.LeaderboardPokinResponse{
+// 			KodeOpd:             data.KodeOpd,
+// 			NamaOpd:             data.NamaOpd,
+// 			Tematik:             tematikItems,
+// 			PersentaseCascading: fmt.Sprintf("%.0f%%", data.PersentaseCascading),
+// 		})
+// 	}
+
+// 	return response, nil
+// }
+
+func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	leaderboardData, err := service.pohonKinerjaOpdRepository.LeaderboardPokinOpd(ctx, tx, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	// ✅ OPTIMASI: Tidak perlu loop FindById lagi!
+	var response []pohonkinerja.LeaderboardPokinResponse
+	for _, data := range leaderboardData {
+		var tematikItems []pohonkinerja.LeaderboardTematikItem
+		for _, name := range data.TematikNames {
+			tematikItems = append(tematikItems, pohonkinerja.LeaderboardTematikItem{
+				Nama: name,
+			})
+		}
+
+		response = append(response, pohonkinerja.LeaderboardPokinResponse{
+			KodeOpd:             data.KodeOpd,
+			NamaOpd:             data.NamaOpd,
+			Tematik:             tematikItems,
+			PersentaseCascading: fmt.Sprintf("%.0f%%", data.PersentaseCascading),
+		})
+	}
+
+	return response, nil
+}

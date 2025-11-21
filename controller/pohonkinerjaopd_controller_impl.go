@@ -534,3 +534,25 @@ func (controller *PohonKinerjaOpdControllerImpl) ControlPokinOpd(writer http.Res
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PohonKinerjaOpdControllerImpl) LeaderboardPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+
+	response, err := controller.PohonKinerjaOpdService.LeaderboardPokinOpd(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   response,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
