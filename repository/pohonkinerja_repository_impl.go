@@ -3967,12 +3967,20 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				pk.level_pohon,
 				pk.kode_opd,
 				pk.clone_from,
-				pk.status
+				pk.status,
+				pk.tahun
 			FROM tb_pohon_kinerja pk
 			WHERE pk.tahun = ?
 			AND pk.level_pohon = 4
 			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-			AND (pk.parent = 0 OR pk.parent IN (SELECT id FROM tb_pohon_kinerja WHERE level_pohon BETWEEN 0 AND 3))
+			AND (
+				pk.parent = 0 
+				OR EXISTS (
+					SELECT 1 FROM tb_pohon_kinerja p2 
+					WHERE p2.id = pk.parent 
+					AND p2.level_pohon BETWEEN 0 AND 3
+				)
+			)
 			
 			UNION ALL
 			
@@ -3981,12 +3989,16 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				child.level_pohon,
 				child.kode_opd,
 				child.clone_from,
-				child.status
+				child.status,
+				child.tahun
 			FROM tb_pohon_kinerja child
 			INNER JOIN valid_pokin vp ON child.parent = vp.id
 			WHERE child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			-- ✅ FIX KRUSIAL: Tambahkan validasi kode_opd harus sama dengan parent!
+			AND child.kode_opd = vp.kode_opd
+			AND child.tahun = vp.tahun
 		),
 		opd_cascading AS (
 			SELECT 
@@ -4040,6 +4052,14 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			FROM tematik_trace
 			WHERE level_pohon = 0
 			AND parent = 0
+		),
+		tematik_agregat AS (
+			SELECT 
+				kode_opd,
+				GROUP_CONCAT(DISTINCT tematik_nama ORDER BY tematik_nama SEPARATOR '|||') as tematik_names,
+				COUNT(DISTINCT tematik_nama) as jumlah_tematik
+			FROM tematik_root
+			GROUP BY kode_opd
 		)
 		SELECT 
 			opd.kode_opd,
@@ -4048,19 +4068,17 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			COALESCE(oc.total_pokin_ada_rekin, 0) as total_pokin_ada_rekin,
 			CASE 
 				WHEN COALESCE(oc.total_pokin, 0) > 0 
-				THEN ROUND((COALESCE(oc.total_pokin_ada_rekin, 0) * 100.0 / oc.total_pokin), 2)
+				THEN (COALESCE(oc.total_pokin_ada_rekin, 0) * 100.0 / oc.total_pokin)
 				ELSE 0 
 			END as persentase_cascading,
-			GROUP_CONCAT(DISTINCT tr.tematik_nama ORDER BY tr.tematik_nama SEPARATOR '|||') as tematik_names,
-			-- ✅ PERBAIKAN: Gunakan COUNT untuk agregasi
+			COALESCE(ta.tematik_names, '') as tematik_names,
 			CASE 
-				WHEN COUNT(DISTINCT tr.tematik_nama) > 0 THEN 1 
+				WHEN COALESCE(ta.jumlah_tematik, 0) > 0 THEN 1 
 				ELSE 0 
 			END as has_tematik
 		FROM tb_operasional_daerah opd
 		LEFT JOIN opd_cascading oc ON opd.kode_opd = oc.kode_opd
-		LEFT JOIN tematik_root tr ON opd.kode_opd = tr.kode_opd
-		GROUP BY opd.kode_opd, opd.nama_opd, oc.total_pokin, oc.total_pokin_ada_rekin
+		LEFT JOIN tematik_agregat ta ON opd.kode_opd = ta.kode_opd
 		ORDER BY 
 			has_tematik DESC,
 			persentase_cascading DESC,
@@ -4076,7 +4094,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 	var result []LeaderboardOpdData
 	for rows.Next() {
 		var data LeaderboardOpdData
-		var tematikNamesStr sql.NullString
+		var tematikNamesStr string
 		var hasTematik int
 
 		err := rows.Scan(
@@ -4093,8 +4111,8 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 		}
 
 		// Parse tematik names
-		if tematikNamesStr.Valid && tematikNamesStr.String != "" {
-			data.TematikNames = strings.Split(tematikNamesStr.String, "|||")
+		if tematikNamesStr != "" {
+			data.TematikNames = strings.Split(tematikNamesStr, "|||")
 		} else {
 			data.TematikNames = []string{}
 		}
