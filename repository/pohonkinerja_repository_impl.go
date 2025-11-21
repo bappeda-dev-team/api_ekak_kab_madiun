@@ -4006,9 +4006,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			FROM valid_pokin vp
 			GROUP BY vp.kode_opd
 		),
-		-- ✅ OPTIMASI: Recursive yang lebih efisien dengan early termination
 		tematik_trace AS (
-			-- Base: ambil source dari clone_from
 			SELECT 
 				vp.kode_opd,
 				pk_src.id,
@@ -4023,7 +4021,6 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			
 			UNION ALL
 			
-			-- Recursive: trace parent sampai level 0
 			SELECT 
 				tt.kode_opd,
 				pk_parent.id,
@@ -4033,8 +4030,8 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				tt.depth + 1
 			FROM tematik_trace tt
 			INNER JOIN tb_pohon_kinerja pk_parent ON tt.parent = pk_parent.id
-			WHERE tt.level_pohon > 0  -- ✅ Stop jika sudah level 0
-			AND tt.depth < 5  -- ✅ Safety limit (max 5 levels)
+			WHERE tt.level_pohon > 0
+			AND tt.depth < 5
 		),
 		tematik_root AS (
 			SELECT DISTINCT
@@ -4045,21 +4042,29 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			AND parent = 0
 		)
 		SELECT 
-			oc.kode_opd,
+			opd.kode_opd,
 			opd.nama_opd,
-			oc.total_pokin,
-			oc.total_pokin_ada_rekin,
+			COALESCE(oc.total_pokin, 0) as total_pokin,
+			COALESCE(oc.total_pokin_ada_rekin, 0) as total_pokin_ada_rekin,
 			CASE 
-				WHEN oc.total_pokin > 0 
-				THEN ROUND((oc.total_pokin_ada_rekin * 100.0 / oc.total_pokin), 2)
+				WHEN COALESCE(oc.total_pokin, 0) > 0 
+				THEN ROUND((COALESCE(oc.total_pokin_ada_rekin, 0) * 100.0 / oc.total_pokin), 2)
 				ELSE 0 
 			END as persentase_cascading,
-			GROUP_CONCAT(DISTINCT tr.tematik_nama ORDER BY tr.tematik_nama SEPARATOR '|||') as tematik_names
-		FROM opd_cascading oc
-		INNER JOIN tb_operasional_daerah opd ON oc.kode_opd = opd.kode_opd
-		LEFT JOIN tematik_root tr ON oc.kode_opd = tr.kode_opd
-		GROUP BY oc.kode_opd, opd.nama_opd, oc.total_pokin, oc.total_pokin_ada_rekin
-		ORDER BY persentase_cascading DESC, opd.nama_opd ASC
+			GROUP_CONCAT(DISTINCT tr.tematik_nama ORDER BY tr.tematik_nama SEPARATOR '|||') as tematik_names,
+			-- ✅ PERBAIKAN: Gunakan COUNT untuk agregasi
+			CASE 
+				WHEN COUNT(DISTINCT tr.tematik_nama) > 0 THEN 1 
+				ELSE 0 
+			END as has_tematik
+		FROM tb_operasional_daerah opd
+		LEFT JOIN opd_cascading oc ON opd.kode_opd = oc.kode_opd
+		LEFT JOIN tematik_root tr ON opd.kode_opd = tr.kode_opd
+		GROUP BY opd.kode_opd, opd.nama_opd, oc.total_pokin, oc.total_pokin_ada_rekin
+		ORDER BY 
+			has_tematik DESC,
+			persentase_cascading DESC,
+			opd.nama_opd ASC
 	`
 
 	rows, err := tx.QueryContext(ctx, query, tahun, tahun)
@@ -4072,6 +4077,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 	for rows.Next() {
 		var data LeaderboardOpdData
 		var tematikNamesStr sql.NullString
+		var hasTematik int
 
 		err := rows.Scan(
 			&data.KodeOpd,
@@ -4080,6 +4086,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			&data.TotalPokinAdaRekin,
 			&data.PersentaseCascading,
 			&tematikNamesStr,
+			&hasTematik,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("gagal scan data: %w", err)
@@ -4088,9 +4095,15 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 		// Parse tematik names
 		if tematikNamesStr.Valid && tematikNamesStr.String != "" {
 			data.TematikNames = strings.Split(tematikNamesStr.String, "|||")
+		} else {
+			data.TematikNames = []string{}
 		}
 
 		result = append(result, data)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return result, nil
