@@ -169,10 +169,13 @@ func (controller *CascadingOpdControllerImpl) FindByMultipleRekinPegawai(writer 
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
-func (controller *CascadingOpdControllerImpl) MultiRekinDetail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	// id rekin list
-	rekinRequest := pohonkinerja.FindByMultipleRekinRequest{}
-	helper.ReadFromRequestBody(r, &rekinRequest)
+func (controller *CascadingOpdControllerImpl) MultiRekinDetailByOpdAndTahun(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	rekinRequest := pohonkinerja.MultiRekinDetailsByOpdAndTahunRequest{}
+	rekinRequest.KodeOpd = kodeOpd
+	rekinRequest.Tahun = tahun
 
 	detailRekinResponses, err := controller.CascadingOpdService.MultiRekinDetails(r.Context(), rekinRequest)
 	if err != nil {

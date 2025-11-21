@@ -977,26 +977,26 @@ func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Cont
 	return nil
 }
 
-func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekins(
+func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekinsByOpdAndTahun(
 	ctx context.Context,
 	tx *sql.Tx,
-	rekinIds []string,
+	kodeOpd string,
+	tahun string,
 ) ([]domain.DetailRekins, error) {
 
-	if len(rekinIds) == 0 {
-		return []domain.DetailRekins{}, nil
-	}
+	// if len(rekinIds) == 0 {
+	// 	return []domain.DetailRekins{}, nil
+	// }
 
 	// Build placeholders
-	placeholders := make([]string, len(rekinIds))
-	args := make([]any, len(rekinIds))
-	for i, id := range rekinIds {
-		placeholders[i] = "?"
-		args[i] = id
-	}
+	// placeholders := make([]string, len(rekinIds))
+	// args := make([]any, len(rekinIds))
+	// for i, id := range rekinIds {
+	// 	placeholders[i] = "?"
+	// 	args[i] = id
+	// }
 
-	query := fmt.Sprintf(`
-        SELECT
+	query := `SELECT
             r.id,
             r.id_pohon,
             p.level_pohon,
@@ -1009,14 +1009,15 @@ func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekins(
         FROM tb_rencana_kinerja r
         JOIN tb_pohon_kinerja p ON r.id_pohon = p.id
         LEFT JOIN tb_subkegiatan_terpilih sub ON r.id = sub.rekin_id
-        WHERE r.id IN (%s)
-    `, strings.Join(placeholders, ","))
+        WHERE r.kode_opd = ? AND r.tahun = ? `
 
-	rows, err := tx.QueryContext(ctx, query, args...)
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	log.Printf("Mencari rencana kinerja dengan kode opd: %s dan tahun: %s", kodeOpd, tahun)
+	log.Printf("Query: %s", query)
 
 	var results []domain.DetailRekins
 

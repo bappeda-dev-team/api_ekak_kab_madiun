@@ -2112,12 +2112,16 @@ func (service *CascadingOpdServiceImpl) processSingleRekin(
 
 func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 	ctx context.Context,
-	request pohonkinerja.FindByMultipleRekinRequest,
+	request pohonkinerja.MultiRekinDetailsByOpdAndTahunRequest,
 ) ([]pohonkinerja.DetailRekinResponse, error) {
 
-	if len(request.RekinIds) == 0 {
-		return nil, errors.New("rekin_ids tidak boleh kosong")
+	if request.KodeOpd == "" || request.Tahun == "" {
+		return nil, errors.New("Kode opd atau tahun tidak ditemukan")
 	}
+
+	// if len(rekinIds) == 0 {
+	// 	return nil, errors.New("rekin_ids tidak boleh kosong")
+	// }
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -2126,7 +2130,7 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 	defer helper.CommitOrRollback(tx)
 
 	// 1. Ambil semua rekin detail
-	detailRekins, err := service.rencanaKinerjaRepository.FindDetailRekins(ctx, tx, request.RekinIds)
+	detailRekins, err := service.rencanaKinerjaRepository.FindDetailRekinsByOpdAndTahun(ctx, tx, request.KodeOpd, request.Tahun)
 	if err != nil {
 		return nil, err
 	}
