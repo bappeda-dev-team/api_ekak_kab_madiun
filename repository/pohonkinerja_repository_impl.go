@@ -3968,17 +3968,17 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				pk.kode_opd,
 				pk.clone_from,
 				pk.status,
-				pk.tahun
+				pk.tahun,
+				pk.parent
 			FROM tb_pohon_kinerja pk
 			WHERE pk.tahun = ?
 			AND pk.level_pohon = 4
 			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
 			AND (
 				pk.parent = 0 
-				OR EXISTS (
-					SELECT 1 FROM tb_pohon_kinerja p2 
-					WHERE p2.id = pk.parent 
-					AND p2.level_pohon BETWEEN 0 AND 3
+				OR pk.parent IN (
+					SELECT id FROM tb_pohon_kinerja 
+					WHERE level_pohon BETWEEN 0 AND 3
 				)
 			)
 			
@@ -3990,15 +3990,24 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				child.kode_opd,
 				child.clone_from,
 				child.status,
-				child.tahun
+				child.tahun,
+				child.parent
 			FROM tb_pohon_kinerja child
 			INNER JOIN valid_pokin vp ON child.parent = vp.id
 			WHERE child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-			-- ✅ FIX KRUSIAL: Tambahkan validasi kode_opd harus sama dengan parent!
 			AND child.kode_opd = vp.kode_opd
 			AND child.tahun = vp.tahun
+		),
+		-- ✅ OPTIMASI: Pre-join pelaksana dengan pegawai untuk menghindari subquery berulang
+		pokin_pelaksana_valid AS (
+			SELECT DISTINCT
+				pp.pohon_kinerja_id,
+				pg.nip
+			FROM tb_pelaksana_pokin pp
+			INNER JOIN tb_pegawai pg ON pp.pegawai_id = pg.id
+			WHERE pp.pohon_kinerja_id IN (SELECT id FROM valid_pokin)
 		),
 		opd_cascading AS (
 			SELECT 
@@ -4007,17 +4016,17 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				COUNT(DISTINCT CASE 
 					WHEN EXISTS (
 						SELECT 1 
-						FROM tb_rencana_kinerja rk2
-						INNER JOIN tb_pelaksana_pokin pp3 ON pp3.pohon_kinerja_id = vp.id
-						INNER JOIN tb_pegawai pg2 ON pp3.pegawai_id = pg2.id
-						WHERE rk2.id_pohon = vp.id 
-						AND pg2.nip = rk2.pegawai_id
+						FROM tb_rencana_kinerja rk
+						INNER JOIN pokin_pelaksana_valid ppv ON ppv.pohon_kinerja_id = vp.id
+						WHERE rk.id_pohon = vp.id 
+						AND rk.pegawai_id = ppv.nip
 					) 
 					THEN vp.id 
 				END) as total_pokin_ada_rekin
 			FROM valid_pokin vp
 			GROUP BY vp.kode_opd
 		),
+		-- ✅ OPTIMASI: Gabungkan tematik_trace dengan filter awal untuk mengurangi data
 		tematik_trace AS (
 			SELECT 
 				vp.kode_opd,
@@ -4030,6 +4039,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			INNER JOIN tb_pohon_kinerja pk_src ON vp.clone_from = pk_src.id
 			WHERE vp.status = 'pokin dari pemda'
 			AND vp.clone_from > 0
+			AND vp.level_pohon = 4  -- ✅ OPTIMASI: Hanya level 4 yang perlu trace tematik
 			
 			UNION ALL
 			
@@ -4045,20 +4055,14 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			WHERE tt.level_pohon > 0
 			AND tt.depth < 5
 		),
-		tematik_root AS (
-			SELECT DISTINCT
-				kode_opd,
-				nama_pohon as tematik_nama
-			FROM tematik_trace
-			WHERE level_pohon = 0
-			AND parent = 0
-		),
 		tematik_agregat AS (
 			SELECT 
 				kode_opd,
-				GROUP_CONCAT(DISTINCT tematik_nama ORDER BY tematik_nama SEPARATOR '|||') as tematik_names,
-				COUNT(DISTINCT tematik_nama) as jumlah_tematik
-			FROM tematik_root
+				GROUP_CONCAT(DISTINCT nama_pohon ORDER BY nama_pohon SEPARATOR '|||') as tematik_names,
+				COUNT(DISTINCT nama_pohon) as jumlah_tematik
+			FROM tematik_trace
+			WHERE level_pohon = 0
+			AND parent = 0
 			GROUP BY kode_opd
 		)
 		SELECT 
@@ -4110,7 +4114,6 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			return nil, fmt.Errorf("gagal scan data: %w", err)
 		}
 
-		// Parse tematik names
 		if tematikNamesStr != "" {
 			data.TematikNames = strings.Split(tematikNamesStr, "|||")
 		} else {
