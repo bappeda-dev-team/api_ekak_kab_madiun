@@ -13,6 +13,8 @@ import (
 	"log"
 	"sort"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -2338,45 +2340,31 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 	return response, nil
 }
 
-// func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
-// 	tx, err := service.DB.Begin()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer helper.CommitOrRollback(tx)
+type CachedLeaderboard struct {
+	Data      []pohonkinerja.LeaderboardPokinResponse
+	Timestamp time.Time
+}
 
-// 	// Ambil data leaderboard dari repository
-// 	leaderboardData, err := service.pohonKinerjaOpdRepository.LeaderboardPokinOpd(ctx, tx, tahun)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// Convert ke response format
-// 	var response []pohonkinerja.LeaderboardPokinResponse
-// 	for _, data := range leaderboardData {
-// 		// Ambil detail tematik
-// 		var tematikItems []pohonkinerja.LeaderboardTematikItem
-// 		for _, tematikId := range data.TematikIds {
-// 			pokin, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, tematikId)
-// 			if err == nil {
-// 				tematikItems = append(tematikItems, pohonkinerja.LeaderboardTematikItem{
-// 					Nama: pokin.NamaPohon,
-// 				})
-// 			}
-// 		}
-
-// 		response = append(response, pohonkinerja.LeaderboardPokinResponse{
-// 			KodeOpd:             data.KodeOpd,
-// 			NamaOpd:             data.NamaOpd,
-// 			Tematik:             tematikItems,
-// 			PersentaseCascading: fmt.Sprintf("%.0f%%", data.PersentaseCascading),
-// 		})
-// 	}
-
-// 	return response, nil
-// }
+var (
+	leaderboardCache     = make(map[string]CachedLeaderboard)
+	leaderboardCacheLock sync.RWMutex
+	cacheExpiry          = 5 * time.Minute
+)
 
 func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
+	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
+
+	// Cek cache terlebih dahulu
+	leaderboardCacheLock.RLock()
+	if cached, exists := leaderboardCache[cacheKey]; exists {
+		if time.Since(cached.Timestamp) < cacheExpiry {
+			leaderboardCacheLock.RUnlock()
+			return cached.Data, nil
+		}
+	}
+	leaderboardCacheLock.RUnlock()
+
+	// Jika cache tidak ada atau expired, ambil dari database
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
@@ -2388,7 +2376,6 @@ func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Conte
 		return nil, err
 	}
 
-	// ✅ OPTIMASI: Tidak perlu loop FindById lagi!
 	var response []pohonkinerja.LeaderboardPokinResponse
 	for _, data := range leaderboardData {
 		var tematikItems []pohonkinerja.LeaderboardTematikItem
@@ -2406,5 +2393,21 @@ func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Conte
 		})
 	}
 
+	//  Simpan ke cache
+	leaderboardCacheLock.Lock()
+	leaderboardCache[cacheKey] = CachedLeaderboard{
+		Data:      response,
+		Timestamp: time.Now(),
+	}
+	leaderboardCacheLock.Unlock()
+
 	return response, nil
+}
+
+// Tambahkan fungsi untuk clear cache (dipanggil saat ada update data)
+func (service *PohonKinerjaOpdServiceImpl) ClearLeaderboardCache(tahun string) {
+	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
+	leaderboardCacheLock.Lock()
+	delete(leaderboardCache, cacheKey)
+	leaderboardCacheLock.Unlock()
 }
