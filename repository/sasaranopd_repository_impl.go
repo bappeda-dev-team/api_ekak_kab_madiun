@@ -22,6 +22,7 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
     SELECT DISTINCT
         pk.id as pokin_id,
         pk.nama_pohon,
+        pk.kode_opd,
         pk.jenis_pohon,
         pk.level_pohon,
         pk.tahun as tahun_pohon,
@@ -75,7 +76,8 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
 	for rows.Next() {
 		var (
 			pokinId, levelPohon                  int
-			namaPohon, jenisPohon, tahunPohon    string
+			namaPohon, kodeOpd                   string
+			jenisPohon, tahunPohon               string
 			pelaksanaId, pegawaiId, pelaksanaNip sql.NullString
 			namaPegawai                          sql.NullString
 			sasaranId                            sql.NullInt64
@@ -90,11 +92,11 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
 		)
 
 		err := rows.Scan(
-			&pokinId, &namaPohon, &jenisPohon, &levelPohon, &tahunPohon,
+			&pokinId, &namaPohon, &kodeOpd, &jenisPohon, &levelPohon, &tahunPohon,
 			&pelaksanaId, &pegawaiId, &pelaksanaNip, &namaPegawai,
 			&sasaranId, &namaSasaranOpd,
 			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
-			&idTujuanOpd, // Tambahkan ini
+			&idTujuanOpd,
 			&indikatorId, &indikator,
 			&rumusPerhitungan, &sumberData,
 			&targetId, &targetTahun, &targetValue, &targetSatuan,
@@ -110,6 +112,7 @@ func (repository *SasaranOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql
 				Id:         pokinId,
 				IdPohon:    pokinId,
 				NamaPohon:  namaPohon,
+				KodeOpd:    kodeOpd,
 				JenisPohon: jenisPohon,
 				LevelPohon: levelPohon,
 				TahunPohon: tahunPohon,
@@ -244,6 +247,8 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
     SELECT DISTINCT
         pk.id as pokin_id,
         pk.nama_pohon,
+        pk.kode_opd,
+        pk.nama_opd,
         pk.jenis_pohon,
         pk.level_pohon,
         pk.tahun as tahun_pohon,
@@ -286,7 +291,8 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 	for rows.Next() {
 		var (
 			pokinId, levelPohon                  int
-			namaPohon, jenisPohon, tahunPohon    string
+			namaPohon, kodeOpd, namaOpd          string
+			jenisPohon, tahunPohon               string
 			pelaksanaId, pegawaiId, pelaksanaNip sql.NullString
 			namaPegawai                          sql.NullString
 			sasaranId                            sql.NullInt64
@@ -301,7 +307,7 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 		)
 
 		err := rows.Scan(
-			&pokinId, &namaPohon, &jenisPohon, &levelPohon, &tahunPohon,
+			&pokinId, &namaPohon, &kodeOpd, &namaOpd, &jenisPohon, &levelPohon, &tahunPohon,
 			&pelaksanaId, &pegawaiId, &pelaksanaNip, &namaPegawai,
 			&sasaranId, &namaSasaranOpd,
 			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
@@ -320,6 +326,8 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 				Id:         pokinId,
 				IdPohon:    pokinId,
 				NamaPohon:  namaPohon,
+				KodeOpd:    kodeOpd,
+				NamaOpd:    namaOpd,
 				JenisPohon: jenisPohon,
 				LevelPohon: levelPohon,
 				TahunPohon: tahunPohon,
@@ -1100,6 +1108,7 @@ func (repository *SasaranOpdRepositoryImpl) FindByTahun(ctx context.Context, tx 
         SELECT DISTINCT
             pk.id as pokin_id,
             pk.nama_pohon,
+            pk.kode_opd,
             pk.jenis_pohon,
             pk.level_pohon,
             pk.tahun as tahun_pohon,
@@ -1157,23 +1166,23 @@ func (repository *SasaranOpdRepositoryImpl) FindByTahun(ctx context.Context, tx 
 
 	for rows.Next() {
 		var (
-			pokinId, levelPohon                  int
-			namaPohon, jenisPohon, tahunPohon    string
-			pelaksanaId, pegawaiId, pelaksanaNip sql.NullString
-			namaPegawai                          sql.NullString
-			sasaranId                            sql.NullInt64
-			namaSasaranOpd                       sql.NullString
-			idTujuanOpd                          sql.NullInt64
-			tahunAwalSasaran, tahunAkhirSasaran  sql.NullString
-			jenisPeriodeSasaran                  sql.NullString
-			indikatorId, indikator               sql.NullString
-			rumusPerhitungan, sumberData         sql.NullString
-			targetId, targetTahun                sql.NullString
-			targetValue, targetSatuan            sql.NullString
+			pokinId, levelPohon                        int
+			namaPohon, kodeOpd, jenisPohon, tahunPohon string
+			pelaksanaId, pegawaiId, pelaksanaNip       sql.NullString
+			namaPegawai                                sql.NullString
+			sasaranId                                  sql.NullInt64
+			namaSasaranOpd                             sql.NullString
+			idTujuanOpd                                sql.NullInt64
+			tahunAwalSasaran, tahunAkhirSasaran        sql.NullString
+			jenisPeriodeSasaran                        sql.NullString
+			indikatorId, indikator                     sql.NullString
+			rumusPerhitungan, sumberData               sql.NullString
+			targetId, targetTahun                      sql.NullString
+			targetValue, targetSatuan                  sql.NullString
 		)
 
 		err := rows.Scan(
-			&pokinId, &namaPohon, &jenisPohon, &levelPohon, &tahunPohon,
+			&pokinId, &namaPohon, &kodeOpd, &jenisPohon, &levelPohon, &tahunPohon,
 			&pelaksanaId, &pegawaiId, &pelaksanaNip, &namaPegawai,
 			&sasaranId, &namaSasaranOpd,
 			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
@@ -1192,6 +1201,7 @@ func (repository *SasaranOpdRepositoryImpl) FindByTahun(ctx context.Context, tx 
 			sasaranOpd = &domain.SasaranOpd{
 				Id:         pokinId,
 				IdPohon:    pokinId,
+				KodeOpd:    kodeOpd,
 				NamaPohon:  namaPohon,
 				JenisPohon: jenisPohon,
 				LevelPohon: levelPohon,
