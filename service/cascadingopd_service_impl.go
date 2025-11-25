@@ -2112,6 +2112,59 @@ func (service *CascadingOpdServiceImpl) processSingleRekin(
 
 func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 	ctx context.Context,
+	request pohonkinerja.FindByMultipleRekinRequest,
+) ([]pohonkinerja.DetailRekinResponse, error) {
+
+	if len(request.RekinIds) == 0 {
+		return nil, errors.New("rekin_ids tidak boleh kosong")
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// 1. Ambil semua rekin detail
+	detailRekins, err := service.rencanaKinerjaRepository.FindDetailRekins(ctx, tx, request.RekinIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// 1.5 ambil indikator target
+	indikatorMap, err := service.preloadIndikatorTargetRekin(ctx, tx, detailRekins)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Ambil anggaran
+	anggaranMap, err := service.preloadAnggaran(ctx, tx, detailRekins)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Preload seluruh hierarki
+	kegMap, subMap, progMap, bidMap, err := service.preloadAllHierarchies(ctx, tx, detailRekins)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Susun final response
+	responses := service.fillResponseLoop(
+		detailRekins,
+		indikatorMap,
+		anggaranMap,
+		kegMap,
+		subMap,
+		progMap,
+		bidMap,
+	)
+
+	return responses, nil
+}
+
+func (service *CascadingOpdServiceImpl) MultiRekinDetailsByOpdTahun(
+	ctx context.Context,
 	request pohonkinerja.MultiRekinDetailsByOpdAndTahunRequest,
 ) ([]pohonkinerja.DetailRekinResponse, error) {
 
@@ -2135,6 +2188,12 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 		return nil, err
 	}
 
+	// 1.5 ambil indikator target
+	indikatorMap, err := service.preloadIndikatorTargetRekin(ctx, tx, detailRekins)
+	if err != nil {
+		return nil, err
+	}
+
 	// 2. Ambil anggaran
 	anggaranMap, err := service.preloadAnggaran(ctx, tx, detailRekins)
 	if err != nil {
@@ -2150,6 +2209,7 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 	// 4. Susun final response
 	responses := service.fillResponseLoop(
 		detailRekins,
+		indikatorMap,
 		anggaranMap,
 		kegMap,
 		subMap,
@@ -2162,6 +2222,7 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetails(
 
 func (service *CascadingOpdServiceImpl) fillResponseLoop(
 	rks []domain.DetailRekins,
+	indikatorMap map[string][]domain.Indikator,
 	anggaranMap map[string]int64,
 	kegMap map[string]pohonkinerja.KegiatanRekinResponse,
 	subMap map[string]pohonkinerja.SubKegiatanRekinResponse,
@@ -2180,8 +2241,14 @@ func (service *CascadingOpdServiceImpl) fillResponseLoop(
 			NamaRencanaKinerja: rk.NamaRencanaKinerja,
 			Tahun:              rk.Tahun,
 			PegawaiId:          rk.PegawaiId,
+			NamaPegawai:        rk.NamaPegawai,
+			KodeOpd:            rk.KodeOpd,
 			LevelPohon:         rk.LevelPohon,
 			PaguAnggaranRekin:  anggaranMap[rk.Id],
+		}
+
+		if inds, ok := indikatorMap[rk.Id]; ok {
+			resp.Indikator = toIndikatorResponse(inds)
 		}
 
 		switch rk.LevelPohon {
@@ -2200,6 +2267,31 @@ func (service *CascadingOpdServiceImpl) fillResponseLoop(
 		out[i] = resp
 	}
 	return out
+}
+
+func (service *CascadingOpdServiceImpl) preloadIndikatorTargetRekin(
+	ctx context.Context,
+	tx *sql.Tx,
+	rks []domain.DetailRekins,
+) (map[string][]domain.Indikator, error) {
+
+	allIds := make([]string, len(rks))
+	for i := range rks {
+		allIds[i] = rks[i].Id
+	}
+
+	list, err := service.rencanaKinerjaRepository.GetAllIndikatorTargetByRekinIds(ctx, tx, allIds)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make(map[string][]domain.Indikator)
+
+	for _, ind := range list {
+		rkId := ind.RencanaKinerjaId
+		results[rkId] = append(results[rkId], ind)
+	}
+	return results, nil
 }
 
 func (service *CascadingOpdServiceImpl) preloadAnggaran(
@@ -2523,4 +2615,33 @@ func (service *CascadingOpdServiceImpl) preloadAllHierarchies(
 
 	// FINAL RETURN (semua unique)
 	return kegMap, subMap, progMap, bidangMap, nil
+}
+
+func toIndikatorResponse(list []domain.Indikator) []pohonkinerja.IndikatorRekinResponse {
+	out := make([]pohonkinerja.IndikatorRekinResponse, 0, len(list))
+
+	for _, ind := range list {
+
+		// convert target
+		targets := make([]pohonkinerja.TargetRekinResponse, 0, len(ind.Target))
+		for _, t := range ind.Target {
+			targets = append(targets, pohonkinerja.TargetRekinResponse{
+				Id:              t.Id,
+				IndikatorId:     t.IndikatorId,
+				TargetIndikator: t.Target,
+				SatuanIndikator: t.Satuan,
+				Tahun:           t.Tahun,
+			})
+		}
+
+		// convert indikator
+		out = append(out, pohonkinerja.IndikatorRekinResponse{
+			Id:               ind.Id,
+			RencanaKinerjaId: ind.RencanaKinerjaId,
+			NamaIndikator:    ind.Indikator,
+			Target:           targets,
+		})
+	}
+
+	return out
 }

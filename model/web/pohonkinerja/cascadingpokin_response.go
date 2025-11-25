@@ -24,8 +24,11 @@ type DetailRekinResponse struct {
 	Id                 string                               `json:"id_rencana_kinerja,omitempty"`
 	IdPohon            int                                  `json:"id_pohon,omitempty"`
 	NamaRencanaKinerja string                               `json:"nama_rencana_kinerja,omitempty"`
+	Indikator          []IndikatorRekinResponse             `json:"indikator,omitempty"`
 	Tahun              string                               `json:"tahun,omitempty"`
 	PegawaiId          string                               `json:"pegawai_id,omitempty"`
+	NamaPegawai        string                               `json:"nama_pegawai,omitempty"`
+	KodeOpd            string                               `json:"kode_opd,omitempty"`
 	LevelPohon         int                                  `json:"level_pohon"`
 	Urusan             []UrusanCascadingRekinResponse       `json:"urusan,omitempty"`        // Untuk level 4
 	BidangUrusan       []BidangUrusanCascadingRekinResponse `json:"bidang_urusan,omitempty"` // Untuk level 4
@@ -84,4 +87,19 @@ type KegiatanRekinResponse struct {
 type SubKegiatanRekinResponse struct {
 	KodeSubkegiatan string `json:"kode_subkegiatan"`
 	NamaSubkegiatan string `json:"nama_subkegiatan"`
+}
+
+type IndikatorRekinResponse struct {
+	Id               string                `json:"id_indikator,omitempty"`
+	RencanaKinerjaId string                `json:"rencana_kinerja_id,omitempty"`
+	NamaIndikator    string                `json:"nama_indikator,omitempty"`
+	Target           []TargetRekinResponse `json:"targets,omitempty"`
+}
+
+type TargetRekinResponse struct {
+	Id              string `json:"id_target,omitempty"`
+	IndikatorId     string `json:"indikator_id"`
+	TargetIndikator string `json:"target"`
+	SatuanIndikator string `json:"satuan"`
+	Tahun           string `json:"tahun,omitempty"`
 }

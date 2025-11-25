@@ -169,6 +169,30 @@ func (controller *CascadingOpdControllerImpl) FindByMultipleRekinPegawai(writer 
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+func (controller *CascadingOpdControllerImpl) MultiRekinDetail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	// id rekin list
+	rekinRequest := pohonkinerja.FindByMultipleRekinRequest{}
+	helper.ReadFromRequestBody(r, &rekinRequest)
+
+	detailRekinResponses, err := controller.CascadingOpdService.MultiRekinDetails(r.Context(), rekinRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get By Multiple Rekin Pegawai",
+		Data:   detailRekinResponses,
+	}
+	helper.WriteToResponseBody(w, webResponse)
+}
+
 func (controller *CascadingOpdControllerImpl) MultiRekinDetailByOpdAndTahun(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
@@ -177,7 +201,7 @@ func (controller *CascadingOpdControllerImpl) MultiRekinDetailByOpdAndTahun(w ht
 	rekinRequest.KodeOpd = kodeOpd
 	rekinRequest.Tahun = tahun
 
-	detailRekinResponses, err := controller.CascadingOpdService.MultiRekinDetails(r.Context(), rekinRequest)
+	detailRekinResponses, err := controller.CascadingOpdService.MultiRekinDetailsByOpdTahun(r.Context(), rekinRequest)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   400,

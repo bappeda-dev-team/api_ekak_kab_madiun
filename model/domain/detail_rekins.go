@@ -8,6 +8,8 @@ type DetailRekins struct {
 	NamaRencanaKinerja string
 	Tahun              string
 	PegawaiId          string
+	NamaPegawai        string
 	KodeOpd            string
 	KodeSubKegiatan    string
+	Indikator          []Indikator
 }
