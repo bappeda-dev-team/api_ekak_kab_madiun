@@ -1093,6 +1093,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekinsByOpdAndTahun(
             r.nama_rencana_kinerja,
             r.tahun,
             r.pegawai_id,
+            tp.id as id_pegawai,
             tp.nama,
             r.kode_opd,
             sub.kode_subkegiatan
@@ -1130,6 +1131,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekinsByOpdAndTahun(
 			&rk.NamaRencanaKinerja,
 			&rk.Tahun,
 			&rk.PegawaiId,
+			&rk.IdPegawai,
 			&rk.NamaPegawai,
 			&rk.KodeOpd,
 			&kodeSub,

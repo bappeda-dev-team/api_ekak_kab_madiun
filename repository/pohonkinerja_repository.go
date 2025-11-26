@@ -89,4 +89,5 @@ type PohonKinerjaRepository interface {
 	CloneHierarchyRecursive(ctx context.Context, tx *sql.Tx, sourceId int, newParentId int64, targetTahun string) (int64, error) // ✅ RETURN int64
 	cloneIndikatorAndTarget(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
 	clonePelaksana(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
+	FindPelaksanaPokinByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []string) ([]domain.PelaksanaPokin, error)
 }

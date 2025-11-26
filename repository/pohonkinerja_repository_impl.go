@@ -690,6 +690,42 @@ func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokin(ctx context.Con
 	return result, nil
 }
 
+func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokinByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []string) ([]domain.PelaksanaPokin, error) {
+	if len(pokinIds) == 0 {
+		return []domain.PelaksanaPokin{}, nil
+	}
+
+	// Build placeholders
+	// akan membuat ? sepanjang pokinIds
+	placeholders := make([]string, len(pokinIds))
+	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+         SELECT
+             id,
+             pohon_kinerja_id,
+             pegawai_id
+         FROM tb_pelaksana_pokin WHERE pohon_kinerja_id IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	helper.PanicIfError(err)
+	defer rows.Close()
+
+	var result []domain.PelaksanaPokin
+	for rows.Next() {
+		var pelaksana domain.PelaksanaPokin
+		err := rows.Scan(&pelaksana.Id, &pelaksana.PohonKinerjaId, &pelaksana.PegawaiId)
+		helper.PanicIfError(err)
+		result = append(result, pelaksana)
+	}
+	return result, nil
+}
+
 func (repository *PohonKinerjaRepositoryImpl) DeletePelaksanaPokin(ctx context.Context, tx *sql.Tx, pelaksanaId string) error {
 	script := "DELETE FROM tb_pelaksana_pokin WHERE id = ?"
 	_, err := tx.ExecContext(ctx, script, pelaksanaId)

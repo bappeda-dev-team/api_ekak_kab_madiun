@@ -8,6 +8,7 @@ type DetailRekins struct {
 	NamaRencanaKinerja string
 	Tahun              string
 	PegawaiId          string
+	IdPegawai          string
 	NamaPegawai        string
 	KodeOpd            string
 	KodeSubKegiatan    string

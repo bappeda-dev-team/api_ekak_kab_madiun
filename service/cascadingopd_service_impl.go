@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -2172,10 +2173,6 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetailsByOpdTahun(
 		return nil, errors.New("Kode opd atau tahun tidak ditemukan")
 	}
 
-	// if len(rekinIds) == 0 {
-	// 	return nil, errors.New("rekin_ids tidak boleh kosong")
-	// }
-
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
@@ -2188,25 +2185,68 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetailsByOpdTahun(
 		return nil, err
 	}
 
-	// 1.5 ambil indikator target
+	// 1.1 Kumpulkan semua pokinId
+	allPokinIds := make([]string, 0, len(detailRekins))
+	for _, r := range detailRekins {
+		// karena inkonsistensi jenis data idPohon di pohon_kinerja
+		// dan di pelaksana
+		idPokinStr := strconv.Itoa(r.IdPohon)
+		allPokinIds = append(allPokinIds, idPokinStr)
+	}
+
+	// Preload pelaksana
+	pelaksanaList, err := service.pohonKinerjaRepository.FindPelaksanaPokinByPokinIds(ctx, tx, allPokinIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build map: pokinId(int) -> set pegawaiId(string)
+	pelaksanaMap := make(map[string]map[string]struct{})
+	for _, p := range pelaksanaList {
+		pkId := strings.TrimSpace(p.PohonKinerjaId)
+
+		if pelaksanaMap[pkId] == nil {
+			pelaksanaMap[pkId] = make(map[string]struct{})
+		}
+
+		pelaksanaMap[pkId][p.PegawaiId] = struct{}{}
+	}
+
+	// 1.2 Filter rekin hanya yang pegawainya pelaksana
+	filtered := make([]domain.DetailRekins, 0)
+	for _, rk := range detailRekins {
+		pokinId := strconv.Itoa(rk.IdPohon)
+
+		if service.isPegawaiPelaksanaPokinFast(
+			pokinId,
+			rk.IdPegawai,
+			pelaksanaMap,
+		) {
+			filtered = append(filtered, rk)
+		}
+	}
+
+	detailRekins = filtered
+
+	// 1.5 indikator target
 	indikatorMap, err := service.preloadIndikatorTargetRekin(ctx, tx, detailRekins)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Ambil anggaran
+	// 2. anggaran
 	anggaranMap, err := service.preloadAnggaran(ctx, tx, detailRekins)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Preload seluruh hierarki
+	// 3. hierarki
 	kegMap, subMap, progMap, bidMap, err := service.preloadAllHierarchies(ctx, tx, detailRekins)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Susun final response
+	// 4. Build response
 	responses := service.fillResponseLoop(
 		detailRekins,
 		indikatorMap,
@@ -2218,6 +2258,18 @@ func (service *CascadingOpdServiceImpl) MultiRekinDetailsByOpdTahun(
 	)
 
 	return responses, nil
+}
+
+func (service *CascadingOpdServiceImpl) isPegawaiPelaksanaPokinFast(
+	pokinId string,
+	pegawaiId string,
+	pelaksanaMap map[string]map[string]struct{},
+) bool {
+	if pelaksanaMap[pokinId] == nil {
+		return false
+	}
+	_, ok := pelaksanaMap[pokinId][pegawaiId]
+	return ok
 }
 
 func (service *CascadingOpdServiceImpl) fillResponseLoop(
