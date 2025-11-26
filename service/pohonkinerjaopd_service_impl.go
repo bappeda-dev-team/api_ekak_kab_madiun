@@ -13,6 +13,8 @@ import (
 	"log"
 	"sort"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -2222,4 +2224,190 @@ func (service *PohonKinerjaOpdServiceImpl) FindPokinAtasan(ctx context.Context, 
 	}
 
 	return response, nil
+}
+
+func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.ControlPokinOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.ControlPokinOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil data per level
+	dataPerLevel, err := service.pohonKinerjaOpdRepository.ControlPokinOpdByLevel(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return pohonkinerja.ControlPokinOpdResponse{}, err
+	}
+
+	// Cari level maksimum yang ada di data
+	maxLevel := 6 // Minimal sampai Operational (level 6)
+	for level := range dataPerLevel {
+		if level > maxLevel {
+			maxLevel = level
+		}
+	}
+
+	// Map nama level
+	levelNames := map[int]string{
+		4: "Strategic",
+		5: "Tactical",
+		6: "Operational",
+	}
+
+	// Build response data per level
+	var responseData []pohonkinerja.ControlPokinOpdData
+	var totalPokin, totalPelaksana, totalPokinAdaPelaksana, totalPokinTanpaPelaksana int
+	var totalRencanaKinerja, totalPokinAdaRekin, totalPokinTanpaRekin int // ← TAMBAH VARIABEL BARU
+
+	// Iterasi dari level 4 sampai maxLevel
+	for level := 4; level <= maxLevel; level++ {
+		var namaLevel string
+
+		// Tentukan nama level
+		if level >= 7 {
+			// Level 7+ adalah Operational N (Operational 1, 2, 3, dst)
+			operationalN := level - 6 // Level 7 = Operational 1, Level 8 = Operational 2, dst
+			namaLevel = fmt.Sprintf("Operational %d", operationalN)
+		} else {
+			namaLevel = levelNames[level]
+		}
+
+		if data, exists := dataPerLevel[level]; exists {
+			// Hitung persentase pelaksana = (pokin ada pelaksana / total pokin) * 100
+			persentasePelaksana := 0.0
+			if data.JumlahPokin > 0 {
+				persentasePelaksana = (float64(data.JumlahPokinAdaPelaksana) / float64(data.JumlahPokin)) * 100
+			}
+
+			// ✅ Hitung persentase cascading = (pokin ada rekin / total pokin) * 100
+			persentaseCascading := 0.0
+			if data.JumlahPokin > 0 {
+				persentaseCascading = (float64(data.JumlahPokinAdaRekin) / float64(data.JumlahPokin)) * 100
+			}
+
+			responseData = append(responseData, pohonkinerja.ControlPokinOpdData{
+				LevelPohon:                level,
+				NamaLevel:                 namaLevel,
+				JumlahPokin:               data.JumlahPokin,
+				JumlahPelaksana:           data.JumlahPelaksana,
+				JumlahPokinAdaPelaksana:   data.JumlahPokinAdaPelaksana,
+				JumlahPokinTanpaPelaksana: data.JumlahPokinTanpaPelaksana,
+				JumlahRencanaKinerja:      data.JumlahRencanaKinerja,
+				JumlahPokinAdaRekin:       data.JumlahPokinAdaRekin,
+				JumlahPokinTanpaRekin:     data.JumlahPokinTanpaRekin,
+				Persentase:                fmt.Sprintf("%.0f%%", persentasePelaksana),
+				PersentaseCascading:       fmt.Sprintf("%.0f%%", persentaseCascading),
+			})
+
+			// Akumulasi total
+			totalPokin += data.JumlahPokin
+			totalPelaksana += data.JumlahPelaksana
+			totalPokinAdaPelaksana += data.JumlahPokinAdaPelaksana
+			totalPokinTanpaPelaksana += data.JumlahPokinTanpaPelaksana
+			totalRencanaKinerja += data.JumlahRencanaKinerja
+			totalPokinAdaRekin += data.JumlahPokinAdaRekin
+			totalPokinTanpaRekin += data.JumlahPokinTanpaRekin
+		}
+	}
+
+	// Hitung persentase total pelaksana
+	persentaseTotalPelaksana := 0.0
+	if totalPokin > 0 {
+		persentaseTotalPelaksana = (float64(totalPokinAdaPelaksana) / float64(totalPokin)) * 100
+	}
+
+	// ✅ Hitung persentase total cascading
+	persentaseTotalCascading := 0.0
+	if totalPokin > 0 {
+		persentaseTotalCascading = (float64(totalPokinAdaRekin) / float64(totalPokin)) * 100
+	}
+
+	response := pohonkinerja.ControlPokinOpdResponse{
+		Data: responseData,
+		Total: pohonkinerja.ControlPokinOpdTotal{
+			TotalPokin:               totalPokin,
+			TotalPelaksana:           totalPelaksana,
+			TotalPokinAdaPelaksana:   totalPokinAdaPelaksana,
+			TotalPokinTanpaPelaksana: totalPokinTanpaPelaksana,
+			TotalRencanaKinerja:      totalRencanaKinerja,
+			TotalPokinAdaRekin:       totalPokinAdaRekin,
+			TotalPokinTanpaRekin:     totalPokinTanpaRekin,
+			Persentase:               fmt.Sprintf("%.0f%%", persentaseTotalPelaksana),
+			PersentaseCascading:      fmt.Sprintf("%.0f%%", persentaseTotalCascading),
+		},
+	}
+
+	return response, nil
+}
+
+type CachedLeaderboard struct {
+	Data      []pohonkinerja.LeaderboardPokinResponse
+	Timestamp time.Time
+}
+
+var (
+	leaderboardCache     = make(map[string]CachedLeaderboard)
+	leaderboardCacheLock sync.RWMutex
+	cacheExpiry          = 5 * time.Minute
+)
+
+func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
+	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
+
+	// Cek cache terlebih dahulu
+	leaderboardCacheLock.RLock()
+	if cached, exists := leaderboardCache[cacheKey]; exists {
+		if time.Since(cached.Timestamp) < cacheExpiry {
+			leaderboardCacheLock.RUnlock()
+			return cached.Data, nil
+		}
+	}
+	leaderboardCacheLock.RUnlock()
+
+	// Jika cache tidak ada atau expired, ambil dari database
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	leaderboardData, err := service.pohonKinerjaOpdRepository.LeaderboardPokinOpd(ctx, tx, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	var response []pohonkinerja.LeaderboardPokinResponse
+	for _, data := range leaderboardData {
+		var tematikItems []pohonkinerja.LeaderboardTematikItem
+		for _, name := range data.TematikNames {
+			tematikItems = append(tematikItems, pohonkinerja.LeaderboardTematikItem{
+				Nama: name,
+			})
+		}
+
+		response = append(response, pohonkinerja.LeaderboardPokinResponse{
+			KodeOpd:             data.KodeOpd,
+			NamaOpd:             data.NamaOpd,
+			Tematik:             tematikItems,
+			PersentaseCascading: fmt.Sprintf("%.0f%%", data.PersentaseCascading),
+		})
+	}
+
+	//  Simpan ke cache
+	leaderboardCacheLock.Lock()
+	leaderboardCache[cacheKey] = CachedLeaderboard{
+		Data:      response,
+		Timestamp: time.Now(),
+	}
+	leaderboardCacheLock.Unlock()
+
+	return response, nil
+}
+
+// Tambahkan fungsi untuk clear cache (dipanggil saat ada update data)
+func (service *PohonKinerjaOpdServiceImpl) ClearLeaderboardCache(tahun string) {
+	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
+	leaderboardCacheLock.Lock()
+	delete(leaderboardCache, cacheKey)
+	leaderboardCacheLock.Unlock()
 }

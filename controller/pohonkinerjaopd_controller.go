@@ -22,4 +22,6 @@ type PohonKinerjaOpdController interface {
 	CheckPokinExistsByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	CountPokinPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindPokinAtasan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	ControlPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	LeaderboardPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

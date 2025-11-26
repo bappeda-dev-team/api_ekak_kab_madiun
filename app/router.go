@@ -466,5 +466,10 @@ func NewRouter(
 	// target baru
 	router.GET("/cascading_opd/multi_rekin_detail_by_opd_and_tahun/:kode_opd/:tahun", cascadingOpdController.MultiRekinDetailByOpdAndTahun)
 
+	//control pokin opd
+	router.GET("/pohon_kinerja_opd/control_pokin_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ControlPokinOpd)
+	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
+	router.GET("/pohon_kinerja_opd/leaderboard_pokin_opd/:tahun", pohonKinerjaOpdController.LeaderboardPokinOpd)
+
 	return router
 }

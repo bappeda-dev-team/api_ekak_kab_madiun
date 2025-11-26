@@ -14,4 +14,5 @@ type UserService interface {
 	Login(ctx context.Context, request user.UserLoginRequest) (user.UserLoginResponse, error)
 	FindByKodeOpdAndRole(ctx context.Context, kodeOpd string, roleName string) ([]user.UserResponse, error)
 	FindByNip(ctx context.Context, nip string) (user.UserResponse, error)
+	CekAdminOpd(ctx context.Context) ([]user.CekAdminOpdResponse, error)
 }
