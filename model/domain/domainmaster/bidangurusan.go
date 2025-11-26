@@ -9,5 +9,6 @@ type BidangUrusan struct {
 	KodeUrusan       string
 	NamaUrusan       string
 	Tahun            string
+	KodeSubKegiatan string
 	CreatedAt        time.Time
 }

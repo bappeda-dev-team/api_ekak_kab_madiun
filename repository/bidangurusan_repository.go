@@ -14,4 +14,6 @@ type BidangUrusanRepository interface {
 	FindAll(ctx context.Context, tx *sql.Tx) ([]domainmaster.BidangUrusan, error)
 	FindByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domainmaster.BidangUrusan, error)
 	FindByKodeBidangUrusan(ctx context.Context, tx *sql.Tx, kodeBidangUrusan string) (domainmaster.BidangUrusan, error)
+	FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domainmaster.BidangUrusan, error)
+	FindByKodeSubKegiatans(ctx context.Context, tx *sql.Tx, kodeSubKegiatans []string) (map[string]domainmaster.BidangUrusan, error)
 }

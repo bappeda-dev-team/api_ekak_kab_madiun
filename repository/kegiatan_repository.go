@@ -15,4 +15,6 @@ type KegiatanRepository interface {
 	FindAll(ctx context.Context, tx *sql.Tx) ([]domainmaster.Kegiatan, error)
 	FindIndikatorByKegiatanId(ctx context.Context, tx *sql.Tx, kegiatanId string) ([]domain.Indikator, error)
 	FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error)
+	FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domainmaster.Kegiatan, error)
+	FindByKodeSubs(ctx context.Context, tx *sql.Tx, kodeSubs []string) (map[string]domainmaster.Kegiatan, error)
 }

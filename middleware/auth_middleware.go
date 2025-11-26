@@ -4,9 +4,25 @@ import (
 	"context"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"log"
 	"net/http"
+	"os"
 	"strings"
+	"time"
+
+	"github.com/MicahParks/keyfunc"
+	"github.com/golang-jwt/jwt/v4"
 )
+
+var JWKS *keyfunc.JWKS
+
+func InitJWKS(jwksURL string) error {
+	var err error
+	JWKS, err = keyfunc.Get(jwksURL, keyfunc.Options{
+		RefreshInterval: time.Hour,
+	})
+	return err
+}
 
 type AuthMiddleware struct {
 	Handler http.Handler
@@ -52,25 +68,81 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		return
 	}
 
-	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+	tokenHeader := request.Header.Get("Authorization")
+	if tokenHeader == "" || !strings.HasPrefix(tokenHeader, "Bearer ") {
+		writeUnauthorized(writer, "Missing or invalid Authorization header")
+		return
+	}
+	rawToken := strings.TrimPrefix(tokenHeader, "Bearer ")
 
-	claims := helper.ValidateJWT(tokenString)
-	if claims.UserId == 0 {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusUnauthorized)
-
-		webResponse := web.WebResponse{
-			Code:   http.StatusUnauthorized,
-			Status: "UNAUTHORIZED",
-			Data:   "Token tidak valid",
-		}
-
-		helper.WriteToResponseBody(writer, webResponse)
+	token, err := jwt.Parse(rawToken, JWKS.Keyfunc)
+	if err != nil {
+		log.Printf("JWT parse error: %v", err)
+		writeUnauthorized(writer, "Invalid token")
+		return
+	}
+	if !token.Valid {
+		log.Println("JWT is not valid")
+		writeUnauthorized(writer, "Invalid token")
 		return
 	}
 
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		writeUnauthorized(writer, "Invalid claims")
+		return
+	}
+
+	// Optional: validate audience or issuer
+	issuer := os.Getenv("KEYCLOAK_ISSUER")
+	if iss, ok := claims["iss"].(string); !ok || iss != issuer {
+		writeUnauthorized(writer, "Invalid issuer")
+		return
+	}
+
+	clientId, hasClientId := claims["client_id"].(string)
+	if hasClientId {
+		allowedService := os.Getenv("ALLOWED_SERVICE_CLIENT_ID")
+
+		if clientId != allowedService {
+			writeForbidden(writer, "client not allowed")
+			return
+		}
+	} else {
+		sessionId := request.Header.Get("X-Session-Id")
+		if sessionId == "" {
+			writeUnauthorized(writer, "User session not found")
+			return
+		}
+	}
+
 	ctx := context.WithValue(request.Context(), helper.UserInfoKey, claims)
+	ctx = context.WithValue(ctx, "client_id", clientId)
+    ctx = context.WithValue(ctx, "is_service_token", hasClientId)
+
+	ctx = context.WithValue(ctx, "user_session_id", request.Header.Get("X-Session-Id"))
+
 	request = request.WithContext(ctx)
 
 	middleware.Handler.ServeHTTP(writer, request)
+}
+
+func writeUnauthorized(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	helper.WriteToResponseBody(w, web.WebResponse{
+		Code:   http.StatusUnauthorized,
+		Status: "UNAUTHORIZED",
+		Data:   message,
+	})
+}
+
+func writeForbidden(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	helper.WriteToResponseBody(w, web.WebResponse{
+		Code:   http.StatusForbidden,
+		Status: "ACCESS NOT ALLOWED",
+		Data:   message,
+	})
 }

@@ -48,6 +48,7 @@ type PohonKinerjaRepository interface {
 	FindTargetByCloneFrom(ctx context.Context, tx *sql.Tx, indikatorId string, cloneFromId string) (domain.Target, error)
 	DeleteClonedPokinHierarchy(ctx context.Context, tx *sql.Tx, id int) error
 	FindChildPokins(ctx context.Context, tx *sql.Tx, parentId int64) ([]domain.PohonKinerja, error)
+	FindChildPokinsFromParentIds(ctx context.Context, tx *sql.Tx, parentIds []int) ([]domain.PohonKinerja, error)
 	InsertClonedPelaksana(ctx context.Context, tx *sql.Tx, newId string, pokinId int64, pelaksana domain.PelaksanaPokin) error
 	FindListOpdAllTematik(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)
 	ValidateParentLevelTarikStrategiOpd(ctx context.Context, tx *sql.Tx, parentId int, childLevel int) error
@@ -90,4 +91,5 @@ type PohonKinerjaRepository interface {
 	clonePelaksana(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
 	ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error)
 	LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error)
+	FindPelaksanaPokinByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []string) ([]domain.PelaksanaPokin, error)
 }

@@ -16,4 +16,5 @@ type SubKegiatanRepository interface {
 	FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error)
 	FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domain.SubKegiatan, error)
 	FindSubKegiatanKAK(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string, kode string, tahun string) (domain.SubKegiatanKAKQuery, error)
+	FindByKodeSubs(ctx context.Context, tx *sql.Tx, kodeSubKegiatans []string) ([]domain.SubKegiatan, error)
 }

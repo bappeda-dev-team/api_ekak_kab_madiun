@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
+	"strings"
 )
 
 type ProgramRepositoryImpl struct {
@@ -215,4 +216,106 @@ func (repository *ProgramRepositoryImpl) FindByKodeProgram(ctx context.Context, 
 	}
 
 	return program, nil
+}
+
+func (repository *ProgramRepositoryImpl) FindByKodeSubKegiatans(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeSubs []string,
+) (map[string]domainmaster.ProgramKegiatan, error) {
+
+	resultMap := make(map[string]domainmaster.ProgramKegiatan)
+
+	if len(kodeSubs) == 0 {
+		return resultMap, nil
+	}
+
+	// Step 1. Extract unique kode_program dari kode_sub (prefix 7)
+	uniqProgram := make(map[string]struct{})
+	kodeProgramList := make([]string, 0)
+
+	// Mapping kode_program -> list kode_sub yang punya prefix itu
+	subGroup := make(map[string][]string)
+
+	for _, ks := range kodeSubs {
+		if len(ks) < 7 {
+			// Skip kode sub yang invalid
+			continue
+		}
+
+		kodeProgram := ks[:7]
+
+		subGroup[kodeProgram] = append(subGroup[kodeProgram], ks)
+
+		if _, exists := uniqProgram[kodeProgram]; !exists {
+			uniqProgram[kodeProgram] = struct{}{}
+			kodeProgramList = append(kodeProgramList, kodeProgram)
+		}
+	}
+
+	if len(kodeProgramList) == 0 {
+		return resultMap, nil
+	}
+
+	// Step 2. Build placeholders & args
+	placeholders := make([]string, len(kodeProgramList))
+	args := make([]any, len(kodeProgramList))
+
+	for i, kode := range kodeProgramList {
+		placeholders[i] = "?"
+		args[i] = kode
+	}
+
+	query := fmt.Sprintf(`
+        SELECT
+            prg.kode_program,
+            prg.nama_program
+        FROM tb_master_program prg
+        WHERE prg.kode_program IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Step 3. Ambil hasil DB: map kode_program → struct ProgramKegiatan
+	programByKode := make(map[string]domainmaster.ProgramKegiatan)
+
+	for rows.Next() {
+		var pr domainmaster.ProgramKegiatan
+
+		err := rows.Scan(
+			&pr.KodeProgram,
+			&pr.NamaProgram,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		programByKode[pr.KodeProgram] = pr
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Step 4. Mapping kembali ke kode_sub_kegiatan asli
+	for kodeProgram, subs := range subGroup {
+		base, ok := programByKode[kodeProgram]
+		if !ok {
+			continue // program tidak ditemukan di DB
+		}
+
+		for _, kodeSub := range subs {
+			resultMap[kodeSub] = domainmaster.ProgramKegiatan{
+				KodeProgram:     base.KodeProgram,
+				NamaProgram:     base.NamaProgram,
+				KodeSubKegiatan: kodeSub, // ★ simpan kode_sub asli
+			}
+		}
+	}
+
+	return resultMap, nil
 }

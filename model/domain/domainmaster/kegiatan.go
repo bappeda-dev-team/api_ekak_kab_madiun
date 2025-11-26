@@ -6,10 +6,11 @@ import (
 )
 
 type Kegiatan struct {
-	Id           string
-	NamaKegiatan string
-	KodeKegiatan string
-	KodeOPD      string
-	CreatedAt    time.Time
-	Indikator    []domain.Indikator
+	Id              string
+	NamaKegiatan    string
+	KodeKegiatan    string
+	KodeSubKegiatan string
+	KodeOPD         string
+	CreatedAt       time.Time
+	Indikator       []domain.Indikator
 }

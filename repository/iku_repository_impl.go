@@ -309,7 +309,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 				parentId, namaParent         sql.NullString
 				indikatorId, namaIndikator   sql.NullString
 				rumusPerhitungan, sumberData sql.NullString
-				ikuActive                    bool
+				ikuActive                    sql.NullBool
 				targetId                     sql.NullString
 				target                       sql.NullString
 				satuan                       sql.NullString
@@ -333,6 +333,9 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 			if err != nil {
 				return err
 			}
+
+			// iku active / not
+			active := ikuActive.Valid && ikuActive.Bool
 
 			// Skip jika indikatorId NULL
 			if !indikatorId.Valid {
@@ -362,7 +365,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 					TahunAkhir:       tahunAkhir,
 					JenisPeriode:     jenisPeriode,
 					Target:           emptyTargets,
-					IkuActive:        ikuActive,
+					IkuActive:        active,
 				}
 				ikuMap[key] = iku
 			}

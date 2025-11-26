@@ -690,6 +690,42 @@ func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokin(ctx context.Con
 	return result, nil
 }
 
+func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokinByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []string) ([]domain.PelaksanaPokin, error) {
+	if len(pokinIds) == 0 {
+		return []domain.PelaksanaPokin{}, nil
+	}
+
+	// Build placeholders
+	// akan membuat ? sepanjang pokinIds
+	placeholders := make([]string, len(pokinIds))
+	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+         SELECT
+             id,
+             pohon_kinerja_id,
+             pegawai_id
+         FROM tb_pelaksana_pokin WHERE pohon_kinerja_id IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	helper.PanicIfError(err)
+	defer rows.Close()
+
+	var result []domain.PelaksanaPokin
+	for rows.Next() {
+		var pelaksana domain.PelaksanaPokin
+		err := rows.Scan(&pelaksana.Id, &pelaksana.PohonKinerjaId, &pelaksana.PegawaiId)
+		helper.PanicIfError(err)
+		result = append(result, pelaksana)
+	}
+	return result, nil
+}
+
 func (repository *PohonKinerjaRepositoryImpl) DeletePelaksanaPokin(ctx context.Context, tx *sql.Tx, pelaksanaId string) error {
 	script := "DELETE FROM tb_pelaksana_pokin WHERE id = ?"
 	_, err := tx.ExecContext(ctx, script, pelaksanaId)
@@ -2239,6 +2275,64 @@ func (r *PohonKinerjaRepositoryImpl) FindChildPokins(ctx context.Context, tx *sq
 			&pokin.Tahun,
 			&pokin.Status,
 			&pokin.CloneFrom,
+			&pokin.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+		pokins = append(pokins, pokin)
+	}
+	return pokins, nil
+}
+
+func (r *PohonKinerjaRepositoryImpl) FindChildPokinsFromParentIds(ctx context.Context, tx *sql.Tx, parentIds []int) ([]domain.PohonKinerja, error) {
+	if len(parentIds) == 0 {
+		return []domain.PohonKinerja{}, nil
+	}
+
+	// uniq parentId
+	uniqParentId := make(map[int]struct{})
+	parentIdList := make([]int, 0)
+
+	for _, parId := range parentIds {
+		if _, exists := uniqParentId[parId]; !exists {
+			uniqParentId[parId] = struct{}{}
+			parentIdList = append(parentIdList, parId)
+		}
+	}
+
+	if len(parentIdList) == 0 {
+		return []domain.PohonKinerja{}, nil
+	}
+
+	// placeholder
+	placeholders := make([]string, len(parentIdList))
+	args := make([]any, len(parentIdList))
+
+	for i, parId := range parentIdList {
+		placeholders[i] = "?"
+		args[i] = parId
+	}
+
+	query := fmt.Sprintf(`
+     SELECT id, parent, level_pohon, is_active
+            FROM tb_pohon_kinerja
+            WHERE is_active = 1 AND parent IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var pokins []domain.PohonKinerja
+	for rows.Next() {
+		var pokin domain.PohonKinerja
+		err := rows.Scan(
+			&pokin.Id,
+			&pokin.Parent,
+			&pokin.LevelPohon,
 			&pokin.IsActive,
 		)
 		if err != nil {

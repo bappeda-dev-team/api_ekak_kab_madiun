@@ -17,15 +17,13 @@ func NewServer(authMiddleware *middleware.AuthMiddleware) *http.Server {
 	port := os.Getenv("port")
 	addr := fmt.Sprintf("%s:%s", host, port)
 
-	cors := helper.NewCORSMiddleware()
-
 	if addr == ":" {
 		addr = "localhost:8080"
 	}
 
 	return &http.Server{
 		Addr:    addr,
-		Handler: cors.Handler(authMiddleware),
+		Handler: authMiddleware,
 	}
 }
 
@@ -37,6 +35,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	jwksURL := os.Getenv("KEYCLOAK_JWKS_URL") // e.g. https://keycloak.local/realms/myrealm/protocol/openid-connect/certs
+	if jwksURL == "" {
+		log.Fatal("Error KEYCLOAK JWKS NOT FOUND")
+	}
+	erru := middleware.InitJWKS(jwksURL)
+	if erru != nil {
+		log.Fatalf("Failed to initialize JWKS: %v", erru)
+	}
+
 	// Cek flag seeder
 	if *runSeeder {
 		log.Println("Menjalankan database seeder...")

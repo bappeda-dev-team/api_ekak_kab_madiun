@@ -26,3 +26,8 @@ type RincianBelanja struct {
 	Renaksi   string
 	Anggaran  int64
 }
+
+type TotalAnggaranRekin struct {
+	RekinId   string
+	TotalAnggaran  int64
+}

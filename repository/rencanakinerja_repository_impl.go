@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type RencanaKinerjaRepositoryImpl struct {
@@ -974,4 +975,351 @@ func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Cont
 	}
 
 	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekins(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinIds []string,
+) ([]domain.DetailRekins, error) {
+
+	if len(rekinIds) == 0 {
+		return []domain.DetailRekins{}, nil
+	}
+
+	// Build placeholders
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+        SELECT
+            r.id,
+            r.id_pohon,
+            p.level_pohon,
+            p.parent,
+            r.nama_rencana_kinerja,
+            r.tahun,
+            r.pegawai_id,
+            r.kode_opd,
+            sub.kode_subkegiatan
+        FROM tb_rencana_kinerja r
+        JOIN tb_pohon_kinerja p ON r.id_pohon = p.id
+        LEFT JOIN tb_subkegiatan_terpilih sub ON r.id = sub.rekin_id
+        WHERE r.id IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.DetailRekins
+
+	for rows.Next() {
+		var (
+			rk domain.DetailRekins
+
+			idPohon    sql.NullInt64
+			levelPohon sql.NullInt64
+			parent     sql.NullInt64
+			kodeSub    sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&idPohon,
+			&levelPohon,
+			&parent,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.PegawaiId,
+			&rk.KodeOpd,
+			&kodeSub,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// mapping nullable → struct
+		if idPohon.Valid {
+			rk.IdPohon = int(idPohon.Int64)
+		}
+		if levelPohon.Valid {
+			rk.LevelPohon = int(levelPohon.Int64)
+		}
+		if parent.Valid {
+			rk.Parent = int(parent.Int64)
+		}
+		if kodeSub.Valid {
+			rk.KodeSubKegiatan = kodeSub.String
+		}
+
+		results = append(results, rk)
+	}
+
+	return results, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekinsByOpdAndTahun(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	tahun string,
+) ([]domain.DetailRekins, error) {
+
+	// if len(rekinIds) == 0 {
+	// 	return []domain.DetailRekins{}, nil
+	// }
+
+	// Build placeholders
+	// placeholders := make([]string, len(rekinIds))
+	// args := make([]any, len(rekinIds))
+	// for i, id := range rekinIds {
+	// 	placeholders[i] = "?"
+	// 	args[i] = id
+	// }
+
+	query := `SELECT
+            r.id,
+            r.id_pohon,
+            p.level_pohon,
+            p.parent,
+            r.nama_rencana_kinerja,
+            r.tahun,
+            r.pegawai_id,
+            tp.id as id_pegawai,
+            tp.nama,
+            r.kode_opd,
+            sub.kode_subkegiatan
+        FROM tb_rencana_kinerja r
+        JOIN tb_pohon_kinerja p ON r.id_pohon = p.id
+        JOIN tb_pegawai tp ON r.pegawai_id = tp.nip
+        LEFT JOIN tb_subkegiatan_terpilih sub ON r.id = sub.rekin_id
+        WHERE r.kode_opd = ? AND r.tahun = ? `
+
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	// log.Printf("Mencari rencana kinerja dengan kode opd: %s dan tahun: %s", kodeOpd, tahun)
+	// log.Printf("Query: %s", query)
+
+	var results []domain.DetailRekins
+
+	for rows.Next() {
+		var (
+			rk domain.DetailRekins
+
+			idPohon    sql.NullInt64
+			levelPohon sql.NullInt64
+			parent     sql.NullInt64
+			kodeSub    sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&idPohon,
+			&levelPohon,
+			&parent,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.PegawaiId,
+			&rk.IdPegawai,
+			&rk.NamaPegawai,
+			&rk.KodeOpd,
+			&kodeSub,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// mapping nullable → struct
+		if idPohon.Valid {
+			rk.IdPohon = int(idPohon.Int64)
+		}
+		if levelPohon.Valid {
+			rk.LevelPohon = int(levelPohon.Int64)
+		}
+		if parent.Valid {
+			rk.Parent = int(parent.Int64)
+		}
+		if kodeSub.Valid {
+			rk.KodeSubKegiatan = kodeSub.String
+		}
+
+		results = append(results, rk)
+	}
+
+	return results, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.DetailRekins, error) {
+	if len(pokinIds) == 0 {
+		return []domain.DetailRekins{}, nil
+	}
+
+	// Build placeholders
+	// akan membuat ? sepanjang pokinIds
+	placeholders := make([]string, len(pokinIds))
+	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+        SELECT
+            r.id,
+            r.id_pohon,
+            p.level_pohon,
+            p.parent,
+            r.nama_rencana_kinerja,
+            r.tahun,
+            r.pegawai_id,
+            r.kode_opd,
+            sub.kode_subkegiatan
+        FROM tb_rencana_kinerja r
+        JOIN tb_pohon_kinerja p ON r.id_pohon = p.id
+        LEFT JOIN tb_subkegiatan_terpilih sub ON r.id = sub.rekin_id
+        WHERE r.id_pohon IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.DetailRekins
+
+	for rows.Next() {
+		var (
+			rk domain.DetailRekins
+
+			idPohon    sql.NullInt64
+			levelPohon sql.NullInt64
+			parent     sql.NullInt64
+			kodeSub    sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&idPohon,
+			&levelPohon,
+			&parent,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.PegawaiId,
+			&rk.KodeOpd,
+			&kodeSub,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// mapping nullable → struct
+		if idPohon.Valid {
+			rk.IdPohon = int(idPohon.Int64)
+		}
+		if levelPohon.Valid {
+			rk.LevelPohon = int(levelPohon.Int64)
+		}
+		if parent.Valid {
+			rk.Parent = int(parent.Int64)
+		}
+		if kodeSub.Valid {
+			rk.KodeSubKegiatan = kodeSub.String
+		}
+
+		results = append(results, rk)
+	}
+
+	return results, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) GetAllIndikatorTargetByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.Indikator, error) {
+	if len(rekinIds) == 0 {
+		return []domain.Indikator{}, nil
+	}
+
+	// Build placeholders
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+        SELECT
+            i.id,
+            i.rencana_kinerja_id,
+            i.indikator,
+            t.id as target_id,
+            t.indikator_id,
+            t.target,
+            t.satuan,
+            t.tahun
+        FROM tb_indikator i
+        JOIN tb_target t ON i.id = t.indikator_id
+        WHERE i.rencana_kinerja_id IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	indikatorMap := make(map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId, rencanaId, indikator string
+			tar                         domain.Target
+		)
+
+		err := rows.Scan(
+			&indId,
+			&rencanaId,
+			&indikator,
+			&tar.Id,
+			&tar.IndikatorId,
+			&tar.Target,
+			&tar.Satuan,
+			&tar.Tahun,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if _, exists := indikatorMap[indId]; !exists {
+			indikatorMap[indId] = &domain.Indikator{
+				Id:               indId,
+				RencanaKinerjaId: rencanaId,
+				Indikator:        indikator,
+				Target:           []domain.Target{},
+			}
+		}
+
+		indikatorMap[indId].Target = append(indikatorMap[indId].Target, tar)
+	}
+
+	// map to slice
+	results := make([]domain.Indikator, 0, len(indikatorMap))
+	for _, ind := range indikatorMap {
+		results = append(results, *ind)
+	}
+
+	return results, nil
 }

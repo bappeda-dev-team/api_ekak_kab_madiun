@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type SubKegiatanRepositoryImpl struct {
@@ -252,15 +253,17 @@ func (repository *SubKegiatanRepositoryImpl) FindByKodeSubKegiatan(ctx context.C
 	defer rows.Close()
 
 	subKegiatan := domain.SubKegiatan{}
+
 	if rows.Next() {
 		err := rows.Scan(&subKegiatan.Id, &subKegiatan.KodeSubKegiatan, &subKegiatan.NamaSubKegiatan)
 		if err != nil {
 			return domain.SubKegiatan{}, err
 		}
-		return subKegiatan, nil
+	} else {
+		return domain.SubKegiatan{}, fmt.Errorf("subkegiatan dengan kode %s tidak ditemukan", kodeSubKegiatan)
 	}
 
-	return domain.SubKegiatan{}, fmt.Errorf("subkegiatan dengan kode %s tidak ditemukan", kodeSubKegiatan)
+	return subKegiatan, nil
 }
 
 func (repository *SubKegiatanRepositoryImpl) FindSubKegiatanKAK(ctx context.Context, tx *sql.Tx, kodeOpd string, kode string, tahun string) (domain.SubKegiatanKAKQuery, error) {
@@ -339,4 +342,47 @@ func (repository *SubKegiatanRepositoryImpl) FindSubKegiatanKAK(ctx context.Cont
 	}
 
 	return result, nil
+}
+
+func (repository *SubKegiatanRepositoryImpl) FindByKodeSubs(ctx context.Context, tx *sql.Tx, kodeSubKegiatans []string) ([]domain.SubKegiatan, error) {
+	if len(kodeSubKegiatans) <= 0 {
+		return []domain.SubKegiatan{}, nil
+	}
+	placeholders := make([]string, len(kodeSubKegiatans))
+	args := make([]any, len(kodeSubKegiatans))
+	for i, kodeSub := range kodeSubKegiatans {
+		placeholders[i] = "?"
+		args[i] = kodeSub
+	}
+	query := fmt.Sprintf(`
+    SELECT
+        sub.kode_subkegiatan,
+        sub.nama_subkegiatan
+    FROM tb_subkegiatan sub
+    WHERE sub.kode_subkegiatan IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.SubKegiatan
+
+	for rows.Next() {
+		var sub domain.SubKegiatan
+		err := rows.Scan(
+			&sub.KodeSubKegiatan,
+			&sub.NamaSubKegiatan,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, sub)
+	}
+
+	return results, nil
 }

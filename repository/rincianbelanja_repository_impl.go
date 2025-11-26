@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"strings"
 )
 
 type RincianBelanjaRepositoryImpl struct {
@@ -689,4 +690,62 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 	}
 
 	return result, nil
+}
+
+func (repository *RincianBelanjaRepositoryImpl) FindAnggaranByRekinIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinIds []string) ([]domain.TotalAnggaranRekin, error) {
+	// so ugly
+	if len(rekinIds) == 0 {
+		return []domain.TotalAnggaranRekin{}, nil
+	}
+
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	// renaksi then rincian belanja
+	query := fmt.Sprintf(`
+		SELECT
+          ren.rencana_kinerja_id,
+          COALESCE(SUM(rb.anggaran), 0) AS total_anggaran
+		FROM tb_rencana_aksi ren
+		LEFT JOIN tb_rincian_belanja rb
+               ON ren.id = rb.renaksi_id
+		WHERE ren.rencana_kinerja_id IN (%s)
+        GROUP BY ren.rencana_kinerja_id
+     `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]domain.TotalAnggaranRekin, 0)
+
+	for rows.Next() {
+		var rb domain.TotalAnggaranRekin
+
+		err := rows.Scan(
+			&rb.RekinId,
+			&rb.TotalAnggaran,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, rb)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
