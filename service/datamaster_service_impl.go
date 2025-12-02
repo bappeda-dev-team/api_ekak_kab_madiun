@@ -82,3 +82,75 @@ func (service *DataMasterServiceImpl) DataRBByTahun(ctx context.Context, tahunBa
 
 	return responses, nil
 }
+
+func (service *DataMasterServiceImpl) SaveRB(ctx context.Context, rb datamaster.RBRequest, userId int) (datamaster.RBResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return datamaster.RBResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// === Convert RBRequest → MasterRB ===
+	entity := datamaster.ConvertRBRequestToMaster(rb, userId)
+
+	// === 1. INSERT MASTER RB ===
+	rbID, err := service.DataMasterRepository.InsertRB(ctx, tx, entity, userId)
+	if err != nil {
+		return datamaster.RBResponse{}, err
+	}
+
+	// === Build Response RB ===
+	response := datamaster.RBResponse{
+		IdRB:          int(rbID),
+		JenisRB:       entity.JenisRB,
+		KegiatanUtama: entity.KegiatanUtama,
+		Keterangan:    entity.Keterangan,
+		TahunBaseline: entity.TahunBaseline,
+		TahunNext:     entity.TahunNext,
+		Indikator:     []datamaster.IndikatorRB{},
+	}
+
+	// === 2. INSERT INDIKATOR ===
+	for _, ind := range entity.Indikator {
+
+		// INSERT into DB
+		indikatorID, err := service.DataMasterRepository.InsertIndikator(ctx, tx, rbID, ind)
+		if err != nil {
+			return datamaster.RBResponse{}, err
+		}
+
+		// siapkan indikator response
+		indResp := datamaster.IndikatorRB{
+			IdRB:        int(rbID),
+			IdIndikator: indikatorID,
+			Indikator:   ind.Indikator,
+			TargetRB:    []datamaster.TargetRB{},
+		}
+
+		// === 3. INSERT TARGET ===
+		for _, t := range ind.TargetRB {
+
+			// simpan target
+			if err := service.DataMasterRepository.InsertTarget(ctx, tx, indikatorID, t); err != nil {
+				return datamaster.RBResponse{}, err
+			}
+
+			// tambahkan ke response
+			indResp.TargetRB = append(indResp.TargetRB, datamaster.TargetRB{
+				IdIndikator:       indikatorID,
+				TahunBaseline:     t.TahunBaseline,
+				TargetBaseline:    t.TargetBaseline,
+				RealisasiBaseline: t.RealisasiBaseline,
+				SatuanBaseline:    t.SatuanBaseline,
+				TahunNext:         t.TahunNext,
+				TargetNext:        t.TargetNext,
+				SatuanNext:        t.SatuanNext,
+			})
+		}
+
+		// masukkan indikator ke response
+		response.Indikator = append(response.Indikator, indResp)
+	}
+
+	return response, nil
+}

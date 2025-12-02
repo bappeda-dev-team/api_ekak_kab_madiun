@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain/datamaster"
 	"fmt"
 )
@@ -202,4 +203,92 @@ func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, t
 	}
 
 	return result, nil
+}
+func (r *DataMasterRepositoryImpl) InsertRB(ctx context.Context, tx *sql.Tx, req datamaster.MasterRB, userId int) (int64, error) {
+
+	query := `
+        INSERT INTO datamaster_rb (
+            jenis_rb, kegiatan_utama, keterangan,
+            tahun_baseline, tahun_next,
+            last_updated_by, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, 1)
+    `
+
+	res, err := tx.ExecContext(ctx, query,
+		req.JenisRB,
+		req.KegiatanUtama,
+		req.Keterangan,
+		req.TahunBaseline,
+		req.TahunNext,
+		userId,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.LastInsertId()
+}
+
+func (r *DataMasterRepositoryImpl) InsertIndikator(ctx context.Context, tx *sql.Tx, rbId int64, indikator datamaster.IndikatorRB) (string, error) {
+
+	indikatorID := helper.GenerateID("IND-RB")
+
+	query := `
+        INSERT INTO tb_indikator (id, id_rb, indikator)
+        VALUES (?, ?, ?)
+    `
+
+	_, err := tx.ExecContext(ctx, query,
+		indikatorID,
+		rbId,
+		indikator.Indikator,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return indikatorID, nil
+}
+func (r *DataMasterRepositoryImpl) InsertTarget(ctx context.Context, tx *sql.Tx, indikatorID string, t datamaster.TargetRB) error {
+
+	query := `
+        INSERT INTO tb_target (id, indikator_id, tahun, target, realisasi, satuan)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `
+
+	// baseline row
+	if t.TahunBaseline != 0 {
+		targetID := helper.GenerateID("TRGT-RB")
+
+		_, err := tx.ExecContext(ctx, query,
+			targetID,
+			indikatorID,
+			t.TahunBaseline,
+			t.TargetBaseline,
+			t.RealisasiBaseline,
+			t.SatuanBaseline,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	// next row
+	if t.TahunNext != 0 {
+		targetID := helper.GenerateID("TRGT-RB")
+
+		_, err := tx.ExecContext(ctx, query,
+			targetID,
+			indikatorID,
+			t.TahunNext,
+			t.TargetNext,
+			nil, // realisasi next → NULL
+			t.SatuanNext,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
