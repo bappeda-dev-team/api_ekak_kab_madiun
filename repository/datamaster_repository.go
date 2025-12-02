@@ -7,5 +7,5 @@ import (
 )
 
 type DataMasterRepository interface {
-	DataRBByTahun(ctx context.Context, tx *sql.Tx) ([]datamaster.MasterRB, error)
+	DataRBByTahun(ctx context.Context, tx *sql.Tx, tahun int) ([]datamaster.MasterRB, error)
 }

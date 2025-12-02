@@ -6,6 +6,8 @@ type RBResponse struct {
 	KegiatanUtama string        `json:"kegiatan_utama"`
 	Keterangan    string        `json:"keterangan"`
 	Indikator     []IndikatorRB `json:"indikator"`
+	TahunBaseline int           `json:"tahun_baseline"`
+	TahunNext     int           `json:"tahun_next"`
 }
 
 type IndikatorRB struct {

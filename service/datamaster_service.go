@@ -6,5 +6,5 @@ import (
 )
 
 type DataMasterService interface {
-	DataRBByTahun(ctx context.Context, tahunBase int) (datamaster.RBResponse, error)
+	DataRBByTahun(ctx context.Context, tahunBase int) ([]datamaster.RBResponse, error)
 }

@@ -1,11 +1,15 @@
 package datamaster
 
 type MasterRB struct {
-	Id            int
-	JenisRB       string
-	KegiatanUtama string
-	Keterangan    string
-	Indikator     []IndikatorRB
+	Id             int
+	JenisRB        string
+	KegiatanUtama  string
+	Keterangan     string
+	Indikator      []IndikatorRB
+	TahunBaseline  int
+	TahunNext      int
+	LastUpdatedBy  int
+	CurrentVersion int
 }
 
 type IndikatorRB struct {
@@ -16,8 +20,8 @@ type IndikatorRB struct {
 }
 
 type TargetRB struct {
-	IdIndikator       string
 	IdTarget          string
+	IdIndikator       string
 	TahunBaseline     int
 	TargetBaseline    int
 	RealisasiBaseline float32
