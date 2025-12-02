@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/service"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
@@ -56,7 +57,7 @@ func (controller *DataMasterControllerImpl) DataRB(w http.ResponseWriter, r *htt
 
 	helper.WriteToResponseBody(w, web.WebResponse{
 		Code:   200,
-		Status: "success",
+		Status: "SUCCESS",
 		Data:   response,
 	})
 }
@@ -200,6 +201,16 @@ func (c *DataMasterControllerImpl) UpdateRB(writer http.ResponseWriter, request 
 	// ===============================
 	response, err := c.DataMasterService.UpdateRB(request.Context(), rb, userId, rbIdNum)
 	if err != nil {
+
+		if err.Error() == "rb_not_found" {
+			helper.WriteToResponseBody(writer, web.WebResponse{
+				Code:   http.StatusNotFound,
+				Status: "NOT_FOUND",
+				Data:   "Data RB tidak ditemukan",
+			})
+			return
+		}
+
 		helper.WriteToResponseBody(writer, web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: "ERROR",
@@ -215,5 +226,71 @@ func (c *DataMasterControllerImpl) UpdateRB(writer http.ResponseWriter, request 
 		Code:   http.StatusCreated,
 		Status: "CREATED",
 		Data:   response,
+	})
+}
+
+func (c *DataMasterControllerImpl) DeleteRB(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	// Guard, Hanya authorization tertinggi yang boleh
+	// ===============================
+	// 1. Ambil User dari JWT Claims
+	// ===============================
+	claims := helper.GetUserInfo(r.Context())
+	if claims.UserId == 0 {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   http.StatusUnauthorized,
+			Status: "UNAUTHORIZED",
+			Data:   "Token invalid",
+		})
+		return
+	}
+	roles := claims.Roles
+	allowed := slices.Contains(roles, "super_admin")
+
+	if !allowed {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   http.StatusForbidden,
+			Status: "FORBIDDEN",
+			Data:   "Akses ditolak, role tidak diizinkan",
+		})
+		return
+	}
+
+	rbId := params.ByName("rb_id")
+	if rbId == "" {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD_REQUEST",
+			Data:   "ID TIDAK VALID",
+		})
+		return
+	}
+
+	rbIdNum, err := strconv.Atoi(rbId)
+	if err != nil {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD_REQUEST",
+			Data:   "ID TIDAK VALID",
+		})
+		return
+	}
+
+	err = c.DataMasterService.DeleteRB(r.Context(), rbIdNum)
+	if err != nil {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	// ===============================
+	// 5. Response sukses
+	// ===============================
+	helper.WriteToResponseBody(w, web.WebResponse{
+		Code:   http.StatusNoContent,
+		Status: "SUCCESS",
+		Data:   "RB Dihapus",
 	})
 }

@@ -473,6 +473,7 @@ func NewRouter(
 	router.GET("/datamaster/rb", dataMasterController.DataRB)
 	router.POST("/datamaster/rb/create", dataMasterController.CreateRB)
 	router.PUT("/datamaster/rb/:rb_id/update", dataMasterController.UpdateRB)
+	router.DELETE("/datamaster/rb/:rb_id/delete", dataMasterController.DeleteRB)
 
 	return router
 }

@@ -14,4 +14,5 @@ type DataMasterRepository interface {
 	InsertTarget(ctx context.Context, tx *sql.Tx, indikatorID string, t datamaster.TargetRB) error
 	FindRBById(ctx context.Context, tx *sql.Tx, rbId int) (datamaster.MasterRB, error)
 	DeleteAllIndikatorAndTargetByRB(ctx context.Context, tx *sql.Tx, rbId int) error
+	DeleteRB(ctx context.Context, tx *sql.Tx, rbId int) error
 }

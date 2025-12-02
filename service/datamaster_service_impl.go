@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"database/sql"
@@ -165,7 +166,7 @@ func (service *DataMasterServiceImpl) UpdateRB(ctx context.Context, rb datamaste
 	// === 1. Cek apakah RB ada ===
 	existingRB, err := service.DataMasterRepository.FindRBById(ctx, tx, rbId)
 	if err != nil {
-		return datamaster.RBResponse{}, fmt.Errorf("RB tidak ditemukan")
+		return datamaster.RBResponse{}, errors.New("rb_not_found")
 	}
 
 	// === 2. Convert RBRequest → Entity ===
@@ -229,4 +230,18 @@ func (service *DataMasterServiceImpl) UpdateRB(ctx context.Context, rb datamaste
 	}
 
 	return response, nil
+}
+
+func (s *DataMasterServiceImpl) DeleteRB(ctx context.Context, rbId int) error {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	err = s.DataMasterRepository.DeleteRB(ctx, tx, rbId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

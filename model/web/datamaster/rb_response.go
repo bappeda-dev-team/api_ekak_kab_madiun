@@ -26,5 +26,5 @@ type TargetRB struct {
 	SatuanBaseline    string  `json:"satuan_baseline"`
 	TahunNext         int     `json:"tahun_next"`
 	TargetNext        int     `json:"target_next,string"`
-	SatuanNext        string  `json:"satuan_next,string"`
+	SatuanNext        string  `json:"satuan_next"`
 }

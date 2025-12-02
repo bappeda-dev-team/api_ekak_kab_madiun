@@ -360,3 +360,15 @@ func (r *DataMasterRepositoryImpl) FindRBById(ctx context.Context, tx *sql.Tx, r
 
 	return rb, nil
 }
+
+func (repo *DataMasterRepositoryImpl) DeleteRB(ctx context.Context, tx *sql.Tx, rbId int) error {
+	// delete indikator target
+	err := repo.DeleteAllIndikatorAndTargetByRB(ctx, tx, rbId)
+	if err != nil {
+		return err
+	}
+
+	query := `DELETE FROM datamaster_rb WHERE id = ?`
+	_, err = tx.ExecContext(ctx, query, rbId)
+	return err
+}
