@@ -74,10 +74,17 @@ func (service *SasaranOpdServiceImpl) FindAll(ctx context.Context, KodeOpd strin
 		return sasaranOpds[i].NamaPohon < sasaranOpds[j].NamaPohon
 	})
 
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, KodeOpd)
+	if err != nil {
+		return nil, err
+	}
+
 	var responses []sasaranopd.SasaranOpdResponse
 	for _, sasaranOpd := range sasaranOpds {
 		response := sasaranopd.SasaranOpdResponse{
 			IdPohon:    sasaranOpd.IdPohon,
+			KodeOpd:    sasaranOpd.KodeOpd,
+			NamaOpd:    opd.NamaOpd,
 			NamaPohon:  sasaranOpd.NamaPohon,
 			JenisPohon: sasaranOpd.JenisPohon,
 			LevelPohon: sasaranOpd.LevelPohon,
@@ -694,6 +701,11 @@ func (service *SasaranOpdServiceImpl) FindByTahun(ctx context.Context, kodeOpd s
 		return nil, err
 	}
 
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, sasaranOpds[0].KodeOpd)
+	if err != nil {
+		return nil, err
+	}
+
 	var responses []sasaranopd.SasaranOpdResponse
 	for _, sasaranOpd := range sasaranOpds {
 		// Validasi tahun pokin terhadap range sasaran
@@ -701,6 +713,8 @@ func (service *SasaranOpdServiceImpl) FindByTahun(ctx context.Context, kodeOpd s
 
 		response := sasaranopd.SasaranOpdResponse{
 			IdPohon:    sasaranOpd.IdPohon,
+			KodeOpd:    sasaranOpd.KodeOpd,
+			NamaOpd:    opd.NamaOpd,
 			NamaPohon:  sasaranOpd.NamaPohon,
 			JenisPohon: sasaranOpd.JenisPohon,
 			LevelPohon: sasaranOpd.LevelPohon,

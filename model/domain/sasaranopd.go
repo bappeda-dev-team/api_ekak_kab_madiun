@@ -4,6 +4,8 @@ type SasaranOpd struct {
 	Id                int
 	IdPohon           int
 	NamaPohon         string
+	KodeOpd           string
+	NamaOpd           string
 	JenisPohon        string
 	LevelPohon        int
 	TahunPohon        string
