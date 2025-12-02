@@ -154,3 +154,79 @@ func (service *DataMasterServiceImpl) SaveRB(ctx context.Context, rb datamaster.
 
 	return response, nil
 }
+
+func (service *DataMasterServiceImpl) UpdateRB(ctx context.Context, rb datamaster.RBRequest, userId int, rbId int) (datamaster.RBResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return datamaster.RBResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// === 1. Cek apakah RB ada ===
+	existingRB, err := service.DataMasterRepository.FindRBById(ctx, tx, rbId)
+	if err != nil {
+		return datamaster.RBResponse{}, fmt.Errorf("RB tidak ditemukan")
+	}
+
+	// === 2. Convert RBRequest → Entity ===
+	entity := datamaster.ConvertRBRequestToMaster(rb, userId)
+	entity.Id = existingRB.Id // penting
+
+	// === 3. Update master RB ===
+	if err := service.DataMasterRepository.UpdateRB(ctx, tx, entity, rbId); err != nil {
+		return datamaster.RBResponse{}, err
+	}
+
+	// === 4. Hapus semua indikator & target lama ===
+	if err := service.DataMasterRepository.DeleteAllIndikatorAndTargetByRB(ctx, tx, rbId); err != nil {
+		return datamaster.RBResponse{}, err
+	}
+
+	// === 5. Insert indikator & target baru ===
+	response := datamaster.RBResponse{
+		IdRB:          rbId,
+		JenisRB:       entity.JenisRB,
+		KegiatanUtama: entity.KegiatanUtama,
+		Keterangan:    entity.Keterangan,
+		TahunBaseline: entity.TahunBaseline,
+		TahunNext:     entity.TahunNext,
+		Indikator:     []datamaster.IndikatorRB{},
+	}
+
+	for _, ind := range entity.Indikator {
+
+		// Insert indikator baru
+		indikatorID, err := service.DataMasterRepository.InsertIndikator(ctx, tx, int64(rbId), ind)
+		if err != nil {
+			return datamaster.RBResponse{}, err
+		}
+
+		indikatorRes := datamaster.IndikatorRB{
+			IdRB:        rbId,
+			IdIndikator: indikatorID,
+			Indikator:   ind.Indikator,
+			TargetRB:    []datamaster.TargetRB{},
+		}
+
+		for _, t := range ind.TargetRB {
+			if err := service.DataMasterRepository.InsertTarget(ctx, tx, indikatorID, t); err != nil {
+				return datamaster.RBResponse{}, err
+			}
+
+			indikatorRes.TargetRB = append(indikatorRes.TargetRB, datamaster.TargetRB{
+				IdIndikator:       indikatorID,
+				TahunBaseline:     t.TahunBaseline,
+				TargetBaseline:    t.TargetBaseline,
+				RealisasiBaseline: t.RealisasiBaseline,
+				SatuanBaseline:    t.SatuanBaseline,
+				TahunNext:         t.TahunNext,
+				TargetNext:        t.TargetNext,
+				SatuanNext:        t.SatuanNext,
+			})
+		}
+
+		response.Indikator = append(response.Indikator, indikatorRes)
+	}
+
+	return response, nil
+}

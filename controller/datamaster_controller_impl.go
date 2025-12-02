@@ -128,3 +128,92 @@ func (c *DataMasterControllerImpl) CreateRB(writer http.ResponseWriter, request 
 		Data:   response,
 	})
 }
+
+func (c *DataMasterControllerImpl) UpdateRB(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	// ===============================
+	// 1. Ambil User dari JWT Claims
+	// ===============================
+	claims := helper.GetUserInfo(request.Context())
+	if claims.UserId == 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusUnauthorized,
+			Status: "UNAUTHORIZED",
+			Data:   "Token invalid",
+		})
+		return
+	}
+
+	userId := claims.UserId
+
+	rbId := params.ByName("rb_id")
+
+	if rbId == "" {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD_REQUEST",
+			Data:   "ID TIDAK VALID",
+		})
+		return
+	}
+
+	rbIdNum, err := strconv.Atoi(rbId)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD_REQUEST",
+			Data:   "ID TIDAK VALID",
+		})
+		return
+	}
+
+	// ===============================
+	// 2. Decode JSON Request Body
+	// ===============================
+	rb := datamaster.RBRequest{}
+	helper.ReadFromRequestBody(request, &rb)
+
+	// ===============================
+	// 3. Validasi Minimal
+	// ===============================
+	if rb.JenisRB == "" || rb.KegiatanUtama == "" || rb.TahunBaseline == 0 || rb.TahunNext == 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD_REQUEST",
+			Data:   "Field wajib tidak boleh kosong",
+		})
+		return
+	}
+
+	if len(rb.Indikator) == 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD_REQUEST",
+			Data:   "Indikator minimal 1",
+		})
+		return
+	}
+
+	// ===============================
+	// 4. Panggil Service SaveRB
+	// ===============================
+	response, err := c.DataMasterService.UpdateRB(request.Context(), rb, userId, rbIdNum)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	// ===============================
+	// 5. Response sukses
+	// ===============================
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusCreated,
+		Status: "CREATED",
+		Data:   response,
+	})
+}

@@ -199,7 +199,7 @@ func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, t
 	}
 
 	if len(result) == 0 {
-		return nil, fmt.Errorf("no data found")
+		return []datamaster.MasterRB{}, nil
 	}
 
 	return result, nil
@@ -291,4 +291,72 @@ func (r *DataMasterRepositoryImpl) InsertTarget(ctx context.Context, tx *sql.Tx,
 	}
 
 	return nil
+}
+
+func (r *DataMasterRepositoryImpl) UpdateRB(ctx context.Context, tx *sql.Tx, req datamaster.MasterRB, rbId int) error {
+	query := `
+		UPDATE datamaster_rb
+		SET jenis_rb = ?, kegiatan_utama = ?, keterangan = ?,
+		    tahun_baseline = ?, tahun_next = ?, last_updated_by = ?,
+		    current_version = current_version + 1
+		WHERE id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, query,
+		req.JenisRB,
+		req.KegiatanUtama,
+		req.Keterangan,
+		req.TahunBaseline,
+		req.TahunNext,
+		req.LastUpdatedBy,
+		rbId,
+	)
+
+	return err
+}
+
+func (r *DataMasterRepositoryImpl) DeleteAllIndikatorAndTargetByRB(ctx context.Context, tx *sql.Tx, rbId int) error {
+
+	// Delete target by indikator_id (cascade manually)
+	queryTarget := `
+		DELETE t FROM tb_target t
+		JOIN tb_indikator i ON t.indikator_id = i.id
+		WHERE i.id_rb = ?
+	`
+
+	if _, err := tx.ExecContext(ctx, queryTarget, rbId); err != nil {
+		return err
+	}
+
+	// Delete indikator
+	queryIndikator := `DELETE FROM tb_indikator WHERE id_rb = ?`
+
+	_, err := tx.ExecContext(ctx, queryIndikator, rbId)
+	return err
+}
+
+func (r *DataMasterRepositoryImpl) FindRBById(ctx context.Context, tx *sql.Tx, rbId int) (datamaster.MasterRB, error) {
+	query := `
+		SELECT id, jenis_rb, kegiatan_utama, keterangan, tahun_baseline, tahun_next
+		FROM datamaster_rb
+		WHERE id = ? AND is_active = 1
+	`
+
+	row := tx.QueryRowContext(ctx, query, rbId)
+
+	var rb datamaster.MasterRB
+
+	err := row.Scan(
+		&rb.Id,
+		&rb.JenisRB,
+		&rb.KegiatanUtama,
+		&rb.Keterangan,
+		&rb.TahunBaseline,
+		&rb.TahunNext,
+	)
+	if err != nil {
+		return datamaster.MasterRB{}, err
+	}
+
+	return rb, nil
 }

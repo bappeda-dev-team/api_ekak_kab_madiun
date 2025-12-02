@@ -472,6 +472,7 @@ func NewRouter(
 	// RB
 	router.GET("/datamaster/rb", dataMasterController.DataRB)
 	router.POST("/datamaster/rb/create", dataMasterController.CreateRB)
+	router.PUT("/datamaster/rb/:rb_id/update", dataMasterController.UpdateRB)
 
 	return router
 }
