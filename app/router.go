@@ -54,6 +54,7 @@ func NewRouter(
 	csfController controller.CSFController,
 	programUnggulanController controller.ProgramUnggulanController,
 	matrixRenjaController controller.MatrixRenjaController,
+	dataMasterController controller.DataMasterController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -467,6 +468,9 @@ func NewRouter(
 	router.GET("/pohon_kinerja_opd/control_pokin_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ControlPokinOpd)
 	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
 	router.GET("/pohon_kinerja_opd/leaderboard_pokin_opd/:tahun", pohonKinerjaOpdController.LeaderboardPokinOpd)
+
+	// RB
+	router.GET("/datamaster/rb", dataMasterController.DataRB)
 
 	return router
 }
