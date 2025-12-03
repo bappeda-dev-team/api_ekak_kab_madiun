@@ -11,4 +11,5 @@ type DataMasterController interface {
 	CreateRB(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	UpdateRB(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	DeleteRB(w http.ResponseWriter, r *http.Request, params httprouter.Params)
+	FindByTahun(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }
