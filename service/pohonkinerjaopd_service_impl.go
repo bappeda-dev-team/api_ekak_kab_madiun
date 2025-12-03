@@ -741,6 +741,29 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 			// Konversi keterangan program ke response
 			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+
+				// -------- CASE RB --------
+				if tagging.NamaTagging == "RB" {
+					rbId, err := strconv.Atoi(keterangan.KodeProgramUnggulan)
+					if err != nil {
+						continue
+					}
+
+					rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+					if err != nil {
+						continue
+					}
+
+					// Response
+					keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+						KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+						RencanaImplementasi: &rbTagging.KegiatanUtama,
+						Tahun:               keterangan.Tahun,
+					})
+
+					continue // penting: JANGAN LANJUT KE GENERAL LOGIC
+				}
+
 				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
 				if err != nil {
 					continue
@@ -1298,6 +1321,28 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponse(ctx context.Co
 		for _, tagging := range taggingList {
 			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+
+				// -------- CASE RB --------
+				if tagging.NamaTagging == "RB" {
+					rbId, err := strconv.Atoi(keterangan.KodeProgramUnggulan)
+					if err != nil {
+						continue
+					}
+
+					rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+					if err != nil {
+						continue
+					}
+
+					// Response
+					keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+						KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+						RencanaImplementasi: &rbTagging.KegiatanUtama,
+						Tahun:               keterangan.Tahun,
+					})
+
+					continue // penting: JANGAN LANJUT KE GENERAL LOGIC
+				}
 
 				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
 				if err != nil {
