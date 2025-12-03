@@ -27,12 +27,13 @@ type PohonKinerjaOpdServiceImpl struct {
 	tujuanOpdRepository       repository.TujuanOpdRepository
 	crosscuttingOpdRepository repository.CrosscuttingOpdRepository
 	reviewRepository          repository.ReviewRepository
+	dataMasterRepository      repository.DataMasterRepository
 	DB                        *sql.DB
 	Validate                  *validator.Validate
 	ProgramUnggulanRepository repository.ProgramUnggulanRepository
 }
 
-func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaOpdServiceImpl {
+func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, dataMasterRepository repository.DataMasterRepository, DB *sql.DB, validate *validator.Validate, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -40,6 +41,7 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		tujuanOpdRepository:       tujuanOpdRepository,
 		crosscuttingOpdRepository: crosscuttingOpdRepository,
 		reviewRepository:          reviewRepository,
+		dataMasterRepository:      dataMasterRepository,
 		DB:                        DB,
 		Validate:                  validate,
 		ProgramUnggulanRepository: programUnggulanRepository,
@@ -149,36 +151,67 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	var taggingResponses []pohonkinerja.TaggingResponse
 
 	for _, tagging := range request.TaggingPokin {
+
 		var keteranganList []domain.KeteranganTagging
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
-			// Ambil detail program unggulan
+
+			// -------- CASE RB --------
+			if tagging.NamaTagging == "RB" {
+				rbId, err := strconv.Atoi(keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
+
+				rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+				if err != nil {
+					continue
+				}
+
+				// Domain
+				keteranganList = append(keteranganList, domain.KeteranganTagging{
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					Tahun:               keterangan.Tahun,
+				})
+
+				// Response
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: &rbTagging.KegiatanUtama,
+					Tahun:               keterangan.Tahun,
+				})
+
+				continue // penting: JANGAN LANJUT KE GENERAL LOGIC
+			}
+
+			// -------- CASE NON-RB --------
 			programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
 			if err != nil {
 				continue
 			}
 
-			// Tambahkan ke list domain
+			// Domain
 			keteranganList = append(keteranganList, domain.KeteranganTagging{
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
 				Tahun:               keterangan.Tahun,
 			})
 
-			// Tambahkan ke response
+			// Response
 			keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
 				KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
 				RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
-				Tahun:               request.Tahun, // Tambahkan tahun ke response
+				Tahun:               keterangan.Tahun,
 			})
 		}
 
-		// Tambahkan ke list domain
+		// Tambah ke list domain tagging
 		taggingList = append(taggingList, domain.TaggingPokin{
 			NamaTagging:              tagging.NamaTagging,
 			KeteranganTaggingProgram: keteranganList,
 		})
 
-		// Tambahkan ke response
+		// Tambah ke response tagging
 		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
 			NamaTagging:              tagging.NamaTagging,
 			KeteranganTaggingProgram: keteranganResponses,
@@ -540,6 +573,28 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 	for _, tagging := range taggingResults {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+
+			// -------- CASE RB --------
+			if tagging.NamaTagging == "RB" {
+				rbId, err := strconv.Atoi(keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
+
+				rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+				if err != nil {
+					continue
+				}
+
+				// Response
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: &rbTagging.KegiatanUtama,
+					Tahun:               keterangan.Tahun,
+				})
+
+				continue // penting: JANGAN LANJUT KE GENERAL LOGIC
+			}
 			programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
 			if err != nil {
 				continue
