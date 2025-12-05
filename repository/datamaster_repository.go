@@ -15,4 +15,5 @@ type DataMasterRepository interface {
 	FindRBById(ctx context.Context, tx *sql.Tx, rbId int) (datamaster.MasterRB, error)
 	DeleteAllIndikatorAndTargetByRB(ctx context.Context, tx *sql.Tx, rbId int) error
 	DeleteRB(ctx context.Context, tx *sql.Tx, rbId int) error
+	PokinByIdRBs(ctx context.Context, tx *sql.Tx, listIdRB []int) ([]datamaster.PokinIdRBTagging, error)
 }

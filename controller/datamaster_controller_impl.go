@@ -333,3 +333,41 @@ func (controller *DataMasterControllerImpl) FindByTahun(w http.ResponseWriter, r
 		Data:   response,
 	})
 }
+
+func (c *DataMasterControllerImpl) LaporanByTahun(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	tahunNextParams := params.ByName("tahunNext")
+	if tahunNextParams == "" {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "tahunNext is missing",
+		})
+		return
+	}
+	tahunInt, err := strconv.Atoi(tahunNextParams)
+	if err != nil {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "tahunNext is malformatted",
+		})
+		return
+	}
+
+	response, err := c.DataMasterService.LaporanByTahun(r.Context(), tahunInt)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   500,
+			Status: "ERROR",
+			Data:   "Terjadi kesalahan server saat mengambil data RB.",
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(w, web.WebResponse{
+		Code:   200,
+		Status: "SUCCESS",
+		Data:   response,
+	})
+}

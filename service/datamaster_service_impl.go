@@ -278,3 +278,79 @@ func (service *DataMasterServiceImpl) FindByTahun(ctx context.Context, tahunBase
 
 	return responses, nil
 }
+
+func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunNext int) ([]datamaster.RbLaporanTahunanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil data dari repository
+	result, err := service.DataMasterRepository.DataRBByTahun(ctx, tx, tahunNext)
+	if err != nil {
+		return nil, err
+	}
+
+	// responses
+	responses := make([]datamaster.RbLaporanTahunanResponse, 0, len(result))
+
+	// Convert MasterRB → RBResponse
+	rbTahunan := make([]datamaster.RbLaporanTahunanResponse, 0, len(result))
+	// list of rb
+	listIdRB := make([]int, 0, len(result))
+
+	for _, rb := range result {
+		// Mapping MasterRB → RBResponse
+		resp := datamaster.RbLaporanTahunanResponse{
+			IdRB:          rb.Id,
+			JenisRB:       rb.JenisRB,
+			KegiatanUtama: rb.KegiatanUtama,
+			Keterangan:    rb.Keterangan,
+			TahunBaseline: rb.TahunBaseline,
+			TahunNext:     rb.TahunNext,
+			Indikator:     make([]datamaster.IndikatorRB, 0),
+			RencanaAksis:  make([]datamaster.RencanaAksiRB, 0),
+		}
+
+		// Mapping Indikator
+		for _, ind := range rb.Indikator {
+			indResp := datamaster.IndikatorRB{
+				IdIndikator: ind.IdIndikator,
+				IdRB:        ind.IdRB,
+				Indikator:   ind.Indikator,
+				TargetRB:    make([]datamaster.TargetRB, 0),
+			}
+
+			for _, tar := range ind.TargetRB {
+				rbResp := datamaster.TargetRB{
+					IdTarget:          tar.IdTarget,
+					IdIndikator:       tar.IdIndikator,
+					TahunBaseline:     tar.TahunBaseline,
+					TargetBaseline:    tar.TargetBaseline,
+					RealisasiBaseline: tar.RealisasiBaseline,
+					SatuanBaseline:    tar.SatuanBaseline,
+					TahunNext:         tar.TahunNext,
+					TargetNext:        tar.TargetNext,
+					SatuanNext:        tar.SatuanNext,
+				}
+				indResp.TargetRB = append(indResp.TargetRB, rbResp)
+			}
+
+			resp.Indikator = append(resp.Indikator, indResp)
+		}
+
+		rbTahunan = append(rbTahunan, resp)
+		listIdRB = append(listIdRB, resp.IdRB)
+	}
+
+	// id pokin, id rb
+	// listPokinRB := make([]int)
+	// find kebutuhan lewat pokin heueheuheu
+	// pokinRbRes, err := service.DataMasterRepository.PokinByIdRBs(ctx, tx, listIdRB)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	return responses, nil
+}

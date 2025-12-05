@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain/datamaster"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 type DataMasterRepositoryImpl struct {
@@ -371,4 +373,55 @@ func (repo *DataMasterRepositoryImpl) DeleteRB(ctx context.Context, tx *sql.Tx, 
 	query := `DELETE FROM datamaster_rb WHERE id = ?`
 	_, err = tx.ExecContext(ctx, query, rbId)
 	return err
+}
+
+func (repo *DataMasterRepositoryImpl) PokinByIdRBs(ctx context.Context, tx *sql.Tx, listIdRB []int) ([]datamaster.PokinIdRBTagging, error) {
+	if len(listIdRB) == 0 {
+		return []datamaster.PokinIdRBTagging{}, errors.New("ids tidak boleh kosong")
+	}
+
+	// Buat placeholder untuk IN clause
+	placeholders := make([]string, len(listIdRB))
+	args := make([]any, len(listIdRB))
+	for i, id := range listIdRB {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`SELECT ket.id_tagging, ket.kode_program_unggulan, rb.kegiatan_utama, tag.id_pokin, tag.nama_tagging, pokin.nama_pohon, pokin.kode_opd, pokin.jenis_pohon
+		FROM tb_keterangan_tagging_program_unggulan ket
+		JOIN tb_tagging_pokin tag ON ket.id_tagging = tag.id AND tag.nama_tagging = 'RB'
+		JOIN datamaster_rb rb ON ket.kode_program_unggulan = rb.id
+		JOIN tb_pohon_kinerja pokin ON tag.id_pokin = pokin.id
+		WHERE ket.kode_program_unggulan IN (%s)`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script)
+	if err != nil {
+		return []datamaster.PokinIdRBTagging{}, err
+	}
+	defer rows.Close()
+
+	var result []datamaster.PokinIdRBTagging
+	for rows.Next() {
+		var pokinRB datamaster.PokinIdRBTagging
+		err := rows.Scan(
+			&pokinRB.IdTagging,
+			&pokinRB.KodeRB,
+			&pokinRB.KegiatanUtama,
+			&pokinRB.IdPokin,
+			&pokinRB.NamaTagging,
+			&pokinRB.NamaPohon,
+			&pokinRB.KodeOpd,
+			&pokinRB.JenisPohon,
+		)
+		if err != nil {
+			return []datamaster.PokinIdRBTagging{}, err
+		}
+		result = append(result, pokinRB)
+	}
+
+	if err = rows.Err(); err != nil {
+		return []datamaster.PokinIdRBTagging{}, err
+	}
+	return result, nil
 }
