@@ -12,14 +12,16 @@ import (
 )
 
 type DataMasterServiceImpl struct {
-	DataMasterRepository repository.DataMasterRepository
-	DB                   *sql.DB
+	DataMasterRepository     repository.DataMasterRepository
+	RencanaKinerjaRepository repository.RencanaKinerjaRepository
+	DB                       *sql.DB
 }
 
-func NewDataMasterServiceImpl(dataMasterRepository repository.DataMasterRepository, DB *sql.DB) *DataMasterServiceImpl {
+func NewDataMasterServiceImpl(dataMasterRepository repository.DataMasterRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB) *DataMasterServiceImpl {
 	return &DataMasterServiceImpl{
-		DataMasterRepository: dataMasterRepository,
-		DB:                   DB,
+		DataMasterRepository:     dataMasterRepository,
+		RencanaKinerjaRepository: rencanaKinerjaRepository,
+		DB:                       DB,
 	}
 }
 
@@ -308,16 +310,14 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 		return nil, err
 	}
 
-	// responses
+	// responses slice + map untuk lookup cepat
 	responses := make([]datamaster.RbLaporanTahunanResponse, 0, len(result))
-
-	// Convert MasterRB → RBResponse
-	rbTahunan := make([]datamaster.RbLaporanTahunanResponse, 0, len(result))
-	// list of rb
+	respMap := make(map[int]*datamaster.RbLaporanTahunanResponse, len(result))
 	listIdRB := make([]int, 0, len(result))
 
 	for _, rb := range result {
-		// Mapping MasterRB → RBResponse
+		listIdRB = append(listIdRB, rb.Id)
+
 		resp := datamaster.RbLaporanTahunanResponse{
 			IdRB:          rb.Id,
 			JenisRB:       rb.JenisRB,
@@ -325,21 +325,20 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 			Keterangan:    rb.Keterangan,
 			TahunBaseline: rb.TahunBaseline,
 			TahunNext:     rb.TahunNext,
-			Indikator:     make([]datamaster.IndikatorRB, 0),
+			Indikator:     make([]datamaster.IndikatorRB, 0, len(rb.Indikator)),
 			RencanaAksis:  make([]datamaster.RencanaAksiRB, 0),
 		}
 
-		// Mapping Indikator
 		for _, ind := range rb.Indikator {
 			indResp := datamaster.IndikatorRB{
 				IdIndikator: ind.IdIndikator,
 				IdRB:        ind.IdRB,
 				Indikator:   ind.Indikator,
-				TargetRB:    make([]datamaster.TargetRB, 0),
+				TargetRB:    make([]datamaster.TargetRB, 0, len(ind.TargetRB)),
 			}
 
 			for _, tar := range ind.TargetRB {
-				rbResp := datamaster.TargetRB{
+				tarResp := datamaster.TargetRB{
 					IdTarget:          tar.IdTarget,
 					IdIndikator:       tar.IdIndikator,
 					TahunBaseline:     tar.TahunBaseline,
@@ -350,23 +349,89 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 					TargetNext:        tar.TargetNext,
 					SatuanNext:        tar.SatuanNext,
 				}
-				indResp.TargetRB = append(indResp.TargetRB, rbResp)
+				indResp.TargetRB = append(indResp.TargetRB, tarResp)
 			}
 
 			resp.Indikator = append(resp.Indikator, indResp)
 		}
 
-		rbTahunan = append(rbTahunan, resp)
-		listIdRB = append(listIdRB, resp.IdRB)
+		// append ke slice responses, lalu simpan pointer ke map
+		responses = append(responses, resp)
+		respMap[rb.Id] = &responses[len(responses)-1]
 	}
 
-	// id pokin, id rb
-	// listPokinRB := make([]int)
-	// find kebutuhan lewat pokin heueheuheu
-	// pokinRbRes, err := service.DataMasterRepository.PokinByIdRBs(ctx, tx, listIdRB)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	// find kebutuhan lewat pokin
+	pokinRbRes, err := service.DataMasterRepository.PokinByIdRBs(ctx, tx, listIdRB)
+	if err != nil {
+		return nil, err
+	}
+
+	// buat map dari IdPokin -> KodeRB agar saat memproses rekin kita tahu RB targetnya
+	pokinToRB := make(map[int]int, len(pokinRbRes)) // IdPokin -> KodeRB
+	for _, pokin := range pokinRbRes {
+		pokinToRB[pokin.IdPokin] = pokin.KodeRB
+	}
+
+	// list pokin id untuk query rekin
+	listPokinIds := make([]int, 0, len(pokinRbRes))
+	for _, pokin := range pokinRbRes {
+		listPokinIds = append(listPokinIds, pokin.IdPokin)
+	}
+
+	// get the rekin by id pokin
+	rekinRes, err := service.RencanaKinerjaRepository.FindByPokinIds(ctx, tx, listPokinIds, tahunNext)
+	if err != nil {
+		return nil, err
+	}
+
+	// untuk tiap rekin, buat RencanaAksiRB dan append ke RB yang sesuai
+	for _, rekin := range rekinRes {
+		// bangun response RencanaAksiRB dari rekin
+		ra := datamaster.RencanaAksiRB{
+			RencanaAksi:     rekin.NamaRencanaKinerja,
+			IndikatorOutput: make([]datamaster.IndikatorRencanaAksiRB, 0, len(rekin.Indikator)),
+			Anggaran:        0,
+			Realisasi:       0,
+			Capaian:         "0%",
+			OpdKoordinator:  rekin.NamaOpd,
+			NipPelaksana:    rekin.PegawaiId,
+			NamaPelaksana:   rekin.NamaPegawai,
+			OpdCrosscutting: make([]datamaster.OpdCrosscutting, 0),
+		}
+
+		for _, ind := range rekin.Indikator {
+			indResp := datamaster.IndikatorRencanaAksiRB{
+				Indikator:       ind.Indikator,
+				TargetIndikator: make([]datamaster.TargetIndikatorRencanaAksiRB, 0, len(ind.Target)),
+			}
+
+			for _, tar := range ind.Target {
+				tarResp := datamaster.TargetIndikatorRencanaAksiRB{
+					Target:    tar.Target,
+					Realisasi: "0",
+					Satuan:    tar.Satuan,
+					Capaian:   "0%",
+					Tahun:     tar.Tahun,
+				}
+				indResp.TargetIndikator = append(indResp.TargetIndikator, tarResp)
+			}
+
+			ra.IndikatorOutput = append(ra.IndikatorOutput, indResp)
+		}
+
+		// cari kodeRB lewat pokinToRB map
+		// Asumsi: rekin.PokinId adalah field yang mengacu ke IdPokin
+		kodeRB, ok := pokinToRB[rekin.IdPohon]
+		if !ok {
+			// jika tidak ditemukan, lewati (atau log) — tergantung kebijakan kamu
+			continue
+		}
+
+		// append rencana aksi ke RB yang sesuai (cek kalau RB ada di respMap)
+		if r, exists := respMap[kodeRB]; exists {
+			r.RencanaAksis = append(r.RencanaAksis, ra)
+		}
+	}
 
 	return responses, nil
 }

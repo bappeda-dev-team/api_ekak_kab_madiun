@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type RencanaKinerjaRepositoryImpl struct {
@@ -80,7 +82,7 @@ func (repository *RencanaKinerjaRepositoryImpl) Update(ctx context.Context, tx *
 
 func (repository *RencanaKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error) {
 	script := "SELECT id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, created_at FROM tb_rencana_kinerja WHERE 1=1"
-	params := []interface{}{}
+	params := []any{}
 
 	if pegawaiId != "" {
 		script += " AND pegawai_id = ?"
@@ -119,7 +121,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAll(ctx context.Context, tx 
 
 func (repository *RencanaKinerjaRepositoryImpl) FindIndikatorbyRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error) {
 	script := "SELECT id, rencana_kinerja_id, indikator, tahun FROM tb_indikator WHERE rencana_kinerja_id = ?"
-	params := []interface{}{rekinId}
+	params := []any{rekinId}
 
 	rows, err := tx.QueryContext(ctx, script, params...)
 	if err != nil {
@@ -143,7 +145,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIndikatorbyRekinId(ctx conte
 
 func (repository *RencanaKinerjaRepositoryImpl) FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error) {
 	script := "SELECT id, indikator_id, target, satuan, tahun FROM tb_target WHERE indikator_id = ?"
-	params := []interface{}{indikatorId}
+	params := []any{indikatorId}
 
 	rows, err := tx.QueryContext(ctx, script, params...)
 	if err != nil {
@@ -167,7 +169,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindTargetByIndikatorId(ctx cont
 
 func (repository *RencanaKinerjaRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string, kodeOPD string, tahun string) (domain.RencanaKinerja, error) {
 	script := "SELECT id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id FROM tb_rencana_kinerja WHERE id = ?"
-	params := []interface{}{id}
+	params := []any{id}
 
 	if kodeOPD != "" {
 		script += " AND kode_opd = ?"
@@ -224,7 +226,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAllRincianKak(ctx context.Co
 		FROM tb_rencana_kinerja 
 		WHERE 1=1
 	`
-	var params []interface{}
+	var params []any
 
 	if rencanaKinerjaId != "" {
 		script += " AND id = ?"
@@ -296,7 +298,7 @@ func (repository *RencanaKinerjaRepositoryImpl) RekinsasaranOpd(ctx context.Cont
         WHERE 1=1
         AND ? BETWEEN rk.tahun_awal AND rk.tahun_akhir
     `
-	params := []interface{}{tahun}
+	params := []any{tahun}
 
 	if pegawaiId != "" {
 		script += " AND pp.nip = ?"
@@ -974,4 +976,157 @@ func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Cont
 	}
 
 	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	pokinIds []int,
+	tahunNext int,
+) ([]domain.RencanaKinerja, error) {
+
+	if len(pokinIds) == 0 {
+		return nil, errors.New("ids tidak boleh kosong")
+	}
+
+	// Build IN clause
+	placeholders := make([]string, len(pokinIds))
+	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	SQL := fmt.Sprintf(`
+        SELECT
+            rk.id,
+            rk.id_pohon,
+            rk.nama_rencana_kinerja,
+            rk.tahun,
+            rk.kode_opd,
+            opd.nama_opd,
+            rk.pegawai_id,
+            peg.nama AS nama_pegawai,
+
+            ind.id AS indikator_id,
+            ind.indikator,
+
+            tar.id AS target_id,
+            tar.target,
+            tar.satuan,
+            tar.tahun AS target_tahun
+        FROM tb_rencana_kinerja rk
+        JOIN tb_operasional_daerah opd ON opd.kode_opd = rk.kode_opd
+        LEFT JOIN tb_pegawai peg ON peg.nip = rk.pegawai_id
+        LEFT JOIN tb_indikator ind ON ind.rencana_kinerja_id = rk.id
+        LEFT JOIN tb_target tar ON tar.indikator_id = ind.id
+        WHERE rk.id_pohon IN (%s) AND tar.tahun = ?
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, SQL, append(args, tahunNext)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Map untuk grouping RK → Indikator → Target
+	rkMap := make(map[string]*domain.RencanaKinerja)
+
+	for rows.Next() {
+
+		var (
+			rk      domain.RencanaKinerja
+			indId   sql.NullString
+			indNama sql.NullString
+
+			tarId     sql.NullString
+			tarTarget sql.NullString
+			tarSatuan sql.NullString
+			tarTahun  sql.NullString
+
+			namaOpd, namaPegawai sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.KodeOpd,
+			&namaOpd,
+			&rk.PegawaiId,
+			&namaPegawai,
+			&indId,
+			&indNama,
+			&tarId,
+			&tarTarget,
+			&tarSatuan,
+			&tarTahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if namaOpd.Valid {
+			rk.NamaOpd = namaOpd.String
+		}
+		if namaPegawai.Valid {
+			rk.NamaPegawai = namaPegawai.String
+		}
+
+		// Ambil atau buat RK
+		existingRK, ok := rkMap[rk.Id]
+		if !ok {
+			rk.Indikator = []domain.Indikator{}
+			rkMap[rk.Id] = &rk
+			existingRK = &rk
+		}
+
+		// Jika indikator NULL, lanjut
+		if !indId.Valid {
+			continue
+		}
+
+		// Ambil atau buat indikator
+		var currentInd *domain.Indikator
+		found := false
+		for i := range existingRK.Indikator {
+			if existingRK.Indikator[i].Id == indId.String {
+				currentInd = &existingRK.Indikator[i]
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			newInd := domain.Indikator{
+				Id:        indId.String,
+				Indikator: indNama.String,
+				Target:    []domain.Target{},
+			}
+			existingRK.Indikator = append(existingRK.Indikator, newInd)
+			currentInd = &existingRK.Indikator[len(existingRK.Indikator)-1]
+		}
+
+		// Jika target null, selesai
+		if !tarId.Valid {
+			continue
+		}
+
+		// Tambahkan target
+		currentInd.Target = append(currentInd.Target, domain.Target{
+			Id:     tarId.String,
+			Target: tarTarget.String,
+			Satuan: tarSatuan.String,
+			Tahun:  tarTahun.String,
+		})
+	}
+
+	// Convert map → slice
+	result := make([]domain.RencanaKinerja, 0, len(rkMap))
+	for _, v := range rkMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
 }

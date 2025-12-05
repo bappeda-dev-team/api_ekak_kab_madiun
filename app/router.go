@@ -308,7 +308,9 @@ func NewRouter(
 	router.POST("/crosscutting_opd/create/:parentId", crosscuttingOpdController.Create)
 	router.PUT("/crosscutting_opd/update/:crosscuttingId", crosscuttingOpdController.Update)
 	router.DELETE("/crosscutting_opd/delete/:crosscuttingId/:nip_pegawai", crosscuttingOpdController.Delete)
+	// INI DIA
 	router.GET("/crosscutting_opd/findall/:parentId", crosscuttingOpdController.FindAll)
+	// INI SAJA
 	router.POST("/crosscutting/:crosscuttingId/permission", crosscuttingOpdController.ApproveOrReject)
 	router.DELETE("/crosscutting/:crosscuttingId/unused", crosscuttingOpdController.DeleteUnused)
 	router.GET("/crosscutting_menunggu/:kode_opd/:tahun", crosscuttingOpdController.FindPokinByCrosscuttingStatus)

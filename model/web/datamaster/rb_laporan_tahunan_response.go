@@ -16,6 +16,7 @@ type RencanaAksiRB struct {
 	IndikatorOutput []IndikatorRencanaAksiRB `json:"indikator_rencana_aksis"`
 	Anggaran        int                      `json:"anggaran,string"`
 	Realisasi       int                      `json:"realisasi_anggaran,string"`
+	Capaian         string                   `json:"capaian_anggaran"`
 	OpdKoordinator  string                   `json:"opd_koordinator"`
 	NipPelaksana    string                   `json:"nip_pelaksana"`
 	NamaPelaksana   string                   `json:"nama_pelaksana"`
@@ -28,10 +29,11 @@ type IndikatorRencanaAksiRB struct {
 }
 
 type TargetIndikatorRencanaAksiRB struct {
-	Target    int    `json:"target,string"`
-	Realisasi int    `json:"realisasi,string"`
+	Target    string `json:"target"`
+	Realisasi string `json:"realisasi"`
 	Satuan    string `json:"satuan"`
-	Capaian   int    `json:"capaian,string"`
+	Capaian   string `json:"capaian"`
+	Tahun     string `json:"tahun"`
 }
 
 type OpdCrosscutting struct {
