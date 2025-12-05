@@ -353,10 +353,27 @@ func (c *DataMasterControllerImpl) LaporanByTahun(w http.ResponseWriter, r *http
 		})
 		return
 	}
+	jenisRBParams := params.ByName("jenisRB")
+	if jenisRBParams != "GENERAL" && jenisRBParams != "TEMATIK" {
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "Jenis RB Tidak diketahui",
+		})
+		return
+	}
 
-	response, err := c.DataMasterService.LaporanByTahun(r.Context(), tahunInt)
+	response, err := c.DataMasterService.LaporanByTahun(r.Context(), tahunInt, jenisRBParams)
 	if err != nil {
 		log.Printf("Error: %v", err)
+		if err.Error() == "ids tidak boleh kosong" {
+			helper.WriteToResponseBody(w, web.WebResponse{
+				Code:   200,
+				Status: "SUCCESS",
+				Data:   []any{},
+			})
+			return
+		}
 		helper.WriteToResponseBody(w, web.WebResponse{
 			Code:   500,
 			Status: "ERROR",

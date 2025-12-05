@@ -17,7 +17,7 @@ func NewDataMasterRepositoryImpl() *DataMasterRepositoryImpl {
 	return &DataMasterRepositoryImpl{}
 }
 
-func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, tx *sql.Tx, tahun int) ([]datamaster.MasterRB, error) {
+func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, tx *sql.Tx, tahun int, jenisRB *string) ([]datamaster.MasterRB, error) {
 
 	query := `
 		SELECT
@@ -41,10 +41,19 @@ func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, t
 		LEFT JOIN tb_indikator ind ON ind.id_rb = rb.id
 		LEFT JOIN tb_target tar ON tar.indikator_id = ind.id
 		WHERE rb.tahun_next = ? AND rb.is_active = 1
-		ORDER BY rb.id, ind.id, tar.id;
 	`
 
-	rows, err := tx.QueryContext(ctx, query, tahun)
+	args := []any{tahun}
+
+	// OPTIONAL FILTER
+	if jenisRB != nil {
+		query += " AND rb.jenis_rb = ?"
+		args = append(args, *jenisRB)
+	}
+
+	query += " ORDER BY rb.id, ind.id, tar.id"
+
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying rb: %v", err)
 	}

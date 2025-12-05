@@ -7,7 +7,7 @@ import (
 )
 
 type DataMasterRepository interface {
-	DataRBByTahun(ctx context.Context, tx *sql.Tx, tahun int) ([]datamaster.MasterRB, error)
+	DataRBByTahun(ctx context.Context, tx *sql.Tx, tahun int, jenisRB *string) ([]datamaster.MasterRB, error)
 	InsertRB(ctx context.Context, tx *sql.Tx, req datamaster.MasterRB, userId int) (int64, error)
 	UpdateRB(ctx context.Context, tx *sql.Tx, rb datamaster.MasterRB, rbId int) error
 	InsertIndikator(ctx context.Context, tx *sql.Tx, rbId int64, indikator datamaster.IndikatorRB) (string, error)

@@ -33,7 +33,7 @@ func (service *DataMasterServiceImpl) DataRBByTahun(ctx context.Context, tahunBa
 	defer helper.CommitOrRollback(tx)
 
 	// Ambil data dari repository
-	result, err := service.DataMasterRepository.DataRBByTahun(ctx, tx, tahunBase)
+	result, err := service.DataMasterRepository.DataRBByTahun(ctx, tx, tahunBase, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (service *DataMasterServiceImpl) FindByTahun(ctx context.Context, tahunBase
 	defer helper.CommitOrRollback(tx)
 
 	// Ambil data dari repository
-	result, err := service.DataMasterRepository.DataRBByTahun(ctx, tx, tahunBase)
+	result, err := service.DataMasterRepository.DataRBByTahun(ctx, tx, tahunBase, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (service *DataMasterServiceImpl) FindByTahun(ctx context.Context, tahunBase
 	return responses, nil
 }
 
-func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunNext int) ([]datamaster.RbLaporanTahunanResponse, error) {
+func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunNext int, jenisRB string) ([]datamaster.RbLaporanTahunanResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
@@ -305,7 +305,7 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 	defer helper.CommitOrRollback(tx)
 
 	// Ambil data dari repository
-	result, err := service.DataMasterRepository.DataRBByTahun(ctx, tx, tahunNext)
+	result, err := service.DataMasterRepository.DataRBByTahun(ctx, tx, tahunNext, &jenisRB)
 	if err != nil {
 		return nil, err
 	}
