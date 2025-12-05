@@ -395,7 +395,7 @@ func (repo *DataMasterRepositoryImpl) PokinByIdRBs(ctx context.Context, tx *sql.
 		JOIN tb_pohon_kinerja pokin ON tag.id_pokin = pokin.id
 		WHERE ket.kode_program_unggulan IN (%s)`, strings.Join(placeholders, ","))
 
-	rows, err := tx.QueryContext(ctx, script)
+	rows, err := tx.QueryContext(ctx, script, args...)
 	if err != nil {
 		return []datamaster.PokinIdRBTagging{}, err
 	}

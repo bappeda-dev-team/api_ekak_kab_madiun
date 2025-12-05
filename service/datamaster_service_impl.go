@@ -36,10 +36,13 @@ func (service *DataMasterServiceImpl) DataRBByTahun(ctx context.Context, tahunBa
 		return nil, err
 	}
 
+	listIdRB := make([]int, 0, len(result))
 	// Convert MasterRB → RBResponse
 	responses := make([]datamaster.RBResponse, 0, len(result))
+	respMap := make(map[int]*datamaster.RBResponse, len(result))
 
 	for _, rb := range result {
+		listIdRB = append(listIdRB, rb.Id)
 		// Mapping MasterRB → RBResponse
 		resp := datamaster.RBResponse{
 			IdRB:          rb.Id,
@@ -49,6 +52,7 @@ func (service *DataMasterServiceImpl) DataRBByTahun(ctx context.Context, tahunBa
 			TahunBaseline: rb.TahunBaseline,
 			TahunNext:     rb.TahunNext,
 			Indikator:     make([]datamaster.IndikatorRB, 0),
+			SudahDiambil:  false,
 		}
 
 		// Mapping Indikator
@@ -79,6 +83,18 @@ func (service *DataMasterServiceImpl) DataRBByTahun(ctx context.Context, tahunBa
 		}
 
 		responses = append(responses, resp)
+		respMap[rb.Id] = &responses[len(responses)-1]
+	}
+
+	pokinRbRes, err := service.DataMasterRepository.PokinByIdRBs(ctx, tx, listIdRB)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pokin := range pokinRbRes {
+		if r, ok := respMap[pokin.KodeRB]; ok {
+			r.SudahDiambil = true
+		}
 	}
 
 	return responses, nil

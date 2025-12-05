@@ -8,6 +8,7 @@ type RBResponse struct {
 	Indikator     []IndikatorRB `json:"indikator"`
 	TahunBaseline int           `json:"tahun_baseline"`
 	TahunNext     int           `json:"tahun_next"`
+	SudahDiambil  bool          `json:"sudah_diambil"`
 }
 
 type IndikatorRB struct {
