@@ -408,15 +408,39 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 		return nil, err
 	}
 
+	listCrossPokinId := make([]int, 0, len(crossRows))
+	for _, c := range crossRows {
+		listCrossPokinId = append(listCrossPokinId, c.CrosscuttingFrom)
+	}
+
+	if len(listCrossPokinId) == 0 {
+		log.Println("[INFO] Crosscutting pokin is empty")
+	}
+	// get the PELAKSANA CROSSCUTTING
+	pelaksanaRekinCrossRows, err := service.RencanaKinerjaRepository.FindByPokinIds(ctx, tx, listCrossPokinId, tahunNext)
+	if err != nil {
+		return nil, err
+	}
+
+	// pokinId -> pelaksana
+	// buat digabung di crossCut
+	pelaksanaCrosscutting := make(map[int][]datamaster.PelaksanaCrosscutting)
+	for _, pl := range pelaksanaRekinCrossRows {
+		pelaksanaCrosscutting[pl.IdPohon] = append(pelaksanaCrosscutting[pl.IdPohon], datamaster.PelaksanaCrosscutting{
+			NipPelaksana:  pl.PegawaiId,
+			NamaPelaksana: pl.NamaPegawai,
+		})
+	}
+
 	crossMap := make(map[int][]datamaster.OpdCrosscutting)
 	for _, c := range crossRows {
 		crossMap[c.CrosscuttingFrom] = append(crossMap[c.CrosscuttingFrom], datamaster.OpdCrosscutting{
-			IdPohon:       c.CrosscuttingFrom,
-			KodeOpd:       c.KodeOpd,
-			NamaOpd:       c.OpdPengirim,
-			NipPelaksana:  "",
-			NamaPelaksana: "",
+			IdPohon:   c.CrosscuttingFrom,
+			KodeOpd:   c.KodeOpd,
+			NamaOpd:   c.OpdPengirim,
+			Pelaksana: pelaksanaCrosscutting[c.CrosscuttingFrom],
 		})
+		listCrossPokinId = append(listCrossPokinId, c.CrosscuttingFrom)
 	}
 
 	// pokinToRekinMap:

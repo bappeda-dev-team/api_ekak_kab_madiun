@@ -38,9 +38,13 @@ type TargetIndikatorRencanaAksiRB struct {
 }
 
 type OpdCrosscutting struct {
-	IdPohon       int    `json:"id_pohon"`
-	KodeOpd       string `json:"kode_opd"`
-	NamaOpd       string `json:"nama_opd"`
+	IdPohon   int                     `json:"id_pohon"`
+	KodeOpd   string                  `json:"kode_opd"`
+	NamaOpd   string                  `json:"nama_opd"`
+	Pelaksana []PelaksanaCrosscutting `json:"pelaksana_crosscuttings"`
+}
+
+type PelaksanaCrosscutting struct {
 	NipPelaksana  string `json:"nip_pelaksana"`
 	NamaPelaksana string `json:"nama_pelaksana"`
 }
