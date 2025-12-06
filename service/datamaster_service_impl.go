@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
@@ -12,16 +13,18 @@ import (
 )
 
 type DataMasterServiceImpl struct {
-	DataMasterRepository     repository.DataMasterRepository
-	RencanaKinerjaRepository repository.RencanaKinerjaRepository
-	DB                       *sql.DB
+	DataMasterRepository      repository.DataMasterRepository
+	RencanaKinerjaRepository  repository.RencanaKinerjaRepository
+	CrosscuttingOpdRepository repository.CrosscuttingOpdRepository
+	DB                        *sql.DB
 }
 
-func NewDataMasterServiceImpl(dataMasterRepository repository.DataMasterRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB) *DataMasterServiceImpl {
+func NewDataMasterServiceImpl(dataMasterRepository repository.DataMasterRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, DB *sql.DB) *DataMasterServiceImpl {
 	return &DataMasterServiceImpl{
-		DataMasterRepository:     dataMasterRepository,
-		RencanaKinerjaRepository: rencanaKinerjaRepository,
-		DB:                       DB,
+		DataMasterRepository:      dataMasterRepository,
+		RencanaKinerjaRepository:  rencanaKinerjaRepository,
+		CrosscuttingOpdRepository: crosscuttingOpdRepository,
+		DB:                        DB,
 	}
 }
 
@@ -372,10 +375,15 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 		pokinToRB[pokin.IdPokin] = pokin.KodeRB
 	}
 
-	// list pokin id untuk query rekin
+	// list pokin id unique untuk query rekin
 	listPokinIds := make([]int, 0, len(pokinRbRes))
+	seen := make(map[int]bool)
+
 	for _, pokin := range pokinRbRes {
-		listPokinIds = append(listPokinIds, pokin.IdPokin)
+		if !seen[pokin.IdPokin] {
+			seen[pokin.IdPokin] = true
+			listPokinIds = append(listPokinIds, pokin.IdPokin)
+		}
 	}
 
 	// get the rekin by id pokin
@@ -384,10 +392,56 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 		return nil, err
 	}
 
+	// get pokin yang ada di rekin saja
+	uniquePohonIdsInRekin := make([]int, 0)
+	seenPohon := make(map[int]struct{})
+	for _, r := range rekinRes {
+		if _, ok := seenPohon[r.IdPohon]; ok {
+			continue
+		}
+		seenPohon[r.IdPohon] = struct{}{}
+		uniquePohonIdsInRekin = append(uniquePohonIdsInRekin, r.IdPohon)
+	}
+
+	crossRows, err := service.CrosscuttingOpdRepository.FindCrosscuttingByPohonIdsFrom(ctx, tx, uniquePohonIdsInRekin)
+	if err != nil {
+		return nil, err
+	}
+
+	crossMap := make(map[int][]datamaster.OpdCrosscutting)
+	for _, c := range crossRows {
+		crossMap[c.CrosscuttingFrom] = append(crossMap[c.CrosscuttingFrom], datamaster.OpdCrosscutting{
+			IdPohon:       c.CrosscuttingFrom,
+			KodeOpd:       c.KodeOpd,
+			NamaOpd:       c.OpdPengirim,
+			NipPelaksana:  "",
+			NamaPelaksana: "",
+		})
+	}
+
+	// pokinToRekinMap:
+	// map[int][]int   => pokinId -> list rekinId
+	pokinToRekinSet := make(map[int]map[string]struct{})
+	// tracker uniq rekin
+	addedRA := make(map[int]map[string]struct{})
+
 	// untuk tiap rekin, buat RencanaAksiRB dan append ke RB yang sesuai
 	for _, rekin := range rekinRes {
+		// append to pokinToRekinMap
+		// buat cari crosscutting
+		if _, ok := pokinToRekinSet[rekin.IdPohon]; !ok {
+			pokinToRekinSet[rekin.IdPohon] = make(map[string]struct{})
+		}
+		// skip jika rekin.Id sudah pernah diproses untuk pokin ini (uniqueness)
+		if _, seen := pokinToRekinSet[rekin.IdPohon][rekin.Id]; seen {
+			continue
+		}
+		// tandai sebagai sudah diproses
+		pokinToRekinSet[rekin.IdPohon][rekin.Id] = struct{}{}
+
 		// bangun response RencanaAksiRB dari rekin
 		ra := datamaster.RencanaAksiRB{
+			IdRencanaAksi:   rekin.Id,
 			RencanaAksi:     rekin.NamaRencanaKinerja,
 			IndikatorOutput: make([]datamaster.IndikatorRencanaAksiRB, 0, len(rekin.Indikator)),
 			Anggaran:        0,
@@ -396,9 +450,10 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 			OpdKoordinator:  rekin.NamaOpd,
 			NipPelaksana:    rekin.PegawaiId,
 			NamaPelaksana:   rekin.NamaPegawai,
-			OpdCrosscutting: make([]datamaster.OpdCrosscutting, 0),
+			OpdCrosscutting: crossMap[rekin.IdPohon],
 		}
 
+		// indikator - target, biasa
 		for _, ind := range rekin.Indikator {
 			indResp := datamaster.IndikatorRencanaAksiRB{
 				Indikator:       ind.Indikator,
@@ -427,10 +482,25 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 			continue
 		}
 
-		// append rencana aksi ke RB yang sesuai (cek kalau RB ada di respMap)
-		if r, exists := respMap[kodeRB]; exists {
-			r.RencanaAksis = append(r.RencanaAksis, ra)
+		// checker agar tidak duplikat
+		if _, ok := addedRA[kodeRB]; !ok {
+			addedRA[kodeRB] = make(map[string]struct{})
 		}
+
+		if _, exists := addedRA[kodeRB][ra.IdRencanaAksi]; exists {
+			// sudah ada, skip
+			continue
+		}
+
+		// append rencana aksi ke RB yang sesuai (cek kalau RB ada di respMap)
+		if resp, exists := respMap[kodeRB]; exists && resp != nil {
+			resp.RencanaAksis = append(resp.RencanaAksis, ra)
+			// tandai sudah ditambahkan
+			addedRA[kodeRB][ra.IdRencanaAksi] = struct{}{}
+		} else {
+			log.Printf("warning: respMap tidak memiliki entry untuk kodeRB=%d (rekinId=%s)", kodeRB, rekin.Id)
+		}
+
 	}
 
 	return responses, nil

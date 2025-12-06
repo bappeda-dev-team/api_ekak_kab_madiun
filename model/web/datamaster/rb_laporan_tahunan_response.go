@@ -12,6 +12,7 @@ type RbLaporanTahunanResponse struct {
 }
 
 type RencanaAksiRB struct {
+	IdRencanaAksi   string                   `json:"id_rencana_aksi"`
 	RencanaAksi     string                   `json:"rencana_aksi"` // rencana kinerja
 	IndikatorOutput []IndikatorRencanaAksiRB `json:"indikator_rencana_aksis"`
 	Anggaran        int                      `json:"anggaran,string"`
@@ -37,6 +38,7 @@ type TargetIndikatorRencanaAksiRB struct {
 }
 
 type OpdCrosscutting struct {
+	IdPohon       int    `json:"id_pohon"`
 	KodeOpd       string `json:"kode_opd"`
 	NamaOpd       string `json:"nama_opd"`
 	NipPelaksana  string `json:"nip_pelaksana"`

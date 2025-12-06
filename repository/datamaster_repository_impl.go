@@ -51,7 +51,7 @@ func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, t
 		args = append(args, *jenisRB)
 	}
 
-	query += " ORDER BY rb.id, ind.id, tar.id"
+	query += " ORDER BY rb.id"
 
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
