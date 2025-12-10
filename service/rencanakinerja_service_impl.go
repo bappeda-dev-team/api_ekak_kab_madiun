@@ -575,6 +575,25 @@ func (service *RencanaKinerjaServiceImpl) FindAllRincianKak(ctx context.Context,
 		return nil, fmt.Errorf("gagal mengambil rencana kinerja: %v", err)
 	}
 
+	// collect rekin id to get anggaran total rekin
+	rekinIdSet := map[string]struct{}{}
+	for _, rekin := range rencanaKinerjaList {
+		rekinIdSet[rekin.Id] = struct{}{}
+	}
+	// uniq id
+	listRekinIds := make([]string, 0, len(rekinIdSet))
+	for id := range rekinIdSet {
+		listRekinIds = append(listRekinIds, id)
+	}
+	listPagu, err := service.rincianBelanjaRepository.FindAnggaranByRekinIds(ctx, tx, listRekinIds)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil anggaran rekin: %v", err)
+	}
+	totalPaguRekin := make(map[string]int)
+	for _, pagu := range listPagu {
+		totalPaguRekin[pagu.RekinId] = int(pagu.TotalAnggaran)
+	}
+
 	var responses []rencanakinerja.DataRincianKerja
 	for _, rencanaKinerja := range rencanaKinerjaList {
 		// Ambil indikator untuk setiap rencana kinerja
@@ -872,6 +891,7 @@ func (service *RencanaKinerjaServiceImpl) FindAllRincianKak(ctx context.Context,
 			},
 			PegawaiId:   rencanaKinerja.PegawaiId,
 			NamaPegawai: pegawai.NamaPegawai,
+			Pagu:        totalPaguRekin[rencanaKinerja.Id],
 			IdPohon:     rencanaKinerja.IdPohon,
 			NamaPohon:   pohon.NamaPohon,
 

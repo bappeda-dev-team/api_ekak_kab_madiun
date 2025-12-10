@@ -20,6 +20,7 @@ type RencanaKinerjaResponse struct {
 	KodeOpd              opdmaster.OpdResponseForAll `json:"operasional_daerah,omitempty"`
 	PegawaiId            string                      `json:"pegawai_id,omitempty"`
 	NamaPegawai          string                      `json:"nama_pegawai,omitempty"`
+	Pagu                 int                         `json:"pagu"`
 	Indikator            []IndikatorResponse         `json:"indikator,omitempty"`
 	// SubKegiatan          subkegiatan.SubKegiatanResponse `json:"sub_kegiatan,omitempty"`
 	Action []web.ActionButton `json:"action,omitempty"`
