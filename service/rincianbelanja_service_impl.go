@@ -211,6 +211,7 @@ func (service *RincianBelanjaServiceImpl) FindRincianBelanjaAsn(ctx context.Cont
 
 			// Sort rencana aksi berdasarkan ID
 			if rk.RencanaAksi != nil {
+				totalAnggaranRekin = 0
 				for _, ra := range rk.RencanaAksi {
 					rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
 						RenaksiId: ra.RenaksiId,
@@ -488,7 +489,7 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 		// Proses rencana kinerja
 		for _, rk := range rb.RencanaKinerja {
 			var rencanaAksiResponses []rincianbelanja.RencanaAksiResponse
-			var totalAnggaranRekin int = 0
+			var totalAnggaranRekin int = 0 // Sudah benar, di-reset untuk setiap rencana kinerja
 
 			// Ambil dan proses indikator rencana kinerja
 			indikators, err := service.rincianBelanjaRepository.FindIndikatorByRekinId(ctx, tx, rk.RencanaKinerjaId)
@@ -500,6 +501,10 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			// Sort dan konversi indikator
 			var indikatorResponses []rincianbelanja.IndikatorResponse
 			for _, ind := range indikators {
+				sort.Slice(ind.Target, func(i, j int) bool {
+					return ind.Target[i].Id < ind.Target[j].Id
+				})
+
 				var targetResponses []rincianbelanja.TargetResponse
 				for _, t := range ind.Target {
 					targetResponses = append(targetResponses, rincianbelanja.TargetResponse{
@@ -518,14 +523,16 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 				})
 			}
 
-			// Proses rencana aksi
-			for _, ra := range rk.RencanaAksi {
-				rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
-					RenaksiId: ra.RenaksiId,
-					Renaksi:   ra.Renaksi,
-					Anggaran:  int(ra.Anggaran),
-				})
-				totalAnggaranRekin += int(ra.Anggaran)
+			// Proses rencana aksi - anggaran sudah di-SUM di query, langsung pakai
+			if rk.RencanaAksi != nil {
+				for _, ra := range rk.RencanaAksi {
+					rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
+						RenaksiId: ra.RenaksiId,
+						Renaksi:   ra.Renaksi,
+						Anggaran:  int(ra.Anggaran), // Anggaran sudah benar dari query
+					})
+					totalAnggaranRekin += int(ra.Anggaran)
+				}
 			}
 
 			subResponse.RincianBelanja = append(subResponse.RincianBelanja, rincianbelanja.RincianBelanjaResponse{
@@ -539,6 +546,7 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			})
 			subResponse.TotalAnggaran += totalAnggaranRekin
 		}
+
 	}
 
 	// Convert map to slice dan sort
