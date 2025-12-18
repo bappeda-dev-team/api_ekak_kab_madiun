@@ -415,6 +415,7 @@ func NewRouter(
 	router.POST("/rincian_belanja/create", rincianBelanjaController.Create)
 	router.PUT("/rincian_belanja/update/:renaksiId", rincianBelanjaController.Update)
 	router.GET("/rincian_belanja/pegawai/:pegawai_id/:tahun", rincianBelanjaController.LaporanRincianBelanjaPegawai)
+	router.POST("/rincian_belanja/upsert", rincianBelanjaController.Upsert)
 
 	router.GET("/rincian_belanja/laporan", rincianBelanjaController.LaporanRincianBelanjaOpd)
 
