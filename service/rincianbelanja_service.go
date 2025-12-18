@@ -11,4 +11,5 @@ type RincianBelanjaService interface {
 	FindRincianBelanjaAsn(ctx context.Context, pegawaiId string, tahun string) []rincianbelanja.RincianBelanjaAsnResponse
 	LaporanRincianBelanjaOpd(ctx context.Context, kodeOpd string, tahun string) ([]rincianbelanja.RincianBelanjaAsnResponse, error)
 	LaporanRincianBelanjaPegawai(ctx context.Context, pegawaiId string, tahun string) ([]rincianbelanja.RincianBelanjaAsnResponse, error)
+	Upsert(ctx context.Context, request rincianbelanja.RincianBelanjaCreateRequest) (rincianbelanja.RencanaAksiResponse, error)
 }

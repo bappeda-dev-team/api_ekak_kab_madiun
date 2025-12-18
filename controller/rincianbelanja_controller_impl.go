@@ -134,3 +134,26 @@ func (controller *RincianBelanjaControllerImpl) LaporanRincianBelanjaPegawai(wri
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *RincianBelanjaControllerImpl) Upsert(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rincianBelanjaUpsertRequest := rincianbelanja.RincianBelanjaCreateRequest{}
+	helper.ReadFromRequestBody(request, &rincianBelanjaUpsertRequest)
+
+	rincianBelanjaResponse, err := controller.rincianBelanjaService.Upsert(request.Context(), rincianBelanjaUpsertRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed upsert rincian belanja",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success upsert rincian belanja",
+		Data:   rincianBelanjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

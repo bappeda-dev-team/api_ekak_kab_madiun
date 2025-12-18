@@ -12,4 +12,5 @@ type RincianBelanjaController interface {
 	FindRincianBelanjaAsn(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	LaporanRincianBelanjaOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	LaporanRincianBelanjaPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	Upsert(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

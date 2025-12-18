@@ -581,3 +581,46 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 
 	return responses, nil
 }
+
+func (service *RincianBelanjaServiceImpl) Upsert(ctx context.Context, request rincianbelanja.RincianBelanjaCreateRequest) (rincianbelanja.RencanaAksiResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return rincianbelanja.RencanaAksiResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi request
+	if request.RenaksiId == "" {
+		return rincianbelanja.RencanaAksiResponse{}, errors.New("renaksi_id tidak boleh kosong")
+	}
+	if request.Anggaran < 0 {
+		return rincianbelanja.RencanaAksiResponse{}, errors.New("anggaran tidak boleh negatif")
+	}
+
+	// Konversi request ke domain model
+	rincianBelanja := domain.RincianBelanja{
+		RenaksiId: request.RenaksiId,
+		Anggaran:  int64(request.Anggaran),
+	}
+
+	// Upsert ke database (update jika ada, create jika belum ada)
+	result, err := service.rincianBelanjaRepository.Upsert(ctx, tx, rincianBelanja)
+	if err != nil {
+		return rincianbelanja.RencanaAksiResponse{}, err
+	}
+
+	// Ambil data lengkap termasuk renaksi setelah upsert
+	rincianBelanjaLengkap, err := service.rincianBelanjaRepository.FindByRenaksiId(ctx, tx, result.RenaksiId)
+	if err != nil {
+		return rincianbelanja.RencanaAksiResponse{}, err
+	}
+
+	// Konversi domain model ke response
+	response := rincianbelanja.RencanaAksiResponse{
+		RenaksiId: rincianBelanjaLengkap.RenaksiId,
+		Renaksi:   rincianBelanjaLengkap.Renaksi,
+		Anggaran:  int(rincianBelanjaLengkap.Anggaran),
+	}
+
+	return response, nil
+}

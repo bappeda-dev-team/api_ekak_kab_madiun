@@ -710,3 +710,20 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 
 	return result, nil
 }
+
+func (repository *RincianBelanjaRepositoryImpl) Upsert(ctx context.Context, tx *sql.Tx, rincianBelanja domain.RincianBelanja) (domain.RincianBelanja, error) {
+	// Cek apakah data sudah ada berdasarkan renaksi_id
+	existing, err := repository.FindByRenaksiId(ctx, tx, rincianBelanja.RenaksiId)
+
+	if err != nil && err != sql.ErrNoRows {
+		return domain.RincianBelanja{}, err
+	}
+
+	// Jika data sudah ada, lakukan update
+	if existing.RenaksiId != "" {
+		return repository.Update(ctx, tx, rincianBelanja)
+	}
+
+	// Jika data belum ada, lakukan create
+	return repository.Create(ctx, tx, rincianBelanja)
+}
