@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"fmt"
+	"strings"
 )
 
 type CascadingOpdRepositoryImpl struct {
@@ -584,4 +586,41 @@ func (repository *CascadingOpdRepositoryImpl) GetTotalAnggaranByPokinIdWithPelak
 	}
 
 	return totalAnggaran, nil
+}
+
+func (repository *CascadingOpdRepositoryImpl) FindTargetByIndikatorIdsBatch(ctx context.Context, tx *sql.Tx, indikatorIds []string) (map[string][]domain.Target, error) {
+	if len(indikatorIds) == 0 {
+		return make(map[string][]domain.Target), nil
+	}
+
+	// Build query dengan IN clause
+	placeholders := make([]string, len(indikatorIds))
+	args := make([]interface{}, len(indikatorIds))
+	for i, id := range indikatorIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(
+		"SELECT id, indikator_id, target, satuan FROM tb_target WHERE indikator_id IN (%s)",
+		strings.Join(placeholders, ","),
+	)
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]domain.Target)
+	for rows.Next() {
+		var target domain.Target
+		err := rows.Scan(&target.Id, &target.IndikatorId, &target.Target, &target.Satuan)
+		if err != nil {
+			return nil, err
+		}
+		result[target.IndikatorId] = append(result[target.IndikatorId], target)
+	}
+
+	return result, nil
 }

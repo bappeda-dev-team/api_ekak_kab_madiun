@@ -14,11 +14,13 @@ const (
 	DefaultCacheTTL = 30 * time.Minute
 	// TTL untuk pohon kinerja (lebih lama karena data jarang berubah)
 	PohonKinerjaCacheTTL = 5 * time.Minute
+	CascadingOpdCacheTTL = 5 * time.Minute
 )
 
 // CacheKeyPrefix untuk berbagai jenis cache
 const (
 	CacheKeyPohonKinerjaOpdAll = "pohon_kinerja_opd_all"
+	CacheKeyCascadingOpdAll    = "cascading_opd_all"
 )
 
 // GenerateCacheKey menghasilkan cache key berdasarkan prefix dan parameter
