@@ -4129,3 +4129,156 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 
 	return result, nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokinBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.PelaksanaPokin, error) {
+	if len(pokinIds) == 0 {
+		return make(map[int][]domain.PelaksanaPokin), nil
+	}
+
+	// Build IN clause dengan placeholders
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT 
+			pp.id, 
+			pp.pohon_kinerja_id, 
+			pp.pegawai_id,
+			p.nip,
+			p.nama as nama_pegawai
+		FROM tb_pelaksana_pokin pp
+		INNER JOIN tb_pegawai p ON pp.pegawai_id = p.id
+		WHERE pp.pohon_kinerja_id IN (%s)
+		ORDER BY pp.pohon_kinerja_id, pp.id
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int][]domain.PelaksanaPokin)
+	for rows.Next() {
+		var pelaksana domain.PelaksanaPokin
+		var pokinId int
+		err := rows.Scan(
+			&pelaksana.Id,
+			&pokinId,
+			&pelaksana.PegawaiId,
+			&pelaksana.Nip,
+			&pelaksana.NamaPegawai,
+		)
+		if err != nil {
+			return nil, err
+		}
+		result[pokinId] = append(result[pokinId], pelaksana)
+	}
+
+	return result, nil
+}
+
+// FindIndikatorByPokinIdsBatch mengambil semua indikator untuk multiple pokin dalam 1 query
+func (repository *PohonKinerjaRepositoryImpl) FindIndikatorByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Indikator, error) {
+	if len(pokinIds) == 0 {
+		return make(map[int][]domain.Indikator), nil
+	}
+
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT 
+			i.id, 
+			i.pokin_id, 
+			i.indikator, 
+			i.tahun, 
+			i.clone_from
+		FROM tb_indikator i
+		WHERE i.pokin_id IN (%s)
+		ORDER BY i.pokin_id, i.id
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int][]domain.Indikator)
+	for rows.Next() {
+		var indikator domain.Indikator
+		var pokinId int
+		err := rows.Scan(
+			&indikator.Id,
+			&pokinId,
+			&indikator.Indikator,
+			&indikator.Tahun,
+			&indikator.CloneFrom,
+		)
+		if err != nil {
+			return nil, err
+		}
+		result[pokinId] = append(result[pokinId], indikator)
+	}
+
+	return result, nil
+}
+
+// FindTargetByIndikatorIdsBatch mengambil semua target untuk multiple indikator dalam 1 query
+func (repository *PohonKinerjaRepositoryImpl) FindTargetByIndikatorIdsBatch(ctx context.Context, tx *sql.Tx, indikatorIds []string) (map[string][]domain.Target, error) {
+	if len(indikatorIds) == 0 {
+		return make(map[string][]domain.Target), nil
+	}
+
+	placeholders := make([]string, len(indikatorIds))
+	args := make([]interface{}, len(indikatorIds))
+	for i, id := range indikatorIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT 
+			id, 
+			indikator_id, 
+			target, 
+			satuan, 
+			tahun
+		FROM tb_target
+		WHERE indikator_id IN (%s)
+		ORDER BY indikator_id, id
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]domain.Target)
+	for rows.Next() {
+		var target domain.Target
+		err := rows.Scan(
+			&target.Id,
+			&target.IndikatorId,
+			&target.Target,
+			&target.Satuan,
+			&target.Tahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+		result[target.IndikatorId] = append(result[target.IndikatorId], target)
+	}
+
+	return result, nil
+}

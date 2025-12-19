@@ -79,7 +79,8 @@ func InitializeServer() *http.Server {
 	crosscuttingOpdRepositoryImpl := repository.NewCrosscuttingOpdRepositoryImpl()
 	reviewRepositoryImpl := repository.NewReviewRepositoryImpl()
 	programUnggulanRepositoryImpl := repository.NewProgramUnggulanRepositoryImpl()
-	pohonKinerjaOpdServiceImpl := service.NewPohonKinerjaOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, crosscuttingOpdRepositoryImpl, reviewRepositoryImpl, db, validate, programUnggulanRepositoryImpl)
+	client := app.GetRedisClient()
+	pohonKinerjaOpdServiceImpl := service.NewPohonKinerjaOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, crosscuttingOpdRepositoryImpl, reviewRepositoryImpl, db, validate, programUnggulanRepositoryImpl, client)
 	pohonKinerjaOpdControllerImpl := controller.NewPohonKinerjaOpdControllerImpl(pohonKinerjaOpdServiceImpl)
 	pegawaiServiceImpl := service.NewPegawaiServiceImpl(pegawaiRepositoryImpl, opdRepositoryImpl, db)
 	pegawaiControllerImpl := controller.NewPegawaiControllerImpl(pegawaiServiceImpl)
@@ -205,7 +206,7 @@ var subKegiatanSet = wire.NewSet(repository.NewSubKegiatanRepositoryImpl, wire.B
 
 var subKegiatanTerpilihSet = wire.NewSet(repository.NewSubKegiatanTerpilihRepositoryImpl, wire.Bind(new(repository.SubKegiatanTerpilihRepository), new(*repository.SubKegiatanTerpilihRepositoryImpl)), service.NewSubKegiatanTerpilihServiceImpl, wire.Bind(new(service.SubKegiatanTerpilihService), new(*service.SubKegiatanTerpilihServiceImpl)), controller.NewSubKegiatanTerpilihControllerImpl, wire.Bind(new(controller.SubKegiatanTerpilihController), new(*controller.SubKegiatanTerpilihControllerImpl)))
 
-var pohonKinerjaOpdSet = wire.NewSet(repository.NewPohonKinerjaRepositoryImpl, wire.Bind(new(repository.PohonKinerjaRepository), new(*repository.PohonKinerjaRepositoryImpl)), service.NewPohonKinerjaOpdServiceImpl, wire.Bind(new(service.PohonKinerjaOpdService), new(*service.PohonKinerjaOpdServiceImpl)), controller.NewPohonKinerjaOpdControllerImpl, wire.Bind(new(controller.PohonKinerjaOpdController), new(*controller.PohonKinerjaOpdControllerImpl)))
+var pohonKinerjaOpdSet = wire.NewSet(app.GetRedisClient, repository.NewPohonKinerjaRepositoryImpl, wire.Bind(new(repository.PohonKinerjaRepository), new(*repository.PohonKinerjaRepositoryImpl)), service.NewPohonKinerjaOpdServiceImpl, wire.Bind(new(service.PohonKinerjaOpdService), new(*service.PohonKinerjaOpdServiceImpl)), controller.NewPohonKinerjaOpdControllerImpl, wire.Bind(new(controller.PohonKinerjaOpdController), new(*controller.PohonKinerjaOpdControllerImpl)))
 
 var pegawaiSet = wire.NewSet(repository.NewPegawaiRepositoryImpl, wire.Bind(new(repository.PegawaiRepository), new(*repository.PegawaiRepositoryImpl)), service.NewPegawaiServiceImpl, wire.Bind(new(service.PegawaiService), new(*service.PegawaiServiceImpl)), controller.NewPegawaiControllerImpl, wire.Bind(new(controller.PegawaiController), new(*controller.PegawaiControllerImpl)))
 
