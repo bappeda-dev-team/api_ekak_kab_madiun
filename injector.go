@@ -135,6 +135,7 @@ var subKegiatanTerpilihSet = wire.NewSet(
 )
 
 var pohonKinerjaOpdSet = wire.NewSet(
+	app.GetRedisClient,
 	repository.NewPohonKinerjaRepositoryImpl,
 	wire.Bind(new(repository.PohonKinerjaRepository), new(*repository.PohonKinerjaRepositoryImpl)),
 	service.NewPohonKinerjaOpdServiceImpl,

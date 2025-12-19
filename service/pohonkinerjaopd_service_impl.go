@@ -18,6 +18,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type PohonKinerjaOpdServiceImpl struct {
@@ -30,9 +31,10 @@ type PohonKinerjaOpdServiceImpl struct {
 	DB                        *sql.DB
 	Validate                  *validator.Validate
 	ProgramUnggulanRepository repository.ProgramUnggulanRepository
+	RedisClient               *redis.Client
 }
 
-func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaOpdServiceImpl {
+func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, programUnggulanRepository repository.ProgramUnggulanRepository, redisClient *redis.Client) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -43,6 +45,7 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		DB:                        DB,
 		Validate:                  validate,
 		ProgramUnggulanRepository: programUnggulanRepository,
+		RedisClient:               redisClient,
 	}
 }
 
@@ -893,7 +896,210 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 // }
 
 // findall baru
+// func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.PohonKinerjaOpdAllResponse, error) {
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+
+// 	// Validasi OPD
+// 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+// 	if err != nil {
+// 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, errors.New("kode opd tidak ditemukan")
+// 	}
+
+// 	// Inisialisasi response dasar
+// 	response := pohonkinerja.PohonKinerjaOpdAllResponse{
+// 		KodeOpd:    kodeOpd,
+// 		NamaOpd:    opd.NamaOpd,
+// 		Tahun:      tahun,
+// 		TujuanOpd:  make([]pohonkinerja.TujuanOpdResponse, 0),
+// 		Strategics: make([]pohonkinerja.StrategicOpdResponse, 0),
+// 	}
+
+// 	// Ambil data tujuan OPD
+// 	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdByTahun(ctx, tx, kodeOpd, tahun, "RPJMD")
+// 	if err != nil {
+// 		log.Printf("Error getting tujuan OPD: %v", err)
+// 		return response, nil
+// 	}
+
+// 	// Proses data tujuan OPD
+// 	for _, tujuan := range tujuanOpds {
+// 		indikators, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuan.Id)
+// 		if err != nil {
+// 			log.Printf("Error getting indikator for tujuan ID %d: %v", tujuan.Id, err)
+// 			continue
+// 		}
+
+// 		var indikatorResponses []pohonkinerja.IndikatorTujuanResponse
+// 		for _, indikator := range indikators {
+// 			targets, err := service.tujuanOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id, tahun)
+// 			if err != nil {
+// 				log.Printf("Error getting targets for indikator ID %s: %v", indikator.Id, err)
+// 				continue
+// 			}
+
+// 			var targetResponses []pohonkinerja.TargetTujuanResponse
+// 			for _, target := range targets {
+// 				targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
+// 					Tahun:  target.Tahun,
+// 					Target: target.Target,
+// 					Satuan: target.Satuan,
+// 				})
+// 			}
+
+// 			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
+// 				Indikator: indikator.Indikator,
+// 				Target:    targetResponses,
+// 			})
+// 		}
+
+// 		response.TujuanOpd = append(response.TujuanOpd, pohonkinerja.TujuanOpdResponse{
+// 			Id:        tujuan.Id,
+// 			KodeOpd:   tujuan.KodeOpd,
+// 			Tujuan:    tujuan.Tujuan,
+// 			Indikator: indikatorResponses,
+// 		})
+// 	}
+
+// 	// Ambil data pohon kinerja
+// 	pokins, err := service.pohonKinerjaOpdRepository.FindAll(ctx, tx, kodeOpd, tahun)
+// 	if err != nil {
+// 		return response, nil
+// 	}
+
+// 	if len(pokins) == 0 {
+// 		return response, nil
+// 	}
+
+// 	// Proses data pohon kinerja
+// 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+// 	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
+// 	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
+
+// 	// Kelompokkan data dan ambil data pelaksana & indikator
+// 	maxLevel := 0
+// 	for _, p := range pokins {
+// 		if p.LevelPohon >= 4 {
+// 			if p.LevelPohon > maxLevel {
+// 				maxLevel = p.LevelPohon
+// 			}
+
+// 			if pohonMap[p.LevelPohon] == nil {
+// 				pohonMap[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
+// 			}
+
+// 			p.NamaOpd = opd.NamaOpd
+// 			pohonMap[p.LevelPohon][p.Parent] = append(
+// 				pohonMap[p.LevelPohon][p.Parent],
+// 				p,
+// 			)
+
+// 			// Ambil data pelaksana
+// 			pelaksanaList, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(p.Id))
+// 			if err == nil {
+// 				var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
+// 				for _, pelaksana := range pelaksanaList {
+// 					pegawaiPelaksana, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
+// 					if err != nil {
+// 						continue
+// 					}
+// 					pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
+// 						Id:          pelaksana.Id,
+// 						PegawaiId:   pegawaiPelaksana.Id,
+// 						NamaPegawai: pegawaiPelaksana.NamaPegawai,
+// 					})
+// 				}
+// 				pelaksanaMap[p.Id] = pelaksanaResponses
+// 			}
+
+// 			// Ambil data indikator
+// 			indikatorList, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(p.Id))
+// 			if err == nil {
+// 				var indikatorResponses []pohonkinerja.IndikatorResponse
+// 				for _, indikator := range indikatorList {
+// 					targetList, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
+// 					if err != nil {
+// 						continue
+// 					}
+
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            indikator.Id,
+// 						IdPokin:       indikator.PokinId,
+// 						NamaIndikator: indikator.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 				indikatorMap[p.Id] = indikatorResponses
+// 			}
+// 		}
+// 	}
+
+// 	// Proses khusus untuk level 4 (Strategic)
+// 	if strategicList := pohonMap[4]; len(strategicList) > 0 {
+// 		var allStrategics []domain.PohonKinerja
+// 		processedIds := make(map[int]bool)
+
+// 		// Kumpulkan semua strategic
+// 		for _, strategicsByParent := range strategicList {
+// 			for _, strategic := range strategicsByParent {
+// 				if !processedIds[strategic.Id] {
+// 					allStrategics = append(allStrategics, strategic)
+// 					processedIds[strategic.Id] = true
+// 				}
+// 			}
+// 		}
+
+// 		// Urutkan strategic
+// 		sort.Slice(allStrategics, func(i, j int) bool {
+// 			if allStrategics[i].Status == "pokin dari pemda" && allStrategics[j].Status != "pokin dari pemda" {
+// 				return true
+// 			}
+// 			if allStrategics[i].Status != "pokin dari pemda" && allStrategics[j].Status == "pokin dari pemda" {
+// 				return false
+// 			}
+// 			return allStrategics[i].Id < allStrategics[j].Id
+// 		})
+
+// 		// Build response untuk setiap strategic
+// 		for _, strategic := range allStrategics {
+// 			strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, strategic, pelaksanaMap, indikatorMap)
+// 			response.Strategics = append(response.Strategics, strategicResp)
+// 		}
+// 	}
+
+// 	return response, nil
+// }
+
+// findall with redis
 func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.PohonKinerjaOpdAllResponse, error) {
+	// Generate cache key
+	cacheKey := helper.GenerateCacheKey(helper.CacheKeyPohonKinerjaOpdAll, kodeOpd, tahun)
+
+	// Coba ambil dari cache terlebih dahulu
+	var response pohonkinerja.PohonKinerjaOpdAllResponse
+	err := helper.GetFromCache(ctx, service.RedisClient, cacheKey, &response)
+	if err == nil {
+		// Cache hit, return data dari cache
+		log.Printf("Cache HIT untuk key: %s", cacheKey)
+		return response, nil
+	}
+
+	// Cache miss, ambil data dari database
+	log.Printf("Cache MISS untuk key: %s, mengambil dari database", cacheKey)
+
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
@@ -907,7 +1113,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	}
 
 	// Inisialisasi response dasar
-	response := pohonkinerja.PohonKinerjaOpdAllResponse{
+	response = pohonkinerja.PohonKinerjaOpdAllResponse{
 		KodeOpd:    kodeOpd,
 		NamaOpd:    opd.NamaOpd,
 		Tahun:      tahun,
@@ -968,16 +1174,17 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	}
 
 	if len(pokins) == 0 {
+		// Simpan ke cache meskipun hasil kosong
+		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
 		return response, nil
 	}
 
-	// Proses data pohon kinerja
+	// Proses data pohon kinerja dengan optimasi batch queries
 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
-	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
-	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
-
-	// Kelompokkan data dan ambil data pelaksana & indikator
+	var pokinIds []int
 	maxLevel := 0
+
+	// Kelompokkan data pohon kinerja dan kumpulkan semua pokin IDs
 	for _, p := range pokins {
 		if p.LevelPohon >= 4 {
 			if p.LevelPohon > maxLevel {
@@ -993,35 +1200,61 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				pohonMap[p.LevelPohon][p.Parent],
 				p,
 			)
+			pokinIds = append(pokinIds, p.Id)
+		}
+	}
 
-			// Ambil data pelaksana
-			pelaksanaList, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(p.Id))
-			if err == nil {
+	// Batch fetch semua pelaksana dalam 1 query
+	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
+	if len(pokinIds) > 0 {
+		pelaksanaBatch, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
+		if err == nil {
+			for pokinId, pelaksanaList := range pelaksanaBatch {
 				var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
 				for _, pelaksana := range pelaksanaList {
-					pegawaiPelaksana, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
-					if err != nil {
-						continue
-					}
 					pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
 						Id:          pelaksana.Id,
-						PegawaiId:   pegawaiPelaksana.Id,
-						NamaPegawai: pegawaiPelaksana.NamaPegawai,
+						PegawaiId:   pelaksana.PegawaiId,
+						NamaPegawai: pelaksana.NamaPegawai,
 					})
 				}
-				pelaksanaMap[p.Id] = pelaksanaResponses
+				pelaksanaMap[pokinId] = pelaksanaResponses
+			}
+		} else {
+			log.Printf("Error batch fetching pelaksana: %v", err)
+		}
+	}
+
+	// Batch fetch semua indikator dan target dalam 1 query
+	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
+	if len(pokinIds) > 0 {
+		indikatorBatch, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
+		if err == nil {
+			// Kumpulkan semua indikator IDs untuk batch fetch target
+			var allIndikatorIds []string
+			for _, indikatorList := range indikatorBatch {
+				for _, indikator := range indikatorList {
+					allIndikatorIds = append(allIndikatorIds, indikator.Id)
+				}
 			}
 
-			// Ambil data indikator
-			indikatorList, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(p.Id))
-			if err == nil {
+			// Batch fetch semua target dalam 1 query
+			var targetBatch map[string][]domain.Target
+			if len(allIndikatorIds) > 0 {
+				targetBatch, err = service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+				if err != nil {
+					log.Printf("Error batch fetching targets: %v", err)
+					targetBatch = make(map[string][]domain.Target)
+				}
+			} else {
+				targetBatch = make(map[string][]domain.Target)
+			}
+
+			// Build indikator responses dengan target
+			for pokinId, indikatorList := range indikatorBatch {
 				var indikatorResponses []pohonkinerja.IndikatorResponse
 				for _, indikator := range indikatorList {
-					targetList, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
-					if err != nil {
-						continue
-					}
-
+					targetList := targetBatch[indikator.Id]
 					var targetResponses []pohonkinerja.TargetResponse
 					for _, target := range targetList {
 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
@@ -1034,13 +1267,15 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
 						Id:            indikator.Id,
-						IdPokin:       indikator.PokinId,
+						IdPokin:       fmt.Sprint(pokinId),
 						NamaIndikator: indikator.Indikator,
 						Target:        targetResponses,
 					})
 				}
-				indikatorMap[p.Id] = indikatorResponses
+				indikatorMap[pokinId] = indikatorResponses
 			}
+		} else {
+			log.Printf("Error batch fetching indikator: %v", err)
 		}
 	}
 
@@ -1076,6 +1311,10 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 			response.Strategics = append(response.Strategics, strategicResp)
 		}
 	}
+
+	// Simpan ke cache setelah berhasil mengambil data
+	helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
+	log.Printf("Data disimpan ke cache dengan key: %s", cacheKey)
 
 	return response, nil
 }
