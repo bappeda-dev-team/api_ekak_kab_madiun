@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -105,5 +106,56 @@ func DeleteCacheByPattern(ctx context.Context, client *redis.Client, pattern str
 		return fmt.Errorf("error scanning cache: %w", err)
 	}
 
+	return nil
+}
+
+func InvalidatePohonKinerjaCache(ctx context.Context, client *redis.Client, kodeOpd, tahun string) error {
+	if client == nil {
+		return nil // Ignore if Redis is not available
+	}
+
+	// Invalidate specific cache
+	cacheKey := GenerateCacheKey(CacheKeyPohonKinerjaOpdAll, kodeOpd, tahun)
+	err := DeleteCache(ctx, client, cacheKey)
+	if err != nil {
+		log.Printf("Warning: Failed to invalidate cache for key %s: %v", cacheKey, err)
+	} else {
+		log.Printf("Cache invalidated for key: %s", cacheKey)
+	}
+
+	// Juga invalidate cascading opd cache untuk kodeOpd dan tahun yang sama
+	cascadingCacheKey := GenerateCacheKey(CacheKeyCascadingOpdAll, kodeOpd, tahun)
+	err = DeleteCache(ctx, client, cascadingCacheKey)
+	if err != nil {
+		log.Printf("Warning: Failed to invalidate cascading cache for key %s: %v", cascadingCacheKey, err)
+	} else {
+		log.Printf("Cache invalidated for key: %s", cascadingCacheKey)
+	}
+
+	return nil
+}
+
+// InvalidatePohonKinerjaCacheByPattern menghapus semua cache pohon kinerja yang match pattern
+func InvalidatePohonKinerjaCacheByPattern(ctx context.Context, client *redis.Client, kodeOpd string) error {
+	if client == nil {
+		return nil
+	}
+
+	// Invalidate semua cache untuk kodeOpd ini (semua tahun)
+	pattern := fmt.Sprintf("%s:%s:*", CacheKeyPohonKinerjaOpdAll, kodeOpd)
+	err := DeleteCacheByPattern(ctx, client, pattern)
+	if err != nil {
+		log.Printf("Warning: Failed to invalidate cache by pattern %s: %v", pattern, err)
+		return err
+	}
+
+	// Juga invalidate cascading opd cache
+	cascadingPattern := fmt.Sprintf("%s:%s:*", CacheKeyCascadingOpdAll, kodeOpd)
+	err = DeleteCacheByPattern(ctx, client, cascadingPattern)
+	if err != nil {
+		log.Printf("Warning: Failed to invalidate cascading cache by pattern %s: %v", cascadingPattern, err)
+	}
+
+	log.Printf("Cache invalidated by pattern: %s and %s", pattern, cascadingPattern)
 	return nil
 }

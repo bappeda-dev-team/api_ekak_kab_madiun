@@ -95,4 +95,6 @@ type PohonKinerjaRepository interface {
 	FindPelaksanaPokinBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.PelaksanaPokin, error)
 	FindIndikatorByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Indikator, error)
 	FindTargetByIndikatorIdsBatch(ctx context.Context, tx *sql.Tx, indikatorIds []string) (map[string][]domain.Target, error)
+	FindTaggingByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.TaggingPokin, error)
+	FindTematikByCloneFromBatch(ctx context.Context, tx *sql.Tx, cloneFromIds []int) (map[int]*domain.PohonKinerja, error)
 }

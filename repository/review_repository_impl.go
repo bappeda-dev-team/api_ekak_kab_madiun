@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"fmt"
+	"strings"
 )
 
 type ReviewRepositoryImpl struct {
@@ -297,4 +299,74 @@ func (repository *ReviewRepositoryImpl) FindAllReviewOpd(ctx context.Context, tx
 	}
 
 	return reviews, nil
+}
+
+func (repository *ReviewRepositoryImpl) FindReviewsByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Review, map[int]int, error) {
+	if len(pokinIds) == 0 {
+		return make(map[int][]domain.Review), make(map[int]int), nil
+	}
+
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	// Query untuk mengambil semua review
+	script := fmt.Sprintf(`
+		SELECT id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by, created_at, updated_at 
+		FROM tb_review 
+		WHERE id_pohon_kinerja IN (%s)
+		ORDER BY id_pohon_kinerja, id
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	reviewMap := make(map[int][]domain.Review)
+	for rows.Next() {
+		var review domain.Review
+		err := rows.Scan(&review.Id, &review.IdPohonKinerja, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
+		if err != nil {
+			return nil, nil, err
+		}
+		reviewMap[review.IdPohonKinerja] = append(reviewMap[review.IdPohonKinerja], review)
+	}
+
+	// Query untuk count review per pokin
+	countScript := fmt.Sprintf(`
+		SELECT id_pohon_kinerja, COUNT(*) as count
+		FROM tb_review
+		WHERE id_pohon_kinerja IN (%s)
+		GROUP BY id_pohon_kinerja
+	`, strings.Join(placeholders, ","))
+
+	countRows, err := tx.QueryContext(ctx, countScript, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer countRows.Close()
+
+	reviewCountMap := make(map[int]int)
+	for countRows.Next() {
+		var pokinId, count int
+		err := countRows.Scan(&pokinId, &count)
+		if err != nil {
+			return nil, nil, err
+		}
+		reviewCountMap[pokinId] = count
+	}
+
+	// Set count 0 untuk pokin yang tidak punya review
+	for _, pokinId := range pokinIds {
+		if _, exists := reviewCountMap[pokinId]; !exists {
+			reviewCountMap[pokinId] = 0
+		}
+	}
+
+	return reviewMap, reviewCountMap, nil
 }
