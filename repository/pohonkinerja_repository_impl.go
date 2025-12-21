@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -379,19 +380,17 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
             COALESCE(keterangan_crosscutting, '') as keterangan_crosscutting,
             COALESCE(tahun, '') as tahun,
             COALESCE(status, '') as status,
-            COALESCE(is_active) as is_active,
+            COALESCE(is_active, 0) as is_active,
             COALESCE(clone_from, 0) as clone_from
         FROM tb_pohon_kinerja 
         WHERE kode_opd = ? 
         AND tahun = ?
+        AND level_pohon >= 4
         AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
         ORDER BY 
-            CASE 
-                WHEN status = 'pokin dari pemda' THEN 0 
-                ELSE 1 
-            END,
-            level_pohon, 
-            id ASC`
+            level_pohon ASC, 
+            id ASC
+        LIMIT 10000`
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
 	if err != nil {
@@ -4281,4 +4280,256 @@ func (repository *PohonKinerjaRepositoryImpl) FindTargetByIndikatorIdsBatch(ctx 
 	}
 
 	return result, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.TaggingPokin, error) {
+	if len(pokinIds) == 0 {
+		return make(map[int][]domain.TaggingPokin), nil
+	}
+
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT 
+		t.id,
+		t.id_pokin,
+		t.nama_tagging,
+		t.clone_from,
+		k.id as keterangan_id,
+		k.kode_program_unggulan,
+		k.tahun
+	FROM tb_tagging_pokin t
+	LEFT JOIN tb_keterangan_tagging_program_unggulan k ON t.id = k.id_tagging
+	WHERE t.id_pokin IN (%s)
+	ORDER BY t.id_pokin, t.id, k.id
+	LIMIT 10000
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	taggingMap := make(map[int]*domain.TaggingPokin)
+	result := make(map[int][]domain.TaggingPokin, len(pokinIds))
+
+	for rows.Next() {
+		var (
+			taggingId, idPokin  int
+			namaTagging         string
+			cloneFrom           sql.NullInt64
+			keteranganId        sql.NullInt64
+			kodeProgramUnggulan sql.NullString
+			tahun               sql.NullString
+		)
+
+		err := rows.Scan(
+			&taggingId,
+			&idPokin,
+			&namaTagging,
+			&cloneFrom,
+			&keteranganId,
+			&kodeProgramUnggulan,
+			&tahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		key := taggingId
+		tagging, exists := taggingMap[key]
+		if !exists {
+			tagging = &domain.TaggingPokin{
+				Id:                       taggingId,
+				IdPokin:                  idPokin,
+				NamaTagging:              namaTagging,
+				KeteranganTaggingProgram: []domain.KeteranganTagging{},
+			}
+			if cloneFrom.Valid {
+				tagging.CloneFrom = int(cloneFrom.Int64)
+			}
+			taggingMap[key] = tagging
+		}
+
+		if keteranganId.Valid && kodeProgramUnggulan.Valid {
+			keterangan := domain.KeteranganTagging{
+				Id:                  int(keteranganId.Int64),
+				IdTagging:           taggingId,
+				KodeProgramUnggulan: kodeProgramUnggulan.String,
+				Tahun:               tahun.String,
+			}
+			tagging.KeteranganTaggingProgram = append(tagging.KeteranganTaggingProgram, keterangan)
+		}
+	}
+
+	// Group by pokinId
+	for _, tagging := range taggingMap {
+		pokinId := tagging.IdPokin
+		if result[pokinId] == nil {
+			// Pre-allocate dengan estimasi size (biasanya 1-2 tagging per pokin)
+			result[pokinId] = make([]domain.TaggingPokin, 0, 2)
+		}
+		result[pokinId] = append(result[pokinId], *tagging)
+	}
+	// Sort by ID untuk setiap pokinId
+	for pokinId := range result {
+		sort.Slice(result[pokinId], func(i, j int) bool {
+			return result[pokinId][i].Id < result[pokinId][j].Id
+		})
+	}
+
+	return result, nil
+}
+func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx context.Context, tx *sql.Tx, cloneFromIds []int) (map[int]*domain.PohonKinerja, error) {
+	if len(cloneFromIds) == 0 {
+		return make(map[int]*domain.PohonKinerja), nil
+	}
+
+	uniqueIds := make(map[int]bool)
+	var uniqueCloneFromIds []int
+	for _, id := range cloneFromIds {
+		if id > 0 && !uniqueIds[id] {
+			uniqueIds[id] = true
+			uniqueCloneFromIds = append(uniqueCloneFromIds, id)
+		}
+	}
+
+	if len(uniqueCloneFromIds) == 0 {
+		return make(map[int]*domain.PohonKinerja), nil
+	}
+
+	result := make(map[int]*domain.PohonKinerja)
+
+	// OPTIMASI: Ambil semua data yang relevan dalam query sederhana
+	// Kumpulkan semua IDs yang mungkin relevan (clone_from_ids + semua parent-nya)
+	nodeMap := make(map[int]*struct {
+		Id         int
+		Parent     sql.NullInt64
+		NamaPohon  string
+		LevelPohon int
+	})
+
+	// Step 1: Ambil clone_from_ids dan parent-nya secara iterative
+	currentIds := uniqueCloneFromIds
+	maxIterations := 10
+
+	for iteration := 0; iteration < maxIterations && len(currentIds) > 0; iteration++ {
+		placeholders := make([]string, len(currentIds))
+		args := make([]interface{}, len(currentIds))
+		for i, id := range currentIds {
+			placeholders[i] = "?"
+			args[i] = id
+		}
+
+		script := fmt.Sprintf(`
+			SELECT id, parent, nama_pohon, level_pohon
+			FROM tb_pohon_kinerja
+			WHERE id IN (%s)
+		`, strings.Join(placeholders, ","))
+
+		rows, err := tx.QueryContext(ctx, script, args...)
+		if err != nil {
+			log.Printf("[ERROR] FindTematikByCloneFromBatch query error: %v", err)
+			break
+		}
+
+		var nextIds []int
+		nextIdSet := make(map[int]bool)
+
+		for rows.Next() {
+			var id, levelPohon int
+			var parent sql.NullInt64
+			var namaPohon string
+
+			if err := rows.Scan(&id, &parent, &namaPohon, &levelPohon); err != nil {
+				continue
+			}
+
+			nodeMap[id] = &struct {
+				Id         int
+				Parent     sql.NullInt64
+				NamaPohon  string
+				LevelPohon int
+			}{
+				Id:         id,
+				Parent:     parent,
+				NamaPohon:  namaPohon,
+				LevelPohon: levelPohon,
+			}
+
+			// PERBAIKAN: Convert int64 ke int
+			if parent.Valid && parent.Int64 > 0 {
+				parentId := int(parent.Int64)
+				if !nextIdSet[parentId] {
+					nextIds = append(nextIds, parentId)
+					nextIdSet[parentId] = true
+				}
+			}
+		}
+		rows.Close()
+
+		currentIds = nextIds
+	}
+
+	// Step 2: Process di Go untuk mencari tematik
+	for _, cloneFromId := range uniqueCloneFromIds {
+		tematik := repository.findTematikInMemorySimple(nodeMap, cloneFromId)
+		if tematik != nil {
+			result[cloneFromId] = tematik
+		}
+	}
+
+	log.Printf("[DEBUG] FindTematikByCloneFromBatch: Total results=%d out of %d cloneFromIds",
+		len(result), len(uniqueCloneFromIds))
+
+	return result, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) findTematikInMemorySimple(
+	nodeMap map[int]*struct {
+		Id         int
+		Parent     sql.NullInt64
+		NamaPohon  string
+		LevelPohon int
+	},
+	startId int,
+) *domain.PohonKinerja {
+	currentId := startId
+	visited := make(map[int]bool)
+	maxDepth := 15
+
+	for depth := 0; depth < maxDepth; depth++ {
+		if visited[currentId] {
+			break
+		}
+		visited[currentId] = true
+
+		node, exists := nodeMap[currentId]
+		if !exists {
+			break
+		}
+
+		// Jika ketemu level 0 dengan parent NULL atau 0, return
+		if node.LevelPohon == 0 && (!node.Parent.Valid || node.Parent.Int64 == 0) {
+			return &domain.PohonKinerja{
+				Id:        node.Id,
+				NamaPohon: node.NamaPohon,
+			}
+		}
+
+		// Naik ke parent dengan convert int64 ke int
+		if node.Parent.Valid && node.Parent.Int64 > 0 {
+			currentId = int(node.Parent.Int64)
+		} else {
+			break
+		}
+	}
+
+	return nil
 }

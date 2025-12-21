@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
@@ -563,6 +564,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 			KeteranganTaggingProgram: keteranganResponses,
 		})
 	}
+
 	return pohonkinerja.PohonKinerjaOpdResponse{
 		Id:                     updatedPokin.Id,
 		Parent:                 strconv.Itoa(updatedPokin.Parent),
@@ -1084,36 +1086,400 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 // }
 
 // findall with redis
+// func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.PohonKinerjaOpdAllResponse, error) {
+// 	// Log start time untuk menghitung response time
+// 	startTime := time.Now()
+// 	serviceName := "PohonKinerjaOpdService.FindAll"
+// 	log.Printf("[%s] [START] [%s] kodeOpd=%s, tahun=%s",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun)
+
+// 	// Generate cache key
+// 	cacheKey := helper.GenerateCacheKey(helper.CacheKeyPohonKinerjaOpdAll, kodeOpd, tahun)
+
+// 	// Coba ambil dari cache terlebih dahulu
+// 	var response pohonkinerja.PohonKinerjaOpdAllResponse
+// 	err := helper.GetFromCache(ctx, service.RedisClient, cacheKey, &response)
+// 	if err == nil {
+// 		// Cache hit, return data dari cache
+// 		responseTime := time.Since(startTime)
+// 		log.Printf("[%s] [CACHE HIT] [%s] kodeOpd=%s, tahun=%s, responseTime=%v",
+// 			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun, responseTime)
+// 		return response, nil
+// 	}
+
+// 	// Cache miss, ambil data dari database
+// 	log.Printf("[%s] [CACHE MISS] [%s] kodeOpd=%s, tahun=%s, mengambil dari database",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun)
+
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		log.Printf("[%s] [ERROR] [%s] Error starting transaction: %v",
+// 			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+// 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+
+// 	// Validasi OPD
+// 	opdStartTime := time.Now()
+// 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+// 	if err != nil {
+// 		log.Printf("[%s] [ERROR] [%s] OPD not found: kode_opd=%s, error=%v, duration=%v",
+// 			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, err, time.Since(opdStartTime))
+// 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, errors.New("kode opd tidak ditemukan")
+// 	}
+// 	log.Printf("[%s] [QUERY] [%s] FindByKodeOpd duration=%v",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(opdStartTime))
+
+// 	// Inisialisasi response dasar
+// 	response = pohonkinerja.PohonKinerjaOpdAllResponse{
+// 		KodeOpd:    kodeOpd,
+// 		NamaOpd:    opd.NamaOpd,
+// 		Tahun:      tahun,
+// 		TujuanOpd:  make([]pohonkinerja.TujuanOpdResponse, 0),
+// 		Strategics: make([]pohonkinerja.StrategicOpdResponse, 0),
+// 	}
+
+// 	// Ambil data tujuan OPD
+// 	tujuanStartTime := time.Now()
+// 	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdByTahun(ctx, tx, kodeOpd, tahun, "RPJMD")
+// 	if err != nil {
+// 		log.Printf("[%s] [WARNING] [%s] Error getting tujuan OPD: %v, duration=%v",
+// 			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err, time.Since(tujuanStartTime))
+// 		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
+// 		return response, nil
+// 	}
+// 	log.Printf("[%s] [QUERY] [%s] FindTujuanOpdByTahun count=%d, duration=%v",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(tujuanOpds), time.Since(tujuanStartTime))
+
+// 	// Proses data tujuan OPD (ini bisa dioptimasi lebih lanjut dengan batch queries)
+// 	tujuanProcessStartTime := time.Now()
+// 	for _, tujuan := range tujuanOpds {
+// 		indikators, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuan.Id)
+// 		if err != nil {
+// 			log.Printf("[%s] [WARNING] [%s] Error getting indikator for tujuan ID %d: %v",
+// 				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, tujuan.Id, err)
+// 			continue
+// 		}
+
+// 		var indikatorResponses []pohonkinerja.IndikatorTujuanResponse
+// 		for _, indikator := range indikators {
+// 			targets, err := service.tujuanOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id, tahun)
+// 			if err != nil {
+// 				log.Printf("[%s] [WARNING] [%s] Error getting targets for indikator ID %s: %v",
+// 					time.Now().Format("2006-01-02 15:04:05.000"), serviceName, indikator.Id, err)
+// 				continue
+// 			}
+
+// 			var targetResponses []pohonkinerja.TargetTujuanResponse
+// 			for _, target := range targets {
+// 				targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
+// 					Tahun:  target.Tahun,
+// 					Target: target.Target,
+// 					Satuan: target.Satuan,
+// 				})
+// 			}
+
+// 			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
+// 				Indikator: indikator.Indikator,
+// 				Target:    targetResponses,
+// 			})
+// 		}
+
+// 		response.TujuanOpd = append(response.TujuanOpd, pohonkinerja.TujuanOpdResponse{
+// 			Id:        tujuan.Id,
+// 			KodeOpd:   tujuan.KodeOpd,
+// 			Tujuan:    tujuan.Tujuan,
+// 			Indikator: indikatorResponses,
+// 		})
+// 	}
+// 	log.Printf("[%s] [PROCESS] [%s] Process tujuan OPD duration=%v",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(tujuanProcessStartTime))
+
+// 	// Ambil data pohon kinerja
+// 	pokinStartTime := time.Now()
+// 	pokins, err := service.pohonKinerjaOpdRepository.FindAll(ctx, tx, kodeOpd, tahun)
+// 	if err != nil {
+// 		log.Printf("[%s] [ERROR] [%s] Error getting pohon kinerja: %v, duration=%v",
+// 			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err, time.Since(pokinStartTime))
+// 		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
+// 		return response, nil
+// 	}
+// 	log.Printf("[%s] [QUERY] [%s] FindAll pohon kinerja count=%d, duration=%v",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(pokins), time.Since(pokinStartTime))
+
+// 	if len(pokins) == 0 {
+// 		// Simpan ke cache meskipun hasil kosong
+// 		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
+// 		responseTime := time.Since(startTime)
+// 		log.Printf("[%s] [END] [%s] kodeOpd=%s, tahun=%s, totalResponseTime=%v (empty result)",
+// 			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun, responseTime)
+// 		return response, nil
+// 	}
+
+// 	// OPTIMASI: Proses data pohon kinerja dengan batch queries
+// 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+// 	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
+
+// 	// Kumpulkan semua pokin IDs untuk batch queries
+// 	var pokinIds []int
+// 	maxLevel := 0
+// 	for _, p := range pokins {
+// 		if p.LevelPohon >= 4 {
+// 			if p.LevelPohon > maxLevel {
+// 				maxLevel = p.LevelPohon
+// 			}
+
+// 			if pohonMap[p.LevelPohon] == nil {
+// 				pohonMap[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
+// 			}
+
+// 			p.NamaOpd = opd.NamaOpd
+// 			pohonMap[p.LevelPohon][p.Parent] = append(
+// 				pohonMap[p.LevelPohon][p.Parent],
+// 				p,
+// 			)
+// 			pokinIds = append(pokinIds, p.Id)
+// 		}
+// 	}
+
+// 	log.Printf("[%s] [INFO] [%s] Processing %d pokin entries, maxLevel=%d",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(pokinIds), maxLevel)
+
+// 	// OPTIMASI: Batch fetch semua pelaksana dalam 1 query (sudah include nama pegawai dari JOIN)
+// 	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
+// 	if len(pokinIds) > 0 {
+// 		pelaksanaBatchStartTime := time.Now()
+// 		pelaksanaBatch, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
+// 		if err == nil {
+// 			// FindPelaksanaPokinBatch sudah JOIN dengan tb_pegawai, jadi langsung gunakan nama_pegawai yang sudah ada
+// 			// Tidak perlu fetch pegawai lagi secara individual!
+// 			for pokinId, pelaksanaList := range pelaksanaBatch {
+// 				var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
+// 				for _, pelaksana := range pelaksanaList {
+// 					pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
+// 						Id:          pelaksana.Id,
+// 						PegawaiId:   pelaksana.PegawaiId,
+// 						NamaPegawai: pelaksana.NamaPegawai, // Sudah ada dari JOIN di repository
+// 					})
+// 				}
+// 				pelaksanaMap[pokinId] = pelaksanaResponses
+// 			}
+// 			log.Printf("[%s] [QUERY] [%s] FindPelaksanaPokinBatch count=%d, duration=%v",
+// 				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(pelaksanaBatch), time.Since(pelaksanaBatchStartTime))
+// 		} else {
+// 			log.Printf("[%s] [ERROR] [%s] Error batch fetching pelaksana: %v",
+// 				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+// 		}
+// 	}
+
+// 	// OPTIMASI: Batch fetch semua indikator dan target dalam 1 query
+// 	if len(pokinIds) > 0 {
+// 		indikatorBatchStartTime := time.Now()
+// 		indikatorBatch, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
+// 		if err == nil {
+// 			// Kumpulkan semua indikator IDs untuk batch fetch target
+// 			var allIndikatorIds []string
+// 			for _, indikatorList := range indikatorBatch {
+// 				for _, indikator := range indikatorList {
+// 					allIndikatorIds = append(allIndikatorIds, indikator.Id)
+// 				}
+// 			}
+
+// 			// Batch fetch semua target dalam 1 query
+// 			var targetBatch map[string][]domain.Target
+// 			targetBatchStartTime := time.Now()
+// 			if len(allIndikatorIds) > 0 {
+// 				targetBatch, err = service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+// 				if err != nil {
+// 					log.Printf("[%s] [ERROR] [%s] Error batch fetching targets: %v",
+// 						time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+// 					targetBatch = make(map[string][]domain.Target)
+// 				} else {
+// 					log.Printf("[%s] [QUERY] [%s] FindTargetByIndikatorIdsBatch count=%d, duration=%v",
+// 						time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(allIndikatorIds), time.Since(targetBatchStartTime))
+// 				}
+// 			} else {
+// 				targetBatch = make(map[string][]domain.Target)
+// 			}
+
+// 			// Build indikator responses dengan target
+// 			for pokinId, indikatorList := range indikatorBatch {
+// 				var indikatorResponses []pohonkinerja.IndikatorResponse
+// 				for _, indikator := range indikatorList {
+// 					targetList := targetBatch[indikator.Id]
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            indikator.Id,
+// 						IdPokin:       fmt.Sprint(pokinId),
+// 						NamaIndikator: indikator.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 				indikatorMap[pokinId] = indikatorResponses
+// 			}
+// 			log.Printf("[%s] [QUERY] [%s] FindIndikatorByPokinIdsBatch count=%d, duration=%v",
+// 				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(indikatorBatch), time.Since(indikatorBatchStartTime))
+// 		} else {
+// 			log.Printf("[%s] [ERROR] [%s] Error batch fetching indikator: %v",
+// 				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+// 		}
+// 	}
+
+// 	// OPTIMASI: Pre-fetch semua data yang dibutuhkan untuk build response
+// 	prefetchStartTime := time.Now()
+
+// 	// Pre-fetch semua tagging untuk semua pokin
+// 	taggingMap := make(map[int][]domain.TaggingPokin)
+// 	for _, pokinId := range pokinIds {
+// 		taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, pokinId)
+// 		if err == nil {
+// 			taggingMap[pokinId] = taggingList
+// 		}
+// 	}
+
+// 	// Pre-fetch semua review untuk semua pokin
+// 	reviewMap := make(map[int][]domain.Review)
+// 	reviewCountMap := make(map[int]int)
+// 	reviewNipSet := make(map[string]bool)
+// 	for _, pokinId := range pokinIds {
+// 		count, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, pokinId)
+// 		if err == nil {
+// 			reviewCountMap[pokinId] = count
+// 		}
+
+// 		reviews, err := service.reviewRepository.FindByPohonKinerja(ctx, tx, pokinId)
+// 		if err == nil {
+// 			reviewMap[pokinId] = reviews
+// 			for _, review := range reviews {
+// 				if review.CreatedBy != "" {
+// 					reviewNipSet[review.CreatedBy] = true
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Batch fetch semua pegawai untuk review (hanya yang belum ada di pelaksana)
+// 	var reviewNips []string
+// 	for nip := range reviewNipSet {
+// 		reviewNips = append(reviewNips, nip)
+// 	}
+// 	reviewPegawaiMap := make(map[string]*domainmaster.Pegawai)
+// 	for _, nip := range reviewNips {
+// 		pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, nip)
+// 		if err == nil {
+// 			reviewPegawaiMap[nip] = &pegawai
+// 		}
+// 	}
+
+// 	// Pre-fetch semua program unggulan yang dibutuhkan
+// 	programUnggulanMap := make(map[string]*domain.ProgramUnggulan)
+// 	for _, taggingList := range taggingMap {
+// 		for _, tagging := range taggingList {
+// 			for _, keterangan := range tagging.KeteranganTaggingProgram {
+// 				if _, exists := programUnggulanMap[keterangan.KodeProgramUnggulan]; !exists {
+// 					program, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+// 					if err == nil {
+// 						programUnggulanMap[keterangan.KodeProgramUnggulan] = &program
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	log.Printf("[%s] [QUERY] [%s] Pre-fetch tagging/review/program duration=%v",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(prefetchStartTime))
+
+// 	// Proses khusus untuk level 4 (Strategic)
+// 	buildResponseStartTime := time.Now()
+// 	if strategicList := pohonMap[4]; len(strategicList) > 0 {
+// 		var allStrategics []domain.PohonKinerja
+// 		processedIds := make(map[int]bool)
+
+// 		// Kumpulkan semua strategic
+// 		for _, strategicsByParent := range strategicList {
+// 			for _, strategic := range strategicsByParent {
+// 				if !processedIds[strategic.Id] {
+// 					allStrategics = append(allStrategics, strategic)
+// 					processedIds[strategic.Id] = true
+// 				}
+// 			}
+// 		}
+
+// 		// Urutkan strategic
+// 		sort.Slice(allStrategics, func(i, j int) bool {
+// 			if allStrategics[i].Status == "pokin dari pemda" && allStrategics[j].Status != "pokin dari pemda" {
+// 				return true
+// 			}
+// 			if allStrategics[i].Status != "pokin dari pemda" && allStrategics[j].Status == "pokin dari pemda" {
+// 				return false
+// 			}
+// 			return allStrategics[i].Id < allStrategics[j].Id
+// 		})
+
+// 		// Build response untuk setiap strategic menggunakan pre-fetched data
+// 		for _, strategic := range allStrategics {
+// 			strategicResp := service.buildStrategicResponseOptimized(
+// 				ctx, tx, pohonMap, strategic, pelaksanaMap, indikatorMap,
+// 				taggingMap[strategic.Id], reviewMap[strategic.Id], reviewCountMap[strategic.Id],
+// 				reviewPegawaiMap, programUnggulanMap,
+// 			)
+// 			response.Strategics = append(response.Strategics, strategicResp)
+// 		}
+// 	}
+// 	log.Printf("[%s] [PROCESS] [%s] Build strategic responses duration=%v",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(buildResponseStartTime))
+
+// 	// Simpan ke cache setelah berhasil mengambil data
+// 	cacheSetStartTime := time.Now()
+// 	helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
+// 	log.Printf("[%s] [CACHE] [%s] Set cache duration=%v",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(cacheSetStartTime))
+
+// 	responseTime := time.Since(startTime)
+// 	log.Printf("[%s] [END] [%s] kodeOpd=%s, tahun=%s, totalResponseTime=%v, strategicsCount=%d",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun, responseTime, len(response.Strategics))
+
+//		return response, nil
+//	}
+//
+// CEK OPTIMASI
 func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.PohonKinerjaOpdAllResponse, error) {
-	// Generate cache key
-	cacheKey := helper.GenerateCacheKey(helper.CacheKeyPohonKinerjaOpdAll, kodeOpd, tahun)
-
-	// Coba ambil dari cache terlebih dahulu
-	var response pohonkinerja.PohonKinerjaOpdAllResponse
-	err := helper.GetFromCache(ctx, service.RedisClient, cacheKey, &response)
-	if err == nil {
-		// Cache hit, return data dari cache
-		log.Printf("Cache HIT untuk key: %s", cacheKey)
-		return response, nil
-	}
-
-	// Cache miss, ambil data dari database
-	log.Printf("Cache MISS untuk key: %s, mengambil dari database", cacheKey)
+	// Log start time
+	startTime := time.Now()
+	serviceName := "PohonKinerjaOpdService.FindAll"
+	log.Printf("[%s] [START] [%s] kodeOpd=%s, tahun=%s",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun)
 
 	tx, err := service.DB.Begin()
 	if err != nil {
+		log.Printf("[%s] [ERROR] [%s] Error starting transaction: %v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
 
 	// Validasi OPD
+	opdStartTime := time.Now()
 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
 	if err != nil {
+		log.Printf("[%s] [ERROR] [%s] OPD not found: kode_opd=%s, error=%v, duration=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, err, time.Since(opdStartTime))
 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, errors.New("kode opd tidak ditemukan")
 	}
+	log.Printf("[%s] [QUERY] [%s] FindByKodeOpd duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(opdStartTime))
 
 	// Inisialisasi response dasar
-	response = pohonkinerja.PohonKinerjaOpdAllResponse{
+	response := pohonkinerja.PohonKinerjaOpdAllResponse{
 		KodeOpd:    kodeOpd,
 		NamaOpd:    opd.NamaOpd,
 		Tahun:      tahun,
@@ -1122,202 +1488,1239 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	}
 
 	// Ambil data tujuan OPD
+	tujuanStartTime := time.Now()
 	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdByTahun(ctx, tx, kodeOpd, tahun, "RPJMD")
 	if err != nil {
-		log.Printf("Error getting tujuan OPD: %v", err)
-		return response, nil
-	}
-
-	// Proses data tujuan OPD
-	for _, tujuan := range tujuanOpds {
-		indikators, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuan.Id)
-		if err != nil {
-			log.Printf("Error getting indikator for tujuan ID %d: %v", tujuan.Id, err)
-			continue
-		}
-
-		var indikatorResponses []pohonkinerja.IndikatorTujuanResponse
-		for _, indikator := range indikators {
-			targets, err := service.tujuanOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id, tahun)
-			if err != nil {
-				log.Printf("Error getting targets for indikator ID %s: %v", indikator.Id, err)
-				continue
+		log.Printf("[%s] [WARNING] [%s] Error getting tujuan OPD: %v, duration=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err, time.Since(tujuanStartTime))
+	} else {
+		// Proses data tujuan OPD dengan batch
+		tujuanProcessStartTime := time.Now()
+		if len(tujuanOpds) > 0 {
+			var tujuanIds []int
+			for _, tujuan := range tujuanOpds {
+				tujuanIds = append(tujuanIds, tujuan.Id)
 			}
 
-			var targetResponses []pohonkinerja.TargetTujuanResponse
-			for _, target := range targets {
-				targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
-					Tahun:  target.Tahun,
-					Target: target.Target,
-					Satuan: target.Satuan,
+			// Batch fetch semua indikator untuk semua tujuan
+			indikatorTujuanMap := make(map[int][]domain.Indikator)
+			if len(tujuanIds) > 0 {
+				indikatorBatch, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdIdsBatch(ctx, tx, tujuanIds)
+				if err == nil {
+					indikatorTujuanMap = indikatorBatch
+				}
+			}
+
+			// Kumpulkan semua indikator IDs untuk batch fetch target
+			var allTujuanIndikatorIds []string
+			for _, indikators := range indikatorTujuanMap {
+				for _, indikator := range indikators {
+					allTujuanIndikatorIds = append(allTujuanIndikatorIds, indikator.Id)
+				}
+			}
+
+			// Batch fetch semua target untuk semua indikator tujuan
+			targetTujuanBatch := make(map[string][]domain.Target)
+			if len(allTujuanIndikatorIds) > 0 {
+				targetBatch, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allTujuanIndikatorIds)
+				if err == nil {
+					// Filter target berdasarkan tahun
+					for indikatorId, targets := range targetBatch {
+						filteredTargets := make([]domain.Target, 0, len(targets))
+						for _, target := range targets {
+							if target.Tahun == tahun {
+								filteredTargets = append(filteredTargets, target)
+							}
+						}
+						if len(filteredTargets) > 0 {
+							targetTujuanBatch[indikatorId] = filteredTargets
+						}
+					}
+				}
+			}
+
+			// Build response tujuan OPD
+			tujuanResponses := make([]pohonkinerja.TujuanOpdResponse, 0, len(tujuanOpds))
+			for _, tujuan := range tujuanOpds {
+				indikators := indikatorTujuanMap[tujuan.Id]
+				indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0, len(indikators))
+				for _, indikator := range indikators {
+					targets := targetTujuanBatch[indikator.Id]
+					targetResponses := make([]pohonkinerja.TargetTujuanResponse, 0, len(targets))
+					for _, target := range targets {
+						targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
+							Tahun:  target.Tahun,
+							Target: target.Target,
+							Satuan: target.Satuan,
+						})
+					}
+					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
+						Indikator: indikator.Indikator,
+						Target:    targetResponses,
+					})
+				}
+				tujuanResponses = append(tujuanResponses, pohonkinerja.TujuanOpdResponse{
+					Id:        tujuan.Id,
+					KodeOpd:   tujuan.KodeOpd,
+					Tujuan:    tujuan.Tujuan,
+					Indikator: indikatorResponses,
 				})
 			}
-
-			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
-				Indikator: indikator.Indikator,
-				Target:    targetResponses,
-			})
+			response.TujuanOpd = tujuanResponses
 		}
-
-		response.TujuanOpd = append(response.TujuanOpd, pohonkinerja.TujuanOpdResponse{
-			Id:        tujuan.Id,
-			KodeOpd:   tujuan.KodeOpd,
-			Tujuan:    tujuan.Tujuan,
-			Indikator: indikatorResponses,
-		})
+		log.Printf("[%s] [PROCESS] [%s] Process tujuan OPD duration=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(tujuanProcessStartTime))
 	}
+	log.Printf("[%s] [QUERY] [%s] FindTujuanOpdByTahun count=%d, duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(tujuanOpds), time.Since(tujuanStartTime))
 
 	// Ambil data pohon kinerja
+	pokinStartTime := time.Now()
 	pokins, err := service.pohonKinerjaOpdRepository.FindAll(ctx, tx, kodeOpd, tahun)
 	if err != nil {
+		log.Printf("[%s] [ERROR] [%s] Error getting pohon kinerja: %v, duration=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err, time.Since(pokinStartTime))
 		return response, nil
 	}
+	log.Printf("[%s] [QUERY] [%s] FindAll pohon kinerja count=%d, duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(pokins), time.Since(pokinStartTime))
 
 	if len(pokins) == 0 {
-		// Simpan ke cache meskipun hasil kosong
-		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
+		log.Printf("[%s] [INFO] [%s] pohon_kinerja kosong",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName)
+		responseTime := time.Since(startTime)
+		log.Printf("[%s] [END] [%s] kodeOpd=%s, tahun=%s, totalResponseTime=%v (empty result)",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun, responseTime)
 		return response, nil
 	}
 
-	// Proses data pohon kinerja dengan optimasi batch queries
-	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
-	var pokinIds []int
-	maxLevel := 0
-
-	// Kelompokkan data pohon kinerja dan kumpulkan semua pokin IDs
+	// Kumpulkan semua pokin IDs untuk batch queries
+	pokinIds := make([]int, 0, len(pokins))
 	for _, p := range pokins {
 		if p.LevelPohon >= 4 {
-			if p.LevelPohon > maxLevel {
-				maxLevel = p.LevelPohon
-			}
-
-			if pohonMap[p.LevelPohon] == nil {
-				pohonMap[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
-			}
-
-			p.NamaOpd = opd.NamaOpd
-			pohonMap[p.LevelPohon][p.Parent] = append(
-				pohonMap[p.LevelPohon][p.Parent],
-				p,
-			)
 			pokinIds = append(pokinIds, p.Id)
 		}
 	}
 
-	// Batch fetch semua pelaksana dalam 1 query
+	// Batch fetch pelaksana
+	pelaksanaBatchStartTime := time.Now()
+	pelaksanas, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
+	if err != nil {
+		log.Printf("[%s] [ERROR] [%s] FindPelaksanaPokinBatch gagal | err=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+		return response, err
+	}
 	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
-	if len(pokinIds) > 0 {
-		pelaksanaBatch, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
-		if err == nil {
-			for pokinId, pelaksanaList := range pelaksanaBatch {
-				var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
-				for _, pelaksana := range pelaksanaList {
-					pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
-						Id:          pelaksana.Id,
-						PegawaiId:   pelaksana.PegawaiId,
-						NamaPegawai: pelaksana.NamaPegawai,
-					})
-				}
-				pelaksanaMap[pokinId] = pelaksanaResponses
-			}
-		} else {
-			log.Printf("Error batch fetching pelaksana: %v", err)
+	for pokinId, pelaksanaList := range pelaksanas {
+		pelaksanaResponses := make([]pohonkinerja.PelaksanaOpdResponse, 0, len(pelaksanaList))
+		for _, p := range pelaksanaList {
+			pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
+				Id:          p.Id,
+				PegawaiId:   p.PegawaiId,
+				NamaPegawai: p.NamaPegawai,
+			})
+		}
+		pelaksanaMap[pokinId] = pelaksanaResponses
+	}
+	log.Printf("[%s] [QUERY] [%s] FindPelaksanaPokinBatch count=%d, duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(pelaksanas), time.Since(pelaksanaBatchStartTime))
+
+	// Batch fetch indikator
+	indikatorBatchStartTime := time.Now()
+	indikatorBatch, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
+	if err != nil {
+		log.Printf("[%s] [ERROR] [%s] FindIndikatorByPokinIdsBatch gagal | err=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+		return response, err
+	}
+
+	// Kumpulkan semua indikator IDs untuk batch fetch target
+	var allIndikatorIds []string
+	for _, indikatorList := range indikatorBatch {
+		for _, indikator := range indikatorList {
+			allIndikatorIds = append(allIndikatorIds, indikator.Id)
 		}
 	}
 
-	// Batch fetch semua indikator dan target dalam 1 query
+	// Batch fetch semua target untuk semua indikator
+	var targetBatch map[string][]domain.Target
+	if len(allIndikatorIds) > 0 {
+		targetBatch, err = service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+		if err != nil {
+			log.Printf("[%s] [ERROR] [%s] FindTargetByIndikatorIdsBatch gagal | err=%v",
+				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+			targetBatch = make(map[string][]domain.Target)
+		}
+	} else {
+		targetBatch = make(map[string][]domain.Target)
+	}
+
+	// Build indikator map dengan target
 	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
-	if len(pokinIds) > 0 {
-		indikatorBatch, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
-		if err == nil {
-			// Kumpulkan semua indikator IDs untuk batch fetch target
-			var allIndikatorIds []string
-			for _, indikatorList := range indikatorBatch {
-				for _, indikator := range indikatorList {
-					allIndikatorIds = append(allIndikatorIds, indikator.Id)
-				}
+	for pokinId, indikatorList := range indikatorBatch {
+		indikatorResponses := make([]pohonkinerja.IndikatorResponse, 0, len(indikatorList))
+		for _, indikator := range indikatorList {
+			// Ambil target dari batch yang sudah di-fetch
+			targetList := targetBatch[indikator.Id]
+			targetResponses := make([]pohonkinerja.TargetResponse, 0, len(targetList))
+			for _, target := range targetList {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
+					// TahunSasaran:    target.Tahun,
+				})
 			}
 
-			// Batch fetch semua target dalam 1 query
-			var targetBatch map[string][]domain.Target
-			if len(allIndikatorIds) > 0 {
-				targetBatch, err = service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
-				if err != nil {
-					log.Printf("Error batch fetching targets: %v", err)
-					targetBatch = make(map[string][]domain.Target)
-				}
-			} else {
-				targetBatch = make(map[string][]domain.Target)
-			}
+			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+				Id:            indikator.Id,
+				IdPokin:       fmt.Sprint(pokinId), // Konversi int pokinId ke string
+				NamaIndikator: indikator.Indikator,
+				Target:        targetResponses,
+			})
+		}
+		indikatorMap[pokinId] = indikatorResponses
+	}
+	log.Printf("[%s] [QUERY] [%s] FindIndikatorByPokinIdsBatch count=%d, duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(indikatorBatch), time.Since(indikatorBatchStartTime))
 
-			// Build indikator responses dengan target
-			for pokinId, indikatorList := range indikatorBatch {
-				var indikatorResponses []pohonkinerja.IndikatorResponse
-				for _, indikator := range indikatorList {
-					targetList := targetBatch[indikator.Id]
-					var targetResponses []pohonkinerja.TargetResponse
-					for _, target := range targetList {
-						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-							Id:              target.Id,
-							IndikatorId:     target.IndikatorId,
-							TargetIndikator: target.Target,
-							SatuanIndikator: target.Satuan,
-						})
-					}
-
-					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
-						Id:            indikator.Id,
-						IdPokin:       fmt.Sprint(pokinId),
-						NamaIndikator: indikator.Indikator,
-						Target:        targetResponses,
-					})
-				}
-				indikatorMap[pokinId] = indikatorResponses
-			}
-		} else {
-			log.Printf("Error batch fetching indikator: %v", err)
+	// Batch fetch tematik berdasarkan clone_from
+	tematikBatchStartTime := time.Now()
+	tematikCloneFromSet := make(map[int]bool)
+	for _, p := range pokins {
+		if p.LevelPohon >= 4 && p.CloneFrom > 0 {
+			tematikCloneFromSet[p.CloneFrom] = true
+			// PERBAIKAN: Log untuk debug CloneFrom
+			log.Printf("[%s] [DEBUG] [%s] Found pokin id=%d, level=%d, cloneFrom=%d",
+				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, p.Id, p.LevelPohon, p.CloneFrom)
 		}
 	}
 
-	// Proses khusus untuk level 4 (Strategic)
-	if strategicList := pohonMap[4]; len(strategicList) > 0 {
-		var allStrategics []domain.PohonKinerja
-		processedIds := make(map[int]bool)
+	// OPTIMASI: Batasi jumlah cloneFromIds untuk menghindari query yang terlalu kompleks
+	var tematikCloneFromIds []int
+	maxTematikIds := 100
+	count := 0
+	for cloneFromId := range tematikCloneFromSet {
+		if count >= maxTematikIds {
+			break
+		}
+		tematikCloneFromIds = append(tematikCloneFromIds, cloneFromId)
+		count++
+	}
 
-		// Kumpulkan semua strategic
-		for _, strategicsByParent := range strategicList {
-			for _, strategic := range strategicsByParent {
-				if !processedIds[strategic.Id] {
-					allStrategics = append(allStrategics, strategic)
-					processedIds[strategic.Id] = true
+	// PERBAIKAN: Log cloneFromIds untuk debug
+	if len(tematikCloneFromIds) > 0 {
+		log.Printf("[%s] [DEBUG] [%s] Fetching tematik for cloneFromIds: %v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, tematikCloneFromIds)
+	} else {
+		log.Printf("[%s] [DEBUG] [%s] No cloneFromIds found for tematik fetch",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName)
+	}
+
+	tematikMap := make(map[int]*domain.PohonKinerja)
+	if len(tematikCloneFromIds) > 0 {
+		// OPTIMASI: Gunakan context dengan timeout untuk menghindari query yang terlalu lama
+		tematikCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		tematikBatch, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFromBatch(tematikCtx, tx, tematikCloneFromIds)
+		if err == nil {
+			tematikMap = tematikBatch
+			// PERBAIKAN: Log hasil dengan detail lebih lengkap
+			log.Printf("[%s] [DEBUG] [%s] Found tematik for %d/%d cloneFromIds",
+				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(tematikMap), len(tematikCloneFromIds))
+
+			// PERBAIKAN: Log detail setiap tematik yang ditemukan
+			for cloneFromId, tematik := range tematikMap {
+				if tematik != nil {
+					log.Printf("[%s] [DEBUG] [%s] Tematik: cloneFromId=%d, tematikId=%d, nama=%s",
+						time.Now().Format("2006-01-02 15:04:05.000"), serviceName, cloneFromId, tematik.Id, tematik.NamaPohon)
 				}
 			}
+
+			// PERBAIKAN: Log cloneFromIds yang tidak ditemukan tematik-nya
+			for _, cloneFromId := range tematikCloneFromIds {
+				if _, found := tematikMap[cloneFromId]; !found {
+					log.Printf("[%s] [DEBUG] [%s] Warning: No tematik found for cloneFromId=%d",
+						time.Now().Format("2006-01-02 15:04:05.000"), serviceName, cloneFromId)
+				}
+			}
+		} else {
+			// Log error tapi jangan fail seluruh request
+			log.Printf("[%s] [WARNING] [%s] FindTematikByCloneFromBatch error (non-fatal): %v",
+				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
 		}
+	}
+	log.Printf("[%s] [QUERY] [%s] FindTematikByCloneFromBatch count=%d, duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(tematikMap), time.Since(tematikBatchStartTime))
 
-		// Urutkan strategic
-		sort.Slice(allStrategics, func(i, j int) bool {
-			if allStrategics[i].Status == "pokin dari pemda" && allStrategics[j].Status != "pokin dari pemda" {
-				return true
+	// Proses data pohon kinerja ke map
+	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+	for _, p := range pokins {
+		if p.LevelPohon >= 4 {
+			if pohonMap[p.LevelPohon] == nil {
+				pohonMap[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
 			}
-			if allStrategics[i].Status != "pokin dari pemda" && allStrategics[j].Status == "pokin dari pemda" {
-				return false
+			p.NamaOpd = opd.NamaOpd
+			pohonMap[p.LevelPohon][p.Parent] = append(pohonMap[p.LevelPohon][p.Parent], p)
+		}
+	}
+
+	// Batch fetch tagging
+	taggingBatchStartTime := time.Now()
+	taggings, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinIdsBatch(ctx, tx, pokinIds)
+	if err != nil {
+		log.Printf("[%s] [ERROR] [%s] FindTaggingByPokinIdsBatch gagal | err=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+		return response, err
+	}
+	taggingMap := make(map[int][]pohonkinerja.TaggingResponse)
+	for pokinId, tagList := range taggings {
+		taggingResponses := make([]pohonkinerja.TaggingResponse, 0, len(tagList))
+		for _, tag := range tagList {
+			keteranganResponses := make([]pohonkinerja.KeteranganTaggingResponse, 0, len(tag.KeteranganTaggingProgram))
+			for _, keterangan := range tag.KeteranganTaggingProgram {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: keterangan.RencanaImplementasi,
+				})
 			}
-			return allStrategics[i].Id < allStrategics[j].Id
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                       tag.Id,
+				IdPokin:                  tag.IdPokin,
+				NamaTagging:              tag.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
+			})
+		}
+		taggingMap[pokinId] = taggingResponses
+	}
+	log.Printf("[%s] [QUERY] [%s] FindTaggingByPokinIdsBatch count=%d, duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(taggings), time.Since(taggingBatchStartTime))
+
+	// Batch fetch review
+	reviewBatchStartTime := time.Now()
+	reviews, err := service.reviewRepository.FindByPokinIdBatch(ctx, tx, pokinIds)
+	if err != nil {
+		log.Printf("[%s] [ERROR] [%s] FindByPokinIdBatch gagal | err=%v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, err)
+		return response, err
+	}
+
+	// OPTIMASI: Pre-count reviews per pokinId untuk pre-allocation
+	reviewCountPerPokin := make(map[int]int)
+	for _, review := range reviews {
+		reviewCountPerPokin[review.IdPohonKinerja]++
+	}
+
+	// Pre-allocate reviewMap dengan capacity yang tepat
+	reviewMap := make(map[int][]pohonkinerja.ReviewResponse, len(reviewCountPerPokin))
+	for pokinId, count := range reviewCountPerPokin {
+		reviewMap[pokinId] = make([]pohonkinerja.ReviewResponse, 0, count)
+	}
+
+	// Fill reviewMap
+	for _, review := range reviews {
+		reviewMap[review.IdPohonKinerja] = append(reviewMap[review.IdPohonKinerja], pohonkinerja.ReviewResponse{
+			Id:             review.Id,
+			IdPohonKinerja: review.IdPohonKinerja,
+			Review:         review.Review,
+			Keterangan:     review.Keterangan,
+			CreatedBy:      review.CreatedBy,
+			NamaPegawai:    review.NamaReviewer,
+			JenisPokin:     review.Jenis_pokin,
 		})
+	}
+	log.Printf("[%s] [QUERY] [%s] FindByPokinIdBatch count=%d, duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(reviews), time.Since(reviewBatchStartTime))
 
-		// Build response untuk setiap strategic
+	// Build response untuk strategic (level 4)
+	buildResponseStartTime := time.Now()
+	strategicList := pohonMap[4]
+	if len(strategicList) > 0 {
+		allStrategics := flattenAndSort(strategicList)
+
 		for _, strategic := range allStrategics {
-			strategicResp := service.buildStrategicResponse(ctx, tx, pohonMap, strategic, pelaksanaMap, indikatorMap)
+			strategicResp := buildStrategicOnly(
+				strategic,
+				taggingMap,
+				pelaksanaMap,
+				indikatorMap,
+				reviewMap,
+				tematikMap,
+			)
+
+			// Append tactical (level 5)
+			if tacticalsByParent, ok := pohonMap[5][strategic.Id]; ok {
+				for _, tactical := range tacticalsByParent {
+					tacticalResp := buildTacticalOnly(
+						tactical,
+						taggingMap,
+						pelaksanaMap,
+						indikatorMap,
+						reviewMap,
+						tematikMap,
+					)
+
+					// Lanjut append operational
+					appendOperationals(&tacticalResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, tematikMap)
+
+					strategicResp.Tacticals = append(strategicResp.Tacticals, tacticalResp)
+				}
+			}
+
 			response.Strategics = append(response.Strategics, strategicResp)
 		}
 	}
+	log.Printf("[%s] [PROCESS] [%s] Build strategic responses duration=%v",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(buildResponseStartTime))
 
-	// Simpan ke cache setelah berhasil mengambil data
-	helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.PohonKinerjaCacheTTL)
-	log.Printf("Data disimpan ke cache dengan key: %s", cacheKey)
+	responseTime := time.Since(startTime)
+	log.Printf("[%s] [END] [%s] kodeOpd=%s, tahun=%s, totalResponseTime=%v, strategicsCount=%d",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, kodeOpd, tahun, responseTime, len(response.Strategics))
 
 	return response, nil
 }
+
+// Helper function untuk flatten dan sort strategic
+func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonKinerja {
+	// Hitung total capacity dulu
+	totalCount := 0
+	for _, nodes := range nodesByParent {
+		totalCount += len(nodes)
+	}
+
+	// Pre-allocate dengan capacity yang tepat
+	result := make([]domain.PohonKinerja, 0, totalCount)
+	seen := make(map[int]bool, totalCount) // Pre-allocate map dengan size
+
+	for _, nodes := range nodesByParent {
+		for _, n := range nodes {
+			if !seen[n.Id] {
+				result = append(result, n)
+				seen[n.Id] = true
+			}
+		}
+	}
+
+	// Sort dengan optimasi
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Status == "pokin dari pemda" && result[j].Status != "pokin dari pemda" {
+			return true
+		}
+		if result[i].Status != "pokin dari pemda" && result[j].Status == "pokin dari pemda" {
+			return false
+		}
+		return result[i].Id < result[j].Id
+	})
+
+	return result
+}
+
+// Helper function untuk build strategic only
+func buildStrategicOnly(
+	strategic domain.PohonKinerja,
+	taggingMap map[int][]pohonkinerja.TaggingResponse,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	reviewMap map[int][]pohonkinerja.ReviewResponse,
+	tematikMap map[int]*domain.PohonKinerja,
+) pohonkinerja.StrategicOpdResponse {
+	var keteranganCrosscutting *string
+	if strategic.KeteranganCrosscutting != nil && *strategic.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = strategic.KeteranganCrosscutting
+	}
+
+	// PERBAIKAN: Cari tematik dari pre-fetched map dengan logging yang lebih detail
+	var idTematik *int
+	var namaTematik *string
+	if strategic.CloneFrom > 0 {
+		tematik, exists := tematikMap[strategic.CloneFrom]
+		if exists && tematik != nil {
+			idTematik = &tematik.Id
+			// PERBAIKAN: Pastikan nama_pohon tidak kosong sebelum di-set
+			if tematik.NamaPohon != "" {
+				namaTematik = &tematik.NamaPohon
+			} else {
+				log.Printf("[DEBUG] buildStrategicOnly: tematik found for cloneFrom=%d but NamaPohon is empty, id=%d",
+					strategic.CloneFrom, tematik.Id)
+			}
+		} else {
+			// DEBUG: Log jika tematik tidak ditemukan
+			log.Printf("[DEBUG] buildStrategicOnly: tematik not found for cloneFrom=%d (exists=%v, map size=%d, strategicId=%d)",
+				strategic.CloneFrom, exists, len(tematikMap), strategic.Id)
+		}
+	}
+
+	reviewPokin := reviewMap[strategic.Id]
+	countReview := len(reviewPokin)
+
+	strategicResp := pohonkinerja.StrategicOpdResponse{
+		Id:                     strategic.Id,
+		Parent:                 nil,
+		Strategi:               strategic.NamaPohon,
+		JenisPohon:             strategic.JenisPohon,
+		LevelPohon:             strategic.LevelPohon,
+		Keterangan:             strategic.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 strategic.Status,
+		IsActive:               strategic.IsActive,
+		IdTematik:              idTematik,
+		NamaTematik:            namaTematik,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: strategic.KodeOpd,
+			NamaOpd: strategic.NamaOpd,
+		},
+		Tagging:     taggingMap[strategic.Id],
+		Pelaksana:   pelaksanaMap[strategic.Id],
+		Indikator:   indikatorMap[strategic.Id],
+		Review:      reviewPokin,
+		CountReview: countReview,
+	}
+	return strategicResp
+}
+
+// Helper function untuk build tactical only
+func buildTacticalOnly(
+	tactical domain.PohonKinerja,
+	taggingMap map[int][]pohonkinerja.TaggingResponse,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	reviewMap map[int][]pohonkinerja.ReviewResponse,
+	tematikMap map[int]*domain.PohonKinerja,
+) pohonkinerja.TacticalOpdResponse {
+	var keteranganCrosscutting *string
+	if tactical.KeteranganCrosscutting != nil && *tactical.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = tactical.KeteranganCrosscutting
+	}
+
+	// PERBAIKAN: Cari tematik dari pre-fetched map dengan logging yang lebih detail
+	var idTematik *int
+	var namaTematik *string
+	if tactical.CloneFrom > 0 {
+		tematik, exists := tematikMap[tactical.CloneFrom]
+		if exists && tematik != nil {
+			idTematik = &tematik.Id
+			// PERBAIKAN: Pastikan nama_pohon tidak kosong sebelum di-set
+			if tematik.NamaPohon != "" {
+				namaTematik = &tematik.NamaPohon
+			} else {
+				log.Printf("[DEBUG] buildTacticalOnly: tematik found for cloneFrom=%d but NamaPohon is empty, id=%d",
+					tactical.CloneFrom, tematik.Id)
+			}
+		} else {
+			log.Printf("[DEBUG] buildTacticalOnly: tematik not found for cloneFrom=%d (exists=%v, map size=%d, tacticalId=%d)",
+				tactical.CloneFrom, exists, len(tematikMap), tactical.Id)
+		}
+	}
+
+	reviewPokin := reviewMap[tactical.Id]
+	countReview := len(reviewPokin)
+
+	tacticalResp := pohonkinerja.TacticalOpdResponse{
+		Id:                     tactical.Id,
+		Parent:                 tactical.Parent,
+		Strategi:               tactical.NamaPohon,
+		JenisPohon:             tactical.JenisPohon,
+		LevelPohon:             tactical.LevelPohon,
+		Keterangan:             tactical.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 tactical.Status,
+		IsActive:               tactical.IsActive,
+		IdTematik:              idTematik,
+		NamaTematik:            namaTematik,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: tactical.KodeOpd,
+			NamaOpd: tactical.NamaOpd,
+		},
+		Tagging:     taggingMap[tactical.Id],
+		Pelaksana:   pelaksanaMap[tactical.Id],
+		Indikator:   indikatorMap[tactical.Id],
+		Review:      reviewPokin,
+		CountReview: countReview,
+	}
+	return tacticalResp
+}
+
+// Helper function untuk build operational only
+func buildOperationalOnly(
+	operational domain.PohonKinerja,
+	taggingMap map[int][]pohonkinerja.TaggingResponse,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	reviewMap map[int][]pohonkinerja.ReviewResponse,
+	tematikMap map[int]*domain.PohonKinerja,
+) pohonkinerja.OperationalOpdResponse {
+	var keteranganCrosscutting *string
+	if operational.KeteranganCrosscutting != nil && *operational.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = operational.KeteranganCrosscutting
+	}
+
+	// PERBAIKAN: Cari tematik dari pre-fetched map dengan logging yang lebih detail
+	var idTematik *int
+	var namaTematik *string
+	if operational.CloneFrom > 0 {
+		tematik, exists := tematikMap[operational.CloneFrom]
+		if exists && tematik != nil {
+			idTematik = &tematik.Id
+			// PERBAIKAN: Pastikan nama_pohon tidak kosong sebelum di-set
+			if tematik.NamaPohon != "" {
+				namaTematik = &tematik.NamaPohon
+			} else {
+				log.Printf("[DEBUG] buildOperationalOnly: tematik found for cloneFrom=%d but NamaPohon is empty, id=%d",
+					operational.CloneFrom, tematik.Id)
+			}
+		} else {
+			log.Printf("[DEBUG] buildOperationalOnly: tematik not found for cloneFrom=%d (exists=%v, map size=%d, operationalId=%d)",
+				operational.CloneFrom, exists, len(tematikMap), operational.Id)
+		}
+	}
+
+	reviewPokin := reviewMap[operational.Id]
+	countReview := len(reviewPokin)
+
+	operationalResp := pohonkinerja.OperationalOpdResponse{
+		Id:                     operational.Id,
+		Parent:                 operational.Parent,
+		Strategi:               operational.NamaPohon,
+		JenisPohon:             operational.JenisPohon,
+		LevelPohon:             operational.LevelPohon,
+		Keterangan:             operational.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 operational.Status,
+		IsActive:               operational.IsActive,
+		IdTematik:              idTematik,
+		NamaTematik:            namaTematik,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: operational.KodeOpd,
+			NamaOpd: operational.NamaOpd,
+		},
+		Tagging:     taggingMap[operational.Id],
+		Pelaksana:   pelaksanaMap[operational.Id],
+		Indikator:   indikatorMap[operational.Id],
+		Review:      reviewPokin,
+		CountReview: countReview,
+	}
+	return operationalResp
+}
+
+// Helper function untuk build operational N only
+func buildOperationalNOnly(
+	operationalN domain.PohonKinerja,
+	taggingMap map[int][]pohonkinerja.TaggingResponse,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	reviewMap map[int][]pohonkinerja.ReviewResponse,
+) pohonkinerja.OperationalNOpdResponse {
+	var keteranganCrosscutting *string
+	if operationalN.KeteranganCrosscutting != nil && *operationalN.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = operationalN.KeteranganCrosscutting
+	}
+
+	reviewPokin := reviewMap[operationalN.Id]
+	countReview := len(reviewPokin)
+
+	operationalNResp := pohonkinerja.OperationalNOpdResponse{
+		Id:                     operationalN.Id,
+		Parent:                 operationalN.Parent,
+		Strategi:               operationalN.NamaPohon,
+		JenisPohon:             operationalN.JenisPohon,
+		LevelPohon:             operationalN.LevelPohon,
+		Keterangan:             operationalN.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 operationalN.Status,
+		IsActive:               operationalN.IsActive,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: operationalN.KodeOpd,
+			NamaOpd: operationalN.NamaOpd,
+		},
+		Tagging:     taggingMap[operationalN.Id],
+		Pelaksana:   pelaksanaMap[operationalN.Id],
+		Indikator:   indikatorMap[operationalN.Id],
+		Review:      reviewPokin,
+		CountReview: countReview,
+	}
+	return operationalNResp
+}
+
+// Helper function untuk append operationals
+func appendOperationals(
+	tacticalResp *pohonkinerja.TacticalOpdResponse,
+	pohonMap map[int]map[int][]domain.PohonKinerja,
+	taggingMap map[int][]pohonkinerja.TaggingResponse,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	reviewMap map[int][]pohonkinerja.ReviewResponse,
+	tematikMap map[int]*domain.PohonKinerja,
+) {
+	operationals, ok := pohonMap[6][tacticalResp.Id]
+	if !ok {
+		return
+	}
+
+	// Sort operationals
+	sort.Slice(operationals, func(i, j int) bool {
+		if operationals[i].Status == "pokin dari pemda" && operationals[j].Status != "pokin dari pemda" {
+			return true
+		}
+		if operationals[i].Status != "pokin dari pemda" && operationals[j].Status == "pokin dari pemda" {
+			return false
+		}
+		return operationals[i].Id < operationals[j].Id
+	})
+
+	for _, operational := range operationals {
+		opResp := buildOperationalOnly(
+			operational,
+			taggingMap,
+			pelaksanaMap,
+			indikatorMap,
+			reviewMap,
+			tematikMap,
+		)
+
+		// Lanjut append operational N
+		appendOperationalN(&opResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+
+		tacticalResp.Operationals = append(tacticalResp.Operationals, opResp)
+	}
+}
+
+func appendOperationalN(
+	operationalResp *pohonkinerja.OperationalOpdResponse,
+	pohonMap map[int]map[int][]domain.PohonKinerja,
+	taggingMap map[int][]pohonkinerja.TaggingResponse,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	reviewMap map[int][]pohonkinerja.ReviewResponse,
+) {
+	nextLevel := operationalResp.LevelPohon + 1
+	children, ok := pohonMap[nextLevel][operationalResp.Id]
+	if !ok {
+		return
+	}
+
+	// Sort children
+	sort.Slice(children, func(i, j int) bool {
+		if children[i].Status == "pokin dari pemda" && children[j].Status != "pokin dari pemda" {
+			return true
+		}
+		if children[i].Status != "pokin dari pemda" && children[j].Status == "pokin dari pemda" {
+			return false
+		}
+		return children[i].Id < children[j].Id
+	})
+
+	for _, child := range children {
+		childResp := buildOperationalNOnly(
+			child,
+			taggingMap,
+			pelaksanaMap,
+			indikatorMap,
+			reviewMap,
+		)
+
+		// Recursive untuk level berikutnya jika ada (gunakan function terpisah untuk OperationalNOpdResponse)
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+
+		operationalResp.Childs = append(operationalResp.Childs, childResp)
+	}
+}
+
+// Helper function untuk append operational N recursive (untuk OperationalNOpdResponse)
+func appendOperationalNRecursive(
+	operationalNResp *pohonkinerja.OperationalNOpdResponse,
+	pohonMap map[int]map[int][]domain.PohonKinerja,
+	taggingMap map[int][]pohonkinerja.TaggingResponse,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	reviewMap map[int][]pohonkinerja.ReviewResponse,
+) {
+	nextLevel := operationalNResp.LevelPohon + 1
+	children, ok := pohonMap[nextLevel][operationalNResp.Id]
+	if !ok {
+		return
+	}
+
+	// Sort children
+	sort.Slice(children, func(i, j int) bool {
+		if children[i].Status == "pokin dari pemda" && children[j].Status != "pokin dari pemda" {
+			return true
+		}
+		if children[i].Status != "pokin dari pemda" && children[j].Status == "pokin dari pemda" {
+			return false
+		}
+		return children[i].Id < children[j].Id
+	})
+
+	for _, child := range children {
+		childResp := buildOperationalNOnly(
+			child,
+			taggingMap,
+			pelaksanaMap,
+			indikatorMap,
+			reviewMap,
+		)
+
+		// Recursive untuk level berikutnya jika ada
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+
+		operationalNResp.Childs = append(operationalNResp.Childs, childResp)
+	}
+}
+
+// Versi optimized buildStrategicResponse yang menggunakan pre-fetched data
+func (service *PohonKinerjaOpdServiceImpl) buildStrategicResponseOptimized(
+	ctx context.Context,
+	pohonMap map[int]map[int][]domain.PohonKinerja,
+	strategic domain.PohonKinerja,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	taggingList []domain.TaggingPokin,
+	reviews []domain.Review,
+	countReview int,
+	reviewPegawaiMap map[string]*domainmaster.Pegawai,
+	programUnggulanMap map[string]*domain.ProgramUnggulan,
+	taggingMap map[int][]domain.TaggingPokin,
+	reviewMap map[int][]domain.Review,
+	reviewCountMap map[int]int,
+	tematikMap map[int]*domain.PohonKinerja,
+) pohonkinerja.StrategicOpdResponse {
+	var keteranganCrosscutting *string
+	if strategic.KeteranganCrosscutting != nil && *strategic.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = strategic.KeteranganCrosscutting
+	}
+
+	// Build tagging responses menggunakan pre-fetched data
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range taggingList {
+		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			if program, exists := programUnggulanMap[keterangan.KodeProgramUnggulan]; exists {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: program.KeteranganProgramUnggulan,
+				})
+			}
+		}
+
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                       tagging.Id,
+			IdPokin:                  tagging.IdPokin,
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganResponses,
+		})
+	}
+
+	// Build review responses menggunakan pre-fetched data
+	var reviewResponses []pohonkinerja.ReviewResponse
+	for _, review := range reviews {
+		pegawai, exists := reviewPegawaiMap[review.CreatedBy]
+		if exists {
+			reviewResponses = append(reviewResponses, pohonkinerja.ReviewResponse{
+				Id:             review.Id,
+				IdPohonKinerja: review.IdPohonKinerja,
+				Review:         review.Review,
+				Keterangan:     review.Keterangan,
+				CreatedBy:      pegawai.NamaPegawai,
+			})
+		}
+	}
+
+	// Cari tematik dari pre-fetched map
+	var idTematik *int
+	var namaTematik *string
+	if strategic.CloneFrom > 0 {
+		if tematik, exists := tematikMap[strategic.CloneFrom]; exists && tematik != nil {
+			idTematik = &tematik.Id
+			namaTematik = &tematik.NamaPohon
+		}
+	}
+
+	strategicResp := pohonkinerja.StrategicOpdResponse{
+		Id:                     strategic.Id,
+		Parent:                 nil,
+		Strategi:               strategic.NamaPohon,
+		JenisPohon:             strategic.JenisPohon,
+		LevelPohon:             strategic.LevelPohon,
+		Keterangan:             strategic.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 strategic.Status,
+		IsActive:               strategic.IsActive,
+		IdTematik:              idTematik,
+		NamaTematik:            namaTematik,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: strategic.KodeOpd,
+			NamaOpd: strategic.NamaOpd,
+		},
+		Tagging:     taggingResponses,
+		Pelaksana:   pelaksanaMap[strategic.Id],
+		Indikator:   indikatorMap[strategic.Id],
+		Review:      reviewResponses,
+		CountReview: countReview,
+	}
+
+	// Build tactical (level 5)
+	if tacticalList := pohonMap[5][strategic.Id]; len(tacticalList) > 0 {
+		var tacticals []pohonkinerja.TacticalOpdResponse
+		sort.Slice(tacticalList, func(i, j int) bool {
+			if tacticalList[i].Status == "pokin dari pemda" && tacticalList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if tacticalList[i].Status != "pokin dari pemda" && tacticalList[j].Status == "pokin dari pemda" {
+				return false
+			}
+			return tacticalList[i].Id < tacticalList[j].Id
+		})
+
+		for _, tactical := range tacticalList {
+			tacticalResp := service.buildTacticalResponseOptimized(
+				ctx, pohonMap, tactical, pelaksanaMap, indikatorMap,
+				taggingMap[tactical.Id], reviewMap[tactical.Id], reviewCountMap[tactical.Id],
+				reviewPegawaiMap, programUnggulanMap, idTematik, namaTematik,
+				taggingMap, reviewMap, reviewCountMap,
+			)
+			tacticals = append(tacticals, tacticalResp)
+		}
+		strategicResp.Tacticals = tacticals
+	}
+
+	return strategicResp
+}
+
+// Versi optimized buildTacticalResponse
+func (service *PohonKinerjaOpdServiceImpl) buildTacticalResponseOptimized(
+	ctx context.Context,
+	pohonMap map[int]map[int][]domain.PohonKinerja,
+	tactical domain.PohonKinerja,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	taggingList []domain.TaggingPokin,
+	reviews []domain.Review,
+	countReview int,
+	reviewPegawaiMap map[string]*domainmaster.Pegawai,
+	programUnggulanMap map[string]*domain.ProgramUnggulan,
+	idTematik *int,
+	namaTematik *string,
+	taggingMap map[int][]domain.TaggingPokin,
+	reviewMap map[int][]domain.Review,
+	reviewCountMap map[int]int,
+) pohonkinerja.TacticalOpdResponse {
+	var keteranganCrosscutting *string
+	if tactical.KeteranganCrosscutting != nil && *tactical.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = tactical.KeteranganCrosscutting
+	}
+
+	// Build tagging dan review menggunakan pre-fetched data
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range taggingList {
+		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			if program, exists := programUnggulanMap[keterangan.KodeProgramUnggulan]; exists {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: program.KeteranganProgramUnggulan,
+				})
+			}
+		}
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                       tagging.Id,
+			IdPokin:                  tagging.IdPokin,
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganResponses,
+		})
+	}
+
+	var reviewResponses []pohonkinerja.ReviewResponse
+	for _, review := range reviews {
+		pegawai, exists := reviewPegawaiMap[review.CreatedBy]
+		if exists {
+			reviewResponses = append(reviewResponses, pohonkinerja.ReviewResponse{
+				Id:             review.Id,
+				IdPohonKinerja: review.IdPohonKinerja,
+				Review:         review.Review,
+				Keterangan:     review.Keterangan,
+				CreatedBy:      pegawai.NamaPegawai,
+			})
+		}
+	}
+
+	tacticalResp := pohonkinerja.TacticalOpdResponse{
+		Id:                     tactical.Id,
+		Parent:                 tactical.Parent,
+		Strategi:               tactical.NamaPohon,
+		JenisPohon:             tactical.JenisPohon,
+		LevelPohon:             tactical.LevelPohon,
+		Keterangan:             tactical.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 tactical.Status,
+		IsActive:               tactical.IsActive,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: tactical.KodeOpd,
+			NamaOpd: tactical.NamaOpd,
+		},
+		IdTematik:   idTematik,
+		NamaTematik: namaTematik,
+		Pelaksana:   pelaksanaMap[tactical.Id],
+		Tagging:     taggingResponses,
+		Indikator:   indikatorMap[tactical.Id],
+		Review:      reviewResponses,
+		CountReview: countReview,
+	}
+
+	// Build operational (level 6)
+	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
+		var operationals []pohonkinerja.OperationalOpdResponse
+		sort.Slice(operationalList, func(i, j int) bool {
+			if operationalList[i].Status == "pokin dari pemda" && operationalList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if operationalList[i].Status != "pokin dari pemda" && operationalList[j].Status == "pokin dari pemda" {
+				return false
+			}
+			return operationalList[i].Id < operationalList[j].Id
+		})
+
+		for _, operational := range operationalList {
+			operationalResp := service.buildOperationalResponseOptimized(
+				ctx, pohonMap, operational, pelaksanaMap, indikatorMap,
+				taggingMap[operational.Id], reviewMap[operational.Id], reviewCountMap[operational.Id],
+				reviewPegawaiMap, programUnggulanMap, idTematik, namaTematik,
+				taggingMap, reviewMap, reviewCountMap,
+			)
+			operationals = append(operationals, operationalResp)
+		}
+		tacticalResp.Operationals = operationals
+	}
+
+	return tacticalResp
+}
+
+// Versi optimized buildOperationalResponse
+func (service *PohonKinerjaOpdServiceImpl) buildOperationalResponseOptimized(
+	ctx context.Context,
+	pohonMap map[int]map[int][]domain.PohonKinerja,
+	operational domain.PohonKinerja,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	taggingList []domain.TaggingPokin,
+	reviews []domain.Review,
+	countReview int,
+	reviewPegawaiMap map[string]*domainmaster.Pegawai,
+	programUnggulanMap map[string]*domain.ProgramUnggulan,
+	idTematik *int,
+	namaTematik *string,
+	taggingMap map[int][]domain.TaggingPokin,
+	reviewMap map[int][]domain.Review,
+	reviewCountMap map[int]int,
+) pohonkinerja.OperationalOpdResponse {
+	var keteranganCrosscutting *string
+	if operational.KeteranganCrosscutting != nil && *operational.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = operational.KeteranganCrosscutting
+	}
+
+	// Build tagging dan review menggunakan pre-fetched data
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range taggingList {
+		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			if program, exists := programUnggulanMap[keterangan.KodeProgramUnggulan]; exists {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: program.KeteranganProgramUnggulan,
+				})
+			}
+		}
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                       tagging.Id,
+			IdPokin:                  tagging.IdPokin,
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganResponses,
+		})
+	}
+
+	var reviewResponses []pohonkinerja.ReviewResponse
+	for _, review := range reviews {
+		pegawai, exists := reviewPegawaiMap[review.CreatedBy]
+		if exists {
+			reviewResponses = append(reviewResponses, pohonkinerja.ReviewResponse{
+				Id:             review.Id,
+				IdPohonKinerja: review.IdPohonKinerja,
+				Review:         review.Review,
+				Keterangan:     review.Keterangan,
+				CreatedBy:      pegawai.NamaPegawai,
+			})
+		}
+	}
+
+	operationalResp := pohonkinerja.OperationalOpdResponse{
+		Id:                     operational.Id,
+		Parent:                 operational.Parent,
+		Strategi:               operational.NamaPohon,
+		JenisPohon:             operational.JenisPohon,
+		LevelPohon:             operational.LevelPohon,
+		Keterangan:             operational.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 operational.Status,
+		IsActive:               operational.IsActive,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: operational.KodeOpd,
+			NamaOpd: operational.NamaOpd,
+		},
+		IdTematik:   idTematik,
+		NamaTematik: namaTematik,
+		Pelaksana:   pelaksanaMap[operational.Id],
+		Tagging:     taggingResponses,
+		Indikator:   indikatorMap[operational.Id],
+		Review:      reviewResponses,
+		CountReview: countReview,
+	}
+
+	// Build operational-n untuk level > 6
+	nextLevel := operational.LevelPohon + 1
+	if operationalNList := pohonMap[nextLevel][operational.Id]; len(operationalNList) > 0 {
+		var childs []pohonkinerja.OperationalNOpdResponse
+		sort.Slice(operationalNList, func(i, j int) bool {
+			if operationalNList[i].Status == "pokin dari pemda" && operationalNList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if operationalNList[i].Status != "pokin dari pemda" && operationalNList[j].Status == "pokin dari pemda" {
+				return false
+			}
+			return operationalNList[i].Id < operationalNList[j].Id
+		})
+
+		for _, opN := range operationalNList {
+			childResp := service.buildOperationalNResponseOptimized(
+				ctx, pohonMap, opN, pelaksanaMap, indikatorMap,
+				taggingMap[opN.Id], reviewMap[opN.Id], reviewCountMap[opN.Id],
+				reviewPegawaiMap, programUnggulanMap,
+				taggingMap, reviewMap, reviewCountMap,
+			)
+			childs = append(childs, childResp)
+		}
+		operationalResp.Childs = childs
+	}
+
+	return operationalResp
+}
+
+// Versi optimized buildOperationalNResponse
+func (service *PohonKinerjaOpdServiceImpl) buildOperationalNResponseOptimized(
+	ctx context.Context,
+	pohonMap map[int]map[int][]domain.PohonKinerja,
+	operationalN domain.PohonKinerja,
+	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
+	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	taggingList []domain.TaggingPokin,
+	reviews []domain.Review,
+	countReview int,
+	reviewPegawaiMap map[string]*domainmaster.Pegawai,
+	programUnggulanMap map[string]*domain.ProgramUnggulan,
+	taggingMap map[int][]domain.TaggingPokin,
+	reviewMap map[int][]domain.Review,
+	reviewCountMap map[int]int,
+) pohonkinerja.OperationalNOpdResponse {
+	var keteranganCrosscutting *string
+	if operationalN.KeteranganCrosscutting != nil && *operationalN.KeteranganCrosscutting != "" {
+		keteranganCrosscutting = operationalN.KeteranganCrosscutting
+	}
+
+	// Build tagging dan review menggunakan pre-fetched data
+	var taggingResponses []pohonkinerja.TaggingResponse
+	for _, tagging := range taggingList {
+		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			if program, exists := programUnggulanMap[keterangan.KodeProgramUnggulan]; exists {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: program.KeteranganProgramUnggulan,
+				})
+			}
+		}
+		taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+			Id:                       tagging.Id,
+			IdPokin:                  tagging.IdPokin,
+			NamaTagging:              tagging.NamaTagging,
+			KeteranganTaggingProgram: keteranganResponses,
+		})
+	}
+
+	var reviewResponses []pohonkinerja.ReviewResponse
+	for _, review := range reviews {
+		pegawai, exists := reviewPegawaiMap[review.CreatedBy]
+		if exists {
+			reviewResponses = append(reviewResponses, pohonkinerja.ReviewResponse{
+				Id:             review.Id,
+				IdPohonKinerja: review.IdPohonKinerja,
+				Review:         review.Review,
+				Keterangan:     review.Keterangan,
+				CreatedBy:      pegawai.NamaPegawai,
+			})
+		}
+	}
+
+	operationalNResp := pohonkinerja.OperationalNOpdResponse{
+		Id:                     operationalN.Id,
+		Parent:                 operationalN.Parent,
+		Strategi:               operationalN.NamaPohon,
+		JenisPohon:             operationalN.JenisPohon,
+		LevelPohon:             operationalN.LevelPohon,
+		Keterangan:             operationalN.Keterangan,
+		KeteranganCrosscutting: keteranganCrosscutting,
+		Status:                 operationalN.Status,
+		IsActive:               operationalN.IsActive,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: operationalN.KodeOpd,
+			NamaOpd: operationalN.NamaOpd,
+		},
+		Tagging:     taggingResponses,
+		Pelaksana:   pelaksanaMap[operationalN.Id],
+		Indikator:   indikatorMap[operationalN.Id],
+		Review:      reviewResponses,
+		CountReview: countReview,
+	}
+
+	// Build child nodes secara rekursif
+	nextLevel := operationalN.LevelPohon + 1
+	if nextOperationalNList := pohonMap[nextLevel][operationalN.Id]; len(nextOperationalNList) > 0 {
+		var childs []pohonkinerja.OperationalNOpdResponse
+		sort.Slice(nextOperationalNList, func(i, j int) bool {
+			if nextOperationalNList[i].Status == "pokin dari pemda" && nextOperationalNList[j].Status != "pokin dari pemda" {
+				return true
+			}
+			if nextOperationalNList[i].Status != "pokin dari pemda" && nextOperationalNList[j].Status == "pokin dari pemda" {
+				return false
+			}
+			return nextOperationalNList[i].Id < nextOperationalNList[j].Id
+		})
+
+		for _, child := range nextOperationalNList {
+			childResp := service.buildOperationalNResponseOptimized(
+				ctx, pohonMap, child, pelaksanaMap, indikatorMap,
+				taggingMap[child.Id], reviewMap[child.Id], reviewCountMap[child.Id],
+				reviewPegawaiMap, programUnggulanMap,
+				taggingMap, reviewMap, reviewCountMap,
+			)
+			childs = append(childs, childResp)
+		}
+		operationalNResp.Childs = childs
+	}
+
+	return operationalNResp
+}
+
+//end optimasi
 
 func (service *PohonKinerjaOpdServiceImpl) FindStrategicNoParent(ctx context.Context, kodeOpd, tahun string) ([]pohonkinerja.StrategicOpdResponse, error) {
 	tx, err := service.DB.Begin()

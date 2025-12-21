@@ -46,3 +46,13 @@ type ReviewOpd struct {
 	CreatedAt  string
 	UpdatedAt  string
 }
+
+type ReviewWithNama struct {
+	Id             int
+	IdPohonKinerja int
+	Review         string
+	Keterangan     string
+	CreatedBy      string
+	NamaReviewer   string
+	Jenis_pokin    string
+}
