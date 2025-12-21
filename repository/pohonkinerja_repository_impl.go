@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -4385,13 +4386,11 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 
 	return result, nil
 }
-
 func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx context.Context, tx *sql.Tx, cloneFromIds []int) (map[int]*domain.PohonKinerja, error) {
 	if len(cloneFromIds) == 0 {
 		return make(map[int]*domain.PohonKinerja), nil
 	}
 
-	// Buat map untuk menghindari duplikasi cloneFromIds
 	uniqueIds := make(map[int]bool)
 	var uniqueCloneFromIds []int
 	for _, id := range cloneFromIds {
@@ -4405,70 +4404,132 @@ func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx co
 		return make(map[int]*domain.PohonKinerja), nil
 	}
 
-	placeholders := make([]string, len(uniqueCloneFromIds))
-	args := make([]interface{}, len(uniqueCloneFromIds))
-	for i, id := range uniqueCloneFromIds {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-
-	// OPTIMASI: Query yang lebih efisien dengan batasan depth untuk menghindari infinite recursion
-	// Gunakan MAX recursion depth dan indexing yang lebih baik
-	script := fmt.Sprintf(`
-	WITH RECURSIVE tematik_tree AS (
-		-- Base case: semua clone_from_ids
-		SELECT 
-			pk.id,
-			pk.parent,
-			pk.nama_pohon,
-			pk.level_pohon,
-			pk.id as clone_from_id,
-			0 as depth
-		FROM tb_pohon_kinerja pk
-		WHERE pk.id IN (%s)
-		
-		UNION ALL
-		
-		-- Recursive case: ambil parent nodes dengan limit depth yang lebih ketat
-		SELECT 
-			parent_pk.id,
-			parent_pk.parent,
-			parent_pk.nama_pohon,
-			parent_pk.level_pohon,
-			tt.clone_from_id,
-			tt.depth + 1 as depth
-		FROM tb_pohon_kinerja parent_pk
-		INNER JOIN tematik_tree tt ON parent_pk.id = tt.parent
-		WHERE parent_pk.level_pohon >= 0 
-		AND tt.depth < 5  -- OPTIMASI: Kurangi dari 10 ke 5 (kebanyakan hierarchy tidak lebih dari 5 level)
-		AND parent_pk.parent IS NOT NULL
-		AND parent_pk.parent > 0
-	)
-	SELECT DISTINCT clone_from_id, id, nama_pohon
-	FROM tematik_tree
-	WHERE level_pohon = 0
-	LIMIT 100  -- OPTIMASI: Limit lebih ketat
-`, strings.Join(placeholders, ","))
-
-	rows, err := tx.QueryContext(ctx, script, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	result := make(map[int]*domain.PohonKinerja)
-	for rows.Next() {
-		var cloneFromId, tematikId int
-		var tematikNama string
-		err := rows.Scan(&cloneFromId, &tematikId, &tematikNama)
-		if err != nil {
-			return nil, err
+
+	// OPTIMASI: Ambil semua data yang relevan dalam query sederhana
+	// Kumpulkan semua IDs yang mungkin relevan (clone_from_ids + semua parent-nya)
+	nodeMap := make(map[int]*struct {
+		Id         int
+		Parent     sql.NullInt64
+		NamaPohon  string
+		LevelPohon int
+	})
+
+	// Step 1: Ambil clone_from_ids dan parent-nya secara iterative
+	currentIds := uniqueCloneFromIds
+	maxIterations := 10
+
+	for iteration := 0; iteration < maxIterations && len(currentIds) > 0; iteration++ {
+		placeholders := make([]string, len(currentIds))
+		args := make([]interface{}, len(currentIds))
+		for i, id := range currentIds {
+			placeholders[i] = "?"
+			args[i] = id
 		}
-		result[cloneFromId] = &domain.PohonKinerja{
-			Id:        tematikId,
-			NamaPohon: tematikNama,
+
+		script := fmt.Sprintf(`
+			SELECT id, parent, nama_pohon, level_pohon
+			FROM tb_pohon_kinerja
+			WHERE id IN (%s)
+		`, strings.Join(placeholders, ","))
+
+		rows, err := tx.QueryContext(ctx, script, args...)
+		if err != nil {
+			log.Printf("[ERROR] FindTematikByCloneFromBatch query error: %v", err)
+			break
+		}
+
+		var nextIds []int
+		nextIdSet := make(map[int]bool)
+
+		for rows.Next() {
+			var id, levelPohon int
+			var parent sql.NullInt64
+			var namaPohon string
+
+			if err := rows.Scan(&id, &parent, &namaPohon, &levelPohon); err != nil {
+				continue
+			}
+
+			nodeMap[id] = &struct {
+				Id         int
+				Parent     sql.NullInt64
+				NamaPohon  string
+				LevelPohon int
+			}{
+				Id:         id,
+				Parent:     parent,
+				NamaPohon:  namaPohon,
+				LevelPohon: levelPohon,
+			}
+
+			// PERBAIKAN: Convert int64 ke int
+			if parent.Valid && parent.Int64 > 0 {
+				parentId := int(parent.Int64)
+				if !nextIdSet[parentId] {
+					nextIds = append(nextIds, parentId)
+					nextIdSet[parentId] = true
+				}
+			}
+		}
+		rows.Close()
+
+		currentIds = nextIds
+	}
+
+	// Step 2: Process di Go untuk mencari tematik
+	for _, cloneFromId := range uniqueCloneFromIds {
+		tematik := repository.findTematikInMemorySimple(nodeMap, cloneFromId)
+		if tematik != nil {
+			result[cloneFromId] = tematik
 		}
 	}
+
+	log.Printf("[DEBUG] FindTematikByCloneFromBatch: Total results=%d out of %d cloneFromIds",
+		len(result), len(uniqueCloneFromIds))
 
 	return result, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) findTematikInMemorySimple(
+	nodeMap map[int]*struct {
+		Id         int
+		Parent     sql.NullInt64
+		NamaPohon  string
+		LevelPohon int
+	},
+	startId int,
+) *domain.PohonKinerja {
+	currentId := startId
+	visited := make(map[int]bool)
+	maxDepth := 15
+
+	for depth := 0; depth < maxDepth; depth++ {
+		if visited[currentId] {
+			break
+		}
+		visited[currentId] = true
+
+		node, exists := nodeMap[currentId]
+		if !exists {
+			break
+		}
+
+		// Jika ketemu level 0 dengan parent NULL atau 0, return
+		if node.LevelPohon == 0 && (!node.Parent.Valid || node.Parent.Int64 == 0) {
+			return &domain.PohonKinerja{
+				Id:        node.Id,
+				NamaPohon: node.NamaPohon,
+			}
+		}
+
+		// Naik ke parent dengan convert int64 ke int
+		if node.Parent.Valid && node.Parent.Int64 > 0 {
+			currentId = int(node.Parent.Int64)
+		} else {
+			break
+		}
+	}
+
+	return nil
 }

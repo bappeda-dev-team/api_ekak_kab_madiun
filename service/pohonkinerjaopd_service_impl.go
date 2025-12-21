@@ -1686,18 +1686,20 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(indikatorBatch), time.Since(indikatorBatchStartTime))
 
 	// Batch fetch tematik berdasarkan clone_from
-	// Batch fetch tematik berdasarkan clone_from - OPTIMASI: Skip jika tidak ada atau buat optional
 	tematikBatchStartTime := time.Now()
 	tematikCloneFromSet := make(map[int]bool)
 	for _, p := range pokins {
 		if p.LevelPohon >= 4 && p.CloneFrom > 0 {
 			tematikCloneFromSet[p.CloneFrom] = true
+			// PERBAIKAN: Log untuk debug CloneFrom
+			log.Printf("[%s] [DEBUG] [%s] Found pokin id=%d, level=%d, cloneFrom=%d",
+				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, p.Id, p.LevelPohon, p.CloneFrom)
 		}
 	}
 
 	// OPTIMASI: Batasi jumlah cloneFromIds untuk menghindari query yang terlalu kompleks
 	var tematikCloneFromIds []int
-	maxTematikIds := 100 // Batasi maksimal 100 IDs untuk menghindari query yang terlalu lambat
+	maxTematikIds := 100
 	count := 0
 	for cloneFromId := range tematikCloneFromSet {
 		if count >= maxTematikIds {
@@ -1707,15 +1709,43 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 		count++
 	}
 
+	// PERBAIKAN: Log cloneFromIds untuk debug
+	if len(tematikCloneFromIds) > 0 {
+		log.Printf("[%s] [DEBUG] [%s] Fetching tematik for cloneFromIds: %v",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, tematikCloneFromIds)
+	} else {
+		log.Printf("[%s] [DEBUG] [%s] No cloneFromIds found for tematik fetch",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName)
+	}
+
 	tematikMap := make(map[int]*domain.PohonKinerja)
 	if len(tematikCloneFromIds) > 0 {
 		// OPTIMASI: Gunakan context dengan timeout untuk menghindari query yang terlalu lama
-		tematikCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		tematikCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
 		tematikBatch, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFromBatch(tematikCtx, tx, tematikCloneFromIds)
 		if err == nil {
 			tematikMap = tematikBatch
+			// PERBAIKAN: Log hasil dengan detail lebih lengkap
+			log.Printf("[%s] [DEBUG] [%s] Found tematik for %d/%d cloneFromIds",
+				time.Now().Format("2006-01-02 15:04:05.000"), serviceName, len(tematikMap), len(tematikCloneFromIds))
+
+			// PERBAIKAN: Log detail setiap tematik yang ditemukan
+			for cloneFromId, tematik := range tematikMap {
+				if tematik != nil {
+					log.Printf("[%s] [DEBUG] [%s] Tematik: cloneFromId=%d, tematikId=%d, nama=%s",
+						time.Now().Format("2006-01-02 15:04:05.000"), serviceName, cloneFromId, tematik.Id, tematik.NamaPohon)
+				}
+			}
+
+			// PERBAIKAN: Log cloneFromIds yang tidak ditemukan tematik-nya
+			for _, cloneFromId := range tematikCloneFromIds {
+				if _, found := tematikMap[cloneFromId]; !found {
+					log.Printf("[%s] [DEBUG] [%s] Warning: No tematik found for cloneFromId=%d",
+						time.Now().Format("2006-01-02 15:04:05.000"), serviceName, cloneFromId)
+				}
+			}
 		} else {
 			// Log error tapi jangan fail seluruh request
 			log.Printf("[%s] [WARNING] [%s] FindTematikByCloneFromBatch error (non-fatal): %v",
@@ -1856,8 +1886,15 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 // Helper function untuk flatten dan sort strategic
 func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonKinerja {
-	var result []domain.PohonKinerja
-	seen := make(map[int]bool)
+	// Hitung total capacity dulu
+	totalCount := 0
+	for _, nodes := range nodesByParent {
+		totalCount += len(nodes)
+	}
+
+	// Pre-allocate dengan capacity yang tepat
+	result := make([]domain.PohonKinerja, 0, totalCount)
+	seen := make(map[int]bool, totalCount) // Pre-allocate map dengan size
 
 	for _, nodes := range nodesByParent {
 		for _, n := range nodes {
@@ -1868,6 +1905,7 @@ func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonK
 		}
 	}
 
+	// Sort dengan optimasi
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Status == "pokin dari pemda" && result[j].Status != "pokin dari pemda" {
 			return true
@@ -1894,16 +1932,25 @@ func buildStrategicOnly(
 	if strategic.KeteranganCrosscutting != nil && *strategic.KeteranganCrosscutting != "" {
 		keteranganCrosscutting = strategic.KeteranganCrosscutting
 	}
-	// Cari tematik dari pre-fetched map
+
+	// PERBAIKAN: Cari tematik dari pre-fetched map dengan logging yang lebih detail
 	var idTematik *int
 	var namaTematik *string
 	if strategic.CloneFrom > 0 {
-		if tematik, exists := tematikMap[strategic.CloneFrom]; exists && tematik != nil {
+		tematik, exists := tematikMap[strategic.CloneFrom]
+		if exists && tematik != nil {
 			idTematik = &tematik.Id
-			namaTematik = &tematik.NamaPohon
+			// PERBAIKAN: Pastikan nama_pohon tidak kosong sebelum di-set
+			if tematik.NamaPohon != "" {
+				namaTematik = &tematik.NamaPohon
+			} else {
+				log.Printf("[DEBUG] buildStrategicOnly: tematik found for cloneFrom=%d but NamaPohon is empty, id=%d",
+					strategic.CloneFrom, tematik.Id)
+			}
 		} else {
-			// Jika tematik tidak ditemukan tapi CloneFrom > 0, tetap set idTematik
-			idTematik = &strategic.CloneFrom
+			// DEBUG: Log jika tematik tidak ditemukan
+			log.Printf("[DEBUG] buildStrategicOnly: tematik not found for cloneFrom=%d (exists=%v, map size=%d, strategicId=%d)",
+				strategic.CloneFrom, exists, len(tematikMap), strategic.Id)
 		}
 	}
 
@@ -1948,16 +1995,24 @@ func buildTacticalOnly(
 	if tactical.KeteranganCrosscutting != nil && *tactical.KeteranganCrosscutting != "" {
 		keteranganCrosscutting = tactical.KeteranganCrosscutting
 	}
-	// Cari tematik dari pre-fetched map
+
+	// PERBAIKAN: Cari tematik dari pre-fetched map dengan logging yang lebih detail
 	var idTematik *int
 	var namaTematik *string
 	if tactical.CloneFrom > 0 {
-		if tematik, exists := tematikMap[tactical.CloneFrom]; exists && tematik != nil {
+		tematik, exists := tematikMap[tactical.CloneFrom]
+		if exists && tematik != nil {
 			idTematik = &tematik.Id
-			namaTematik = &tematik.NamaPohon
+			// PERBAIKAN: Pastikan nama_pohon tidak kosong sebelum di-set
+			if tematik.NamaPohon != "" {
+				namaTematik = &tematik.NamaPohon
+			} else {
+				log.Printf("[DEBUG] buildTacticalOnly: tematik found for cloneFrom=%d but NamaPohon is empty, id=%d",
+					tactical.CloneFrom, tematik.Id)
+			}
 		} else {
-			// Jika tematik tidak ditemukan tapi CloneFrom > 0, tetap set idTematik
-			idTematik = &tactical.CloneFrom
+			log.Printf("[DEBUG] buildTacticalOnly: tematik not found for cloneFrom=%d (exists=%v, map size=%d, tacticalId=%d)",
+				tactical.CloneFrom, exists, len(tematikMap), tactical.Id)
 		}
 	}
 
@@ -2002,17 +2057,24 @@ func buildOperationalOnly(
 	if operational.KeteranganCrosscutting != nil && *operational.KeteranganCrosscutting != "" {
 		keteranganCrosscutting = operational.KeteranganCrosscutting
 	}
-	// Cari tematik dari pre-fetched map
-	// Cari tematik dari pre-fetched map
+
+	// PERBAIKAN: Cari tematik dari pre-fetched map dengan logging yang lebih detail
 	var idTematik *int
 	var namaTematik *string
 	if operational.CloneFrom > 0 {
-		if tematik, exists := tematikMap[operational.CloneFrom]; exists && tematik != nil {
+		tematik, exists := tematikMap[operational.CloneFrom]
+		if exists && tematik != nil {
 			idTematik = &tematik.Id
-			namaTematik = &tematik.NamaPohon
+			// PERBAIKAN: Pastikan nama_pohon tidak kosong sebelum di-set
+			if tematik.NamaPohon != "" {
+				namaTematik = &tematik.NamaPohon
+			} else {
+				log.Printf("[DEBUG] buildOperationalOnly: tematik found for cloneFrom=%d but NamaPohon is empty, id=%d",
+					operational.CloneFrom, tematik.Id)
+			}
 		} else {
-			// Jika tematik tidak ditemukan tapi CloneFrom > 0, tetap set idTematik
-			idTematik = &operational.CloneFrom
+			log.Printf("[DEBUG] buildOperationalOnly: tematik not found for cloneFrom=%d (exists=%v, map size=%d, operationalId=%d)",
+				operational.CloneFrom, exists, len(tematikMap), operational.Id)
 		}
 	}
 
