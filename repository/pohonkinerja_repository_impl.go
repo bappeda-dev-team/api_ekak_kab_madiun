@@ -4295,17 +4295,18 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 
 	script := fmt.Sprintf(`
 		SELECT 
-			t.id,
-			t.id_pokin,
-			t.nama_tagging,
-			t.clone_from,
-			k.id as keterangan_id,
-			k.kode_program_unggulan,
-			k.tahun
-		FROM tb_tagging_pokin t
-		LEFT JOIN tb_keterangan_tagging_program_unggulan k ON t.id = k.id_tagging
-		WHERE t.id_pokin IN (%s)
-		ORDER BY t.id_pokin, t.id, k.id
+		t.id,
+		t.id_pokin,
+		t.nama_tagging,
+		t.clone_from,
+		k.id as keterangan_id,
+		k.kode_program_unggulan,
+		k.tahun
+	FROM tb_tagging_pokin t
+	LEFT JOIN tb_keterangan_tagging_program_unggulan k ON t.id = k.id_tagging
+	WHERE t.id_pokin IN (%s)
+	ORDER BY t.id_pokin, t.id, k.id
+	LIMIT 10000
 	`, strings.Join(placeholders, ","))
 
 	rows, err := tx.QueryContext(ctx, script, args...)
@@ -4315,7 +4316,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 	defer rows.Close()
 
 	taggingMap := make(map[int]*domain.TaggingPokin)
-	result := make(map[int][]domain.TaggingPokin)
+	result := make(map[int][]domain.TaggingPokin, len(pokinIds))
 
 	for rows.Next() {
 		var (
@@ -4368,9 +4369,13 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 
 	// Group by pokinId
 	for _, tagging := range taggingMap {
-		result[tagging.IdPokin] = append(result[tagging.IdPokin], *tagging)
+		pokinId := tagging.IdPokin
+		if result[pokinId] == nil {
+			// Pre-allocate dengan estimasi size (biasanya 1-2 tagging per pokin)
+			result[pokinId] = make([]domain.TaggingPokin, 0, 2)
+		}
+		result[pokinId] = append(result[pokinId], *tagging)
 	}
-
 	// Sort by ID untuk setiap pokinId
 	for pokinId := range result {
 		sort.Slice(result[pokinId], func(i, j int) bool {
@@ -4407,36 +4412,43 @@ func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx co
 		args[i] = id
 	}
 
-	// Query menggunakan CTE untuk setiap clone_from_id dan mengambil tematik (level 0)
+	// OPTIMASI: Query yang lebih efisien dengan batasan depth untuk menghindari infinite recursion
+	// Gunakan MAX recursion depth dan indexing yang lebih baik
 	script := fmt.Sprintf(`
-		WITH RECURSIVE tematik_tree AS (
-			-- Base case: semua clone_from_ids
-			SELECT 
-				pk.id,
-				pk.parent,
-				pk.nama_pohon,
-				pk.level_pohon,
-				pk.id as clone_from_id
-			FROM tb_pohon_kinerja pk
-			WHERE pk.id IN (%s)
-			
-			UNION ALL
-			
-			-- Recursive case: ambil parent nodes
-			SELECT 
-				parent_pk.id,
-				parent_pk.parent,
-				parent_pk.nama_pohon,
-				parent_pk.level_pohon,
-				tt.clone_from_id
-			FROM tb_pohon_kinerja parent_pk
-			INNER JOIN tematik_tree tt ON parent_pk.id = tt.parent
-			WHERE parent_pk.level_pohon >= 0
-		)
-		SELECT DISTINCT clone_from_id, id, nama_pohon
-		FROM tematik_tree
-		WHERE level_pohon = 0
-	`, strings.Join(placeholders, ","))
+	WITH RECURSIVE tematik_tree AS (
+		-- Base case: semua clone_from_ids
+		SELECT 
+			pk.id,
+			pk.parent,
+			pk.nama_pohon,
+			pk.level_pohon,
+			pk.id as clone_from_id,
+			0 as depth
+		FROM tb_pohon_kinerja pk
+		WHERE pk.id IN (%s)
+		
+		UNION ALL
+		
+		-- Recursive case: ambil parent nodes dengan limit depth yang lebih ketat
+		SELECT 
+			parent_pk.id,
+			parent_pk.parent,
+			parent_pk.nama_pohon,
+			parent_pk.level_pohon,
+			tt.clone_from_id,
+			tt.depth + 1 as depth
+		FROM tb_pohon_kinerja parent_pk
+		INNER JOIN tematik_tree tt ON parent_pk.id = tt.parent
+		WHERE parent_pk.level_pohon >= 0 
+		AND tt.depth < 5  -- OPTIMASI: Kurangi dari 10 ke 5 (kebanyakan hierarchy tidak lebih dari 5 level)
+		AND parent_pk.parent IS NOT NULL
+		AND parent_pk.parent > 0
+	)
+	SELECT DISTINCT clone_from_id, id, nama_pohon
+	FROM tematik_tree
+	WHERE level_pohon = 0
+	LIMIT 100  -- OPTIMASI: Limit lebih ketat
+`, strings.Join(placeholders, ","))
 
 	rows, err := tx.QueryContext(ctx, script, args...)
 	if err != nil {

@@ -301,9 +301,9 @@ func (repository *ReviewRepositoryImpl) FindAllReviewOpd(ctx context.Context, tx
 	return reviews, nil
 }
 
-func (repository *ReviewRepositoryImpl) FindReviewsByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Review, map[int]int, error) {
+func (repository *ReviewRepositoryImpl) FindByPokinIdBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.ReviewWithNama, error) {
 	if len(pokinIds) == 0 {
-		return make(map[int][]domain.Review), make(map[int]int), nil
+		return make([]domain.ReviewWithNama, 0), nil
 	}
 
 	placeholders := make([]string, len(pokinIds))
@@ -313,60 +313,52 @@ func (repository *ReviewRepositoryImpl) FindReviewsByPokinIdsBatch(ctx context.C
 		args[i] = id
 	}
 
-	// Query untuk mengambil semua review
 	script := fmt.Sprintf(`
-		SELECT id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by, created_at, updated_at 
-		FROM tb_review 
-		WHERE id_pohon_kinerja IN (%s)
-		ORDER BY id_pohon_kinerja, id
+		SELECT 
+			r.id, 
+			r.id_pohon_kinerja, 
+			r.review, 
+			r.keterangan, 
+			r.created_by, 
+			COALESCE(p.nama, '') as nama_reviewer,
+			r.jenis_pokin
+		FROM tb_review r
+		LEFT JOIN tb_pegawai p ON p.nip = r.created_by
+		WHERE r.id_pohon_kinerja IN (%s)
+		ORDER BY r.id_pohon_kinerja, r.id
 	`, strings.Join(placeholders, ","))
 
 	rows, err := tx.QueryContext(ctx, script, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	reviewMap := make(map[int][]domain.Review)
+	var reviews []domain.ReviewWithNama
 	for rows.Next() {
-		var review domain.Review
-		err := rows.Scan(&review.Id, &review.IdPohonKinerja, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
+		var review domain.ReviewWithNama
+		err := rows.Scan(
+			&review.Id,
+			&review.IdPohonKinerja,
+			&review.Review,
+			&review.Keterangan,
+			&review.CreatedBy,
+			&review.NamaReviewer,
+			&review.Jenis_pokin,
+		)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		reviewMap[review.IdPohonKinerja] = append(reviewMap[review.IdPohonKinerja], review)
+		reviews = append(reviews, review)
 	}
 
-	// Query untuk count review per pokin
-	countScript := fmt.Sprintf(`
-		SELECT id_pohon_kinerja, COUNT(*) as count
-		FROM tb_review
-		WHERE id_pohon_kinerja IN (%s)
-		GROUP BY id_pohon_kinerja
-	`, strings.Join(placeholders, ","))
-
-	countRows, err := tx.QueryContext(ctx, countScript, args...)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer countRows.Close()
-
-	reviewCountMap := make(map[int]int)
-	for countRows.Next() {
-		var pokinId, count int
-		err := countRows.Scan(&pokinId, &count)
-		if err != nil {
-			return nil, nil, err
-		}
-		reviewCountMap[pokinId] = count
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
-	// Set count 0 untuk pokin yang tidak punya review
-	for _, pokinId := range pokinIds {
-		if _, exists := reviewCountMap[pokinId]; !exists {
-			reviewCountMap[pokinId] = 0
-		}
+	if reviews == nil {
+		reviews = make([]domain.ReviewWithNama, 0)
 	}
 
-	return reviewMap, reviewCountMap, nil
+	return reviews, nil
 }
