@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -198,6 +199,54 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRincianKak(writer http.Re
 	pegawaiId := params.ByName("pegawai_id")
 
 	rencanaAksiResponses, err := controller.rencanaKinerjaService.FindAllRincianKak(request.Context(), pegawaiId, rencanaKinerjaId)
+	if err != nil {
+		webResponse := web.WebRencanaKinerjaResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed get rincian kak",
+			Data:   nil,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebRencanaKinerjaResponse{
+		Code:   http.StatusOK,
+		Status: "success get rincian kak",
+		Data:   rencanaAksiResponses,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *RencanaKinerjaControllerImpl) RincianKakByBulanTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rencanaKinerjaId := params.ByName("rencana_kinerja_id")
+	pegawaiId := params.ByName("pegawai_id")
+
+	bulanStr := request.URL.Query().Get("bulan")
+	bulan, err := strconv.Atoi(bulanStr)
+	if err != nil {
+		webResponse := web.WebRencanaKinerjaResponse{
+			Code:   http.StatusBadRequest,
+			Status: "bulan tidak valid",
+			Data:   nil,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	tahunStr := request.URL.Query().Get("tahun")
+	tahun, err := strconv.Atoi(tahunStr)
+	if err != nil {
+		webResponse := web.WebRencanaKinerjaResponse{
+			Code:   http.StatusBadRequest,
+			Status: "tahun tidak valid",
+			Data:   nil,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	rencanaAksiResponses, err := controller.rencanaKinerjaService.FindAllRincianKakByBulanTahun(request.Context(), pegawaiId, rencanaKinerjaId, bulan, tahun)
 	if err != nil {
 		webResponse := web.WebRencanaKinerjaResponse{
 			Code:   http.StatusBadRequest,

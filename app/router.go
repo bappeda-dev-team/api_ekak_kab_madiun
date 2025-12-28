@@ -276,6 +276,8 @@ func NewRouter(
 
 	//rincian kak
 	router.GET("/rencana_kinerja/:rencana_kinerja_id/pegawai/:pegawai_id/input_rincian_kak", rencanaKinerjaController.FindAllRincianKak)
+	// get renaksi rincian kak by bulan tahun
+	router.GET("/rencana_kinerja/:rencana_kinerja_id/pegawai/:pegawai_id/rincian_kak_by_bulan_tahun", rencanaKinerjaController.RincianKakByBulanTahun)
 
 	//role
 	router.POST("/role/create", roleController.Create)

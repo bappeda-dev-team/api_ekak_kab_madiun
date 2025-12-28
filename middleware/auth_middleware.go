@@ -118,7 +118,7 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 
 	ctx := context.WithValue(request.Context(), helper.UserInfoKey, claims)
 	ctx = context.WithValue(ctx, "client_id", clientId)
-    ctx = context.WithValue(ctx, "is_service_token", hasClientId)
+	ctx = context.WithValue(ctx, "is_service_token", hasClientId)
 
 	ctx = context.WithValue(ctx, "user_session_id", request.Header.Get("X-Session-Id"))
 
