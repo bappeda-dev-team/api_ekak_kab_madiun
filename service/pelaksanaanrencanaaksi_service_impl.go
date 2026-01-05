@@ -43,19 +43,19 @@ func (service *PelaksanaanRencanaAksiServiceImpl) Create(ctx context.Context, re
 		return rencanaaksi.PelaksanaanRencanaAksiResponse{}, fmt.Errorf("bobot harus diisi lebih dari 0")
 	}
 
-	// Periksa apakah bulan sudah ada untuk rencana aksi ini
+	// PERBAIKAN: Lock rencana_aksi untuk mencegah race condition
+	rencanaAksi, err := service.RencanaAksiRepository.FindById(ctx, tx, request.RencanaAksiId)
+	if err != nil {
+		return rencanaaksi.PelaksanaanRencanaAksiResponse{}, fmt.Errorf("gagal mendapatkan RencanaAksi: %v", err)
+	}
+
+	// Check dengan SELECT FOR UPDATE
 	exists, err := service.PelaksanaanRencanaAksiRepository.ExistsByRencanaAksiIdAndBulan(ctx, tx, request.RencanaAksiId, request.Bulan)
 	if err != nil {
 		return rencanaaksi.PelaksanaanRencanaAksiResponse{}, fmt.Errorf("gagal memeriksa keberadaan bulan: %v", err)
 	}
 	if exists {
 		return rencanaaksi.PelaksanaanRencanaAksiResponse{}, fmt.Errorf("bulan %d sudah ada untuk rencana aksi ini", request.Bulan)
-	}
-
-	// Dapatkan RencanaAksi untuk mendapatkan RencanaKinerjaId
-	rencanaAksi, err := service.RencanaAksiRepository.FindById(ctx, tx, request.RencanaAksiId)
-	if err != nil {
-		return rencanaaksi.PelaksanaanRencanaAksiResponse{}, fmt.Errorf("gagal mendapatkan RencanaAksi: %v", err)
 	}
 
 	// Periksa total bobot yang sudah ada untuk rencana kinerja ini
