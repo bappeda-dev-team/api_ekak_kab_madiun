@@ -1,2 +1,0 @@
-ALTER TABLE tb_pelaksanaan_rencana_aksi 
-DROP KEY uk_rencana_aksi_bulan;
