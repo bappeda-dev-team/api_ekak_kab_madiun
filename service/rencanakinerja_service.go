@@ -25,4 +25,6 @@ type RencanaKinerjaService interface {
 
 	//rencana kinerja atasan
 	FindRekinAtasan(ctx context.Context, rekinId string) (rencanakinerja.RekinAtasanResponse, error)
+
+	CloneRencanaKinerja(ctx context.Context, rekinId string, tahunBaru string) (rencanakinerja.RencanaKinerjaResponse, error)
 }

@@ -18,4 +18,5 @@ type ManualIKRepository interface {
 	FindManualIKSasaranOpdByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) (domain.ManualIK, error)
 	DeleteByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error
 	IsIndikatorExist(ctx context.Context, tx *sql.Tx, indikatorId string) (bool, error)
+	CloneManualIK(ctx context.Context, tx *sql.Tx, indikatorIdLama string, indikatorIdBaru string) error
 }

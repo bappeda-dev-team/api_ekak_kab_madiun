@@ -27,4 +27,15 @@ type RencanaKinerjaRepository interface {
 	FindIndikatorSasaranbyRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error)
 	FindTargetByIndikatorIdAndTahun(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) ([]domain.Target, error)
 	FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error)
+
+	// Method untuk clone
+	CloneRencanaKinerja(ctx context.Context, tx *sql.Tx, rekinId string, tahunBaru string) (domain.RencanaKinerja, error)
+	CloneIndikator(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
+	CloneTarget(ctx context.Context, tx *sql.Tx, indikatorIdLama string, indikatorIdBaru string, tahunBaru string) error
+	CloneRencanaAksi(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
+	CloneDasarHukum(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
+	CloneGambaranUmum(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
+	CloneInovasi(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
+	ClonePermasalahan(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
+	CreateIndikatorClone(ctx context.Context, tx *sql.Tx, newIndikatorId string, rekinIdBaru string, indikator string, tahunBaru string) error
 }

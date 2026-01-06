@@ -170,6 +170,7 @@ func (repository *ManualIKRepositoryImpl) GetManualIK(ctx context.Context, tx *s
 }
 
 // GetRencanaKinerja mengambil data rencana kinerja dan indikator
+// GetRencanaKinerja mengambil data rencana kinerja dan indikator
 func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, domain.RencanaKinerja, []domain.Target, domain.PohonKinerja, error) {
 	// Query untuk mendapatkan indikator, rencana kinerja, dan pohon kinerja parent
 	scriptIndikator := `
@@ -202,6 +203,8 @@ func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx contex
 	var pohonParent domain.PohonKinerja
 
 	// Gunakan sql.NullInt64 dan sql.NullString untuk menangani nilai null
+	var pohonId sql.NullInt64    // Tambahkan ini untuk pohon_id
+	var pohonNama sql.NullString // Tambahkan ini untuk nama_pohon
 	var parentId sql.NullInt64
 	var parentNamaPohon sql.NullString
 	var parentJenisPohon sql.NullString
@@ -219,40 +222,35 @@ func (repository *ManualIKRepositoryImpl) GetRencanaKinerjaWithTarget(ctx contex
 		&rencanaKinerja.Catatan,
 		&rencanaKinerja.KodeOpd,
 		&rencanaKinerja.PegawaiId,
-		&pohonParent.Id,
-		&pohonParent.NamaPohon,
+		&pohonId,   // Ubah dari &pohonParent.Id
+		&pohonNama, // Ubah dari &pohonParent.NamaPohon
 		&parentId,
 		&parentNamaPohon,
 		&parentJenisPohon,
 		&parentLevelPohon,
 	)
 	if err != nil && err != sql.ErrNoRows {
-		return domain.Indikator{}, domain.RencanaKinerja{}, nil, domain.PohonKinerja{}, err
+		return domain.Indikator{}, domain.RencanaKinerja{}, []domain.Target{}, domain.PohonKinerja{}, err
 	}
 
-	// Set nilai dari NullInt64/NullString ke struct
+	// Assign nilai jika valid
+	if pohonId.Valid {
+		pohonParent.Id = int(pohonId.Int64)
+	}
+	if pohonNama.Valid {
+		pohonParent.NamaPohon = pohonNama.String
+	}
 	if parentId.Valid {
 		pohonParent.Parent = int(parentId.Int64)
-	} else {
-		pohonParent.Parent = 0
 	}
-
 	if parentNamaPohon.Valid {
 		pohonParent.NamaPohonParent = parentNamaPohon.String
-	} else {
-		pohonParent.NamaPohonParent = ""
 	}
-
 	if parentJenisPohon.Valid {
-		pohonParent.JenisPohonParent = parentJenisPohon.String
-	} else {
-		pohonParent.JenisPohonParent = ""
+		pohonParent.JenisPohon = parentJenisPohon.String
 	}
-
 	if parentLevelPohon.Valid {
-		pohonParent.LevelPohonParent = int(parentLevelPohon.Int64)
-	} else {
-		pohonParent.LevelPohonParent = 0
+		pohonParent.LevelPohon = int(parentLevelPohon.Int64)
 	}
 
 	// Query untuk target tetap sama
@@ -495,4 +493,42 @@ func (repository *ManualIKRepositoryImpl) IsIndikatorExist(ctx context.Context, 
 
 	// Mengembalikan true jika count > 0 (indikator ditemukan)
 	return count > 0, nil
+}
+
+func (repository *ManualIKRepositoryImpl) CloneManualIK(ctx context.Context, tx *sql.Tx, indikatorIdLama string, indikatorIdBaru string) error {
+	script := `
+		INSERT INTO tb_manual_ik (
+			indikator_id, perspektif, tujuan_rekin, definisi, 
+			key_activities, formula, jenis_indikator, kinerja, 
+			penduduk, spasial, unit_penanggung_jawab, 
+			unit_penyedia_data, sumber_data, jangka_waktu_awal, 
+			jangka_waktu_akhir, periode_pelaporan
+		)
+		SELECT 
+			?,
+			perspektif,
+			tujuan_rekin,
+			definisi,
+			key_activities,
+			formula,
+			jenis_indikator,
+			kinerja,
+			penduduk,
+			spasial,
+			unit_penanggung_jawab,
+			unit_penyedia_data,
+			sumber_data,
+			jangka_waktu_awal,
+			jangka_waktu_akhir,
+			periode_pelaporan
+		FROM tb_manual_ik
+		WHERE indikator_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, indikatorIdBaru, indikatorIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone manual IK: %v", err)
+	}
+
+	return nil
 }
