@@ -1,1 +1,1 @@
-ALTER TABLE tb_permasalahan MODIFY COLUMN id INT;
+ALTER TABLE tb_permasalahan MODIFY COLUMN id INT ;
