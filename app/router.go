@@ -469,5 +469,8 @@ func NewRouter(
 	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
 	router.GET("/pohon_kinerja_opd/leaderboard_pokin_opd/:tahun", pohonKinerjaOpdController.LeaderboardPokinOpd)
 
+	//clone rekin
+	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)
+
 	return router
 }

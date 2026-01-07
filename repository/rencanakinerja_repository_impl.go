@@ -6,6 +6,9 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"log"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type RencanaKinerjaRepositoryImpl struct {
@@ -971,6 +974,252 @@ func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Cont
 			return fmt.Errorf("rencana kinerja dengan id %s tidak ditemukan", rekinId)
 		}
 		return err
+	}
+
+	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaKinerja(ctx context.Context, tx *sql.Tx, rekinId string, tahunBaru string) (domain.RencanaKinerja, error) {
+
+	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
+	year := time.Now().Year()
+	newRekinId := fmt.Sprintf("REKIN-PEG-%v-%v", year, randomDigits)
+
+	script := `
+		INSERT INTO tb_rencana_kinerja (
+			id, id_pohon, nama_rencana_kinerja, tahun, 
+			status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode
+		)
+		SELECT 
+			?,
+			id_pohon,
+			nama_rencana_kinerja,
+			?,
+			'',
+			'',
+			kode_opd,
+			pegawai_id,
+			'',
+			'',
+			'',
+			''
+		FROM tb_rencana_kinerja
+		WHERE id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, newRekinId, tahunBaru, rekinId)
+	if err != nil {
+		return domain.RencanaKinerja{}, fmt.Errorf("gagal clone rencana kinerja: %v", err)
+	}
+
+	// Retrieve the cloned record menggunakan ID yang baru di-generate
+	var newRekin domain.RencanaKinerja
+	querySelect := `
+		SELECT id, id_pohon, nama_rencana_kinerja, tahun, 
+		       status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode
+		FROM tb_rencana_kinerja
+		WHERE id = ?
+	`
+
+	err = tx.QueryRowContext(ctx, querySelect, newRekinId).Scan(
+		&newRekin.Id,
+		&newRekin.IdPohon,
+		&newRekin.NamaRencanaKinerja,
+		&newRekin.Tahun,
+		&newRekin.StatusRencanaKinerja,
+		&newRekin.Catatan,
+		&newRekin.KodeOpd,
+		&newRekin.PegawaiId,
+		&newRekin.KodeSubKegiatan,
+		&newRekin.TahunAwal,
+		&newRekin.TahunAkhir,
+		&newRekin.JenisPeriode,
+	)
+
+	if err != nil {
+		return domain.RencanaKinerja{}, fmt.Errorf("gagal mengambil data clone: %v", err)
+	}
+
+	return newRekin, nil
+}
+
+// CloneIndikator - Clone indikator dengan mapping indikator lama ke baru
+func (repository *RencanaKinerjaRepositoryImpl) CloneIndikator(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error {
+	script := `
+		INSERT INTO tb_indikator (
+			id, rencana_kinerja_id, indikator, tahun
+		)
+		SELECT 
+			REPLACE(UUID(), '-', ''),
+			?,
+			indikator,
+			(SELECT tahun FROM tb_rencana_kinerja WHERE id = ?)
+		FROM tb_indikator
+		WHERE rencana_kinerja_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, rekinIdBaru, rekinIdBaru, rekinIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone indikator: %v", err)
+	}
+
+	return nil
+}
+
+// CloneTarget - Clone target untuk indikator baru
+func (repository *RencanaKinerjaRepositoryImpl) CloneTarget(ctx context.Context, tx *sql.Tx, indikatorIdLama string, indikatorIdBaru string, tahunBaru string) error {
+	script := `
+		INSERT INTO tb_target (
+			id, indikator_id, target, satuan, tahun
+		)
+		SELECT 
+			REPLACE(UUID(), '-', ''),
+			?,
+			target,
+			satuan,
+			?
+		FROM tb_target
+		WHERE indikator_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, indikatorIdBaru, tahunBaru, indikatorIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone target: %v", err)
+	}
+
+	return nil
+}
+
+// CloneRencanaAksi - Clone rencana aksi tanpa pelaksanaan
+func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaAksi(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error {
+	script := `
+		INSERT INTO tb_rencana_aksi (
+			id, rencana_kinerja_id, kode_opd, urutan, nama_rencana_aksi
+		)
+		SELECT 
+			REPLACE(UUID(), '-', ''),
+			?,
+			kode_opd,
+			urutan,
+			nama_rencana_aksi
+		FROM tb_rencana_aksi
+		WHERE rencana_kinerja_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, rekinIdBaru, rekinIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone rencana aksi: %v", err)
+	}
+
+	return nil
+}
+
+// CloneDasarHukum - Clone dasar hukum
+func (repository *RencanaKinerjaRepositoryImpl) CloneDasarHukum(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error {
+	script := `
+		INSERT INTO tb_dasar_hukum (
+			id, rekin_id, urutan, peraturan_terkait, uraian
+		)
+		SELECT 
+			REPLACE(UUID(), '-', ''),
+			?,
+			urutan,
+			peraturan_terkait,
+			uraian
+		FROM tb_dasar_hukum
+		WHERE rekin_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, rekinIdBaru, rekinIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone dasar hukum: %v", err)
+	}
+
+	return nil
+}
+
+// CloneGambaranUmum - Clone gambaran umum
+func (repository *RencanaKinerjaRepositoryImpl) CloneGambaranUmum(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error {
+	script := `
+		INSERT INTO tb_gambaran_umum (
+			id, rekin_id, kode_opd, urutan, gambaran_umum
+		)
+		SELECT 
+			REPLACE(UUID(), '-', ''),
+			?,
+			kode_opd,
+			urutan,
+			gambaran_umum
+		FROM tb_gambaran_umum
+		WHERE rekin_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, rekinIdBaru, rekinIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone gambaran umum: %v", err)
+	}
+
+	return nil
+}
+
+// CloneInovasi - Clone inovasi
+func (repository *RencanaKinerjaRepositoryImpl) CloneInovasi(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error {
+	script := `
+		INSERT INTO tb_inovasi (
+			id, rekin_id, judul_inovasi, jenis_inovasi, gambaran_nilai_kebaruan
+		)
+		SELECT 
+			REPLACE(UUID(), '-', ''),
+			?,
+			judul_inovasi,
+			jenis_inovasi,
+			gambaran_nilai_kebaruan
+		FROM tb_inovasi
+		WHERE rekin_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, rekinIdBaru, rekinIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone inovasi: %v", err)
+	}
+
+	return nil
+}
+
+// ClonePermasalahan - Clone permasalahan
+func (repository *RencanaKinerjaRepositoryImpl) ClonePermasalahan(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error {
+	script := `
+		INSERT INTO tb_permasalahan (
+			rekin_id, permasalahan, penyebab_internal, penyebab_eksternal, jenis_permasalahan
+		)
+		SELECT 
+			?,
+			permasalahan,
+			penyebab_internal,
+			penyebab_eksternal,
+			jenis_permasalahan
+		FROM tb_permasalahan
+		WHERE rekin_id = ?
+	`
+
+	_, err := tx.ExecContext(ctx, script, rekinIdBaru, rekinIdLama)
+	if err != nil {
+		return fmt.Errorf("gagal clone permasalahan: %v", err)
+	}
+
+	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) CreateIndikatorClone(ctx context.Context, tx *sql.Tx, newIndikatorId string, rekinIdBaru string, indikator string, tahunBaru string) error {
+	script := `
+		INSERT INTO tb_indikator (
+			id, rencana_kinerja_id, indikator, tahun
+		) VALUES (?, ?, ?, ?)
+	`
+
+	_, err := tx.ExecContext(ctx, script, newIndikatorId, rekinIdBaru, indikator, tahunBaru)
+	if err != nil {
+		return fmt.Errorf("gagal insert indikator clone: %v", err)
 	}
 
 	return nil

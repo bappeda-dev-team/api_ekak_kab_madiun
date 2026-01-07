@@ -1975,3 +1975,202 @@ func (service *RencanaKinerjaServiceImpl) getKegiatanSubkegiatanForRekinAtasan(
 
 	return kegiatanList, subkegiatanList
 }
+
+func (service *RencanaKinerjaServiceImpl) CloneRencanaKinerja(ctx context.Context, rekinId string, tahunBaru string) (rencanakinerja.RencanaKinerjaResponse, error) {
+	log.Printf("Memulai proses clone rencana kinerja ID: %s ke tahun: %s", rekinId, tahunBaru)
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Gagal memulai transaksi: %v", err)
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// 1. Validasi rencana kinerja exists
+	err = service.rencanaKinerjaRepository.ValidateRekinId(ctx, tx, rekinId)
+	if err != nil {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("rencana kinerja tidak ditemukan: %v", err)
+	}
+
+	// 2. Clone rencana kinerja utama
+	newRekin, err := service.rencanaKinerjaRepository.CloneRencanaKinerja(ctx, tx, rekinId, tahunBaru)
+	if err != nil {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal clone rencana kinerja: %v", err)
+	}
+
+	log.Printf("Rencana kinerja berhasil di-clone dengan ID baru: %s", newRekin.Id)
+
+	// 3. Ambil indikator lama
+	indikatorLama, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rekinId)
+	if err != nil && err != sql.ErrNoRows {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil indikator lama: %v", err)
+	}
+
+	// 4. Clone indikator dan data terkait
+	for _, indikator := range indikatorLama {
+		// Generate ID untuk indikator baru
+		randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
+		year := time.Now().Year()
+		newIndikatorId := fmt.Sprintf("IND-REKIN-%v-%v", year, randomDigits)
+
+		// Clone indikator menggunakan repository
+		err = service.rencanaKinerjaRepository.CreateIndikatorClone(ctx, tx, newIndikatorId, newRekin.Id, indikator.Indikator, tahunBaru)
+		if err != nil {
+			return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal clone indikator: %v", err)
+		}
+
+		log.Printf("Indikator di-clone: %s -> %s", indikator.Id, newIndikatorId)
+
+		// 4a. Clone Target
+		err = service.rencanaKinerjaRepository.CloneTarget(ctx, tx, indikator.Id, newIndikatorId, tahunBaru)
+		if err != nil {
+			log.Printf("Warning: gagal clone target untuk indikator %s: %v", indikator.Id, err)
+			// Jangan return error, karena mungkin memang tidak ada target
+		}
+
+		// 4b. Clone ManualIK
+		err = service.manualIKRepository.CloneManualIK(ctx, tx, indikator.Id, newIndikatorId)
+		if err != nil {
+			log.Printf("Error clone manual IK untuk indikator %s: %v", indikator.Id, err)
+			// Return error karena manual IK penting
+			return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal clone manual IK untuk indikator %s: %v", indikator.Id, err)
+		}
+	}
+
+	// 5. Clone Rencana Aksi (tanpa pelaksanaan)
+	err = service.rencanaKinerjaRepository.CloneRencanaAksi(ctx, tx, rekinId, newRekin.Id)
+	if err != nil {
+		log.Printf("Warning: gagal clone rencana aksi: %v", err)
+		// Tidak return error, karena mungkin memang tidak ada rencana aksi
+	}
+
+	// 6. Clone Dasar Hukum
+	err = service.rencanaKinerjaRepository.CloneDasarHukum(ctx, tx, rekinId, newRekin.Id)
+	if err != nil {
+		log.Printf("Error clone dasar hukum: %v", err)
+		// Return error karena dasar hukum penting
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal clone dasar hukum: %v", err)
+	}
+
+	// 7. Clone Gambaran Umum
+	err = service.rencanaKinerjaRepository.CloneGambaranUmum(ctx, tx, rekinId, newRekin.Id)
+	if err != nil {
+		log.Printf("Warning: gagal clone gambaran umum: %v", err)
+		// Tidak return error
+	}
+
+	// 8. Clone Inovasi
+	err = service.rencanaKinerjaRepository.CloneInovasi(ctx, tx, rekinId, newRekin.Id)
+	if err != nil {
+		log.Printf("Warning: gagal clone inovasi: %v", err)
+		// Tidak return error
+	}
+
+	// 9. Clone Permasalahan
+	err = service.rencanaKinerjaRepository.ClonePermasalahan(ctx, tx, rekinId, newRekin.Id)
+	if err != nil {
+		log.Printf("Error clone permasalahan: %v", err)
+		// Return error karena permasalahan penting
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal clone permasalahan: %v", err)
+	}
+
+	log.Printf("Proses clone selesai untuk rencana kinerja ID: %s", newRekin.Id)
+
+	// 10. Ambil data lengkap rencana kinerja yang baru untuk response
+	rencanaKinerjaBaru, err := service.rencanaKinerjaRepository.FindById(ctx, tx, newRekin.Id, newRekin.KodeOpd, tahunBaru)
+	if err != nil {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil data rencana kinerja baru: %v", err)
+	}
+
+	// Ambil data OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, rencanaKinerjaBaru.KodeOpd)
+	if err != nil {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil data OPD: %v", err)
+	}
+
+	// Ambil data pegawai
+	pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, rencanaKinerjaBaru.PegawaiId)
+	if err != nil {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil data pegawai: %v", err)
+	}
+
+	// Ambil data pohon kinerja
+	pohon, err := service.pohonKinerjaRepository.FindById(ctx, tx, rencanaKinerjaBaru.IdPohon)
+	if err != nil {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil data pohon kinerja: %v", err)
+	}
+
+	// Ambil indikator baru
+	indikatorBaru, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, newRekin.Id)
+	if err != nil && err != sql.ErrNoRows {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil indikator baru: %v", err)
+	}
+
+	// Proses indikator dan target
+	var indikatorResponses []rencanakinerja.IndikatorResponse
+	for _, indikator := range indikatorBaru {
+		// Ambil manual IK
+		manualIK, err := service.manualIKRepository.FindByIndikatorId(ctx, tx, indikator.Id)
+		if err != nil {
+			log.Printf("Warning: gagal mengambil manual IK: %v", err)
+		}
+
+		// Filter output data yang true saja
+		var outputData []string
+		if manualIK.Kinerja {
+			outputData = append(outputData, "kinerja")
+		}
+		if manualIK.Penduduk {
+			outputData = append(outputData, "penduduk")
+		}
+		if manualIK.Spatial {
+			outputData = append(outputData, "spatial")
+		}
+
+		// Ambil target
+		targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
+		if err != nil && err != sql.ErrNoRows {
+			return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal mengambil target: %v", err)
+		}
+
+		var targetResponses []rencanakinerja.TargetResponse
+		for _, target := range targets {
+			targetResponses = append(targetResponses, rencanakinerja.TargetResponse{
+				Id:              target.Id,
+				IndikatorId:     target.IndikatorId,
+				TargetIndikator: target.Target,
+				SatuanIndikator: target.Satuan,
+			})
+		}
+
+		indikatorResponses = append(indikatorResponses, rencanakinerja.IndikatorResponse{
+			Id:               indikator.Id,
+			RencanaKinerjaId: indikator.RencanaKinerjaId,
+			NamaIndikator:    indikator.Indikator,
+			Target:           targetResponses,
+			ManualIK: &rencanakinerja.DataOutput{
+				OutputData: outputData,
+			},
+		})
+	}
+
+	// Buat response
+	response := rencanakinerja.RencanaKinerjaResponse{
+		Id:                   rencanaKinerjaBaru.Id,
+		NamaRencanaKinerja:   rencanaKinerjaBaru.NamaRencanaKinerja,
+		Tahun:                rencanaKinerjaBaru.Tahun,
+		StatusRencanaKinerja: rencanaKinerjaBaru.StatusRencanaKinerja,
+		Catatan:              rencanaKinerjaBaru.Catatan,
+		KodeOpd: opdmaster.OpdResponseForAll{
+			KodeOpd: opd.KodeOpd,
+			NamaOpd: opd.NamaOpd,
+		},
+		PegawaiId:   rencanaKinerjaBaru.PegawaiId,
+		NamaPegawai: pegawai.NamaPegawai,
+		IdPohon:     rencanaKinerjaBaru.IdPohon,
+		NamaPohon:   pohon.NamaPohon,
+		Indikator:   indikatorResponses,
+	}
+
+	return response, nil
+}
