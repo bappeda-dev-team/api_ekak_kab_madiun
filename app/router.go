@@ -443,7 +443,7 @@ func NewRouter(
 	router.POST("/program_unggulan/create", programUnggulanController.Create)
 	router.PUT("/program_unggulan/update/:id", programUnggulanController.Update)
 	router.DELETE("/program_unggulan/delete/:id", programUnggulanController.Delete)
-	router.GET("/program_unggulan/findall/:tahun_awal/:tahun_akhir", programUnggulanController.FindAll)
+	router.GET("/program_unggulan/findall/:tahun_awal/:tahun_akhir", programUnggulanController.FindAllByTahunPokinAktif)
 	router.GET("/program_unggulan/findbykodeprogramunggulan/:kode_program_unggulan", programUnggulanController.FindByKodeProgramUnggulan)
 	router.GET("/program_unggulan/findbytahun/:tahun", programUnggulanController.FindByTahun)
 	router.GET("/program_unggulan/findunusedbytahun/:tahun", programUnggulanController.FindUnusedByTahun)

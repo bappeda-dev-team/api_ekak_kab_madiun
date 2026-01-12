@@ -161,6 +161,37 @@ func (controller *ProgramUnggulanControllerImpl) FindAll(writer http.ResponseWri
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *ProgramUnggulanControllerImpl) FindAllByTahunPokinAktif(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahunStr := params.ByName("tahun")
+	tahun, err := strconv.Atoi(tahunStr)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	programUnggulanResponse, err := controller.ProgramUnggulanService.FindByTahunPokin(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Found Program Unggulan",
+		Data:   programUnggulanResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
 func (controller *ProgramUnggulanControllerImpl) FindByKodeProgramUnggulan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	programUnggulanResponse, err := controller.ProgramUnggulanService.FindByKodeProgramUnggulan(request.Context(), params.ByName("kode_program_unggulan"))
 	if err != nil {
