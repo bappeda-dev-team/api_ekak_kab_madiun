@@ -971,6 +971,7 @@ func (service *RencanaKinerjaServiceImpl) FindAllRincianKakByBulanTahun(ctx cont
 	}
 
 	var responses []rencanakinerja.DataRincianKerja
+
 	for _, rencanaKinerja := range rencanaKinerjaList {
 		// Ambil indikator untuk setiap rencana kinerja
 		indikators, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rencanaKinerja.Id)
@@ -2370,4 +2371,208 @@ func (service *RencanaKinerjaServiceImpl) getKegiatanSubkegiatanForRekinAtasan(
 	}
 
 	return kegiatanList, subkegiatanList
+}
+
+func (service *RencanaKinerjaServiceImpl) FindBatchDetails(ctx context.Context, rekinIds []string, bulan int, tahun int) ([]rencanakinerja.DataRincianKerja, error) {
+	if tahun <= 0 || bulan <= 0 || bulan > 12 {
+		return nil, errors.New("tahun atau bulan tidak valid")
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("db error: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil semua rencana kinerja
+	rencanaKinerjaList, err := service.rencanaKinerjaRepository.FindDetailRekinsByRekinIds(ctx, tx, rekinIds)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil rencana kinerja: %v", err)
+	}
+
+	// collect rekin id to get anggaran total rekin
+	rekinIdSet := map[string]struct{}{}
+	for _, rekin := range rencanaKinerjaList {
+		rekinIdSet[rekin.Id] = struct{}{}
+	}
+	// uniq id
+	listRekinIds := make([]string, 0, len(rekinIdSet))
+	for id := range rekinIdSet {
+		listRekinIds = append(listRekinIds, id)
+	}
+	listPagu, err := service.rincianBelanjaRepository.FindAnggaranByRekinIds(ctx, tx, listRekinIds)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil anggaran rekin: %v", err)
+	}
+	totalPaguRekin := make(map[string]int)
+	for _, pagu := range listPagu {
+		totalPaguRekin[pagu.RekinId] = int(pagu.TotalAnggaran)
+	}
+	rencanaAksiList, err := service.RencanaAksiRepository.FindAllBatch(ctx, tx, listRekinIds)
+	if err != nil {
+		log.Printf("Warning: gagal mengambil rencana aksi: %v", err)
+		rencanaAksiList = []domain.RencanaAksi{}
+	}
+	rencanaAksiByRekin := make(map[string][]domain.RencanaAksi)
+	for _, ra := range rencanaAksiList {
+		rencanaAksiByRekin[ra.RencanaKinerjaId] =
+			append(rencanaAksiByRekin[ra.RencanaKinerjaId], ra)
+	}
+	// renaksi id batch untuk batch find pelaksana
+	rencanaAksiIds := make([]string, 0, len(rencanaAksiList))
+	for _, ra := range rencanaAksiList {
+		rencanaAksiIds = append(rencanaAksiIds, ra.Id)
+	}
+	pelaksanaanList, err := service.PelaksanaanRencanaAksiRepository.FindByRencanaAksiIdsBatch(ctx, tx, rencanaAksiIds)
+	if err != nil {
+		log.Printf("Warning: gagal mengambil pelaksanaan rencana aksi: %v", err)
+		pelaksanaanList = []domain.PelaksanaanRencanaAksi{}
+	}
+
+	pelaksanaanByRencanaAksi := make(map[string][]domain.PelaksanaanRencanaAksi)
+
+	for _, p := range pelaksanaanList {
+		pelaksanaanByRencanaAksi[p.RencanaAksiId] =
+			append(pelaksanaanByRencanaAksi[p.RencanaAksiId], p)
+	}
+
+	responses := []rencanakinerja.DataRincianKerja{}
+	for _, rencana := range rencanaKinerjaList {
+		rencanaKinerjaResponse := rencanakinerja.RencanaKinerjaResponse{
+			Id:                   rencana.Id,
+			NamaRencanaKinerja:   rencana.NamaRencanaKinerja,
+			Tahun:                rencana.Tahun,
+			StatusRencanaKinerja: rencana.StatusRencanaKinerja,
+			Catatan:              rencana.Catatan,
+			KodeOpd: opdmaster.OpdResponseForAll{
+				KodeOpd: rencana.KodeOpd,
+				NamaOpd: rencana.NamaOpd,
+			},
+			PegawaiId:   rencana.PegawaiId,
+			NamaPegawai: rencana.NamaPegawai,
+			Pagu:        totalPaguRekin[rencana.Id],
+			IdPohon:     rencana.IdPohon,
+			NamaPohon:   rencana.NamaPohon,
+			Indikator:   toIndikatorResponses(rencana.Indikator),
+		}
+		subKegiatanResponses := []subkegiatan.SubKegiatanResponse{}
+		subKegiatanResponses = append(subKegiatanResponses, subkegiatan.SubKegiatanResponse{
+			RekinId:         rencana.Id,
+			KodeSubKegiatan: rencana.KodeSubKegiatan,
+			NamaSubKegiatan: rencana.NamaSubKegiatan,
+		})
+
+		// ================= RENCANA AKSI =================
+		rencanaAksiResponses := []rencanaaksi.RencanaAksiResponse{}
+		bobotPerBulan := make([]int, 12)
+		bulanTerpakai := make(map[int]bool)
+
+		rencanaAksiListForRekin := rencanaAksiByRekin[rencana.Id]
+
+		for _, rencanaAksi := range rencanaAksiListForRekin {
+
+			pelaksanaanList := pelaksanaanByRencanaAksi[rencanaAksi.Id]
+
+			pelaksanaanPerBulan := make(map[int]domain.PelaksanaanRencanaAksi)
+			for _, p := range pelaksanaanList {
+				pelaksanaanPerBulan[p.Bulan] = p
+				if p.Bobot > 0 {
+					bulanTerpakai[p.Bulan] = true
+				}
+			}
+
+			var pelaksanaanLengkap []domain.PelaksanaanRencanaAksi
+			totalBobotRencanaAksi := 0
+
+			if pelaksanaan, exists := pelaksanaanPerBulan[bulan]; exists {
+				pelaksanaanLengkap = append(pelaksanaanLengkap, domain.PelaksanaanRencanaAksi{
+					Id:            pelaksanaan.Id,
+					RencanaAksiId: rencanaAksi.Id,
+					Bulan:         bulan,
+					Bobot:         pelaksanaan.Bobot,
+				})
+				totalBobotRencanaAksi += pelaksanaan.Bobot
+				bobotPerBulan[bulan-1] += pelaksanaan.Bobot
+			} else {
+				pelaksanaanLengkap = append(pelaksanaanLengkap, domain.PelaksanaanRencanaAksi{
+					Id:            "",
+					RencanaAksiId: rencanaAksi.Id,
+					Bulan:         bulan,
+					Bobot:         0,
+				})
+			}
+
+			response := helper.ToRencanaAksiResponse(rencanaAksi, pelaksanaanLengkap)
+			response.TotalBobotRencanaAksi = totalBobotRencanaAksi
+
+			if bulanTerpakai[bulan] {
+				rencanaAksiResponses = append(rencanaAksiResponses, response)
+			}
+		}
+		var totalPerBulanResponse []rencanaaksi.BobotBulanan
+		totalKeseluruhan := 0
+
+		bulanUnik := []int{}
+		for b := range bulanTerpakai {
+			bulanUnik = append(bulanUnik, b)
+		}
+		sort.Ints(bulanUnik)
+
+		for b := 1; b <= 12; b++ {
+			bobot := bobotPerBulan[b-1]
+			totalPerBulanResponse = append(totalPerBulanResponse, rencanaaksi.BobotBulanan{
+				Bulan:      b,
+				TotalBobot: bobot,
+			})
+			totalKeseluruhan += bobot
+		}
+
+		rencanaAksiTable := rencanaaksi.RencanaAksiTableResponse{
+			RencanaAksi:      rencanaAksiResponses,
+			TotalPerBulan:    totalPerBulanResponse,
+			TotalKeseluruhan: totalKeseluruhan,
+			WaktuDibutuhkan:  len(bulanUnik), // Jumlah bulan unik yang digunakan
+		}
+		responses = append(responses, rencanakinerja.DataRincianKerja{
+			RencanaKinerja: rencanaKinerjaResponse,
+			SubKegiatan:    subKegiatanResponses,
+			RencanaAksi:    rencanaAksiTable,
+		})
+	}
+
+	return responses, nil
+}
+
+func toIndikatorResponses(
+	indikators []domain.Indikator,
+) []rencanakinerja.IndikatorResponse {
+
+	responses := make([]rencanakinerja.IndikatorResponse, 0, len(indikators))
+
+	for _, indikator := range indikators {
+		responses = append(responses, rencanakinerja.IndikatorResponse{
+			Id:               indikator.Id,
+			RencanaKinerjaId: indikator.RencanaKinerjaId,
+			NamaIndikator:    indikator.Indikator,
+			Target:           toTargetResponses(indikator.Target),
+		})
+	}
+
+	return responses
+}
+
+func toTargetResponses(targets []domain.Target) []rencanakinerja.TargetResponse {
+	responses := make([]rencanakinerja.TargetResponse, 0, len(targets))
+
+	for _, t := range targets {
+		responses = append(responses, rencanakinerja.TargetResponse{
+			Id:              t.Id,
+			IndikatorId:     t.IndikatorId,
+			TargetIndikator: t.Target,
+			SatuanIndikator: t.Satuan,
+			Tahun:           t.Tahun,
+		})
+	}
+
+	return responses
 }

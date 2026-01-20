@@ -15,6 +15,7 @@ type RencanaKinerjaService interface {
 
 	FindAllRincianKak(ctx context.Context, pegawaiId string, rencanaKinerjaId string) ([]rencanakinerja.DataRincianKerja, error)
 	FindAllRincianKakByBulanTahun(ctx context.Context, pegawaiId string, rencanaKinerjaId string, bulan int, tahun int) ([]rencanakinerja.DataRincianKerja, error)
+	FindBatchDetails(ctx context.Context, rekinIds []string, bulan int, tahun int) ([]rencanakinerja.DataRincianKerja, error)
 
 	//rencana kinerja level 1
 	CreateRekinLevel1(ctx context.Context, request rencanakinerja.RencanaKinerjaCreateRequest) (rencanakinerja.RencanaKinerjaResponse, error)

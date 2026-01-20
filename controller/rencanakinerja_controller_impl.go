@@ -414,3 +414,29 @@ func (controller *RencanaKinerjaControllerImpl) FindRekinAtasan(writer http.Resp
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *RencanaKinerjaControllerImpl) FindBatchDetails(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	req := rencanakinerja.FindByIdRekinsRequest{}
+	helper.ReadFromRequestBody(r, &req)
+
+	idRekins := req.Ids
+	bulan := req.Bulan
+	tahun := req.Tahun
+
+	response, err := controller.rencanaKinerjaService.FindBatchDetails(r.Context(), idRekins, bulan, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "failed get rekin batch details",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Found Detail Rencana Kinerja",
+		Data:   response,
+	}
+	helper.WriteToResponseBody(w, webResponse)
+}

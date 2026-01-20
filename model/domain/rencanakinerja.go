@@ -22,6 +22,8 @@ type RencanaKinerja struct {
 	PeriodeId            int
 	CreatedAt            time.Time
 	Indikator            []Indikator
+	indikatorMap         map[string]int `json:"-"`
+
 	//tambahan
 	Formula            string
 	SumberData         string

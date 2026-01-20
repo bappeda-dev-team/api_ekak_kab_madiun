@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -1319,6 +1321,152 @@ func (repository *RencanaKinerjaRepositoryImpl) GetAllIndikatorTargetByRekinIds(
 	results := make([]domain.Indikator, 0, len(indikatorMap))
 	for _, ind := range indikatorMap {
 		results = append(results, *ind)
+	}
+
+	return results, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindDetailRekinsByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.RencanaKinerja, error) {
+	if len(rekinIds) == 0 {
+		return []domain.RencanaKinerja{}, errors.New("ids tidak boleh kosong")
+	}
+
+	baseQuery := `
+        SELECT
+            rk.id,
+            rk.id_pohon,
+            rk.nama_rencana_kinerja,
+            rk.tahun,
+            rk.status_rencana_kinerja,
+            rk.catatan,
+            rk.kode_opd,
+            rk.pegawai_id,
+            sub.kode_subkegiatan,
+            sub.nama_subkegiatan,
+            i.id as indikator_id,
+            i.indikator,
+            i.tahun as indikator_tahun,
+            t.id as target_id,
+            t.target,
+            t.satuan,
+            t.tahun as target_tahun,
+            pg.nama
+        FROM tb_rencana_kinerja rk
+        LEFT JOIN tb_pegawai pg ON rk.pegawai_id = pg.nip
+        LEFT JOIN tb_indikator i ON rk.id = i.rencana_kinerja_id
+        LEFT JOIN tb_target t ON i.id = t.indikator_id
+        LEFT JOIN tb_subkegiatan_terpilih tst ON rk.id = tst.rekin_id
+        LEFT JOIN tb_subkegiatan sub ON sub.id = tst.subkegiatan_id
+        WHERE rk.id IN (?)
+        ORDER BY rk.created_at ASC`
+
+	query, args := helper.BuildInQueryString(baseQuery, rekinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+
+	if err != nil {
+		return nil, fmt.Errorf("error querying rencana kinerja: %v", err)
+	}
+	defer rows.Close()
+
+	rencanaMap := make(map[string]*domain.RencanaKinerja)
+
+	for rows.Next() {
+		var (
+			rk        domain.RencanaKinerja
+			indikator domain.Indikator
+			target    domain.Target
+
+			indikatorId, indikatorNama, indikatorTahun      sql.NullString
+			targetId, targetNama, targetSatuan, targetTahun sql.NullString
+			namaPegawai                                     sql.NullString
+			kodeSubkegiatan, namaSubkegiatan                sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.StatusRencanaKinerja,
+			&rk.Catatan,
+			&rk.KodeOpd,
+			&rk.PegawaiId,
+			&kodeSubkegiatan,
+			&namaSubkegiatan,
+			&indikatorId,
+			&indikatorNama,
+			&indikatorTahun,
+			&targetId,
+			&targetNama,
+			&targetSatuan,
+			&targetTahun,
+			&namaPegawai,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		existingRk, ok := rencanaMap[rk.Id]
+		if !ok {
+			rk.Indikator = []domain.Indikator{}
+			if namaPegawai.Valid {
+				rk.NamaPegawai = namaPegawai.String
+			}
+
+			if kodeSubkegiatan.Valid {
+				rk.KodeSubKegiatan = kodeSubkegiatan.String
+			}
+
+			if namaSubkegiatan.Valid {
+				rk.NamaSubKegiatan = namaSubkegiatan.String
+			}
+
+			rencanaMap[rk.Id] = &rk
+			existingRk = &rk
+		}
+
+		if !indikatorId.Valid {
+			continue
+		}
+
+		indikatorIndex, exists := -1, false
+
+		for i := range existingRk.Indikator {
+			if existingRk.Indikator[i].Id == indikatorId.String {
+				indikatorIndex = i
+				exists = true
+				break
+			}
+		}
+
+		if !exists {
+			indikator = domain.Indikator{
+				Id:        indikatorId.String,
+				Indikator: indikatorNama.String,
+				Tahun:     indikatorTahun.String,
+				Target:    []domain.Target{},
+			}
+			existingRk.Indikator = append(existingRk.Indikator, indikator)
+			indikatorIndex = len(existingRk.Indikator) - 1
+		}
+
+		if targetId.Valid {
+			target = domain.Target{
+				Id:          targetId.String,
+				Target:      targetNama.String,
+				Satuan:      targetSatuan.String,
+				Tahun:       targetTahun.String,
+				IndikatorId: indikatorId.String,
+			}
+			existingRk.Indikator[indikatorIndex].Target =
+				append(existingRk.Indikator[indikatorIndex].Target, target)
+		}
+	}
+
+	results := make([]domain.RencanaKinerja, 0, len(rencanaMap))
+	for _, rk := range rencanaMap {
+		results = append(results, *rk)
 	}
 
 	return results, nil

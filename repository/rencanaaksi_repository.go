@@ -12,6 +12,7 @@ type RencanaAksiRepository interface {
 	Delete(ctx context.Context, tx *sql.Tx, id string) error
 	FindById(ctx context.Context, tx *sql.Tx, id string) (domain.RencanaAksi, error)
 	FindAll(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string) ([]domain.RencanaAksi, error)
+	FindAllBatch(ctx context.Context, tx *sql.Tx, rencanaKinerjaIds []string) ([]domain.RencanaAksi, error)
 	IsUrutanExistsForRencanaKinerja(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string, urutan int) (bool, error)
 	IsUrutanExistsForRencanaKinerjaExcludingId(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string, urutan int, excludeId string) (bool, error)
 	GetTotalBobotForRencanaKinerja(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string) (int, error)

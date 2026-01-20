@@ -3,7 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"errors"
+	"fmt"
 )
 
 type PelaksanaanRencanaAksiRepositoryImpl struct {
@@ -61,6 +64,39 @@ func (repository *PelaksanaanRencanaAksiRepositoryImpl) FindByRencanaAksiId(ctx 
 	rows, err := tx.QueryContext(ctx, script, rencanaAksiId)
 	if err != nil {
 		return nil, err
+	}
+	defer rows.Close()
+
+	var pelaksanaanRencanaAksiList []domain.PelaksanaanRencanaAksi
+	for rows.Next() {
+		var pelaksanaanRencanaAksi domain.PelaksanaanRencanaAksi
+		err := rows.Scan(&pelaksanaanRencanaAksi.Id, &pelaksanaanRencanaAksi.RencanaAksiId, &pelaksanaanRencanaAksi.Bobot, &pelaksanaanRencanaAksi.Bulan)
+		if err != nil {
+			return nil, err
+		}
+		pelaksanaanRencanaAksiList = append(pelaksanaanRencanaAksiList, pelaksanaanRencanaAksi)
+	}
+	return pelaksanaanRencanaAksiList, nil
+}
+
+func (repository *PelaksanaanRencanaAksiRepositoryImpl) FindByRencanaAksiIdsBatch(ctx context.Context, tx *sql.Tx, rencanaAksiIds []string) ([]domain.PelaksanaanRencanaAksi, error) {
+	if len(rencanaAksiIds) == 0 {
+		return []domain.PelaksanaanRencanaAksi{}, errors.New("ids tidak boleh kosong")
+	}
+
+	baseQuery := `SELECT
+            id,
+            rencana_aksi_id,
+            bobot,
+            bulan
+           FROM tb_pelaksanaan_rencana_aksi
+           WHERE rencana_aksi_id IN (?)`
+	query, args := helper.BuildInQueryString(baseQuery, rencanaAksiIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+
+	if err != nil {
+		return nil, fmt.Errorf("error querying rencana kinerja: %v", err)
 	}
 	defer rows.Close()
 

@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"errors"
 	"fmt"
 )
 
@@ -176,7 +178,7 @@ func (repository *RencanaAksiRepositoryImpl) FindById(ctx context.Context, tx *s
 
 func (repository *RencanaAksiRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string) ([]domain.RencanaAksi, error) {
 	script := "SELECT id, rencana_kinerja_id, kode_opd, urutan, nama_rencana_aksi FROM tb_rencana_aksi"
-	var args []interface{}
+	var args []any
 
 	if rencanaKinerjaId != "" {
 		script += " WHERE rencana_kinerja_id = ?"
@@ -234,4 +236,38 @@ func (repository *RencanaAksiRepositoryImpl) GetTotalBobotForRencanaKinerja(ctx 
 	var totalBobot int
 	err := tx.QueryRowContext(ctx, script, rencanaKinerjaId).Scan(&totalBobot)
 	return totalBobot, err
+}
+
+func (repository *RencanaAksiRepositoryImpl) FindAllBatch(ctx context.Context, tx *sql.Tx, rencanaKinerjaIds []string) ([]domain.RencanaAksi, error) {
+	if len(rencanaKinerjaIds) == 0 {
+		return []domain.RencanaAksi{}, errors.New("ids tidak boleh kosong")
+	}
+
+	baseQuery := `SELECT
+                  id,
+                  rencana_kinerja_id,
+                  kode_opd, urutan,
+                  nama_rencana_aksi
+                 FROM tb_rencana_aksi
+                 WHERE rencana_kinerja_id IN (?)
+                 ORDER BY urutan ASC`
+
+	query, args := helper.BuildInQueryString(baseQuery, rencanaKinerjaIds)
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error querying rencana aksi batch: %v", err)
+	}
+	defer rows.Close()
+
+	var rencanaAksis []domain.RencanaAksi
+	for rows.Next() {
+		var rencanaAksi domain.RencanaAksi
+		err := rows.Scan(&rencanaAksi.Id, &rencanaAksi.RencanaKinerjaId, &rencanaAksi.KodeOpd, &rencanaAksi.Urutan, &rencanaAksi.NamaRencanaAksi)
+		if err != nil {
+			return []domain.RencanaAksi{}, err
+		}
+		rencanaAksis = append(rencanaAksis, rencanaAksi)
+	}
+
+	return rencanaAksis, nil
 }

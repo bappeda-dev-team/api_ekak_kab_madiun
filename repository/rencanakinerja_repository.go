@@ -31,4 +31,5 @@ type RencanaKinerjaRepository interface {
 	FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.DetailRekins, error)
 	FindDetailRekinsByOpdAndTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.DetailRekins, error)
 	GetAllIndikatorTargetByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.Indikator, error)
+	FindDetailRekinsByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.RencanaKinerja, error)
 }

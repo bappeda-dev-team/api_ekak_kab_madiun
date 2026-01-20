@@ -21,4 +21,5 @@ type RencanaKinerjaController interface {
 	FindIdRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindRekinLevel3(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindRekinAtasan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindBatchDetails(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }
