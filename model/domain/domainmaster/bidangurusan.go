@@ -11,3 +11,12 @@ type BidangUrusan struct {
 	Tahun            string
 	CreatedAt        time.Time
 }
+
+type BidangUrusanOpd struct {
+	Id               int
+	KodeBidangUrusan string
+	NamaBidangUrusan string
+	KodeOpd          string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}

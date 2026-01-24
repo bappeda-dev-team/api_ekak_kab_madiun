@@ -13,4 +13,8 @@ type BidangUrusanController interface {
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByKodeOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	CreateOPD(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	DeleteOPD(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindBidangUrusanTerpilihByKodeOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

@@ -469,6 +469,11 @@ func NewRouter(
 	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
 	router.GET("/pohon_kinerja_opd/leaderboard_pokin_opd/:tahun", pohonKinerjaOpdController.LeaderboardPokinOpd)
 
+	//bidang urusan terpilih opd
+	router.POST("/bidang_urusan_opd/create", bidangUrusanController.CreateOPD)
+	router.DELETE("/bidang_urusan_opd/delete/:id", bidangUrusanController.DeleteOPD)
+	router.GET("/bidang_urusan_opd/findall/:kode_opd", bidangUrusanController.FindBidangUrusanTerpilihByKodeOpd)
+
 	//clone rekin
 	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)
 
