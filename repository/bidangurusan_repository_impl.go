@@ -218,3 +218,70 @@ func (repository *BidangUrusanRepositoryImpl) FindByKodeBidangUrusan(ctx context
 
 	return bidangUrusan, nil
 }
+
+func (repository *BidangUrusanRepositoryImpl) CreateOPD(ctx context.Context, tx *sql.Tx, bidangurusanOpd domainmaster.BidangUrusanOpd) (domainmaster.BidangUrusanOpd, error) {
+	script := "INSERT INTO tb_bidangurusan_terpilih (id, kode_opd, kode_bidang_urusan) VALUES (?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, bidangurusanOpd.Id, bidangurusanOpd.KodeOpd, bidangurusanOpd.KodeBidangUrusan)
+	if err != nil {
+		return bidangurusanOpd, err
+	}
+	return bidangurusanOpd, nil
+}
+
+func (repository *BidangUrusanRepositoryImpl) DeleteOPD(ctx context.Context, tx *sql.Tx, id string) error {
+	script := "DELETE FROM tb_bidangurusan_terpilih WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repository *BidangUrusanRepositoryImpl) FindBidangUrusanTerpilihByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domainmaster.BidangUrusanOpd, error) {
+	script := `
+		SELECT 
+			but.id, but.kode_opd, but.kode_bidang_urusan, 
+			bu.nama_bidang_urusan
+		FROM tb_bidangurusan_terpilih but
+		LEFT JOIN tb_bidang_urusan bu ON but.kode_bidang_urusan = bu.kode_bidang_urusan
+		WHERE but.kode_opd = ?
+	`
+	rows, err := tx.QueryContext(ctx, script, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domainmaster.BidangUrusanOpd
+	for rows.Next() {
+		var res domainmaster.BidangUrusanOpd
+		err := rows.Scan(&res.Id, &res.KodeOpd, &res.KodeBidangUrusan, &res.NamaBidangUrusan)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, res)
+	}
+	return results, nil
+}
+
+// Method untuk validasi apakah kode bidang urusan ada di master tb_bidang_urusan
+func (repository *BidangUrusanRepositoryImpl) IsBidangUrusanMasterExists(ctx context.Context, tx *sql.Tx, kodeBidangUrusan string) (bool, error) {
+	script := "SELECT COUNT(id) FROM tb_bidang_urusan WHERE kode_bidang_urusan = ?"
+	var count int
+	err := tx.QueryRowContext(ctx, script, kodeBidangUrusan).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// Method untuk cek duplikasi di tb_bidangurusan_terpilih
+func (repository *BidangUrusanRepositoryImpl) IsBidangUrusanAlreadySelected(ctx context.Context, tx *sql.Tx, kodeOpd string, kodeBidangUrusan string) (bool, error) {
+	script := "SELECT COUNT(id) FROM tb_bidangurusan_terpilih WHERE kode_opd = ? AND kode_bidang_urusan = ?"
+	var count int
+	err := tx.QueryRowContext(ctx, script, kodeOpd, kodeBidangUrusan).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
