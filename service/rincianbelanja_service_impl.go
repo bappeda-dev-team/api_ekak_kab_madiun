@@ -211,6 +211,7 @@ func (service *RincianBelanjaServiceImpl) FindRincianBelanjaAsn(ctx context.Cont
 
 			// Sort rencana aksi berdasarkan ID
 			if rk.RencanaAksi != nil {
+				totalAnggaranRekin = 0
 				for _, ra := range rk.RencanaAksi {
 					rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
 						RenaksiId: ra.RenaksiId,
@@ -488,7 +489,7 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 		// Proses rencana kinerja
 		for _, rk := range rb.RencanaKinerja {
 			var rencanaAksiResponses []rincianbelanja.RencanaAksiResponse
-			var totalAnggaranRekin int = 0
+			var totalAnggaranRekin int = 0 // Sudah benar, di-reset untuk setiap rencana kinerja
 
 			// Ambil dan proses indikator rencana kinerja
 			indikators, err := service.rincianBelanjaRepository.FindIndikatorByRekinId(ctx, tx, rk.RencanaKinerjaId)
@@ -500,6 +501,10 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			// Sort dan konversi indikator
 			var indikatorResponses []rincianbelanja.IndikatorResponse
 			for _, ind := range indikators {
+				sort.Slice(ind.Target, func(i, j int) bool {
+					return ind.Target[i].Id < ind.Target[j].Id
+				})
+
 				var targetResponses []rincianbelanja.TargetResponse
 				for _, t := range ind.Target {
 					targetResponses = append(targetResponses, rincianbelanja.TargetResponse{
@@ -518,14 +523,16 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 				})
 			}
 
-			// Proses rencana aksi
-			for _, ra := range rk.RencanaAksi {
-				rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
-					RenaksiId: ra.RenaksiId,
-					Renaksi:   ra.Renaksi,
-					Anggaran:  int(ra.Anggaran),
-				})
-				totalAnggaranRekin += int(ra.Anggaran)
+			// Proses rencana aksi - anggaran sudah di-SUM di query, langsung pakai
+			if rk.RencanaAksi != nil {
+				for _, ra := range rk.RencanaAksi {
+					rencanaAksiResponses = append(rencanaAksiResponses, rincianbelanja.RencanaAksiResponse{
+						RenaksiId: ra.RenaksiId,
+						Renaksi:   ra.Renaksi,
+						Anggaran:  int(ra.Anggaran), // Anggaran sudah benar dari query
+					})
+					totalAnggaranRekin += int(ra.Anggaran)
+				}
 			}
 
 			subResponse.RincianBelanja = append(subResponse.RincianBelanja, rincianbelanja.RincianBelanjaResponse{
@@ -539,6 +546,7 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			})
 			subResponse.TotalAnggaran += totalAnggaranRekin
 		}
+
 	}
 
 	// Convert map to slice dan sort
@@ -572,4 +580,47 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 	})
 
 	return responses, nil
+}
+
+func (service *RincianBelanjaServiceImpl) Upsert(ctx context.Context, request rincianbelanja.RincianBelanjaCreateRequest) (rincianbelanja.RencanaAksiResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return rincianbelanja.RencanaAksiResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi request
+	if request.RenaksiId == "" {
+		return rincianbelanja.RencanaAksiResponse{}, errors.New("renaksi_id tidak boleh kosong")
+	}
+	if request.Anggaran < 0 {
+		return rincianbelanja.RencanaAksiResponse{}, errors.New("anggaran tidak boleh negatif")
+	}
+
+	// Konversi request ke domain model
+	rincianBelanja := domain.RincianBelanja{
+		RenaksiId: request.RenaksiId,
+		Anggaran:  int64(request.Anggaran),
+	}
+
+	// Upsert ke database (update jika ada, create jika belum ada)
+	result, err := service.rincianBelanjaRepository.Upsert(ctx, tx, rincianBelanja)
+	if err != nil {
+		return rincianbelanja.RencanaAksiResponse{}, err
+	}
+
+	// Ambil data lengkap termasuk renaksi setelah upsert
+	rincianBelanjaLengkap, err := service.rincianBelanjaRepository.FindByRenaksiId(ctx, tx, result.RenaksiId)
+	if err != nil {
+		return rincianbelanja.RencanaAksiResponse{}, err
+	}
+
+	// Konversi domain model ke response
+	response := rincianbelanja.RencanaAksiResponse{
+		RenaksiId: rincianBelanjaLengkap.RenaksiId,
+		Renaksi:   rincianBelanjaLengkap.Renaksi,
+		Anggaran:  int(rincianBelanjaLengkap.Anggaran),
+	}
+
+	return response, nil
 }

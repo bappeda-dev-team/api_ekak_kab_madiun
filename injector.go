@@ -433,6 +433,7 @@ func InitializeServer() *http.Server {
 
 	wire.Build(
 		app.GetConnection,
+		app.GetRedisClient,
 		wire.Value([]validator.Option{}),
 		validator.New,
 		rencanaKinerjaSet,

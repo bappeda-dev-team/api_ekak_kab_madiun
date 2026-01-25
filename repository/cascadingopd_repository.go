@@ -25,4 +25,5 @@ type CascadingOpdRepository interface {
 	FindKodeSubkegiatanFromChildren(ctx context.Context, tx *sql.Tx, pokinId int) ([]string, error)
 	FindPokinByNipAndTahun(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.PohonKinerja, error)
 	GetTotalAnggaranByPokinIdWithPelaksana(ctx context.Context, tx *sql.Tx, pokinId int) (int64, error)
+	FindTargetByIndikatorIdsBatch(ctx context.Context, tx *sql.Tx, indikatorIds []string) (map[string][]domain.Target, error)
 }

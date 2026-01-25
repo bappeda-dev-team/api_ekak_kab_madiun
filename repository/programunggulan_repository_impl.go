@@ -297,3 +297,40 @@ func (repository *ProgramUnggulanRepositoryImpl) FindByIdTerkait(ctx context.Con
 
 	return result, nil
 }
+
+func (repository *ProgramUnggulanRepositoryImpl) FindProgramUnggulanByKodesBatch(ctx context.Context, tx *sql.Tx, kodes []string) (map[string]*domain.ProgramUnggulan, error) {
+	if len(kodes) == 0 {
+		return make(map[string]*domain.ProgramUnggulan), nil
+	}
+
+	placeholders := make([]string, len(kodes))
+	args := make([]interface{}, len(kodes))
+	for i, kode := range kodes {
+		placeholders[i] = "?"
+		args[i] = kode
+	}
+
+	script := fmt.Sprintf(`
+		SELECT id, kode_program_unggulan, keterangan_program_unggulan, tahun_awal, tahun_akhir
+		FROM tb_program_unggulan
+		WHERE kode_program_unggulan IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]*domain.ProgramUnggulan)
+	for rows.Next() {
+		var program domain.ProgramUnggulan
+		err := rows.Scan(&program.Id, &program.KodeProgramUnggulan, &program.KeteranganProgramUnggulan, &program.TahunAwal, &program.TahunAkhir)
+		if err != nil {
+			return nil, err
+		}
+		result[program.KodeProgramUnggulan] = &program
+	}
+
+	return result, nil
+}

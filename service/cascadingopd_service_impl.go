@@ -14,6 +14,8 @@ import (
 	"log"
 	"sort"
 	"strings"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type CascadingOpdServiceImpl struct {
@@ -28,6 +30,7 @@ type CascadingOpdServiceImpl struct {
 	bidangUrusanRepository   repository.BidangUrusanRepository
 	rincianBelanjaRepository repository.RincianBelanjaRepository
 	rencanaAksiRepository    repository.RencanaAksiRepository
+	RedisClient              *redis.Client
 }
 
 func NewCascadingOpdServiceImpl(
@@ -40,7 +43,8 @@ func NewCascadingOpdServiceImpl(
 	cascadingOpdRepository repository.CascadingOpdRepository,
 	bidangUrusanRepository repository.BidangUrusanRepository,
 	rincianBelanjaRepository repository.RincianBelanjaRepository,
-	rencanaAksiRepository repository.RencanaAksiRepository) *CascadingOpdServiceImpl {
+	rencanaAksiRepository repository.RencanaAksiRepository,
+	RedisClient *redis.Client) *CascadingOpdServiceImpl {
 	return &CascadingOpdServiceImpl{
 		pohonKinerjaRepository:   pohonKinerjaRepository,
 		opdRepository:            opdRepository,
@@ -53,10 +57,26 @@ func NewCascadingOpdServiceImpl(
 		bidangUrusanRepository:   bidangUrusanRepository,
 		rincianBelanjaRepository: rincianBelanjaRepository,
 		rencanaAksiRepository:    rencanaAksiRepository,
+		RedisClient:              RedisClient,
 	}
 }
 
 func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.CascadingOpdResponse, error) {
+	// Generate cache key
+	cacheKey := helper.GenerateCacheKey(helper.CacheKeyCascadingOpdAll, kodeOpd, tahun)
+
+	// Coba ambil dari cache terlebih dahulu
+	var response pohonkinerja.CascadingOpdResponse
+	err := helper.GetFromCache(ctx, service.RedisClient, cacheKey, &response)
+	if err == nil {
+		// Cache hit, return data dari cache
+		log.Printf("Cache HIT untuk key: %s", cacheKey)
+		return response, nil
+	}
+
+	// Cache miss, ambil data dari database
+	log.Printf("Cache MISS untuk key: %s, mengambil dari database", cacheKey)
+
 	tx, err := service.DB.Begin()
 	if err != nil {
 		log.Printf("Error starting transaction: %v", err)
@@ -72,7 +92,7 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 	}
 
 	// Inisialisasi response dasar
-	response := pohonkinerja.CascadingOpdResponse{
+	response = pohonkinerja.CascadingOpdResponse{
 		KodeOpd:    kodeOpd,
 		NamaOpd:    opd.NamaOpd,
 		Tahun:      tahun,
@@ -84,19 +104,48 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdForCascadingOpd(ctx, tx, kodeOpd, tahun, "RPJMD")
 	if err != nil {
 		log.Printf("Warning: Failed to get tujuan OPD data: %v", err)
+		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
 		return response, nil
 	}
 
 	log.Printf("Processing %d tujuan OPD entries", len(tujuanOpds))
 
-	// Konversi tujuan OPD ke format response
+	// OPTIMASI: Batch fetch indikator untuk semua tujuan OPD
+	var tujuanIds []int
+	kodeBidangUrusanSet := make(map[string]bool)
 	for _, tujuan := range tujuanOpds {
-		indikators, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuan.Id)
-		if err != nil {
-			log.Printf("Warning: Failed to get indicators for tujuan ID %d: %v", tujuan.Id, err)
-			continue
+		tujuanIds = append(tujuanIds, tujuan.Id)
+		if tujuan.KodeBidangUrusan != "" {
+			kodeBidangUrusanSet[tujuan.KodeBidangUrusan] = true
 		}
+	}
 
+	// Batch fetch indikator tujuan OPD
+	indikatorTujuanMap := make(map[int][]domain.Indikator)
+	for _, tujuanId := range tujuanIds {
+		indikators, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuanId)
+		if err == nil {
+			indikatorTujuanMap[tujuanId] = indikators
+		}
+	}
+
+	// OPTIMASI: Batch fetch bidang urusan
+	var kodeBidangUrusanList []string
+	for kode := range kodeBidangUrusanSet {
+		kodeBidangUrusanList = append(kodeBidangUrusanList, kode)
+	}
+
+	bidangUrusanMap := make(map[string]domainmaster.BidangUrusan)
+	for _, kode := range kodeBidangUrusanList {
+		bidangUrusan, err := service.bidangUrusanRepository.FindByKodeBidangUrusan(ctx, tx, kode)
+		if err == nil {
+			bidangUrusanMap[kode] = bidangUrusan
+		}
+	}
+
+	// Build tujuan opd response
+	for _, tujuan := range tujuanOpds {
+		indikators := indikatorTujuanMap[tujuan.Id]
 		var indikatorResponses []pohonkinerja.IndikatorTujuanResponse
 		for _, indikator := range indikators {
 			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
@@ -104,11 +153,7 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 			})
 		}
 
-		bidangUrusan, err := service.bidangUrusanRepository.FindByKodeBidangUrusan(ctx, tx, tujuan.KodeBidangUrusan)
-		if err != nil {
-			log.Printf("Warning: Failed to get bidang urusan data: %v", err)
-			continue
-		}
+		bidangUrusan := bidangUrusanMap[tujuan.KodeBidangUrusan]
 
 		response.TujuanOpd = append(response.TujuanOpd, pohonkinerja.TujuanOpdCascadingResponse{
 			Id:         tujuan.Id,
@@ -124,22 +169,25 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 	pokins, err := service.cascadingOpdRepository.FindAll(ctx, tx, kodeOpd, tahun)
 	if err != nil {
 		log.Printf("Error getting pohon kinerja data: %v", err)
+		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
 		return response, nil
 	}
 
 	if len(pokins) == 0 {
 		log.Printf("No pohon kinerja found for kodeOpd=%s, tahun=%s", kodeOpd, tahun)
+		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
 		return response, nil
 	}
 
 	log.Printf("Processing %d pohon kinerja entries", len(pokins))
 
-	// Proses data pohon kinerja
+	// OPTIMASI: Proses data pohon kinerja dengan batch queries
 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
 	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
 	rencanaKinerjaMap := make(map[int][]domain.RencanaKinerja)
 
-	// Kelompokkan data dan ambil data indikator & rencana kinerja
+	// Kumpulkan semua pokin IDs untuk batch queries
+	var pokinIds []int
 	maxLevel := 0
 	for _, p := range pokins {
 		if p.LevelPohon > maxLevel {
@@ -155,62 +203,191 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 			pohonMap[p.LevelPohon][p.Parent],
 			p,
 		)
+		pokinIds = append(pokinIds, p.Id)
+	}
 
-		// Ambil data rencana kinerja untuk semua level
-		rencanaKinerjaList, err := service.rencanaKinerjaRepository.FindByPokinId(ctx, tx, p.Id)
+	// OPTIMASI: Batch fetch semua rencana kinerja untuk semua pokin
+	rencanaKinerjaBatch := make(map[int][]domain.RencanaKinerja)
+	for _, pokinId := range pokinIds {
+		rekinList, err := service.rencanaKinerjaRepository.FindByPokinId(ctx, tx, pokinId)
 		if err == nil {
-			var validRencanaKinerja []domain.RencanaKinerja
+			rencanaKinerjaBatch[pokinId] = rekinList
+		}
+	}
 
-			// Tambahkan log untuk debugging
-			log.Printf("Processing rencana kinerja for pohon ID %d (Level %d)", p.Id, p.LevelPohon)
+	// OPTIMASI: Batch fetch semua pelaksana
+	pelaksanaBatch, err := service.pohonKinerjaRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
+	if err != nil {
+		log.Printf("Error batch fetching pelaksana: %v", err)
+		pelaksanaBatch = make(map[int][]domain.PelaksanaPokin)
+	}
 
-			// Ambil daftar pelaksana
-			pelaksanaList, err := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(p.Id))
-			if err == nil {
-				pelaksanaMap := make(map[string]*domainmaster.Pegawai)
-				rekinMap := make(map[string]bool) // Ubah dari PegawaiId ke Id rencana kinerja untuk deduplication
+	// OPTIMASI: Kumpulkan semua pegawai IDs untuk batch fetch
+	pegawaiIdsSet := make(map[string]bool)
+	for _, pelaksanaList := range pelaksanaBatch {
+		for _, pelaksana := range pelaksanaList {
+			pegawaiIdsSet[pelaksana.PegawaiId] = true
+		}
+	}
 
-				for _, pelaksana := range pelaksanaList {
-					pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
-					if err == nil {
-						pelaksanaMap[pegawai.Nip] = &pegawai
-					}
-				}
+	var pegawaiIds []string
+	for id := range pegawaiIdsSet {
+		pegawaiIds = append(pegawaiIds, id)
+	}
 
-				for _, rk := range rencanaKinerjaList {
-					if pegawai, exists := pelaksanaMap[rk.PegawaiId]; exists {
-						// Cek apakah rencana kinerja ini sudah ditambahkan (deduplication)
-						if !rekinMap[rk.Id] {
-							rk.NamaPegawai = pegawai.NamaPegawai
-							validRencanaKinerja = append(validRencanaKinerja, rk)
-							rekinMap[rk.Id] = true // Simpan ID rencana kinerja, bukan PegawaiId
-						}
-					}
-				}
+	// Batch fetch semua pegawai
+	pegawaiMap := make(map[string]*domainmaster.Pegawai)
+	for _, pegawaiId := range pegawaiIds {
+		pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pegawaiId)
+		if err == nil {
+			pegawaiMap[pegawai.Id] = &pegawai
+			pegawaiMap[pegawai.Nip] = &pegawai // Map by NIP juga untuk lookup rencana kinerja
+		}
+	}
 
-				// Track pegawai yang sudah memiliki rencana kinerja
-				pegawaiWithRekinMap := make(map[string]bool)
-				for _, rk := range validRencanaKinerja {
-					pegawaiWithRekinMap[rk.PegawaiId] = true
-				}
+	// Process rencana kinerja untuk setiap pokin menggunakan batch data
+	for _, p := range pokins {
+		rencanaKinerjaList := rencanaKinerjaBatch[p.Id]
+		if len(rencanaKinerjaList) == 0 {
+			continue
+		}
 
-				// Tambahkan pelaksana yang belum memiliki rencana kinerja
-				for _, pegawai := range pelaksanaMap {
-					if !pegawaiWithRekinMap[pegawai.Nip] {
-						validRencanaKinerja = append(validRencanaKinerja, domain.RencanaKinerja{
-							IdPohon:     p.Id,
-							NamaPohon:   p.NamaPohon,
-							Tahun:       p.Tahun,
-							PegawaiId:   pegawai.Nip,
-							NamaPegawai: pegawai.NamaPegawai,
-							Indikator:   nil,
-						})
-					}
+		pelaksanaList := pelaksanaBatch[p.Id]
+		pelaksanaMap := make(map[string]*domainmaster.Pegawai)
+		rekinMap := make(map[string]bool)
+
+		// Build pelaksana map dari batch pegawai
+		for _, pelaksana := range pelaksanaList {
+			if pegawai, exists := pegawaiMap[pelaksana.PegawaiId]; exists {
+				pelaksanaMap[pegawai.Nip] = pegawai // Map by NIP untuk matching dengan rencana kinerja
+			}
+		}
+
+		// Filter rencana kinerja yang sesuai dengan pelaksana
+		var validRencanaKinerja []domain.RencanaKinerja
+		for _, rk := range rencanaKinerjaList {
+			// rk.PegawaiId adalah NIP, kita cek apakah NIP ini ada di pelaksanaMap
+			if pegawai, exists := pelaksanaMap[rk.PegawaiId]; exists {
+				if !rekinMap[rk.Id] {
+					rk.NamaPegawai = pegawai.NamaPegawai
+					validRencanaKinerja = append(validRencanaKinerja, rk)
+					rekinMap[rk.Id] = true
 				}
 			}
+		}
 
+		// Track pegawai yang sudah memiliki rencana kinerja
+		pegawaiWithRekinMap := make(map[string]bool)
+		for _, rk := range validRencanaKinerja {
+			pegawaiWithRekinMap[rk.PegawaiId] = true
+		}
+
+		// Tambahkan pelaksana yang belum memiliki rencana kinerja
+		for _, pegawai := range pelaksanaMap {
+			if !pegawaiWithRekinMap[pegawai.Nip] {
+				validRencanaKinerja = append(validRencanaKinerja, domain.RencanaKinerja{
+					IdPohon:     p.Id,
+					NamaPohon:   p.NamaPohon,
+					Tahun:       p.Tahun,
+					PegawaiId:   pegawai.Nip,
+					NamaPegawai: pegawai.NamaPegawai,
+					Indikator:   nil,
+				})
+			}
+		}
+
+		if len(validRencanaKinerja) > 0 {
 			rencanaKinerjaMap[p.Id] = validRencanaKinerja
-			log.Printf("Added %d valid rencana kinerja for pohon ID %d", len(validRencanaKinerja), p.Id)
+		}
+	}
+
+	// OPTIMASI: Kumpulkan semua rekin IDs untuk batch fetch indikator rekin
+	var allRekinIds []string
+	for _, rekinList := range rencanaKinerjaMap {
+		for _, rk := range rekinList {
+			if rk.Id != "" {
+				allRekinIds = append(allRekinIds, rk.Id)
+			}
+		}
+	}
+
+	// OPTIMASI: Batch fetch semua indikator rekin
+	indikatorRekinBatch := make(map[string][]domain.Indikator)
+	for _, rekinId := range allRekinIds {
+		indikators, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rekinId)
+		if err == nil {
+			indikatorRekinBatch[rekinId] = indikators
+		}
+	}
+
+	// OPTIMASI: Kumpulkan semua indikator rekin IDs untuk batch fetch target
+	var allIndikatorRekinIds []string
+	for _, indikators := range indikatorRekinBatch {
+		for _, ind := range indikators {
+			allIndikatorRekinIds = append(allIndikatorRekinIds, ind.Id)
+		}
+	}
+
+	// OPTIMASI: Batch fetch semua target untuk indikator rekin
+	var targetRekinBatch map[string][]domain.Target
+	if len(allIndikatorRekinIds) > 0 {
+		targetRekinBatch, err = service.pohonKinerjaRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorRekinIds)
+		if err != nil {
+			log.Printf("Error batch fetching targets rekin: %v", err)
+			targetRekinBatch = make(map[string][]domain.Target)
+		}
+	} else {
+		targetRekinBatch = make(map[string][]domain.Target)
+	}
+
+	// OPTIMASI: Batch fetch indikator untuk pohon kinerja
+	indikatorBatch, err := service.pohonKinerjaRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
+	if err == nil {
+		// Kumpulkan semua indikator IDs untuk batch fetch target
+		var allIndikatorIds []string
+		for _, indikatorList := range indikatorBatch {
+			for _, indikator := range indikatorList {
+				allIndikatorIds = append(allIndikatorIds, indikator.Id)
+			}
+		}
+
+		// Batch fetch semua target untuk indikator pohon kinerja
+		var targetBatch map[string][]domain.Target
+		if len(allIndikatorIds) > 0 {
+			targetBatch, err = service.pohonKinerjaRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+			if err != nil {
+				log.Printf("Error batch fetching targets: %v", err)
+				targetBatch = make(map[string][]domain.Target)
+			}
+		} else {
+			targetBatch = make(map[string][]domain.Target)
+		}
+
+		// Build indikator map
+		for pokinId, indikatorList := range indikatorBatch {
+			var indikatorResponses []pohonkinerja.IndikatorResponse
+			for _, indikator := range indikatorList {
+				targetList := targetBatch[indikator.Id]
+				var targetResponses []pohonkinerja.TargetResponse
+				for _, target := range targetList {
+					targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+						Id:              target.Id,
+						IndikatorId:     target.IndikatorId,
+						TargetIndikator: target.Target,
+						SatuanIndikator: target.Satuan,
+					})
+				}
+
+				indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+					Id:            indikator.Id,
+					IdPokin:       fmt.Sprint(pokinId),
+					NamaIndikator: indikator.Indikator,
+					Target:        targetResponses,
+				})
+			}
+			if len(indikatorResponses) > 0 {
+				indikatorMap[pokinId] = indikatorResponses
+			}
 		}
 	}
 
@@ -230,7 +407,10 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 			})
 
 			for _, strategic := range strategicsByParent {
-				strategicResp := service.buildStrategicCascadingResponse(ctx, tx, pohonMap, strategic, indikatorMap, rencanaKinerjaMap)
+				strategicResp := service.buildStrategicCascadingResponseOptimized(
+					ctx, tx, pohonMap, strategic, indikatorMap, rencanaKinerjaMap,
+					indikatorRekinBatch, targetRekinBatch,
+				)
 				response.Strategics = append(response.Strategics, strategicResp)
 			}
 		}
@@ -246,48 +426,51 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 		})
 	}
 
+	// Simpan ke cache setelah berhasil mengambil data
+	helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
+	log.Printf("Data disimpan ke cache dengan key: %s", cacheKey)
+
 	return response, nil
 }
 
-func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
+// VERSI OPTIMASI - Strategic
+func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponseOptimized(
 	ctx context.Context,
 	tx *sql.Tx,
 	pohonMap map[int]map[int][]domain.PohonKinerja,
 	strategic domain.PohonKinerja,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
-	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.StrategicCascadingOpdResponse {
+	rencanaKinerjaMap map[int][]domain.RencanaKinerja,
+	indikatorRekinBatch map[string][]domain.Indikator,
+	targetRekinBatch map[string][]domain.Target) pohonkinerja.StrategicCascadingOpdResponse {
 
-	// Proses rencana kinerja untuk strategic
+	// Proses rencana kinerja untuk strategic dengan batch data
 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaResponse
-	// Proses pelaksana dari pohon kinerja
 	if rencanaKinerjaList, ok := rencanaKinerjaMap[strategic.Id]; ok {
+		// Build rencana kinerja responses menggunakan batch data
 		for _, rk := range rencanaKinerjaList {
 			var indikatorResponses []pohonkinerja.IndikatorResponse
-
-			// Hanya ambil indikator jika rencana kinerja memiliki ID
 			if rk.Id != "" {
-				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
-				if err == nil {
-					for _, ind := range indikatorRekin {
-						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-						var targetResponses []pohonkinerja.TargetResponse
-						if err == nil {
-							for _, target := range targets {
-								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-									Id:              target.Id,
-									IndikatorId:     target.IndikatorId,
-									TargetIndikator: target.Target,
-									SatuanIndikator: target.Satuan,
-								})
-							}
-						}
-						indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							IdRekin:       rk.Id,
-							NamaIndikator: ind.Indikator,
-							Target:        targetResponses,
+				// Gunakan batch data indikator rekin yang sudah di-fetch
+				indikators := indikatorRekinBatch[rk.Id]
+				for _, ind := range indikators {
+					targetList := targetRekinBatch[ind.Id]
+					var targetResponses []pohonkinerja.TargetResponse
+					for _, target := range targetList {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
 						})
 					}
+
+					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+						Id:            ind.Id,
+						IdRekin:       rk.Id,
+						NamaIndikator: ind.Indikator,
+						Target:        targetResponses,
+					})
 				}
 			}
 
@@ -304,7 +487,7 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 		}
 	}
 
-	// Proses program dari level 6 melalui level 5
+	// OPTIMASI: Kumpulkan semua kode program untuk batch fetch
 	programMap := make(map[string]string)
 	if tacticalList, exists := pohonMap[5][strategic.Id]; exists {
 		for _, tactical := range tacticalList {
@@ -331,41 +514,64 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 		}
 	}
 
-	// Convert program map ke slice dan sort
-	var programList []pohonkinerja.ProgramResponse
-	for kodeProgram, namaProgram := range programMap {
-		// Ambil indikator program
-		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
-		indikatorProgram, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
-			ctx,
-			tx,
-			kodeProgram,
-			strategic.KodeOpd,
-			strategic.Tahun,
+	// OPTIMASI: Batch fetch semua indikator program sekaligus
+	var kodeProgramList []string
+	for kode := range programMap {
+		kodeProgramList = append(kodeProgramList, kode)
+	}
+
+	indikatorProgramBatch := make(map[string][]domain.Indikator)
+	for _, kodeProgram := range kodeProgramList {
+		indikators, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+			ctx, tx, kodeProgram, strategic.KodeOpd, strategic.Tahun,
 		)
 		if err == nil {
-			for _, ind := range indikatorProgram {
-				// Ambil target untuk indikator program
-				targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-				var targetResponses []pohonkinerja.TargetResponse
-				if err == nil {
-					for _, target := range targets {
-						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-							Id:              target.Id,
-							IndikatorId:     target.IndikatorId,
-							TargetIndikator: target.Target,
-							SatuanIndikator: target.Satuan,
-						})
-					}
-				}
+			indikatorProgramBatch[kodeProgram] = indikators
+		}
+	}
 
-				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
-					Id:            ind.Id,
-					Kode:          ind.Kode,
-					NamaIndikator: ind.Indikator,
-					Target:        targetResponses, // Menambahkan target ke indikator program
+	// Kumpulkan semua indikator program IDs untuk batch fetch target
+	var allIndikatorProgramIds []string
+	for _, indikators := range indikatorProgramBatch {
+		for _, ind := range indikators {
+			allIndikatorProgramIds = append(allIndikatorProgramIds, ind.Id)
+		}
+	}
+
+	// Batch fetch semua target program
+	targetProgramBatch := make(map[string][]domain.Target)
+	if len(allIndikatorProgramIds) > 0 {
+		var err error
+		targetProgramBatch, err = service.cascadingOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorProgramIds)
+		if err != nil {
+			log.Printf("Error batch fetching target program: %v", err)
+		}
+	}
+
+	// Build program list
+	var programList []pohonkinerja.ProgramResponse
+	for kodeProgram, namaProgram := range programMap {
+		indikators := indikatorProgramBatch[kodeProgram]
+		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+
+		for _, ind := range indikators {
+			targetList := targetProgramBatch[ind.Id]
+			var targetResponses []pohonkinerja.TargetResponse
+			for _, target := range targetList {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
 				})
 			}
+
+			indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+				Id:            ind.Id,
+				Kode:          ind.Kode,
+				NamaIndikator: ind.Indikator,
+				Target:        targetResponses,
+			})
 		}
 
 		programList = append(programList, pohonkinerja.ProgramResponse{
@@ -398,7 +604,6 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 	if tacticalList := pohonMap[5][strategic.Id]; len(tacticalList) > 0 {
 		var tacticals []pohonkinerja.TacticalCascadingOpdResponse
 		sort.Slice(tacticalList, func(i, j int) bool {
-			// Prioritaskan status "pokin dari pemda"
 			if tacticalList[i].Status == "pokin dari pemda" && tacticalList[j].Status != "pokin dari pemda" {
 				return true
 			}
@@ -409,63 +614,57 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 		})
 
 		for _, tactical := range tacticalList {
-			tacticalResp := service.buildTacticalCascadingResponse(ctx, tx, pohonMap, tactical, indikatorMap, rencanaKinerjaMap)
+			tacticalResp := service.buildTacticalCascadingResponseOptimized(
+				ctx, tx, pohonMap, tactical, indikatorMap, rencanaKinerjaMap,
+				indikatorRekinBatch, targetRekinBatch,
+			)
 			tacticals = append(tacticals, tacticalResp)
-			// Tambahkan pagu anggaran dari setiap tactical
 			totalPaguAnggaran += tacticalResp.PaguAnggaran
 		}
 		strategicResp.Tacticals = tacticals
 	}
 
-	// Set pagu anggaran dari total pagu anggaran tactical
 	strategicResp.PaguAnggaran = totalPaguAnggaran
-
 	return strategicResp
 }
 
-func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
+// VERSI OPTIMASI - Tactical
+func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponseOptimized(
 	ctx context.Context,
 	tx *sql.Tx,
 	pohonMap map[int]map[int][]domain.PohonKinerja,
 	tactical domain.PohonKinerja,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
-	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.TacticalCascadingOpdResponse {
+	rencanaKinerjaMap map[int][]domain.RencanaKinerja,
+	indikatorRekinBatch map[string][]domain.Indikator,
+	targetRekinBatch map[string][]domain.Target) pohonkinerja.TacticalCascadingOpdResponse {
 
-	log.Printf("Building tactical response for ID: %d, Level: %d", tactical.Id, tactical.LevelPohon)
-
-	// Map untuk menyimpan program unik
-	programMap := make(map[string]string)
-
-	// Proses rencana kinerja untuk tactical
+	// Proses rencana kinerja untuk tactical dengan batch data
 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaResponse
 	if rencanaKinerjaList, ok := rencanaKinerjaMap[tactical.Id]; ok {
 		for _, rk := range rencanaKinerjaList {
 			var indikatorResponses []pohonkinerja.IndikatorResponse
-
-			// Hanya ambil indikator jika rencana kinerja memiliki ID
 			if rk.Id != "" {
-				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
-				if err == nil {
-					for _, ind := range indikatorRekin {
-						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-						var targetResponses []pohonkinerja.TargetResponse
-						if err == nil {
-							for _, target := range targets {
-								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-									Id:              target.Id,
-									IndikatorId:     target.IndikatorId,
-									TargetIndikator: target.Target,
-									SatuanIndikator: target.Satuan,
-								})
-							}
-						}
-						indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							IdRekin:       rk.Id,
-							NamaIndikator: ind.Indikator,
-							Target:        targetResponses,
+				// Gunakan batch data yang sudah di-fetch
+				indikators := indikatorRekinBatch[rk.Id]
+				for _, ind := range indikators {
+					targetList := targetRekinBatch[ind.Id]
+					var targetResponses []pohonkinerja.TargetResponse
+					for _, target := range targetList {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
 						})
 					}
+
+					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+						Id:            ind.Id,
+						IdRekin:       rk.Id,
+						NamaIndikator: ind.Indikator,
+						Target:        targetResponses,
+					})
 				}
 			}
 
@@ -482,7 +681,8 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 		}
 	}
 
-	// Proses program dari level operational
+	// OPTIMASI: Kumpulkan semua kode program untuk batch fetch
+	programMap := make(map[string]string)
 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
 		for _, operational := range operationalList {
 			if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
@@ -504,41 +704,64 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 		}
 	}
 
-	// Convert program map ke slice dan sort
-	var programList []pohonkinerja.ProgramResponse
-	for kodeProgram, namaProgram := range programMap {
-		// Ambil indikator program
-		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
-		indikatorProgram, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
-			ctx,
-			tx,
-			kodeProgram,
-			tactical.KodeOpd,
-			tactical.Tahun,
+	// OPTIMASI: Batch fetch semua indikator program sekaligus
+	var kodeProgramList []string
+	for kode := range programMap {
+		kodeProgramList = append(kodeProgramList, kode)
+	}
+
+	indikatorProgramBatch := make(map[string][]domain.Indikator)
+	for _, kodeProgram := range kodeProgramList {
+		indikators, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+			ctx, tx, kodeProgram, tactical.KodeOpd, tactical.Tahun,
 		)
 		if err == nil {
-			for _, ind := range indikatorProgram {
-				// Ambil target untuk indikator program
-				targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-				var targetResponses []pohonkinerja.TargetResponse
-				if err == nil {
-					for _, target := range targets {
-						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-							Id:              target.Id,
-							IndikatorId:     target.IndikatorId,
-							TargetIndikator: target.Target,
-							SatuanIndikator: target.Satuan,
-						})
-					}
-				}
+			indikatorProgramBatch[kodeProgram] = indikators
+		}
+	}
 
-				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
-					Id:            ind.Id,
-					Kode:          ind.Kode,
-					NamaIndikator: ind.Indikator,
-					Target:        targetResponses,
+	// Kumpulkan semua indikator program IDs untuk batch fetch target
+	var allIndikatorProgramIds []string
+	for _, indikators := range indikatorProgramBatch {
+		for _, ind := range indikators {
+			allIndikatorProgramIds = append(allIndikatorProgramIds, ind.Id)
+		}
+	}
+
+	// Batch fetch semua target program
+	targetProgramBatch := make(map[string][]domain.Target)
+	if len(allIndikatorProgramIds) > 0 {
+		var err error
+		targetProgramBatch, err = service.cascadingOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorProgramIds)
+		if err != nil {
+			log.Printf("Error batch fetching target program: %v", err)
+		}
+	}
+
+	// Build program list
+	var programList []pohonkinerja.ProgramResponse
+	for kodeProgram, namaProgram := range programMap {
+		indikators := indikatorProgramBatch[kodeProgram]
+		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+
+		for _, ind := range indikators {
+			targetList := targetProgramBatch[ind.Id]
+			var targetResponses []pohonkinerja.TargetResponse
+			for _, target := range targetList {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
 				})
 			}
+
+			indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+				Id:            ind.Id,
+				Kode:          ind.Kode,
+				NamaIndikator: ind.Indikator,
+				Target:        targetResponses,
+			})
 		}
 
 		programList = append(programList, pohonkinerja.ProgramResponse{
@@ -571,7 +794,6 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
 		var operationals []pohonkinerja.OperationalCascadingOpdResponse
 		sort.Slice(operationalList, func(i, j int) bool {
-			// Prioritaskan status "pokin dari pemda"
 			if operationalList[i].Status == "pokin dari pemda" && operationalList[j].Status != "pokin dari pemda" {
 				return true
 			}
@@ -582,148 +804,212 @@ func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
 		})
 
 		for _, operational := range operationalList {
-			operationalResp := service.buildOperationalCascadingResponse(ctx, tx, pohonMap, operational, indikatorMap, rencanaKinerjaMap)
+			operationalResp := service.buildOperationalCascadingResponseOptimized(
+				ctx, tx, pohonMap, operational, indikatorMap, rencanaKinerjaMap,
+				indikatorRekinBatch, targetRekinBatch,
+			)
 			operationals = append(operationals, operationalResp)
-			// Tambahkan total anggaran dari setiap operational
 			totalPaguAnggaran += operationalResp.TotalAnggaran
 		}
 		tacticalResp.Operationals = operationals
 	}
 
-	// Set pagu anggaran dari total anggaran operational
 	tacticalResp.PaguAnggaran = totalPaguAnggaran
-
 	return tacticalResp
 }
 
-func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
+// VERSI OPTIMASI - Operational
+func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponseOptimized(
 	ctx context.Context,
 	tx *sql.Tx,
 	pohonMap map[int]map[int][]domain.PohonKinerja,
 	operational domain.PohonKinerja,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
-	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.OperationalCascadingOpdResponse {
+	rencanaKinerjaMap map[int][]domain.RencanaKinerja,
+	indikatorRekinBatch map[string][]domain.Indikator,
+	targetRekinBatch map[string][]domain.Target) pohonkinerja.OperationalCascadingOpdResponse {
 
 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalResponse
 	var totalAnggaranOperational int64 = 0
+
+	// OPTIMASI: Batch fetch anggaran untuk semua rencana kinerja
 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
+		// Kumpulkan semua rekin IDs untuk batch fetch rencana aksi
+		var rekinIds []string
+		for _, rk := range rencanaKinerjaList {
+			if rk.Id != "" {
+				rekinIds = append(rekinIds, rk.Id)
+			}
+		}
+
+		// Batch fetch rencana aksi untuk semua rencana kinerja
+		rencanaAksiMap := make(map[string][]domain.RencanaAksi)
+		for _, rekinId := range rekinIds {
+			rencanaAksiList, err := service.rencanaAksiRepository.FindAll(ctx, tx, rekinId)
+			if err == nil {
+				rencanaAksiMap[rekinId] = rencanaAksiList
+			}
+		}
+
+		// Kumpulkan semua renaksi IDs untuk batch fetch anggaran
+		var renaksiIds []string
+		for _, rencanaAksiList := range rencanaAksiMap {
+			for _, ra := range rencanaAksiList {
+				renaksiIds = append(renaksiIds, ra.Id)
+			}
+		}
+
+		// Batch fetch anggaran
+		anggaranMap := make(map[string]int64)
+		for _, renaksiId := range renaksiIds {
+			rincianBelanja, err := service.rincianBelanjaRepository.FindAnggaranByRenaksiId(ctx, tx, renaksiId)
+			if err == nil {
+				anggaranMap[renaksiId] = rincianBelanja.Anggaran
+			}
+		}
+
+		// Kumpulkan kode subkegiatan dan kegiatan untuk batch fetch indikator
+		kodeSubkegiatanSet := make(map[string]bool)
+		kodeKegiatanSet := make(map[string]bool)
+		for _, rk := range rencanaKinerjaList {
+			if rk.KodeSubKegiatan != "" {
+				kodeSubkegiatanSet[rk.KodeSubKegiatan] = true
+			}
+			if rk.KodeKegiatan != "" {
+				kodeKegiatanSet[rk.KodeKegiatan] = true
+			}
+		}
+
+		// Batch fetch indikator subkegiatan dan kegiatan
+		indikatorSubkegiatanBatch := make(map[string][]domain.Indikator)
+		for kode := range kodeSubkegiatanSet {
+			indikators, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+				ctx, tx, kode, operational.KodeOpd, operational.Tahun,
+			)
+			if err == nil {
+				indikatorSubkegiatanBatch[kode] = indikators
+			}
+		}
+
+		indikatorKegiatanBatch := make(map[string][]domain.Indikator)
+		for kode := range kodeKegiatanSet {
+			indikators, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+				ctx, tx, kode, operational.KodeOpd, operational.Tahun,
+			)
+			if err == nil {
+				indikatorKegiatanBatch[kode] = indikators
+			}
+		}
+
+		// Kumpulkan semua indikator IDs untuk batch fetch target
+		var allIndikatorIds []string
+		for _, indikators := range indikatorSubkegiatanBatch {
+			for _, ind := range indikators {
+				allIndikatorIds = append(allIndikatorIds, ind.Id)
+			}
+		}
+		for _, indikators := range indikatorKegiatanBatch {
+			for _, ind := range indikators {
+				allIndikatorIds = append(allIndikatorIds, ind.Id)
+			}
+		}
+
+		// Batch fetch semua target untuk indikator subkegiatan dan kegiatan
+		targetSubkegiatanKegiatanBatch := make(map[string][]domain.Target)
+		if len(allIndikatorIds) > 0 {
+			var err error
+			targetSubkegiatanKegiatanBatch, err = service.cascadingOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+			if err != nil {
+				log.Printf("Error batch fetching target subkegiatan/kegiatan: %v", err)
+			}
+		}
+
+		// Build rencana kinerja responses
 		for _, rk := range rencanaKinerjaList {
 			var totalAnggaranRenkin int64 = 0
 			if rk.Id != "" {
-				// Ambil semua rencana aksi untuk rencana kinerja ini
-				rencanaAksiList, err := service.rencanaAksiRepository.FindAll(ctx, tx, rk.Id)
-				if err == nil {
-					for _, ra := range rencanaAksiList {
-						// Ambil anggaran untuk setiap rencana aksi
-						rincianBelanja, err := service.rincianBelanjaRepository.FindAnggaranByRenaksiId(ctx, tx, ra.Id)
-						if err == nil {
-							totalAnggaranRenkin += rincianBelanja.Anggaran
-						}
-					}
+				rencanaAksiList := rencanaAksiMap[rk.Id]
+				for _, ra := range rencanaAksiList {
+					totalAnggaranRenkin += anggaranMap[ra.Id]
 				}
 			}
-
 			totalAnggaranOperational += totalAnggaranRenkin
 
-			// Indikator rencana kinerja
+			// Indikator rencana kinerja (gunakan batch data)
 			var indikatorRekinResponses []pohonkinerja.IndikatorResponse
 			if rk.Id != "" {
-				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
-				if err == nil {
-					for _, ind := range indikatorRekin {
-						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-						var targetResponses []pohonkinerja.TargetResponse
-						if err == nil {
-							for _, target := range targets {
-								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-									Id:              target.Id,
-									IndikatorId:     target.IndikatorId,
-									TargetIndikator: target.Target,
-									SatuanIndikator: target.Satuan,
-								})
-							}
-						}
-						indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							IdRekin:       rk.Id,
-							NamaIndikator: ind.Indikator,
-							Target:        targetResponses,
+				indikators := indikatorRekinBatch[rk.Id]
+				for _, ind := range indikators {
+					targetList := targetRekinBatch[ind.Id]
+					var targetResponses []pohonkinerja.TargetResponse
+					for _, target := range targetList {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
 						})
 					}
+
+					indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
+						Id:            ind.Id,
+						IdRekin:       rk.Id,
+						NamaIndikator: ind.Indikator,
+						Target:        targetResponses,
+					})
 				}
 			}
 
-			// Indikator subkegiatan
+			// Indikator subkegiatan (gunakan batch data)
 			var indikatorSubkegiatanResponses []pohonkinerja.IndikatorResponse
 			if rk.KodeSubKegiatan != "" {
-				indikatorSubkegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
-					ctx,
-					tx,
-					rk.KodeSubKegiatan,
-					operational.KodeOpd,
-					operational.Tahun,
-				)
-				if err == nil {
-					for _, ind := range indikatorSubkegiatan {
-						// Ambil target untuk indikator
-						targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-						var targetResponses []pohonkinerja.TargetResponse
-						if err == nil {
-							for _, target := range targets {
-								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-									Id:              target.Id,
-									IndikatorId:     target.IndikatorId,
-									TargetIndikator: target.Target,
-									SatuanIndikator: target.Satuan,
-								})
-							}
-						}
-
-						indikatorSubkegiatanResponses = append(indikatorSubkegiatanResponses, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							Kode:          ind.Kode,
-							NamaIndikator: ind.Indikator,
-							Target:        targetResponses,
+				indikators := indikatorSubkegiatanBatch[rk.KodeSubKegiatan]
+				for _, ind := range indikators {
+					targetList := targetSubkegiatanKegiatanBatch[ind.Id]
+					var targetResponses []pohonkinerja.TargetResponse
+					for _, target := range targetList {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
 						})
 					}
+
+					indikatorSubkegiatanResponses = append(indikatorSubkegiatanResponses, pohonkinerja.IndikatorResponse{
+						Id:            ind.Id,
+						Kode:          ind.Kode,
+						NamaIndikator: ind.Indikator,
+						Target:        targetResponses,
+					})
 				}
 			}
 
-			// Indikator kegiatan
+			// Indikator kegiatan (gunakan batch data)
 			var indikatorKegiatanResponses []pohonkinerja.IndikatorResponse
 			if rk.KodeKegiatan != "" {
-				indikatorKegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
-					ctx,
-					tx,
-					rk.KodeKegiatan,
-					operational.KodeOpd,
-					operational.Tahun,
-				)
-				if err == nil {
-					for _, ind := range indikatorKegiatan {
-						// Ambil target untuk indikator
-						targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-						var targetResponses []pohonkinerja.TargetResponse
-						if err == nil {
-							for _, target := range targets {
-								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-									Id:              target.Id,
-									IndikatorId:     target.IndikatorId,
-									TargetIndikator: target.Target,
-									SatuanIndikator: target.Satuan,
-								})
-							}
-						}
-
-						indikatorKegiatanResponses = append(indikatorKegiatanResponses, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							Kode:          ind.Kode,
-							NamaIndikator: ind.Indikator,
-							Target:        targetResponses,
+				indikators := indikatorKegiatanBatch[rk.KodeKegiatan]
+				for _, ind := range indikators {
+					targetList := targetSubkegiatanKegiatanBatch[ind.Id]
+					var targetResponses []pohonkinerja.TargetResponse
+					for _, target := range targetList {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
 						})
 					}
+
+					indikatorKegiatanResponses = append(indikatorKegiatanResponses, pohonkinerja.IndikatorResponse{
+						Id:            ind.Id,
+						Kode:          ind.Kode,
+						NamaIndikator: ind.Indikator,
+						Target:        targetResponses,
+					})
 				}
 			}
+
 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalResponse{
 				Id:                   rk.Id,
 				IdPohon:              operational.Id,
@@ -771,7 +1057,10 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 		})
 
 		for _, opN := range operationalNList {
-			childResp := service.buildOperationalNCascadingResponse(ctx, tx, pohonMap, opN, indikatorMap, rencanaKinerjaMap)
+			childResp := service.buildOperationalNCascadingResponseOptimized(
+				ctx, tx, pohonMap, opN, indikatorMap, rencanaKinerjaMap,
+				indikatorRekinBatch, targetRekinBatch,
+			)
 			childs = append(childs, childResp)
 		}
 		operationalResp.Childs = childs
@@ -780,49 +1069,44 @@ func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
 	return operationalResp
 }
 
-func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponse(
+// VERSI OPTIMASI - Operational N
+func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponseOptimized(
 	ctx context.Context,
 	tx *sql.Tx,
 	pohonMap map[int]map[int][]domain.PohonKinerja,
 	operationalN domain.PohonKinerja,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
-	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.OperationalNOpdCascadingResponse {
-
-	log.Printf("Building OperationalN response for ID: %d, Level: %d", operationalN.Id, operationalN.LevelPohon)
+	rencanaKinerjaMap map[int][]domain.RencanaKinerja,
+	indikatorRekinBatch map[string][]domain.Indikator,
+	targetRekinBatch map[string][]domain.Target) pohonkinerja.OperationalNOpdCascadingResponse {
 
 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalNResponse
 
-	// Proses rencana kinerja yang ada
+	// Proses rencana kinerja dengan batch data
 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operationalN.Id]; ok {
-		log.Printf("Found %d rencana kinerja for OperationalN ID %d", len(rencanaKinerjaList), operationalN.Id)
-
 		for _, rk := range rencanaKinerjaList {
 			var indikatorResponses []pohonkinerja.IndikatorResponse
-
-			// Ambil indikator jika rencana kinerja memiliki ID
 			if rk.Id != "" {
-				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
-				if err == nil {
-					for _, ind := range indikatorRekin {
-						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
-						var targetResponses []pohonkinerja.TargetResponse
-						if err == nil {
-							for _, target := range targets {
-								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
-									Id:              target.Id,
-									IndikatorId:     target.IndikatorId,
-									TargetIndikator: target.Target,
-									SatuanIndikator: target.Satuan,
-								})
-							}
-						}
-						indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							IdRekin:       rk.Id,
-							NamaIndikator: ind.Indikator,
-							Target:        targetResponses,
+				// Gunakan batch data yang sudah di-fetch
+				indikators := indikatorRekinBatch[rk.Id]
+				for _, ind := range indikators {
+					targetList := targetRekinBatch[ind.Id]
+					var targetResponses []pohonkinerja.TargetResponse
+					for _, target := range targetList {
+						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+							Id:              target.Id,
+							IndikatorId:     target.IndikatorId,
+							TargetIndikator: target.Target,
+							SatuanIndikator: target.Satuan,
 						})
 					}
+
+					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+						Id:            ind.Id,
+						IdRekin:       rk.Id,
+						NamaIndikator: ind.Indikator,
+						Target:        targetResponses,
+					})
 				}
 			}
 
@@ -839,7 +1123,6 @@ func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponse(
 		}
 	}
 
-	// Buat response
 	operationalNResp := pohonkinerja.OperationalNOpdCascadingResponse{
 		Id:         operationalN.Id,
 		Parent:     operationalN.Parent,
@@ -857,7 +1140,7 @@ func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponse(
 		Indikator:      indikatorMap[operationalN.Id],
 	}
 
-	// Proses child nodes jika ada
+	// Proses child nodes jika ada (recursive)
 	nextLevel := operationalN.LevelPohon + 1
 	if childList := pohonMap[nextLevel][operationalN.Id]; len(childList) > 0 {
 		var childs []pohonkinerja.OperationalNOpdCascadingResponse
@@ -866,13 +1149,15 @@ func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponse(
 		})
 
 		for _, child := range childList {
-			childResp := service.buildOperationalNCascadingResponse(
+			childResp := service.buildOperationalNCascadingResponseOptimized(
 				ctx,
 				tx,
 				pohonMap,
 				child,
 				indikatorMap,
 				rencanaKinerjaMap,
+				indikatorRekinBatch,
+				targetRekinBatch,
 			)
 			childs = append(childs, childResp)
 		}
@@ -881,6 +1166,1720 @@ func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponse(
 
 	return operationalNResp
 }
+
+// func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.CascadingOpdResponse, error) {
+// 	// Generate cache key
+// 	cacheKey := helper.GenerateCacheKey(helper.CacheKeyCascadingOpdAll, kodeOpd, tahun)
+
+// 	// Coba ambil dari cache terlebih dahulu
+// 	var response pohonkinerja.CascadingOpdResponse
+// 	err := helper.GetFromCache(ctx, service.RedisClient, cacheKey, &response)
+// 	if err == nil {
+// 		// Cache hit, return data dari cache
+// 		log.Printf("Cache HIT untuk key: %s", cacheKey)
+// 		return response, nil
+// 	}
+
+// 	// Cache miss, ambil data dari database
+// 	log.Printf("Cache MISS untuk key: %s, mengambil dari database", cacheKey)
+
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		log.Printf("Error starting transaction: %v", err)
+// 		return pohonkinerja.CascadingOpdResponse{}, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+
+// 	// Validasi OPD
+// 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+// 	if err != nil {
+// 		log.Printf("Error: OPD not found for kode_opd=%s: %v", kodeOpd, err)
+// 		return pohonkinerja.CascadingOpdResponse{}, errors.New("kode opd tidak ditemukan")
+// 	}
+
+// 	// Inisialisasi response dasar
+// 	response = pohonkinerja.CascadingOpdResponse{
+// 		KodeOpd:    kodeOpd,
+// 		NamaOpd:    opd.NamaOpd,
+// 		Tahun:      tahun,
+// 		TujuanOpd:  make([]pohonkinerja.TujuanOpdCascadingResponse, 0),
+// 		Strategics: make([]pohonkinerja.StrategicCascadingOpdResponse, 0),
+// 	}
+
+// 	// Ambil data tujuan OPD
+// 	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdForCascadingOpd(ctx, tx, kodeOpd, tahun, "RPJMD")
+// 	if err != nil {
+// 		log.Printf("Warning: Failed to get tujuan OPD data: %v", err)
+// 		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
+// 		return response, nil
+// 	}
+
+// 	log.Printf("Processing %d tujuan OPD entries", len(tujuanOpds))
+
+// 	// OPTIMASI: Batch fetch indikator untuk semua tujuan OPD
+// 	var tujuanIds []int
+// 	kodeBidangUrusanSet := make(map[string]bool)
+// 	for _, tujuan := range tujuanOpds {
+// 		tujuanIds = append(tujuanIds, tujuan.Id)
+// 		if tujuan.KodeBidangUrusan != "" {
+// 			kodeBidangUrusanSet[tujuan.KodeBidangUrusan] = true
+// 		}
+// 	}
+
+// 	// Batch fetch indikator tujuan OPD (masih pakai loop karena belum ada batch method)
+// 	indikatorTujuanMap := make(map[int][]domain.Indikator)
+// 	for _, tujuanId := range tujuanIds {
+// 		indikators, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuanId)
+// 		if err == nil {
+// 			indikatorTujuanMap[tujuanId] = indikators
+// 		}
+// 	}
+
+// 	// OPTIMASI: Batch fetch bidang urusan
+// 	var kodeBidangUrusanList []string
+// 	for kode := range kodeBidangUrusanSet {
+// 		kodeBidangUrusanList = append(kodeBidangUrusanList, kode)
+// 	}
+
+// 	bidangUrusanMap := make(map[string]domainmaster.BidangUrusan)
+// 	for _, kode := range kodeBidangUrusanList {
+// 		bidangUrusan, err := service.bidangUrusanRepository.FindByKodeBidangUrusan(ctx, tx, kode)
+// 		if err == nil {
+// 			bidangUrusanMap[kode] = bidangUrusan
+// 		}
+// 	}
+
+// 	// Build tujuan opd response
+// 	for _, tujuan := range tujuanOpds {
+// 		indikators := indikatorTujuanMap[tujuan.Id]
+// 		var indikatorResponses []pohonkinerja.IndikatorTujuanResponse
+// 		for _, indikator := range indikators {
+// 			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
+// 				Indikator: indikator.Indikator,
+// 			})
+// 		}
+
+// 		bidangUrusan := bidangUrusanMap[tujuan.KodeBidangUrusan]
+
+// 		response.TujuanOpd = append(response.TujuanOpd, pohonkinerja.TujuanOpdCascadingResponse{
+// 			Id:         tujuan.Id,
+// 			KodeOpd:    tujuan.KodeOpd,
+// 			Tujuan:     tujuan.Tujuan,
+// 			KodeBidang: tujuan.KodeBidangUrusan,
+// 			NamaBidang: bidangUrusan.NamaBidangUrusan,
+// 			Indikator:  indikatorResponses,
+// 		})
+// 	}
+
+// 	// Ambil data pohon kinerja
+// 	pokins, err := service.cascadingOpdRepository.FindAll(ctx, tx, kodeOpd, tahun)
+// 	if err != nil {
+// 		log.Printf("Error getting pohon kinerja data: %v", err)
+// 		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
+// 		return response, nil
+// 	}
+
+// 	if len(pokins) == 0 {
+// 		log.Printf("No pohon kinerja found for kodeOpd=%s, tahun=%s", kodeOpd, tahun)
+// 		helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
+// 		return response, nil
+// 	}
+
+// 	log.Printf("Processing %d pohon kinerja entries", len(pokins))
+
+// 	// OPTIMASI: Proses data pohon kinerja dengan batch queries
+// 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+// 	indikatorMap := make(map[int][]pohonkinerja.IndikatorResponse)
+// 	rencanaKinerjaMap := make(map[int][]domain.RencanaKinerja)
+
+// 	// Kumpulkan semua pokin IDs untuk batch queries
+// 	var pokinIds []int
+// 	maxLevel := 0
+// 	for _, p := range pokins {
+// 		if p.LevelPohon > maxLevel {
+// 			maxLevel = p.LevelPohon
+// 		}
+
+// 		if pohonMap[p.LevelPohon] == nil {
+// 			pohonMap[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
+// 		}
+
+// 		p.NamaOpd = opd.NamaOpd
+// 		pohonMap[p.LevelPohon][p.Parent] = append(
+// 			pohonMap[p.LevelPohon][p.Parent],
+// 			p,
+// 		)
+// 		pokinIds = append(pokinIds, p.Id)
+// 	}
+
+// 	// OPTIMASI: Batch fetch semua rencana kinerja untuk semua pokin
+// 	// Perlu membuat method FindByPokinIdsBatch di repository
+// 	rencanaKinerjaBatch := make(map[int][]domain.RencanaKinerja)
+// 	for _, pokinId := range pokinIds {
+// 		rekinList, err := service.rencanaKinerjaRepository.FindByPokinId(ctx, tx, pokinId)
+// 		if err == nil {
+// 			rencanaKinerjaBatch[pokinId] = rekinList
+// 		}
+// 	}
+
+// 	// OPTIMASI: Batch fetch semua pelaksana
+// 	pelaksanaBatch, err := service.pohonKinerjaRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
+// 	if err != nil {
+// 		log.Printf("Error batch fetching pelaksana: %v", err)
+// 		pelaksanaBatch = make(map[int][]domain.PelaksanaPokin)
+// 	}
+
+// 	// OPTIMASI: Kumpulkan semua pegawai IDs untuk batch fetch
+// 	// Perlu mapping: pelaksana.PegawaiId adalah id pegawai (bukan NIP)
+// 	pegawaiIdsSet := make(map[string]bool)
+// 	for _, pelaksanaList := range pelaksanaBatch {
+// 		for _, pelaksana := range pelaksanaList {
+// 			pegawaiIdsSet[pelaksana.PegawaiId] = true
+// 		}
+// 	}
+
+// 	var pegawaiIds []string
+// 	for id := range pegawaiIdsSet {
+// 		pegawaiIds = append(pegawaiIds, id)
+// 	}
+
+// 	// Batch fetch semua pegawai (perlu method FindByIdsBatch)
+// 	pegawaiMap := make(map[string]*domainmaster.Pegawai)
+// 	for _, pegawaiId := range pegawaiIds {
+// 		pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pegawaiId)
+// 		if err == nil {
+// 			pegawaiMap[pegawai.Id] = &pegawai
+// 			pegawaiMap[pegawai.Nip] = &pegawai // Map by NIP juga untuk lookup rencana kinerja
+// 		}
+// 	}
+
+// 	// Process rencana kinerja untuk setiap pokin menggunakan batch data
+// 	for _, p := range pokins {
+// 		rencanaKinerjaList := rencanaKinerjaBatch[p.Id]
+// 		if len(rencanaKinerjaList) == 0 {
+// 			continue
+// 		}
+
+// 		pelaksanaList := pelaksanaBatch[p.Id]
+// 		pelaksanaMap := make(map[string]*domainmaster.Pegawai)
+// 		rekinMap := make(map[string]bool)
+
+// 		// Build pelaksana map dari batch pegawai
+// 		// Perhatikan: pelaksana.PegawaiId adalah id pegawai, kita perlu map ke NIP
+// 		for _, pelaksana := range pelaksanaList {
+// 			if pegawai, exists := pegawaiMap[pelaksana.PegawaiId]; exists {
+// 				pelaksanaMap[pegawai.Nip] = pegawai // Map by NIP untuk matching dengan rencana kinerja
+// 			}
+// 		}
+
+// 		// Filter rencana kinerja yang sesuai dengan pelaksana
+// 		var validRencanaKinerja []domain.RencanaKinerja
+// 		for _, rk := range rencanaKinerjaList {
+// 			// rk.PegawaiId adalah NIP, kita cek apakah NIP ini ada di pelaksanaMap
+// 			if pegawai, exists := pelaksanaMap[rk.PegawaiId]; exists {
+// 				if !rekinMap[rk.Id] {
+// 					rk.NamaPegawai = pegawai.NamaPegawai
+// 					validRencanaKinerja = append(validRencanaKinerja, rk)
+// 					rekinMap[rk.Id] = true
+// 				}
+// 			}
+// 		}
+
+// 		// Track pegawai yang sudah memiliki rencana kinerja
+// 		pegawaiWithRekinMap := make(map[string]bool)
+// 		for _, rk := range validRencanaKinerja {
+// 			pegawaiWithRekinMap[rk.PegawaiId] = true
+// 		}
+
+// 		// Tambahkan pelaksana yang belum memiliki rencana kinerja
+// 		for _, pegawai := range pelaksanaMap {
+// 			if !pegawaiWithRekinMap[pegawai.Nip] {
+// 				validRencanaKinerja = append(validRencanaKinerja, domain.RencanaKinerja{
+// 					IdPohon:     p.Id,
+// 					NamaPohon:   p.NamaPohon,
+// 					Tahun:       p.Tahun,
+// 					PegawaiId:   pegawai.Nip,
+// 					NamaPegawai: pegawai.NamaPegawai,
+// 					Indikator:   nil,
+// 				})
+// 			}
+// 		}
+
+// 		if len(validRencanaKinerja) > 0 {
+// 			rencanaKinerjaMap[p.Id] = validRencanaKinerja
+// 		}
+// 	}
+
+// 	// OPTIMASI: Batch fetch indikator untuk pohon kinerja
+// 	indikatorBatch, err := service.pohonKinerjaRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
+// 	if err == nil {
+// 		// Kumpulkan semua indikator IDs untuk batch fetch target
+// 		var allIndikatorIds []string
+// 		for _, indikatorList := range indikatorBatch {
+// 			for _, indikator := range indikatorList {
+// 				allIndikatorIds = append(allIndikatorIds, indikator.Id)
+// 			}
+// 		}
+
+// 		// Batch fetch semua target
+// 		var targetBatch map[string][]domain.Target
+// 		if len(allIndikatorIds) > 0 {
+// 			targetBatch, err = service.pohonKinerjaRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+// 			if err != nil {
+// 				log.Printf("Error batch fetching targets: %v", err)
+// 				targetBatch = make(map[string][]domain.Target)
+// 			}
+// 		} else {
+// 			targetBatch = make(map[string][]domain.Target)
+// 		}
+
+// 		// Build indikator map
+// 		for pokinId, indikatorList := range indikatorBatch {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+// 			for _, indikator := range indikatorList {
+// 				targetList := targetBatch[indikator.Id]
+// 				var targetResponses []pohonkinerja.TargetResponse
+// 				for _, target := range targetList {
+// 					targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 						Id:              target.Id,
+// 						IndikatorId:     target.IndikatorId,
+// 						TargetIndikator: target.Target,
+// 						SatuanIndikator: target.Satuan,
+// 					})
+// 				}
+
+// 				indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 					Id:            indikator.Id,
+// 					IdPokin:       fmt.Sprint(pokinId),
+// 					NamaIndikator: indikator.Indikator,
+// 					Target:        targetResponses,
+// 				})
+// 			}
+// 			if len(indikatorResponses) > 0 {
+// 				indikatorMap[pokinId] = indikatorResponses
+// 			}
+// 		}
+// 	}
+
+// 	// Build response untuk strategic (level 4)
+// 	if strategicList := pohonMap[4]; len(strategicList) > 0 {
+// 		log.Printf("Processing %d strategic entries", len(strategicList))
+// 		for _, strategicsByParent := range strategicList {
+// 			sort.Slice(strategicsByParent, func(i, j int) bool {
+// 				// Prioritaskan status "pokin dari pemda"
+// 				if strategicsByParent[i].Status == "pokin dari pemda" && strategicsByParent[j].Status != "pokin dari pemda" {
+// 					return true
+// 				}
+// 				if strategicsByParent[i].Status != "pokin dari pemda" && strategicsByParent[j].Status == "pokin dari pemda" {
+// 					return false
+// 				}
+// 				return strategicsByParent[i].Id < strategicsByParent[j].Id
+// 			})
+
+// 			for _, strategic := range strategicsByParent {
+// 				strategicResp := service.buildStrategicCascadingResponseOptimized(ctx, tx, pohonMap, strategic, indikatorMap, rencanaKinerjaMap)
+// 				response.Strategics = append(response.Strategics, strategicResp)
+// 			}
+// 		}
+
+// 		sort.Slice(response.Strategics, func(i, j int) bool {
+// 			if response.Strategics[i].Status == "pokin dari pemda" && response.Strategics[j].Status != "pokin dari pemda" {
+// 				return true
+// 			}
+// 			if response.Strategics[i].Status != "pokin dari pemda" && response.Strategics[j].Status == "pokin dari pemda" {
+// 				return false
+// 			}
+// 			return response.Strategics[i].Id < response.Strategics[j].Id
+// 		})
+// 	}
+
+// 	// Simpan ke cache setelah berhasil mengambil data
+// 	helper.SetToCache(ctx, service.RedisClient, cacheKey, response, helper.CascadingOpdCacheTTL)
+// 	log.Printf("Data disimpan ke cache dengan key: %s", cacheKey)
+
+// 	return response, nil
+// }
+
+// // VERSI OPTIMASI
+// func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponseOptimized(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	strategic domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.StrategicCascadingOpdResponse {
+
+// 	// Proses rencana kinerja untuk strategic dengan batch queries
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaResponse
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[strategic.Id]; ok {
+// 		// OPTIMASI: Kumpulkan semua rekin IDs untuk batch fetch indikator
+// 		var rekinIds []string
+// 		for _, rk := range rencanaKinerjaList {
+// 			if rk.Id != "" {
+// 				rekinIds = append(rekinIds, rk.Id)
+// 			}
+// 		}
+
+// 		// Batch fetch indikator rekin (perlu method FindIndikatorbyRekinIdsBatch)
+// 		// Untuk sekarang masih pakai loop, tapi bisa dioptimasi lebih lanjut
+// 		indikatorRekinMap := make(map[string][]domain.Indikator)
+// 		for _, rekinId := range rekinIds {
+// 			indikators, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rekinId)
+// 			if err == nil {
+// 				indikatorRekinMap[rekinId] = indikators
+// 			}
+// 		}
+
+// 		// Kumpulkan semua indikator IDs untuk batch fetch target
+// 		var allIndikatorRekinIds []string
+// 		for _, indikators := range indikatorRekinMap {
+// 			for _, ind := range indikators {
+// 				allIndikatorRekinIds = append(allIndikatorRekinIds, ind.Id)
+// 			}
+// 		}
+
+// 		// Batch fetch semua target
+// 		targetBatch := make(map[string][]domain.Target)
+// 		if len(allIndikatorRekinIds) > 0 {
+// 			var err error
+// 			targetBatch, err = service.pohonKinerjaRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorRekinIds)
+// 			if err != nil {
+// 				log.Printf("Error batch fetching targets: %v", err)
+// 			}
+// 		}
+
+// 		// Build rencana kinerja responses
+// 		for _, rk := range rencanaKinerjaList {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+// 			if rk.Id != "" {
+// 				indikators := indikatorRekinMap[rk.Id]
+// 				for _, ind := range indikators {
+// 					targetList := targetBatch[ind.Id]
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            ind.Id,
+// 						IdRekin:       rk.Id,
+// 						NamaIndikator: ind.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 			}
+
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaResponse{
+// 				Id:                 rk.Id,
+// 				IdPohon:            strategic.Id,
+// 				NamaPohon:          strategic.NamaPohon,
+// 				NamaRencanaKinerja: rk.NamaRencanaKinerja,
+// 				Tahun:              strategic.Tahun,
+// 				PegawaiId:          rk.PegawaiId,
+// 				NamaPegawai:        rk.NamaPegawai,
+// 				Indikator:          indikatorResponses,
+// 			})
+// 		}
+// 	}
+
+// 	// OPTIMASI: Kumpulkan semua kode program untuk batch fetch
+// 	programMap := make(map[string]string)
+// 	if tacticalList, exists := pohonMap[5][strategic.Id]; exists {
+// 		for _, tactical := range tacticalList {
+// 			if operationalList, exists := pohonMap[6][tactical.Id]; exists {
+// 				for _, operational := range operationalList {
+// 					if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
+// 						for _, rk := range rencanaKinerjaList {
+// 							if rk.KodeSubKegiatan != "" {
+// 								segments := strings.Split(rk.KodeSubKegiatan, ".")
+// 								if len(segments) >= 3 {
+// 									kodeProgram := strings.Join(segments[:3], ".")
+// 									if _, exists := programMap[kodeProgram]; !exists {
+// 										program, err := service.programRepository.FindByKodeProgram(ctx, tx, kodeProgram)
+// 										if err == nil {
+// 											programMap[kodeProgram] = program.NamaProgram
+// 										}
+// 									}
+// 								}
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Batch fetch indikator program dan target (perlu optimasi lebih lanjut)
+// 	var programList []pohonkinerja.ProgramResponse
+// 	for kodeProgram, namaProgram := range programMap {
+// 		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+// 		indikatorProgram, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 			ctx, tx, kodeProgram, strategic.KodeOpd, strategic.Tahun,
+// 		)
+// 		if err == nil {
+// 			// Kumpulkan indikator IDs untuk batch fetch target
+// 			var indikatorIds []string
+// 			for _, ind := range indikatorProgram {
+// 				indikatorIds = append(indikatorIds, ind.Id)
+// 			}
+
+// 			// Batch fetch target
+// 			targetProgramBatch := make(map[string][]domain.Target)
+// 			if len(indikatorIds) > 0 {
+// 				// Gunakan FindTargetByIndikatorIdsBatch jika ada di cascadingOpdRepository
+// 				// Untuk sekarang masih pakai loop
+// 				for _, indikatorId := range indikatorIds {
+// 					targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, indikatorId)
+// 					if err == nil {
+// 						targetProgramBatch[indikatorId] = targets
+// 					}
+// 				}
+// 			}
+
+// 			for _, ind := range indikatorProgram {
+// 				targetList := targetProgramBatch[ind.Id]
+// 				var targetResponses []pohonkinerja.TargetResponse
+// 				for _, target := range targetList {
+// 					targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 						Id:              target.Id,
+// 						IndikatorId:     target.IndikatorId,
+// 						TargetIndikator: target.Target,
+// 						SatuanIndikator: target.Satuan,
+// 					})
+// 				}
+
+// 				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+// 					Id:            ind.Id,
+// 					Kode:          ind.Kode,
+// 					NamaIndikator: ind.Indikator,
+// 					Target:        targetResponses,
+// 				})
+// 			}
+// 		}
+
+// 		programList = append(programList, pohonkinerja.ProgramResponse{
+// 			KodeProgram: kodeProgram,
+// 			NamaProgram: namaProgram,
+// 			Indikator:   indikatorProgramResponses,
+// 		})
+// 	}
+
+// 	strategicResp := pohonkinerja.StrategicCascadingOpdResponse{
+// 		Id:         strategic.Id,
+// 		Parent:     nil,
+// 		Strategi:   strategic.NamaPohon,
+// 		JenisPohon: strategic.JenisPohon,
+// 		LevelPohon: strategic.LevelPohon,
+// 		Keterangan: strategic.Keterangan,
+// 		Status:     strategic.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: strategic.KodeOpd,
+// 			NamaOpd: strategic.NamaOpd,
+// 		},
+// 		IsActive:       strategic.IsActive,
+// 		Program:        programList,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[strategic.Id],
+// 	}
+
+// 	// Build tactical responses dan hitung total pagu anggaran
+// 	var totalPaguAnggaran int64 = 0
+// 	if tacticalList := pohonMap[5][strategic.Id]; len(tacticalList) > 0 {
+// 		var tacticals []pohonkinerja.TacticalCascadingOpdResponse
+// 		sort.Slice(tacticalList, func(i, j int) bool {
+// 			if tacticalList[i].Status == "pokin dari pemda" && tacticalList[j].Status != "pokin dari pemda" {
+// 				return true
+// 			}
+// 			if tacticalList[i].Status != "pokin dari pemda" && tacticalList[j].Status == "pokin dari pemda" {
+// 				return false
+// 			}
+// 			return tacticalList[i].Id < tacticalList[j].Id
+// 		})
+
+// 		for _, tactical := range tacticalList {
+// 			tacticalResp := service.buildTacticalCascadingResponseOptimized(ctx, tx, pohonMap, tactical, indikatorMap, rencanaKinerjaMap)
+// 			tacticals = append(tacticals, tacticalResp)
+// 			totalPaguAnggaran += tacticalResp.PaguAnggaran
+// 		}
+// 		strategicResp.Tacticals = tacticals
+// 	}
+
+// 	strategicResp.PaguAnggaran = totalPaguAnggaran
+// 	return strategicResp
+// }
+// func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponseOptimized(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	tactical domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja,
+// 	indikatorRekinBatch map[string][]domain.Indikator,
+// 	targetBatch map[string][]domain.Target) pohonkinerja.TacticalCascadingOpdResponse {
+
+// 	// Proses rencana kinerja untuk tactical dengan batch data
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaResponse
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[tactical.Id]; ok {
+// 		for _, rk := range rencanaKinerjaList {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+// 			if rk.Id != "" {
+// 				// Gunakan batch data yang sudah di-fetch
+// 				indikators := indikatorRekinBatch[rk.Id]
+// 				for _, ind := range indikators {
+// 					targetList := targetBatch[ind.Id]
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            ind.Id,
+// 						IdRekin:       rk.Id,
+// 						NamaIndikator: ind.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 			}
+
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaResponse{
+// 				Id:                 rk.Id,
+// 				IdPohon:            tactical.Id,
+// 				NamaPohon:          tactical.NamaPohon,
+// 				NamaRencanaKinerja: rk.NamaRencanaKinerja,
+// 				Tahun:              tactical.Tahun,
+// 				PegawaiId:          rk.PegawaiId,
+// 				NamaPegawai:        rk.NamaPegawai,
+// 				Indikator:          indikatorResponses,
+// 			})
+// 		}
+// 	}
+
+// 	// OPTIMASI: Kumpulkan semua kode program untuk batch fetch
+// 	programMap := make(map[string]string)
+// 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
+// 		for _, operational := range operationalList {
+// 			if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
+// 				for _, rk := range rencanaKinerjaList {
+// 					if rk.KodeSubKegiatan != "" {
+// 						segments := strings.Split(rk.KodeSubKegiatan, ".")
+// 						if len(segments) >= 3 {
+// 							kodeProgram := strings.Join(segments[:3], ".")
+// 							if _, exists := programMap[kodeProgram]; !exists {
+// 								program, err := service.programRepository.FindByKodeProgram(ctx, tx, kodeProgram)
+// 								if err == nil {
+// 									programMap[kodeProgram] = program.NamaProgram
+// 								}
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// OPTIMASI: Batch fetch semua indikator program sekaligus
+// 	var kodeProgramList []string
+// 	for kode := range programMap {
+// 		kodeProgramList = append(kodeProgramList, kode)
+// 	}
+
+// 	indikatorProgramBatch := make(map[string][]domain.Indikator)
+// 	for _, kodeProgram := range kodeProgramList {
+// 		indikators, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 			ctx, tx, kodeProgram, tactical.KodeOpd, tactical.Tahun,
+// 		)
+// 		if err == nil {
+// 			indikatorProgramBatch[kodeProgram] = indikators
+// 		}
+// 	}
+
+// 	// Kumpulkan semua indikator program IDs untuk batch fetch target
+// 	var allIndikatorProgramIds []string
+// 	for _, indikators := range indikatorProgramBatch {
+// 		for _, ind := range indikators {
+// 			allIndikatorProgramIds = append(allIndikatorProgramIds, ind.Id)
+// 		}
+// 	}
+
+// 	// Batch fetch semua target program
+// 	targetProgramBatch := make(map[string][]domain.Target)
+// 	if len(allIndikatorProgramIds) > 0 {
+// 		var err error
+// 		targetProgramBatch, err = service.cascadingOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorProgramIds)
+// 		if err != nil {
+// 			log.Printf("Error batch fetching target program: %v", err)
+// 		}
+// 	}
+
+// 	// Build program list
+// 	var programList []pohonkinerja.ProgramResponse
+// 	for kodeProgram, namaProgram := range programMap {
+// 		indikators := indikatorProgramBatch[kodeProgram]
+// 		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+
+// 		for _, ind := range indikators {
+// 			targetList := targetProgramBatch[ind.Id]
+// 			var targetResponses []pohonkinerja.TargetResponse
+// 			for _, target := range targetList {
+// 				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 					Id:              target.Id,
+// 					IndikatorId:     target.IndikatorId,
+// 					TargetIndikator: target.Target,
+// 					SatuanIndikator: target.Satuan,
+// 				})
+// 			}
+
+// 			indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+// 				Id:            ind.Id,
+// 				Kode:          ind.Kode,
+// 				NamaIndikator: ind.Indikator,
+// 				Target:        targetResponses,
+// 			})
+// 		}
+
+// 		programList = append(programList, pohonkinerja.ProgramResponse{
+// 			KodeProgram: kodeProgram,
+// 			NamaProgram: namaProgram,
+// 			Indikator:   indikatorProgramResponses,
+// 		})
+// 	}
+
+// 	tacticalResp := pohonkinerja.TacticalCascadingOpdResponse{
+// 		Id:         tactical.Id,
+// 		Parent:     tactical.Parent,
+// 		Strategi:   tactical.NamaPohon,
+// 		JenisPohon: tactical.JenisPohon,
+// 		LevelPohon: tactical.LevelPohon,
+// 		Keterangan: tactical.Keterangan,
+// 		Status:     tactical.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: tactical.KodeOpd,
+// 			NamaOpd: tactical.NamaOpd,
+// 		},
+// 		IsActive:       tactical.IsActive,
+// 		Program:        programList,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[tactical.Id],
+// 	}
+
+// 	// Build operational responses dan hitung total pagu anggaran
+// 	var totalPaguAnggaran int64 = 0
+// 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
+// 		var operationals []pohonkinerja.OperationalCascadingOpdResponse
+// 		sort.Slice(operationalList, func(i, j int) bool {
+// 			if operationalList[i].Status == "pokin dari pemda" && operationalList[j].Status != "pokin dari pemda" {
+// 				return true
+// 			}
+// 			if operationalList[i].Status != "pokin dari pemda" && operationalList[j].Status == "pokin dari pemda" {
+// 				return false
+// 			}
+// 			return operationalList[i].Id < operationalList[j].Id
+// 		})
+
+// 		for _, operational := range operationalList {
+// 			operationalResp := service.buildOperationalCascadingResponseOptimized(ctx, tx, pohonMap, operational, indikatorMap, rencanaKinerjaMap, indikatorRekinBatch, targetBatch)
+// 			operationals = append(operationals, operationalResp)
+// 			totalPaguAnggaran += operationalResp.TotalAnggaran
+// 		}
+// 		tacticalResp.Operationals = operationals
+// 	}
+
+// 	tacticalResp.PaguAnggaran = totalPaguAnggaran
+// 	return tacticalResp
+// }
+
+// // Versi optimized untuk operational dengan batch queries
+// func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponseOptimized(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	operational domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja,
+// 	indikatorRekinBatch map[string][]domain.Indikator,
+// 	targetBatch map[string][]domain.Target) pohonkinerja.OperationalCascadingOpdResponse {
+
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalResponse
+// 	var totalAnggaranOperational int64 = 0
+
+// 	// OPTIMASI: Batch fetch anggaran untuk semua rencana kinerja
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
+// 		// Kumpulkan semua rekin IDs untuk batch fetch rencana aksi
+// 		var rekinIds []string
+// 		for _, rk := range rencanaKinerjaList {
+// 			if rk.Id != "" {
+// 				rekinIds = append(rekinIds, rk.Id)
+// 			}
+// 		}
+
+// 		// Batch fetch rencana aksi untuk semua rencana kinerja (perlu method FindAllBatch)
+// 		// Untuk sekarang masih loop, tapi bisa dioptimasi lebih lanjut dengan batch method
+// 		rencanaAksiMap := make(map[string][]domain.RencanaAksi)
+// 		for _, rekinId := range rekinIds {
+// 			rencanaAksiList, err := service.rencanaAksiRepository.FindAll(ctx, tx, rekinId)
+// 			if err == nil {
+// 				rencanaAksiMap[rekinId] = rencanaAksiList
+// 			}
+// 		}
+
+// 		// Kumpulkan semua renaksi IDs untuk batch fetch anggaran
+// 		var renaksiIds []string
+// 		for _, rencanaAksiList := range rencanaAksiMap {
+// 			for _, ra := range rencanaAksiList {
+// 				renaksiIds = append(renaksiIds, ra.Id)
+// 			}
+// 		}
+
+// 		// Batch fetch anggaran (perlu method FindAnggaranByRenaksiIdsBatch)
+// 		// Untuk sekarang masih loop
+// 		anggaranMap := make(map[string]int64)
+// 		for _, renaksiId := range renaksiIds {
+// 			rincianBelanja, err := service.rincianBelanjaRepository.FindAnggaranByRenaksiId(ctx, tx, renaksiId)
+// 			if err == nil {
+// 				anggaranMap[renaksiId] = rincianBelanja.Anggaran
+// 			}
+// 		}
+
+// 		// Kumpulkan kode subkegiatan dan kegiatan untuk batch fetch indikator
+// 		kodeSubkegiatanSet := make(map[string]bool)
+// 		kodeKegiatanSet := make(map[string]bool)
+// 		for _, rk := range rencanaKinerjaList {
+// 			if rk.KodeSubKegiatan != "" {
+// 				kodeSubkegiatanSet[rk.KodeSubKegiatan] = true
+// 			}
+// 			if rk.KodeKegiatan != "" {
+// 				kodeKegiatanSet[rk.KodeKegiatan] = true
+// 			}
+// 		}
+
+// 		// Batch fetch indikator subkegiatan dan kegiatan
+// 		indikatorSubkegiatanBatch := make(map[string][]domain.Indikator)
+// 		for kode := range kodeSubkegiatanSet {
+// 			indikators, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 				ctx, tx, kode, operational.KodeOpd, operational.Tahun,
+// 			)
+// 			if err == nil {
+// 				indikatorSubkegiatanBatch[kode] = indikators
+// 			}
+// 		}
+
+// 		indikatorKegiatanBatch := make(map[string][]domain.Indikator)
+// 		for kode := range kodeKegiatanSet {
+// 			indikators, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 				ctx, tx, kode, operational.KodeOpd, operational.Tahun,
+// 			)
+// 			if err == nil {
+// 				indikatorKegiatanBatch[kode] = indikators
+// 			}
+// 		}
+
+// 		// Kumpulkan semua indikator IDs untuk batch fetch target
+// 		var allIndikatorIds []string
+// 		for _, indikators := range indikatorSubkegiatanBatch {
+// 			for _, ind := range indikators {
+// 				allIndikatorIds = append(allIndikatorIds, ind.Id)
+// 			}
+// 		}
+// 		for _, indikators := range indikatorKegiatanBatch {
+// 			for _, ind := range indikators {
+// 				allIndikatorIds = append(allIndikatorIds, ind.Id)
+// 			}
+// 		}
+
+// 		// Batch fetch semua target untuk indikator subkegiatan dan kegiatan
+// 		targetSubkegiatanKegiatanBatch := make(map[string][]domain.Target)
+// 		if len(allIndikatorIds) > 0 {
+// 			var err error
+// 			targetSubkegiatanKegiatanBatch, err = service.cascadingOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+// 			if err != nil {
+// 				log.Printf("Error batch fetching target subkegiatan/kegiatan: %v", err)
+// 			}
+// 		}
+
+// 		// Build rencana kinerja responses
+// 		for _, rk := range rencanaKinerjaList {
+// 			var totalAnggaranRenkin int64 = 0
+// 			if rk.Id != "" {
+// 				rencanaAksiList := rencanaAksiMap[rk.Id]
+// 				for _, ra := range rencanaAksiList {
+// 					totalAnggaranRenkin += anggaranMap[ra.Id]
+// 				}
+// 			}
+// 			totalAnggaranOperational += totalAnggaranRenkin
+
+// 			// Indikator rencana kinerja (gunakan batch data)
+// 			var indikatorRekinResponses []pohonkinerja.IndikatorResponse
+// 			if rk.Id != "" {
+// 				indikators := indikatorRekinBatch[rk.Id]
+// 				for _, ind := range indikators {
+// 					targetList := targetBatch[ind.Id]
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            ind.Id,
+// 						IdRekin:       rk.Id,
+// 						NamaIndikator: ind.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 			}
+
+// 			// Indikator subkegiatan (gunakan batch data)
+// 			var indikatorSubkegiatanResponses []pohonkinerja.IndikatorResponse
+// 			if rk.KodeSubKegiatan != "" {
+// 				indikators := indikatorSubkegiatanBatch[rk.KodeSubKegiatan]
+// 				for _, ind := range indikators {
+// 					targetList := targetSubkegiatanKegiatanBatch[ind.Id]
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorSubkegiatanResponses = append(indikatorSubkegiatanResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            ind.Id,
+// 						Kode:          ind.Kode,
+// 						NamaIndikator: ind.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 			}
+
+// 			// Indikator kegiatan (gunakan batch data)
+// 			var indikatorKegiatanResponses []pohonkinerja.IndikatorResponse
+// 			if rk.KodeKegiatan != "" {
+// 				indikators := indikatorKegiatanBatch[rk.KodeKegiatan]
+// 				for _, ind := range indikators {
+// 					targetList := targetSubkegiatanKegiatanBatch[ind.Id]
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorKegiatanResponses = append(indikatorKegiatanResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            ind.Id,
+// 						Kode:          ind.Kode,
+// 						NamaIndikator: ind.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 			}
+
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalResponse{
+// 				Id:                   rk.Id,
+// 				IdPohon:              operational.Id,
+// 				NamaPohon:            operational.NamaPohon,
+// 				NamaRencanaKinerja:   rk.NamaRencanaKinerja,
+// 				Tahun:                operational.Tahun,
+// 				PegawaiId:            rk.PegawaiId,
+// 				NamaPegawai:          rk.NamaPegawai,
+// 				KodeSubkegiatan:      rk.KodeSubKegiatan,
+// 				NamaSubkegiatan:      rk.NamaSubKegiatan,
+// 				Anggaran:             totalAnggaranRenkin,
+// 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
+// 				KodeKegiatan:         rk.KodeKegiatan,
+// 				NamaKegiatan:         rk.NamaKegiatan,
+// 				IndikatorKegiatan:    indikatorKegiatanResponses,
+// 				Indikator:            indikatorRekinResponses,
+// 			})
+// 		}
+// 	}
+
+// 	operationalResp := pohonkinerja.OperationalCascadingOpdResponse{
+// 		Id:         operational.Id,
+// 		Parent:     operational.Parent,
+// 		Strategi:   operational.NamaPohon,
+// 		JenisPohon: operational.JenisPohon,
+// 		LevelPohon: operational.LevelPohon,
+// 		Keterangan: operational.Keterangan,
+// 		Status:     operational.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: operational.KodeOpd,
+// 			NamaOpd: operational.NamaOpd,
+// 		},
+// 		IsActive:       operational.IsActive,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[operational.Id],
+// 		TotalAnggaran:  totalAnggaranOperational,
+// 	}
+
+// 	// Build operational N responses jika ada
+// 	nextLevel := operational.LevelPohon + 1
+// 	if operationalNList := pohonMap[nextLevel][operational.Id]; len(operationalNList) > 0 {
+// 		var childs []pohonkinerja.OperationalNOpdCascadingResponse
+// 		sort.Slice(operationalNList, func(i, j int) bool {
+// 			return operationalNList[i].Id < operationalNList[j].Id
+// 		})
+
+// 		for _, opN := range operationalNList {
+// 			childResp := service.buildOperationalNCascadingResponseOptimized(ctx, tx, pohonMap, opN, indikatorMap, rencanaKinerjaMap, indikatorRekinBatch, targetBatch)
+// 			childs = append(childs, childResp)
+// 		}
+// 		operationalResp.Childs = childs
+// 	}
+
+// 	return operationalResp
+// }
+
+// // Versi optimized untuk operational N dengan batch queries
+// func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponseOptimized(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	operationalN domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja,
+// 	indikatorRekinBatch map[string][]domain.Indikator,
+// 	targetBatch map[string][]domain.Target) pohonkinerja.OperationalNOpdCascadingResponse {
+
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalNResponse
+
+// 	// Proses rencana kinerja dengan batch data
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operationalN.Id]; ok {
+// 		for _, rk := range rencanaKinerjaList {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+// 			if rk.Id != "" {
+// 				// Gunakan batch data yang sudah di-fetch
+// 				indikators := indikatorRekinBatch[rk.Id]
+// 				for _, ind := range indikators {
+// 					targetList := targetBatch[ind.Id]
+// 					var targetResponses []pohonkinerja.TargetResponse
+// 					for _, target := range targetList {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+
+// 					indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 						Id:            ind.Id,
+// 						IdRekin:       rk.Id,
+// 						NamaIndikator: ind.Indikator,
+// 						Target:        targetResponses,
+// 					})
+// 				}
+// 			}
+
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalNResponse{
+// 				Id:                 rk.Id,
+// 				IdPohon:            operationalN.Id,
+// 				NamaPohon:          operationalN.NamaPohon,
+// 				NamaRencanaKinerja: rk.NamaRencanaKinerja,
+// 				Tahun:              operationalN.Tahun,
+// 				PegawaiId:          rk.PegawaiId,
+// 				NamaPegawai:        rk.NamaPegawai,
+// 				Indikator:          indikatorResponses,
+// 			})
+// 		}
+// 	}
+
+// 	operationalNResp := pohonkinerja.OperationalNOpdCascadingResponse{
+// 		Id:         operationalN.Id,
+// 		Parent:     operationalN.Parent,
+// 		Strategi:   operationalN.NamaPohon,
+// 		JenisPohon: operationalN.JenisPohon,
+// 		LevelPohon: operationalN.LevelPohon,
+// 		Keterangan: operationalN.Keterangan,
+// 		Status:     operationalN.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: operationalN.KodeOpd,
+// 			NamaOpd: operationalN.NamaOpd,
+// 		},
+// 		IsActive:       operationalN.IsActive,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[operationalN.Id],
+// 	}
+
+// 	// Proses child nodes jika ada
+// 	nextLevel := operationalN.LevelPohon + 1
+// 	if childList := pohonMap[nextLevel][operationalN.Id]; len(childList) > 0 {
+// 		var childs []pohonkinerja.OperationalNOpdCascadingResponse
+// 		sort.Slice(childList, func(i, j int) bool {
+// 			return childList[i].Id < childList[j].Id
+// 		})
+
+// 		for _, child := range childList {
+// 			childResp := service.buildOperationalNCascadingResponseOptimized(
+// 				ctx,
+// 				tx,
+// 				pohonMap,
+// 				child,
+// 				indikatorMap,
+// 				rencanaKinerjaMap,
+// 				indikatorRekinBatch,
+// 				targetBatch,
+// 			)
+// 			childs = append(childs, childResp)
+// 		}
+// 		operationalNResp.Childs = childs
+// 	}
+
+// 	return operationalNResp
+// }
+
+// //AKHIR VERSI OPTIMASI
+
+// func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	strategic domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.StrategicCascadingOpdResponse {
+
+// 	// Proses rencana kinerja untuk strategic
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaResponse
+// 	// Proses pelaksana dari pohon kinerja
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[strategic.Id]; ok {
+// 		for _, rk := range rencanaKinerjaList {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+
+// 			// Hanya ambil indikator jika rencana kinerja memiliki ID
+// 			if rk.Id != "" {
+// 				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
+// 				if err == nil {
+// 					for _, ind := range indikatorRekin {
+// 						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 						var targetResponses []pohonkinerja.TargetResponse
+// 						if err == nil {
+// 							for _, target := range targets {
+// 								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 									Id:              target.Id,
+// 									IndikatorId:     target.IndikatorId,
+// 									TargetIndikator: target.Target,
+// 									SatuanIndikator: target.Satuan,
+// 								})
+// 							}
+// 						}
+// 						indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 							Id:            ind.Id,
+// 							IdRekin:       rk.Id,
+// 							NamaIndikator: ind.Indikator,
+// 							Target:        targetResponses,
+// 						})
+// 					}
+// 				}
+// 			}
+
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaResponse{
+// 				Id:                 rk.Id,
+// 				IdPohon:            strategic.Id,
+// 				NamaPohon:          strategic.NamaPohon,
+// 				NamaRencanaKinerja: rk.NamaRencanaKinerja,
+// 				Tahun:              strategic.Tahun,
+// 				PegawaiId:          rk.PegawaiId,
+// 				NamaPegawai:        rk.NamaPegawai,
+// 				Indikator:          indikatorResponses,
+// 			})
+// 		}
+// 	}
+
+// 	// Proses program dari level 6 melalui level 5
+// 	programMap := make(map[string]string)
+// 	if tacticalList, exists := pohonMap[5][strategic.Id]; exists {
+// 		for _, tactical := range tacticalList {
+// 			if operationalList, exists := pohonMap[6][tactical.Id]; exists {
+// 				for _, operational := range operationalList {
+// 					if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
+// 						for _, rk := range rencanaKinerjaList {
+// 							if rk.KodeSubKegiatan != "" {
+// 								segments := strings.Split(rk.KodeSubKegiatan, ".")
+// 								if len(segments) >= 3 {
+// 									kodeProgram := strings.Join(segments[:3], ".")
+// 									if _, exists := programMap[kodeProgram]; !exists {
+// 										program, err := service.programRepository.FindByKodeProgram(ctx, tx, kodeProgram)
+// 										if err == nil {
+// 											programMap[kodeProgram] = program.NamaProgram
+// 										}
+// 									}
+// 								}
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Convert program map ke slice dan sort
+// 	var programList []pohonkinerja.ProgramResponse
+// 	for kodeProgram, namaProgram := range programMap {
+// 		// Ambil indikator program
+// 		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+// 		indikatorProgram, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 			ctx,
+// 			tx,
+// 			kodeProgram,
+// 			strategic.KodeOpd,
+// 			strategic.Tahun,
+// 		)
+// 		if err == nil {
+// 			for _, ind := range indikatorProgram {
+// 				// Ambil target untuk indikator program
+// 				targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 				var targetResponses []pohonkinerja.TargetResponse
+// 				if err == nil {
+// 					for _, target := range targets {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+// 				}
+
+// 				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+// 					Id:            ind.Id,
+// 					Kode:          ind.Kode,
+// 					NamaIndikator: ind.Indikator,
+// 					Target:        targetResponses, // Menambahkan target ke indikator program
+// 				})
+// 			}
+// 		}
+
+// 		programList = append(programList, pohonkinerja.ProgramResponse{
+// 			KodeProgram: kodeProgram,
+// 			NamaProgram: namaProgram,
+// 			Indikator:   indikatorProgramResponses,
+// 		})
+// 	}
+
+// 	strategicResp := pohonkinerja.StrategicCascadingOpdResponse{
+// 		Id:         strategic.Id,
+// 		Parent:     nil,
+// 		Strategi:   strategic.NamaPohon,
+// 		JenisPohon: strategic.JenisPohon,
+// 		LevelPohon: strategic.LevelPohon,
+// 		Keterangan: strategic.Keterangan,
+// 		Status:     strategic.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: strategic.KodeOpd,
+// 			NamaOpd: strategic.NamaOpd,
+// 		},
+// 		IsActive:       strategic.IsActive,
+// 		Program:        programList,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[strategic.Id],
+// 	}
+
+// 	// Build tactical responses dan hitung total pagu anggaran
+// 	var totalPaguAnggaran int64 = 0
+// 	if tacticalList := pohonMap[5][strategic.Id]; len(tacticalList) > 0 {
+// 		var tacticals []pohonkinerja.TacticalCascadingOpdResponse
+// 		sort.Slice(tacticalList, func(i, j int) bool {
+// 			// Prioritaskan status "pokin dari pemda"
+// 			if tacticalList[i].Status == "pokin dari pemda" && tacticalList[j].Status != "pokin dari pemda" {
+// 				return true
+// 			}
+// 			if tacticalList[i].Status != "pokin dari pemda" && tacticalList[j].Status == "pokin dari pemda" {
+// 				return false
+// 			}
+// 			return tacticalList[i].Id < tacticalList[j].Id
+// 		})
+
+// 		for _, tactical := range tacticalList {
+// 			tacticalResp := service.buildTacticalCascadingResponse(ctx, tx, pohonMap, tactical, indikatorMap, rencanaKinerjaMap)
+// 			tacticals = append(tacticals, tacticalResp)
+// 			// Tambahkan pagu anggaran dari setiap tactical
+// 			totalPaguAnggaran += tacticalResp.PaguAnggaran
+// 		}
+// 		strategicResp.Tacticals = tacticals
+// 	}
+
+// 	// Set pagu anggaran dari total pagu anggaran tactical
+// 	strategicResp.PaguAnggaran = totalPaguAnggaran
+
+// 	return strategicResp
+// }
+
+// func (service *CascadingOpdServiceImpl) buildTacticalCascadingResponse(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	tactical domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.TacticalCascadingOpdResponse {
+
+// 	log.Printf("Building tactical response for ID: %d, Level: %d", tactical.Id, tactical.LevelPohon)
+
+// 	// Map untuk menyimpan program unik
+// 	programMap := make(map[string]string)
+
+// 	// Proses rencana kinerja untuk tactical
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaResponse
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[tactical.Id]; ok {
+// 		for _, rk := range rencanaKinerjaList {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+
+// 			// Hanya ambil indikator jika rencana kinerja memiliki ID
+// 			if rk.Id != "" {
+// 				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
+// 				if err == nil {
+// 					for _, ind := range indikatorRekin {
+// 						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 						var targetResponses []pohonkinerja.TargetResponse
+// 						if err == nil {
+// 							for _, target := range targets {
+// 								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 									Id:              target.Id,
+// 									IndikatorId:     target.IndikatorId,
+// 									TargetIndikator: target.Target,
+// 									SatuanIndikator: target.Satuan,
+// 								})
+// 							}
+// 						}
+// 						indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 							Id:            ind.Id,
+// 							IdRekin:       rk.Id,
+// 							NamaIndikator: ind.Indikator,
+// 							Target:        targetResponses,
+// 						})
+// 					}
+// 				}
+// 			}
+
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaResponse{
+// 				Id:                 rk.Id,
+// 				IdPohon:            tactical.Id,
+// 				NamaPohon:          tactical.NamaPohon,
+// 				NamaRencanaKinerja: rk.NamaRencanaKinerja,
+// 				Tahun:              tactical.Tahun,
+// 				PegawaiId:          rk.PegawaiId,
+// 				NamaPegawai:        rk.NamaPegawai,
+// 				Indikator:          indikatorResponses,
+// 			})
+// 		}
+// 	}
+
+// 	// Proses program dari level operational
+// 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
+// 		for _, operational := range operationalList {
+// 			if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
+// 				for _, rk := range rencanaKinerjaList {
+// 					if rk.KodeSubKegiatan != "" {
+// 						segments := strings.Split(rk.KodeSubKegiatan, ".")
+// 						if len(segments) >= 3 {
+// 							kodeProgram := strings.Join(segments[:3], ".")
+// 							if _, exists := programMap[kodeProgram]; !exists {
+// 								program, err := service.programRepository.FindByKodeProgram(ctx, tx, kodeProgram)
+// 								if err == nil {
+// 									programMap[kodeProgram] = program.NamaProgram
+// 								}
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Convert program map ke slice dan sort
+// 	var programList []pohonkinerja.ProgramResponse
+// 	for kodeProgram, namaProgram := range programMap {
+// 		// Ambil indikator program
+// 		var indikatorProgramResponses []pohonkinerja.IndikatorResponse
+// 		indikatorProgram, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 			ctx,
+// 			tx,
+// 			kodeProgram,
+// 			tactical.KodeOpd,
+// 			tactical.Tahun,
+// 		)
+// 		if err == nil {
+// 			for _, ind := range indikatorProgram {
+// 				// Ambil target untuk indikator program
+// 				targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 				var targetResponses []pohonkinerja.TargetResponse
+// 				if err == nil {
+// 					for _, target := range targets {
+// 						targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 							Id:              target.Id,
+// 							IndikatorId:     target.IndikatorId,
+// 							TargetIndikator: target.Target,
+// 							SatuanIndikator: target.Satuan,
+// 						})
+// 					}
+// 				}
+
+// 				indikatorProgramResponses = append(indikatorProgramResponses, pohonkinerja.IndikatorResponse{
+// 					Id:            ind.Id,
+// 					Kode:          ind.Kode,
+// 					NamaIndikator: ind.Indikator,
+// 					Target:        targetResponses,
+// 				})
+// 			}
+// 		}
+
+// 		programList = append(programList, pohonkinerja.ProgramResponse{
+// 			KodeProgram: kodeProgram,
+// 			NamaProgram: namaProgram,
+// 			Indikator:   indikatorProgramResponses,
+// 		})
+// 	}
+
+// 	tacticalResp := pohonkinerja.TacticalCascadingOpdResponse{
+// 		Id:         tactical.Id,
+// 		Parent:     tactical.Parent,
+// 		Strategi:   tactical.NamaPohon,
+// 		JenisPohon: tactical.JenisPohon,
+// 		LevelPohon: tactical.LevelPohon,
+// 		Keterangan: tactical.Keterangan,
+// 		Status:     tactical.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: tactical.KodeOpd,
+// 			NamaOpd: tactical.NamaOpd,
+// 		},
+// 		IsActive:       tactical.IsActive,
+// 		Program:        programList,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[tactical.Id],
+// 	}
+
+// 	// Build operational responses dan hitung total pagu anggaran
+// 	var totalPaguAnggaran int64 = 0
+// 	if operationalList := pohonMap[6][tactical.Id]; len(operationalList) > 0 {
+// 		var operationals []pohonkinerja.OperationalCascadingOpdResponse
+// 		sort.Slice(operationalList, func(i, j int) bool {
+// 			// Prioritaskan status "pokin dari pemda"
+// 			if operationalList[i].Status == "pokin dari pemda" && operationalList[j].Status != "pokin dari pemda" {
+// 				return true
+// 			}
+// 			if operationalList[i].Status != "pokin dari pemda" && operationalList[j].Status == "pokin dari pemda" {
+// 				return false
+// 			}
+// 			return operationalList[i].Id < operationalList[j].Id
+// 		})
+
+// 		for _, operational := range operationalList {
+// 			operationalResp := service.buildOperationalCascadingResponse(ctx, tx, pohonMap, operational, indikatorMap, rencanaKinerjaMap)
+// 			operationals = append(operationals, operationalResp)
+// 			// Tambahkan total anggaran dari setiap operational
+// 			totalPaguAnggaran += operationalResp.TotalAnggaran
+// 		}
+// 		tacticalResp.Operationals = operationals
+// 	}
+
+// 	// Set pagu anggaran dari total anggaran operational
+// 	tacticalResp.PaguAnggaran = totalPaguAnggaran
+
+// 	return tacticalResp
+// }
+
+// func (service *CascadingOpdServiceImpl) buildOperationalCascadingResponse(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	operational domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.OperationalCascadingOpdResponse {
+
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalResponse
+// 	var totalAnggaranOperational int64 = 0
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operational.Id]; ok {
+// 		for _, rk := range rencanaKinerjaList {
+// 			var totalAnggaranRenkin int64 = 0
+// 			if rk.Id != "" {
+// 				// Ambil semua rencana aksi untuk rencana kinerja ini
+// 				rencanaAksiList, err := service.rencanaAksiRepository.FindAll(ctx, tx, rk.Id)
+// 				if err == nil {
+// 					for _, ra := range rencanaAksiList {
+// 						// Ambil anggaran untuk setiap rencana aksi
+// 						rincianBelanja, err := service.rincianBelanjaRepository.FindAnggaranByRenaksiId(ctx, tx, ra.Id)
+// 						if err == nil {
+// 							totalAnggaranRenkin += rincianBelanja.Anggaran
+// 						}
+// 					}
+// 				}
+// 			}
+
+// 			totalAnggaranOperational += totalAnggaranRenkin
+
+// 			// Indikator rencana kinerja
+// 			var indikatorRekinResponses []pohonkinerja.IndikatorResponse
+// 			if rk.Id != "" {
+// 				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
+// 				if err == nil {
+// 					for _, ind := range indikatorRekin {
+// 						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 						var targetResponses []pohonkinerja.TargetResponse
+// 						if err == nil {
+// 							for _, target := range targets {
+// 								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 									Id:              target.Id,
+// 									IndikatorId:     target.IndikatorId,
+// 									TargetIndikator: target.Target,
+// 									SatuanIndikator: target.Satuan,
+// 								})
+// 							}
+// 						}
+// 						indikatorRekinResponses = append(indikatorRekinResponses, pohonkinerja.IndikatorResponse{
+// 							Id:            ind.Id,
+// 							IdRekin:       rk.Id,
+// 							NamaIndikator: ind.Indikator,
+// 							Target:        targetResponses,
+// 						})
+// 					}
+// 				}
+// 			}
+
+// 			// Indikator subkegiatan
+// 			var indikatorSubkegiatanResponses []pohonkinerja.IndikatorResponse
+// 			if rk.KodeSubKegiatan != "" {
+// 				indikatorSubkegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 					ctx,
+// 					tx,
+// 					rk.KodeSubKegiatan,
+// 					operational.KodeOpd,
+// 					operational.Tahun,
+// 				)
+// 				if err == nil {
+// 					for _, ind := range indikatorSubkegiatan {
+// 						// Ambil target untuk indikator
+// 						targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 						var targetResponses []pohonkinerja.TargetResponse
+// 						if err == nil {
+// 							for _, target := range targets {
+// 								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 									Id:              target.Id,
+// 									IndikatorId:     target.IndikatorId,
+// 									TargetIndikator: target.Target,
+// 									SatuanIndikator: target.Satuan,
+// 								})
+// 							}
+// 						}
+
+// 						indikatorSubkegiatanResponses = append(indikatorSubkegiatanResponses, pohonkinerja.IndikatorResponse{
+// 							Id:            ind.Id,
+// 							Kode:          ind.Kode,
+// 							NamaIndikator: ind.Indikator,
+// 							Target:        targetResponses,
+// 						})
+// 					}
+// 				}
+// 			}
+
+// 			// Indikator kegiatan
+// 			var indikatorKegiatanResponses []pohonkinerja.IndikatorResponse
+// 			if rk.KodeKegiatan != "" {
+// 				indikatorKegiatan, err := service.cascadingOpdRepository.FindByKodeAndOpdAndTahun(
+// 					ctx,
+// 					tx,
+// 					rk.KodeKegiatan,
+// 					operational.KodeOpd,
+// 					operational.Tahun,
+// 				)
+// 				if err == nil {
+// 					for _, ind := range indikatorKegiatan {
+// 						// Ambil target untuk indikator
+// 						targets, err := service.cascadingOpdRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 						var targetResponses []pohonkinerja.TargetResponse
+// 						if err == nil {
+// 							for _, target := range targets {
+// 								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 									Id:              target.Id,
+// 									IndikatorId:     target.IndikatorId,
+// 									TargetIndikator: target.Target,
+// 									SatuanIndikator: target.Satuan,
+// 								})
+// 							}
+// 						}
+
+// 						indikatorKegiatanResponses = append(indikatorKegiatanResponses, pohonkinerja.IndikatorResponse{
+// 							Id:            ind.Id,
+// 							Kode:          ind.Kode,
+// 							NamaIndikator: ind.Indikator,
+// 							Target:        targetResponses,
+// 						})
+// 					}
+// 				}
+// 			}
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalResponse{
+// 				Id:                   rk.Id,
+// 				IdPohon:              operational.Id,
+// 				NamaPohon:            operational.NamaPohon,
+// 				NamaRencanaKinerja:   rk.NamaRencanaKinerja,
+// 				Tahun:                operational.Tahun,
+// 				PegawaiId:            rk.PegawaiId,
+// 				NamaPegawai:          rk.NamaPegawai,
+// 				KodeSubkegiatan:      rk.KodeSubKegiatan,
+// 				NamaSubkegiatan:      rk.NamaSubKegiatan,
+// 				Anggaran:             totalAnggaranRenkin,
+// 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
+// 				KodeKegiatan:         rk.KodeKegiatan,
+// 				NamaKegiatan:         rk.NamaKegiatan,
+// 				IndikatorKegiatan:    indikatorKegiatanResponses,
+// 				Indikator:            indikatorRekinResponses,
+// 			})
+// 		}
+// 	}
+
+// 	operationalResp := pohonkinerja.OperationalCascadingOpdResponse{
+// 		Id:         operational.Id,
+// 		Parent:     operational.Parent,
+// 		Strategi:   operational.NamaPohon,
+// 		JenisPohon: operational.JenisPohon,
+// 		LevelPohon: operational.LevelPohon,
+// 		Keterangan: operational.Keterangan,
+// 		Status:     operational.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: operational.KodeOpd,
+// 			NamaOpd: operational.NamaOpd,
+// 		},
+// 		IsActive:       operational.IsActive,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[operational.Id],
+// 		TotalAnggaran:  totalAnggaranOperational,
+// 	}
+
+// 	// Build operational N responses jika ada
+// 	nextLevel := operational.LevelPohon + 1
+// 	if operationalNList := pohonMap[nextLevel][operational.Id]; len(operationalNList) > 0 {
+// 		var childs []pohonkinerja.OperationalNOpdCascadingResponse
+// 		sort.Slice(operationalNList, func(i, j int) bool {
+// 			return operationalNList[i].Id < operationalNList[j].Id
+// 		})
+
+// 		for _, opN := range operationalNList {
+// 			childResp := service.buildOperationalNCascadingResponse(ctx, tx, pohonMap, opN, indikatorMap, rencanaKinerjaMap)
+// 			childs = append(childs, childResp)
+// 		}
+// 		operationalResp.Childs = childs
+// 	}
+
+// 	return operationalResp
+// }
+
+// func (service *CascadingOpdServiceImpl) buildOperationalNCascadingResponse(
+// 	ctx context.Context,
+// 	tx *sql.Tx,
+// 	pohonMap map[int]map[int][]domain.PohonKinerja,
+// 	operationalN domain.PohonKinerja,
+// 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+// 	rencanaKinerjaMap map[int][]domain.RencanaKinerja) pohonkinerja.OperationalNOpdCascadingResponse {
+
+// 	log.Printf("Building OperationalN response for ID: %d, Level: %d", operationalN.Id, operationalN.LevelPohon)
+
+// 	var rencanaKinerjaResponses []pohonkinerja.RencanaKinerjaOperationalNResponse
+
+// 	// Proses rencana kinerja yang ada
+// 	if rencanaKinerjaList, ok := rencanaKinerjaMap[operationalN.Id]; ok {
+// 		log.Printf("Found %d rencana kinerja for OperationalN ID %d", len(rencanaKinerjaList), operationalN.Id)
+
+// 		for _, rk := range rencanaKinerjaList {
+// 			var indikatorResponses []pohonkinerja.IndikatorResponse
+
+// 			// Ambil indikator jika rencana kinerja memiliki ID
+// 			if rk.Id != "" {
+// 				indikatorRekin, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rk.Id)
+// 				if err == nil {
+// 					for _, ind := range indikatorRekin {
+// 						targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, ind.Id)
+// 						var targetResponses []pohonkinerja.TargetResponse
+// 						if err == nil {
+// 							for _, target := range targets {
+// 								targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+// 									Id:              target.Id,
+// 									IndikatorId:     target.IndikatorId,
+// 									TargetIndikator: target.Target,
+// 									SatuanIndikator: target.Satuan,
+// 								})
+// 							}
+// 						}
+// 						indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+// 							Id:            ind.Id,
+// 							IdRekin:       rk.Id,
+// 							NamaIndikator: ind.Indikator,
+// 							Target:        targetResponses,
+// 						})
+// 					}
+// 				}
+// 			}
+
+// 			rencanaKinerjaResponses = append(rencanaKinerjaResponses, pohonkinerja.RencanaKinerjaOperationalNResponse{
+// 				Id:                 rk.Id,
+// 				IdPohon:            operationalN.Id,
+// 				NamaPohon:          operationalN.NamaPohon,
+// 				NamaRencanaKinerja: rk.NamaRencanaKinerja,
+// 				Tahun:              operationalN.Tahun,
+// 				PegawaiId:          rk.PegawaiId,
+// 				NamaPegawai:        rk.NamaPegawai,
+// 				Indikator:          indikatorResponses,
+// 			})
+// 		}
+// 	}
+
+// 	// Buat response
+// 	operationalNResp := pohonkinerja.OperationalNOpdCascadingResponse{
+// 		Id:         operationalN.Id,
+// 		Parent:     operationalN.Parent,
+// 		Strategi:   operationalN.NamaPohon,
+// 		JenisPohon: operationalN.JenisPohon,
+// 		LevelPohon: operationalN.LevelPohon,
+// 		Keterangan: operationalN.Keterangan,
+// 		Status:     operationalN.Status,
+// 		KodeOpd: opdmaster.OpdResponseForAll{
+// 			KodeOpd: operationalN.KodeOpd,
+// 			NamaOpd: operationalN.NamaOpd,
+// 		},
+// 		IsActive:       operationalN.IsActive,
+// 		RencanaKinerja: rencanaKinerjaResponses,
+// 		Indikator:      indikatorMap[operationalN.Id],
+// 	}
+
+// 	// Proses child nodes jika ada
+// 	nextLevel := operationalN.LevelPohon + 1
+// 	if childList := pohonMap[nextLevel][operationalN.Id]; len(childList) > 0 {
+// 		var childs []pohonkinerja.OperationalNOpdCascadingResponse
+// 		sort.Slice(childList, func(i, j int) bool {
+// 			return childList[i].Id < childList[j].Id
+// 		})
+
+// 		for _, child := range childList {
+// 			childResp := service.buildOperationalNCascadingResponse(
+// 				ctx,
+// 				tx,
+// 				pohonMap,
+// 				child,
+// 				indikatorMap,
+// 				rencanaKinerjaMap,
+// 			)
+// 			childs = append(childs, childResp)
+// 		}
+// 		operationalNResp.Childs = childs
+// 	}
+
+// 	return operationalNResp
+// }
 
 // by rekin
 func (service *CascadingOpdServiceImpl) FindByRekinPegawaiAndId(ctx context.Context, rekinId string) (pohonkinerja.CascadingRekinPegawaiResponse, error) {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
+	"fmt"
+	"strings"
 )
 
 type PegawaiRepositoryImpl struct {
@@ -86,4 +88,41 @@ func (repository *PegawaiRepositoryImpl) FindByNip(ctx context.Context, tx *sql.
 		return domainmaster.Pegawai{}, err
 	}
 	return pegawai, nil
+}
+
+func (repository *PegawaiRepositoryImpl) FindPegawaiByNipsBatch(ctx context.Context, tx *sql.Tx, nips []string) (map[string]*domainmaster.Pegawai, error) {
+	if len(nips) == 0 {
+		return make(map[string]*domainmaster.Pegawai), nil
+	}
+
+	placeholders := make([]string, len(nips))
+	args := make([]interface{}, len(nips))
+	for i, nip := range nips {
+		placeholders[i] = "?"
+		args[i] = nip
+	}
+
+	script := fmt.Sprintf(`
+		SELECT id, nip, nama
+		FROM tb_pegawai
+		WHERE nip IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]*domainmaster.Pegawai)
+	for rows.Next() {
+		var pegawai domainmaster.Pegawai
+		err := rows.Scan(&pegawai.Id, &pegawai.Nip, &pegawai.NamaPegawai)
+		if err != nil {
+			return nil, err
+		}
+		result[pegawai.Nip] = &pegawai
+	}
+
+	return result, nil
 }

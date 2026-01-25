@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 type TujuanOpdRepositoryImpl struct {
@@ -821,4 +822,50 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdForCascadingOpd(ctx cont
 	}
 
 	return tujuanOpds, nil
+}
+
+func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdIdsBatch(ctx context.Context, tx *sql.Tx, tujuanOpdIds []int) (map[int][]domain.Indikator, error) {
+	if len(tujuanOpdIds) == 0 {
+		return make(map[int][]domain.Indikator), nil
+	}
+
+	// Build query dengan IN clause
+	placeholders := make([]string, len(tujuanOpdIds))
+	args := make([]interface{}, len(tujuanOpdIds))
+	for i, id := range tujuanOpdIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT 
+			id, 
+			tujuan_opd_id,
+			indikator,
+			COALESCE(rumus_perhitungan, '') as rumus_perhitungan,
+			COALESCE(sumber_data, '') as sumber_data
+		FROM tb_indikator
+		WHERE tujuan_opd_id IN (%s)
+		ORDER BY tujuan_opd_id ASC, id ASC
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Group indikators by tujuan_opd_id
+	result := make(map[int][]domain.Indikator)
+	for rows.Next() {
+		var indikator domain.Indikator
+		var tujuanOpdId int
+		err := rows.Scan(&indikator.Id, &tujuanOpdId, &indikator.Indikator, &indikator.RumusPerhitungan, &indikator.SumberData)
+		if err != nil {
+			return nil, err
+		}
+		result[tujuanOpdId] = append(result[tujuanOpdId], indikator)
+	}
+
+	return result, nil
 }

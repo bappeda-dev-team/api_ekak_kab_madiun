@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"fmt"
+	"strings"
 )
 
 type ReviewRepositoryImpl struct {
@@ -294,6 +296,68 @@ func (repository *ReviewRepositoryImpl) FindAllReviewOpd(ctx context.Context, tx
 
 	if reviews == nil {
 		reviews = make([]domain.ReviewOpd, 0)
+	}
+
+	return reviews, nil
+}
+
+func (repository *ReviewRepositoryImpl) FindByPokinIdBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.ReviewWithNama, error) {
+	if len(pokinIds) == 0 {
+		return make([]domain.ReviewWithNama, 0), nil
+	}
+
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT 
+			r.id, 
+			r.id_pohon_kinerja, 
+			r.review, 
+			r.keterangan, 
+			r.created_by, 
+			COALESCE(p.nama, '') as nama_reviewer,
+			r.jenis_pokin
+		FROM tb_review r
+		LEFT JOIN tb_pegawai p ON p.nip = r.created_by
+		WHERE r.id_pohon_kinerja IN (%s)
+		ORDER BY r.id_pohon_kinerja, r.id
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reviews []domain.ReviewWithNama
+	for rows.Next() {
+		var review domain.ReviewWithNama
+		err := rows.Scan(
+			&review.Id,
+			&review.IdPohonKinerja,
+			&review.Review,
+			&review.Keterangan,
+			&review.CreatedBy,
+			&review.NamaReviewer,
+			&review.Jenis_pokin,
+		)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, review)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if reviews == nil {
+		reviews = make([]domain.ReviewWithNama, 0)
 	}
 
 	return reviews, nil

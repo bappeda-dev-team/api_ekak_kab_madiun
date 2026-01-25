@@ -65,8 +65,8 @@ func (repository *RincianBelanjaRepositoryImpl) FindByRenaksiId(ctx context.Cont
 
 func (repository *RincianBelanjaRepositoryImpl) FindRincianBelanjaAsn(ctx context.Context, tx *sql.Tx, pegawaiId string, tahun string) ([]domain.RincianBelanjaAsn, error) {
 	query := `
-        WITH rencana_kinerja_pegawai AS (
-            SELECT 
+           WITH rencana_kinerja_pegawai AS (
+            SELECT DISTINCT
                 rk.id as rekin_id,
                 rk.pegawai_id,
                 p.nama as nama_pegawai,
@@ -81,6 +81,14 @@ func (repository *RincianBelanjaRepositoryImpl) FindRincianBelanjaAsn(ctx contex
             AND rk.tahun = ?
             AND st.kode_subkegiatan IS NOT NULL
             AND st.kode_subkegiatan != ''
+        ),
+        anggaran_per_renaksi AS (
+            SELECT 
+                ra.id as renaksi_id,
+                COALESCE(SUM(rb.anggaran), 0) as total_anggaran
+            FROM tb_rincian_belanja rb
+            INNER JOIN tb_rencana_aksi ra ON ra.id = rb.renaksi_id
+            GROUP BY ra.id
         )
         SELECT 
             rkp.pegawai_id,
@@ -92,12 +100,12 @@ func (repository *RincianBelanjaRepositoryImpl) FindRincianBelanjaAsn(ctx contex
             ra.id as renaksi_id,
             ra.nama_rencana_aksi,
             COALESCE(ra.urutan, 999) as urutan,
-            COALESCE(SUM(rb.anggaran), 0) as anggaran
+            COALESCE(apr.total_anggaran, 0) as anggaran
         FROM rencana_kinerja_pegawai rkp
         LEFT JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rkp.rekin_id
-        LEFT JOIN tb_rincian_belanja rb ON rb.renaksi_id = ra.id
+        LEFT JOIN anggaran_per_renaksi apr ON apr.renaksi_id = ra.id
         GROUP BY rkp.pegawai_id, rkp.nama_pegawai, rkp.kode_subkegiatan, rkp.nama_subkegiatan,
-                 rkp.rekin_id, rkp.nama_rencana_kinerja, ra.id, ra.nama_rencana_aksi, ra.urutan
+                 rkp.rekin_id, rkp.nama_rencana_kinerja, ra.id, ra.nama_rencana_aksi, ra.urutan, apr.total_anggaran
         ORDER BY rkp.kode_subkegiatan, rkp.rekin_id, ra.urutan ASC, ra.id ASC
     `
 
@@ -550,8 +558,6 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 		kodeOpds = append(kodeOpds, kodeOpd)
 	}
 
-	fmt.Println(kodeOpds)
-
 	query := `
     WITH pegawai_rencana AS (
         SELECT DISTINCT st.kode_subkegiatan, rk.kode_opd
@@ -560,7 +566,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
         WHERE rk.pegawai_id = ? AND rk.tahun = ?
     ),
     related_rencana AS (
-        SELECT 
+        SELECT DISTINCT
             rk.id as rekin_id,
             rk.pegawai_id,
             rk.kode_opd,
@@ -575,6 +581,14 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
         LEFT JOIN tb_pegawai p ON p.nip = rk.pegawai_id
         LEFT JOIN tb_subkegiatan sk ON sk.kode_subkegiatan = st.kode_subkegiatan
         WHERE rk.tahun = ?
+    ),
+    anggaran_per_renaksi AS (
+        SELECT 
+            ra.id as renaksi_id,
+            COALESCE(SUM(rb.anggaran), 0) as total_anggaran
+        FROM tb_rincian_belanja rb
+        INNER JOIN tb_rencana_aksi ra ON ra.id = rb.renaksi_id
+        GROUP BY ra.id
     )
     SELECT 
         rr.pegawai_id,
@@ -587,12 +601,12 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
         ra.id as renaksi_id,
         ra.nama_rencana_aksi,
         COALESCE(ra.urutan, 999) as urutan,
-        COALESCE(SUM(rb.anggaran), 0) as anggaran
+        COALESCE(apr.total_anggaran, 0) as anggaran
     FROM related_rencana rr
     LEFT JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rr.rekin_id
-    LEFT JOIN tb_rincian_belanja rb ON rb.renaksi_id = ra.id
+    LEFT JOIN anggaran_per_renaksi apr ON apr.renaksi_id = ra.id
     GROUP BY rr.pegawai_id, rr.nama_pegawai, rr.kode_opd, rr.kode_subkegiatan, 
-             rr.nama_subkegiatan, rr.rekin_id, rr.nama_rencana_kinerja, ra.id, ra.nama_rencana_aksi, ra.urutan
+             rr.nama_subkegiatan, rr.rekin_id, rr.nama_rencana_kinerja, ra.id, ra.nama_rencana_aksi, ra.urutan, apr.total_anggaran
     ORDER BY rr.kode_opd, rr.kode_subkegiatan, rr.pegawai_id, rr.rekin_id, ra.urutan ASC, ra.id ASC
     `
 
@@ -605,7 +619,8 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 	var result []domain.RincianBelanjaAsn
 	var currentSubkegiatan *domain.RincianBelanjaAsn
 	var currentRencanaKinerja *domain.RencanaKinerjaAsn
-	renaksiMap := make(map[string]bool)
+	// Perbaikan: Gunakan nested map untuk tracking renaksi per rekin untuk mencegah duplikasi
+	renaksiMap := make(map[string]map[string]bool) // map[rekin_id]map[renaksi_id]bool
 
 	for rows.Next() {
 		var (
@@ -648,7 +663,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 				RencanaKinerja:  []domain.RencanaKinerjaAsn{},
 			}
 			currentRencanaKinerja = nil
-			renaksiMap = make(map[string]bool)
+			renaksiMap = make(map[string]map[string]bool) // Reset map untuk subkegiatan baru
 		}
 
 		// Logika rencana kinerja
@@ -662,24 +677,29 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 				RencanaAksi:      make([]domain.RincianBelanja, 0),
 			}
 			currentSubkegiatan.RencanaKinerja = append(currentSubkegiatan.RencanaKinerja, *currentRencanaKinerja)
-			renaksiMap = make(map[string]bool) // RESET untuk rencana kinerja baru
+			// Perbaikan: Inisialisasi map untuk rencana kinerja baru
+			if renaksiMap[rekinId] == nil {
+				renaksiMap[rekinId] = make(map[string]bool)
+			}
 		}
 
-		// Tambahkan rencana aksi jika ada dan belum duplikat
+		// Perbaikan: Tambahkan rencana aksi jika ada dan belum duplikat
 		if renaksiId.Valid && namaRenaksi.Valid {
-			if !renaksiMap[renaksiId.String] {
+			// Cek apakah renaksi sudah ada di map untuk rekin ini
+			if !renaksiMap[rekinId][renaksiId.String] {
 				rincianBelanja := domain.RincianBelanja{
 					RenaksiId: renaksiId.String,
 					Renaksi:   namaRenaksi.String,
-					Anggaran:  anggaran,
+					Anggaran:  anggaran, // Anggaran sudah di-SUM di subquery, langsung pakai
 				}
 				lastIdx := len(currentSubkegiatan.RencanaKinerja) - 1
 				currentSubkegiatan.RencanaKinerja[lastIdx].RencanaAksi = append(
 					currentSubkegiatan.RencanaKinerja[lastIdx].RencanaAksi,
 					rincianBelanja,
 				)
+				// Perbaikan: Hanya tambahkan anggaran sekali per renaksi
 				currentSubkegiatan.TotalAnggaran += int(anggaran)
-				renaksiMap[renaksiId.String] = true
+				renaksiMap[rekinId][renaksiId.String] = true
 			}
 		}
 	}
@@ -689,4 +709,21 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 	}
 
 	return result, nil
+}
+
+func (repository *RincianBelanjaRepositoryImpl) Upsert(ctx context.Context, tx *sql.Tx, rincianBelanja domain.RincianBelanja) (domain.RincianBelanja, error) {
+	// Cek apakah data sudah ada berdasarkan renaksi_id
+	existing, err := repository.FindByRenaksiId(ctx, tx, rincianBelanja.RenaksiId)
+
+	if err != nil && err != sql.ErrNoRows {
+		return domain.RincianBelanja{}, err
+	}
+
+	// Jika data sudah ada, lakukan update
+	if existing.RenaksiId != "" {
+		return repository.Update(ctx, tx, rincianBelanja)
+	}
+
+	// Jika data belum ada, lakukan create
+	return repository.Create(ctx, tx, rincianBelanja)
 }

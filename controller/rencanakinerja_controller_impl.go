@@ -365,3 +365,26 @@ func (controller *RencanaKinerjaControllerImpl) FindRekinAtasan(writer http.Resp
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *RencanaKinerjaControllerImpl) CloneRencanaKinerja(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rekinId := params.ByName("rekin_id")
+	tahunBaru := params.ByName("tahun_tujuan")
+
+	rencanaKinerjaResponse, err := controller.rencanaKinerjaService.CloneRencanaKinerja(request.Context(), rekinId, tahunBaru)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed clone rencana kinerja",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success clone rencana kinerja",
+		Data:   rencanaKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

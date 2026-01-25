@@ -418,6 +418,7 @@ func NewRouter(
 	router.POST("/rincian_belanja/create", rincianBelanjaController.Create)
 	router.PUT("/rincian_belanja/update/:renaksiId", rincianBelanjaController.Update)
 	router.GET("/rincian_belanja/pegawai/:pegawai_id/:tahun", rincianBelanjaController.LaporanRincianBelanjaPegawai)
+	router.POST("/rincian_belanja/upsert", rincianBelanjaController.Upsert)
 
 	router.GET("/rincian_belanja/laporan", rincianBelanjaController.LaporanRincianBelanjaOpd)
 
@@ -471,13 +472,13 @@ func NewRouter(
 	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
 	router.GET("/pohon_kinerja_opd/leaderboard_pokin_opd/:tahun", pohonKinerjaOpdController.LeaderboardPokinOpd)
 
-	// RB
-	router.GET("/datamaster/rb", dataMasterController.DataRB)
-	router.POST("/datamaster/rb/create", dataMasterController.CreateRB)
-	router.PUT("/datamaster/rb/:rb_id/update", dataMasterController.UpdateRB)
-	router.DELETE("/datamaster/rb/:rb_id/delete", dataMasterController.DeleteRB)
-	router.GET("/datamaster/rb/findByTahun/:tahunNext", dataMasterController.FindByTahun)
-	router.GET("/datamaster/rb/laporanByTahun/:tahunNext/:jenisRB", dataMasterController.LaporanByTahun)
+	//bidang urusan terpilih opd
+	router.POST("/bidang_urusan_opd/create", bidangUrusanController.CreateOPD)
+	router.DELETE("/bidang_urusan_opd/delete/:id", bidangUrusanController.DeleteOPD)
+	router.GET("/bidang_urusan_opd/findall/:kode_opd", bidangUrusanController.FindBidangUrusanTerpilihByKodeOpd)
+
+	//clone rekin
+	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)
 
 	return router
 }
