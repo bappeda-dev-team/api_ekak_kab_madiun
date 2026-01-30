@@ -481,12 +481,13 @@ func NewRouter(
 	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)
 
 	// datamaster
+	// RB
 	router.GET("/datamaster/rb", dataMasterController.DataRB)
 	router.POST("/datamaster/rb/create", dataMasterController.CreateRB)
-	router.PUT("/datamaster/rb/:id/update", dataMasterController.UpdateRB)
-	router.DELETE("/datamaster/rb/:id/delete", dataMasterController.DeleteRB)
+	router.PUT("/datamaster/rb/:rb_id/update", dataMasterController.UpdateRB)
+	router.DELETE("/datamaster/rb/:rb_id/delete", dataMasterController.DeleteRB)
 	router.GET("/datamaster/rb/findByTahun/:tahunNext", dataMasterController.FindByTahun)
-	router.GET("/datamaster/rb/laporanByTahun/:tahunNext/:jenisRB", dataMasterController.LaporanByTahun)
+	router.GET("/datamaster/rb/laporanByTahun/:tahunNext", dataMasterController.LaporanByTahun)
 
 	return router
 }
