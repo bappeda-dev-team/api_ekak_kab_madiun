@@ -480,5 +480,8 @@ func NewRouter(
 	//clone rekin
 	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)
 
+	// datamaster
+	router.GET("/rb", dataMasterController.DataRB)
+
 	return router
 }
