@@ -7,6 +7,8 @@ import (
 type RencanaKinerja struct {
 	Id                   string
 	IdPohon              int
+	LevelPohon           int
+	ParentPohon          int
 	NamaPohon            string
 	NamaRencanaKinerja   string
 	Tahun                string

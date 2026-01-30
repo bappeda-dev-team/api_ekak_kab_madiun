@@ -38,4 +38,6 @@ type RencanaKinerjaRepository interface {
 	CloneInovasi(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
 	ClonePermasalahan(ctx context.Context, tx *sql.Tx, rekinIdLama string, rekinIdBaru string) error
 	CreateIndikatorClone(ctx context.Context, tx *sql.Tx, newIndikatorId string, rekinIdBaru string, indikator string, tahunBaru string) error
+
+	FindRekinByFilters(ctx context.Context, tx *sql.Tx, filter domain.FilterParams) ([]domain.RencanaKinerja, error)
 }

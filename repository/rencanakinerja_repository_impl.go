@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -1223,4 +1224,185 @@ func (repository *RencanaKinerjaRepositoryImpl) CreateIndikatorClone(ctx context
 	}
 
 	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.Context, tx *sql.Tx, filter domain.FilterParams) ([]domain.RencanaKinerja, error) {
+	if len(filter) == 0 {
+		return nil, errors.New("filter tidak boleh kosong")
+	}
+	baseQuery := `
+        SELECT
+            rk.id,
+            rk.id_pohon,
+            pk.parent as id_pohon_atasan,
+            rk.nama_rencana_kinerja,
+            rk.tahun,
+            rk.status_rencana_kinerja,
+            rk.catatan,
+            rk.kode_opd,
+            rk.pegawai_id,
+            i.id as indikator_id,
+            i.indikator,
+            i.tahun as indikator_tahun,
+            t.id as target_id,
+            t.target,
+            t.satuan,
+            t.tahun as target_tahun,
+            m.formula,
+            m.sumber_data,
+            pk.nama_pohon,
+            pk.level_pohon,
+            pg.nama,
+            opd.nama_opd
+        FROM tb_rencana_kinerja rk
+        LEFT JOIN tb_pegawai pg ON rk.pegawai_id = pg.nip
+        LEFT JOIN tb_pohon_kinerja pk ON pk.id = rk.id_pohon
+        LEFT JOIN tb_indikator i ON rk.id = i.rencana_kinerja_id
+        LEFT JOIN tb_target t ON i.id = t.indikator_id
+        LEFT JOIN tb_manual_ik m ON i.id = m.indikator_id
+        LEFT JOIN tb_operasional_daerah opd ON opd.kode_opd = rk.kode_opd
+        WHERE 1=1`
+
+	args := []any{}
+
+	// Build WHERE dari filter
+	if v, ok := filter["kode_opd"]; ok {
+		baseQuery += " AND rk.kode_opd = ?"
+		args = append(args, v)
+	}
+
+	if v, ok := filter["tahun"]; ok {
+		baseQuery += " AND rk.tahun = ?"
+		args = append(args, v)
+	}
+	// TAMBAHKAN FILTER LAIN JIKA PERLU
+	if v, ok := filter["pegawai_id"]; ok {
+		baseQuery += " AND rk.pegawai_id = ?"
+		args = append(args, v)
+	}
+
+	if v, ok := filter["rekin_id"]; ok {
+		baseQuery += " AND rk.id = ?"
+		args = append(args, v)
+	}
+
+	rows, err := tx.QueryContext(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	rencanaMap := make(map[string]*domain.RencanaKinerja)
+
+	for rows.Next() {
+		var (
+			rk        domain.RencanaKinerja
+			indikator domain.Indikator
+			target    domain.Target
+
+			indikatorId, indikatorNama, indikatorTahun      sql.NullString
+			targetId, targetNama, targetSatuan, targetTahun sql.NullString
+			formula, sumberData                             sql.NullString
+			namaPohon, namaPegawai, namaOpd                 sql.NullString
+			levelPohon, parentPohon                         sql.NullInt64
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&parentPohon,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.StatusRencanaKinerja,
+			&rk.Catatan,
+			&rk.KodeOpd,
+			&rk.PegawaiId,
+			&indikatorId,
+			&indikatorNama,
+			&indikatorTahun,
+			&targetId,
+			&targetNama,
+			&targetSatuan,
+			&targetTahun,
+			&formula,
+			&sumberData,
+			&namaPohon,
+			&levelPohon,
+			&namaPegawai,
+			&namaOpd,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		existingRk, ok := rencanaMap[rk.Id]
+		if !ok {
+			rk.Indikator = []domain.Indikator{}
+			if namaPohon.Valid {
+				rk.NamaPohon = namaPohon.String
+			}
+			if levelPohon.Valid {
+				rk.LevelPohon = int(levelPohon.Int64)
+			}
+			if parentPohon.Valid {
+				rk.ParentPohon = int(parentPohon.Int64)
+			}
+			if namaPegawai.Valid {
+				rk.NamaPegawai = namaPegawai.String
+			}
+
+			if namaOpd.Valid {
+				rk.NamaOpd = namaOpd.String
+			}
+
+			rencanaMap[rk.Id] = &rk
+			existingRk = &rk
+		}
+
+		if !indikatorId.Valid {
+			continue
+		}
+
+		indikatorIndex, exists := -1, false
+
+		for i := range existingRk.Indikator {
+			if existingRk.Indikator[i].Id == indikatorId.String {
+				indikatorIndex = i
+				exists = true
+				break
+			}
+		}
+
+		if !exists {
+			indikator = domain.Indikator{
+				Id:               indikatorId.String,
+				Indikator:        indikatorNama.String,
+				Tahun:            indikatorTahun.String,
+				RumusPerhitungan: formula,
+				SumberData:       sumberData,
+				Target:           []domain.Target{},
+			}
+			existingRk.Indikator = append(existingRk.Indikator, indikator)
+			indikatorIndex = len(existingRk.Indikator) - 1
+		}
+
+		if targetId.Valid {
+			target = domain.Target{
+				Id:          targetId.String,
+				Target:      targetNama.String,
+				Satuan:      targetSatuan.String,
+				Tahun:       targetTahun.String,
+				IndikatorId: indikatorId.String,
+			}
+			existingRk.Indikator[indikatorIndex].Target =
+				append(existingRk.Indikator[indikatorIndex].Target, target)
+		}
+	}
+
+	results := make([]domain.RencanaKinerja, 0, len(rencanaMap))
+	for _, rk := range rencanaMap {
+		results = append(results, *rk)
+	}
+
+	return results, nil
 }

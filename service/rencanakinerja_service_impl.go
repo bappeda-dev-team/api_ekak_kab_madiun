@@ -2174,3 +2174,79 @@ func (service *RencanaKinerjaServiceImpl) CloneRencanaKinerja(ctx context.Contex
 
 	return response, nil
 }
+
+func (service *RencanaKinerjaServiceImpl) FindByFilter(ctx context.Context, filter domain.FilterParams) ([]rencanakinerja.RencanaKinerjaResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Gagal memulai transaksi: %v", err)
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	kodeOPD := filter["kode_opd"]
+	tahun := filter["tahun"]
+
+	rekinByFilters, err := service.rencanaKinerjaRepository.FindRekinByFilters(ctx, tx, filter)
+	if err != nil {
+		log.Printf("Gagal mencari RencanaKinerja: %v", err)
+		return nil, fmt.Errorf("gagal mencari RencanaKinerja: %v", err)
+	}
+
+	response := []rencanakinerja.RencanaKinerjaResponse{}
+	for _, rencana := range rekinByFilters {
+		response = append(response, rencanakinerja.RencanaKinerjaResponse{
+			Id:                   rencana.Id,
+			NamaRencanaKinerja:   rencana.NamaRencanaKinerja,
+			Tahun:                tahun,
+			StatusRencanaKinerja: rencana.StatusRencanaKinerja,
+			Catatan:              rencana.Catatan,
+			KodeOpd: opdmaster.OpdResponseForAll{
+				KodeOpd: kodeOPD,
+				NamaOpd: rencana.NamaOpd,
+			},
+			PegawaiId:     rencana.PegawaiId,
+			NamaPegawai:   rencana.NamaPegawai,
+			IdPohon:       rencana.IdPohon,
+			IdParentPohon: rencana.ParentPohon,
+			NamaPohon:     rencana.NamaPohon,
+			LevelPohon:    rencana.LevelPohon,
+			Indikator:     toIndikatorResponses(rencana.Indikator),
+		})
+	}
+
+	return response, nil
+}
+
+func toIndikatorResponses(
+	indikators []domain.Indikator,
+) []rencanakinerja.IndikatorResponse {
+
+	responses := make([]rencanakinerja.IndikatorResponse, 0, len(indikators))
+
+	for _, indikator := range indikators {
+		responses = append(responses, rencanakinerja.IndikatorResponse{
+			Id:               indikator.Id,
+			RencanaKinerjaId: indikator.RencanaKinerjaId,
+			NamaIndikator:    indikator.Indikator,
+			Target:           toTargetResponses(indikator.Target),
+		})
+	}
+
+	return responses
+}
+
+func toTargetResponses(targets []domain.Target) []rencanakinerja.TargetResponse {
+	responses := make([]rencanakinerja.TargetResponse, 0, len(targets))
+
+	for _, t := range targets {
+		responses = append(responses, rencanakinerja.TargetResponse{
+			Id:              t.Id,
+			IndikatorId:     t.IndikatorId,
+			TargetIndikator: t.Target,
+			SatuanIndikator: t.Satuan,
+			Tahun:           t.Tahun,
+		})
+	}
+
+	return responses
+}
