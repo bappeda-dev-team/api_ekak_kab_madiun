@@ -434,6 +434,11 @@ var strukturOrganisasiSet = wire.NewSet(
 	wire.Bind(new(repository.StrukturOrganisasiRepository), new(*repository.StrukturOrganisasiRepositoryImpl)),
 )
 
+var jabatanPegawaiSet = wire.NewSet(
+	repository.NewJabatanPegawaiRepositoryImpl,
+	wire.Bind(new(repository.JabatanPegawaiRepository), new(*repository.JabatanPegawaiRepositoryImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -487,6 +492,7 @@ func InitializeServer() *http.Server {
 		matrixRenjaSet,
 		pkOpdSet,
 		strukturOrganisasiSet,
+		jabatanPegawaiSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

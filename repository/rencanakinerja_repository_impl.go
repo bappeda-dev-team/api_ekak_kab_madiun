@@ -1257,6 +1257,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.C
         FROM tb_rencana_kinerja rk
         LEFT JOIN tb_pegawai pg ON rk.pegawai_id = pg.nip
         LEFT JOIN tb_pohon_kinerja pk ON pk.id = rk.id_pohon
+        INNER JOIN tb_pelaksana_pokin plp ON plp.pohon_kinerja_id = rk.id_pohon
         LEFT JOIN tb_indikator i ON rk.id = i.rencana_kinerja_id
         LEFT JOIN tb_target t ON i.id = t.indikator_id
         LEFT JOIN tb_manual_ik m ON i.id = m.indikator_id

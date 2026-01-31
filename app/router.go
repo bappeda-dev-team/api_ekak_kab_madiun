@@ -221,6 +221,7 @@ func NewRouter(
 	router.GET("/pegawai/detail/:id", pegawaiController.FindById)
 	router.DELETE("/pegawai/delete/:id", pegawaiController.Delete)
 	router.GET("/pegawai/findall", pegawaiController.FindAll)
+	router.POST("/pegawai/tambahJabatan", pegawaiController.TambahJabatanPegawai)
 
 	//lembaga
 	router.POST("/lembaga/create", lembagaController.Create)
@@ -474,7 +475,6 @@ func NewRouter(
 	router.POST("/bidang_urusan_opd/create", bidangUrusanController.CreateOPD)
 	router.DELETE("/bidang_urusan_opd/delete/:id", bidangUrusanController.DeleteOPD)
 	router.GET("/bidang_urusan_opd/findall/:kode_opd", bidangUrusanController.FindBidangUrusanTerpilihByKodeOpd)
-
 
 	// PK
 	router.GET("/pk_opd/:kode_opd/:tahun", pkController.FindAllPkOpdTahunan)

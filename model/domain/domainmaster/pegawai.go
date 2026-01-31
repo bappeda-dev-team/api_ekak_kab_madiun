@@ -6,4 +6,5 @@ type Pegawai struct {
 	Nip         string
 	KodeOpd     string
 	NamaOpd     string
+	NamaJabatan string
 }

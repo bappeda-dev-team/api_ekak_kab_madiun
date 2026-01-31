@@ -12,4 +12,5 @@ type PegawaiController interface {
 	Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	TambahJabatanPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

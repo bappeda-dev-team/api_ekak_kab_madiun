@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/pegawai"
 	"ekak_kabupaten_madiun/model/web/pkopd"
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 	"ekak_kabupaten_madiun/repository"
@@ -89,13 +90,13 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 
 	// data struktur untuk penyusunan
 	// lookup pegawai by nip untuk susun nama atasan
-	pegawaiByNip := make(map[string]string)
+	pegawaiByNip := make(map[string]pegawai.PegawaiResponse)
 
 	// pegawaiId = nip
 	rekinByPegawaiId := make(map[string][]rencanakinerja.RencanaKinerjaResponse)
 	// agar jika tidak ada rekin, bisa empty
 	for _, peg := range pegawais {
-		pegawaiByNip[peg.Nip] = peg.NamaPegawai
+		pegawaiByNip[peg.Nip] = peg
 		rekinByPegawaiId[peg.Nip] = []rencanakinerja.RencanaKinerjaResponse{}
 	}
 	rekinById := make(map[string]rencanakinerja.RencanaKinerjaResponse)
@@ -163,10 +164,12 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		nama := rekin.NamaPegawai
 		nipAtasan := atasans[nip]
 		namaAtasan := ""
+		jabatanAtasan := ""
 
 		if nipAtasan != "" {
-			if nama, ok := pegawaiByNip[nipAtasan]; ok {
-				namaAtasan = nama
+			if peg, ok := pegawaiByNip[nipAtasan]; ok {
+				namaAtasan = peg.NamaPegawai
+				jabatanAtasan = peg.NamaJabatan
 			}
 		}
 
@@ -175,17 +178,22 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			pkByLevel[level] = make(map[string]*pkopd.PkPegawai)
 		}
 
+		// data pegawai
+		jabatanPegawai := pegawaiByNip[nip].NamaJabatan
+
 		// init pegawai jika belum ada
 		// input atasan sekalian kalau ada
 		if _, ok := pkByLevel[level][nip]; !ok {
 			pkByLevel[level][nip] = &pkopd.PkPegawai{
-				JenisItem:   translateJenisItem(level),
-				NipAtasan:   nipAtasan,
-				NamaAtasan:  namaAtasan,
-				Nip:         nip,
-				Nama:        nama,
-				Pks:         []pkopd.PkAsn{},
-				Subkegiatan: []pkopd.SubkegiatanPk{},
+				JenisItem:      translateJenisItem(level),
+				NipAtasan:      nipAtasan,
+				NamaAtasan:     namaAtasan,
+				JabatanAtasan:  jabatanAtasan,
+				Nip:            nip,
+				Nama:           nama,
+				JabatanPegawai: jabatanPegawai,
+				Pks:            []pkopd.PkAsn{},
+				Subkegiatan:    []pkopd.SubkegiatanPk{},
 			}
 		}
 		indikatorPk := []pkopd.IndikatorPk{}

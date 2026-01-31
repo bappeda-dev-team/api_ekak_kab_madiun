@@ -8,22 +8,29 @@ import (
 	"ekak_kabupaten_madiun/model/web/pegawai"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type PegawaiServiceImpl struct {
-	pegawaiRepository repository.PegawaiRepository
-	opdRepository     repository.OpdRepository
-	DB                *sql.DB
+	pegawaiRepository        repository.PegawaiRepository
+	opdRepository            repository.OpdRepository
+	jabatanPegawaiRepository repository.JabatanPegawaiRepository
+	DB                       *sql.DB
 }
 
-func NewPegawaiServiceImpl(pegawaiRepository repository.PegawaiRepository, opdRepository repository.OpdRepository, DB *sql.DB) *PegawaiServiceImpl {
+func NewPegawaiServiceImpl(
+	pegawaiRepository repository.PegawaiRepository,
+	opdRepository repository.OpdRepository,
+	jabatanPegawaiRepository repository.JabatanPegawaiRepository,
+	DB *sql.DB) *PegawaiServiceImpl {
 	return &PegawaiServiceImpl{
-		pegawaiRepository: pegawaiRepository,
-		opdRepository:     opdRepository,
-		DB:                DB,
+		pegawaiRepository:        pegawaiRepository,
+		opdRepository:            opdRepository,
+		jabatanPegawaiRepository: jabatanPegawaiRepository,
+		DB:                       DB,
 	}
 }
 
@@ -34,7 +41,6 @@ func (service *PegawaiServiceImpl) Create(ctx context.Context, request pegawai.P
 	}
 	defer helper.CommitOrRollback(tx)
 
-	// ✅ VALIDASI NIP TIDAK DUPLIKAT
 	existingPegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, request.Nip)
 	if err == nil {
 		// Jika tidak ada error, berarti NIP sudah ada
@@ -163,14 +169,73 @@ func (service *PegawaiServiceImpl) FindAll(ctx context.Context, kodeOpd string) 
 		return []pegawai.PegawaiResponse{}, err
 	}
 
-	for i := range pegawais {
-		if pegawais[i].KodeOpd != "" {
-			opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, pegawais[i].KodeOpd)
-			if err == nil {
-				pegawais[i].NamaOpd = opd.NamaOpd
-			}
-		}
+	return helper.ToPegawaiResponses(pegawais), nil
+}
+
+func (service *PegawaiServiceImpl) FindPegawaiWithJabatan(ctx context.Context, tx *sql.Tx, nip string) (pegawai.PegawaiResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pegawai.PegawaiResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	resp, err := service.pegawaiRepository.FindByNipWithJabatan(ctx, tx, nip)
+	if err != nil {
+		return pegawai.PegawaiResponse{}, err
 	}
 
-	return helper.ToPegawaiResponses(pegawais), nil
+	return pegawai.PegawaiResponse{
+		Id:          resp.Id,
+		NamaPegawai: resp.NamaPegawai,
+		Nip:         resp.Nip,
+		KodeOpd:     resp.KodeOpd,
+		NamaOpd:     resp.NamaOpd,
+		NamaJabatan: resp.NamaJabatan,
+	}, nil
+}
+
+func (service *PegawaiServiceImpl) TambahJabatan(
+	ctx context.Context,
+	request pegawai.TambahJabatanRequest,
+) (pegawai.PegawaiResponse, error) {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pegawai.PegawaiResponse{}, err
+	}
+	// defer helper.CommitOrRollback(tx)
+
+	// 1. Cari pegawai berdasarkan NIP
+	peg, err := service.pegawaiRepository.FindByNip(ctx, tx, request.Nip)
+	if err != nil {
+		return pegawai.PegawaiResponse{}, err
+	}
+
+	// 2. Susun domain object
+	uuid := uuid.New().String()
+	jabatanPegawaiId := fmt.Sprintf("JBTN-PEG-%v", uuid[:4])
+
+	jabatanPegawai := domainmaster.JabatanPegawai{
+		Id:        jabatanPegawaiId,
+		IdJabatan: request.IdJabatan,
+		IdPegawai: peg.Nip,
+		Status:    "aktif", // atau enum / konstanta sesuai kebutuhan
+		IsActive:  true,
+		Bulan:     strconv.Itoa(request.Bulan),
+		Tahun:     strconv.Itoa(request.Tahun),
+		KodeOpd:   request.KodeOpd,
+	}
+
+	// 3. Insert ke tb_jabatan_pegawai
+	err = service.jabatanPegawaiRepository.
+		TambahJabatanPegawai(ctx, tx, jabatanPegawai)
+	if err != nil {
+		return pegawai.PegawaiResponse{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return pegawai.PegawaiResponse{}, err
+	}
+
+	return service.FindPegawaiWithJabatan(ctx, tx, request.Nip)
 }

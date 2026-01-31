@@ -6,4 +6,5 @@ type PegawaiResponse struct {
 	Nip         string `json:"nip"`
 	KodeOpd     string `json:"kode_opd"`
 	NamaOpd     string `json:"nama_opd"`
+	NamaJabatan string `json:"nama_jabatan"`
 }

@@ -82,7 +82,8 @@ func InitializeServer() *http.Server {
 	programUnggulanRepositoryImpl := repository.NewProgramUnggulanRepositoryImpl()
 	pohonKinerjaOpdServiceImpl := service.NewPohonKinerjaOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, crosscuttingOpdRepositoryImpl, reviewRepositoryImpl, db, validate, programUnggulanRepositoryImpl, client)
 	pohonKinerjaOpdControllerImpl := controller.NewPohonKinerjaOpdControllerImpl(pohonKinerjaOpdServiceImpl)
-	pegawaiServiceImpl := service.NewPegawaiServiceImpl(pegawaiRepositoryImpl, opdRepositoryImpl, db)
+	jabatanPegawaiRepositoryImpl := repository.NewJabatanPegawaiRepositoryImpl()
+	pegawaiServiceImpl := service.NewPegawaiServiceImpl(pegawaiRepositoryImpl, opdRepositoryImpl, jabatanPegawaiRepositoryImpl, db)
 	pegawaiControllerImpl := controller.NewPegawaiControllerImpl(pegawaiServiceImpl)
 	lembagaRepositoryImpl := repository.NewLembagaRepositoryImpl()
 	lembagaServiceImpl := service.NewLembagaServiceImpl(lembagaRepositoryImpl, db, validate)
@@ -277,3 +278,5 @@ var matrixRenjaSet = wire.NewSet(repository.NewMatrixRenjaRepositoryImpl, wire.B
 var pkOpdSet = wire.NewSet(repository.NewPkRepositoryImpl, wire.Bind(new(repository.PkRepository), new(*repository.PkRepositoryImpl)), service.NewPkServiceImpl, wire.Bind(new(service.PkService), new(*service.PkServiceImpl)), controller.NewPkControllerImpl, wire.Bind(new(controller.PkController), new(*controller.PkControllerImpl)))
 
 var strukturOrganisasiSet = wire.NewSet(repository.NewStrukturOrganisasiRepositoryImpl, wire.Bind(new(repository.StrukturOrganisasiRepository), new(*repository.StrukturOrganisasiRepositoryImpl)))
+
+var jabatanPegawaiSet = wire.NewSet(repository.NewJabatanPegawaiRepositoryImpl, wire.Bind(new(repository.JabatanPegawaiRepository), new(*repository.JabatanPegawaiRepositoryImpl)))

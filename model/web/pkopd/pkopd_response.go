@@ -15,13 +15,15 @@ type PkOpdByLevel struct {
 }
 
 type PkPegawai struct {
-	JenisItem   string          `json:"jenis_item"`
-	NipAtasan   string          `json:"nip_atasan"`
-	NamaAtasan  string          `json:"nama_atasan"`
-	Nama        string          `json:"nama_pegawai"`
-	Nip         string          `json:"nip"`
-	Pks         []PkAsn         `json:"pks"`
-	Subkegiatan []SubkegiatanPk `json:"subkegiatan"`
+	JenisItem      string          `json:"jenis_item"`
+	NipAtasan      string          `json:"nip_atasan"`
+	NamaAtasan     string          `json:"nama_atasan"`
+	JabatanAtasan  string          `json:"jabatan_atasan"`
+	Nama           string          `json:"nama_pegawai"`
+	Nip            string          `json:"nip"`
+	JabatanPegawai string          `json:"jabatan_pegawai"`
+	Pks            []PkAsn         `json:"pks"`
+	Subkegiatan    []SubkegiatanPk `json:"subkegiatan"`
 }
 
 type SubkegiatanPk struct {
