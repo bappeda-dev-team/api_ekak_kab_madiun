@@ -63,8 +63,14 @@ func (repository *PegawaiRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
             jab.nama_jabatan
             FROM tb_pegawai peg
             LEFT JOIN tb_operasional_daerah opd ON peg.kode_opd = opd.kode_opd
-            LEFT JOIN tb_jabatan_pegawai jp ON jp.id_pegawai = peg.nip
-            LEFT JOIN tb_jabatan jab ON jab.id = jp.id_jabatan
+			LEFT JOIN tb_jabatan jab
+				ON jab.id = (
+					SELECT jp.id_jabatan
+					FROM tb_jabatan_pegawai jp
+					WHERE jp.id_pegawai = peg.nip
+					ORDER BY jp.tahun DESC, jp.bulan DESC
+					LIMIT 1
+				)
             WHERE 1=1 `
 	var params []any
 
@@ -106,9 +112,6 @@ func (repository *PegawaiRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 		}
 		if namaJabatan.Valid {
 			pegawai.NamaJabatan = namaJabatan.String
-		}
-		if kodeOpd.Valid {
-			pegawai.KodeOpd = kodeOpd.String
 		}
 		pegawais = append(pegawais, pegawai)
 	}
@@ -157,9 +160,6 @@ func (repository *PegawaiRepositoryImpl) FindByNipWithJabatan(ctx context.Contex
 	}
 	if namaJabatan.Valid {
 		pegawai.NamaJabatan = namaJabatan.String
-	}
-	if kodeOpd.Valid {
-		pegawai.KodeOpd = kodeOpd.String
 	}
 	if err != nil {
 		return domainmaster.Pegawai{}, err
