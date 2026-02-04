@@ -13,4 +13,5 @@ type OpdRepository interface {
 	FindAll(ctx context.Context, tx *sql.Tx) ([]domainmaster.Opd, error)
 	FindById(ctx context.Context, tx *sql.Tx, opdId string) (domainmaster.Opd, error)
 	FindByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) (domainmaster.Opd, error)
+	FindAllWithLembaga(ctx context.Context, tx *sql.Tx) ([]domainmaster.Opd, map[string]domainmaster.Lembaga, error)
 }
