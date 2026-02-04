@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"math/rand"
 	"strconv"
+	"time"
 )
 
 type ManualIKRepositoryImpl struct {
@@ -496,15 +498,21 @@ func (repository *ManualIKRepositoryImpl) IsIndikatorExist(ctx context.Context, 
 }
 
 func (repository *ManualIKRepositoryImpl) CloneManualIK(ctx context.Context, tx *sql.Tx, indikatorIdLama string, indikatorIdBaru string) error {
+	// Generate ID baru seperti di fungsi Create
+	src := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(src)
+	idBaru := r.Intn(100000)
+
 	script := `
 		INSERT INTO tb_manual_ik (
-			indikator_id, perspektif, tujuan_rekin, definisi, 
+			id, indikator_id, perspektif, tujuan_rekin, definisi, 
 			key_activities, formula, jenis_indikator, kinerja, 
 			penduduk, spasial, unit_penanggung_jawab, 
 			unit_penyedia_data, sumber_data, jangka_waktu_awal, 
 			jangka_waktu_akhir, periode_pelaporan
 		)
 		SELECT 
+			?,
 			?,
 			perspektif,
 			tujuan_rekin,
@@ -525,7 +533,7 @@ func (repository *ManualIKRepositoryImpl) CloneManualIK(ctx context.Context, tx 
 		WHERE indikator_id = ?
 	`
 
-	_, err := tx.ExecContext(ctx, script, indikatorIdBaru, indikatorIdLama)
+	_, err := tx.ExecContext(ctx, script, idBaru, indikatorIdBaru, indikatorIdLama)
 	if err != nil {
 		return fmt.Errorf("gagal clone manual IK: %v", err)
 	}

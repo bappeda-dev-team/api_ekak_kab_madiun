@@ -978,7 +978,6 @@ func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Cont
 
 	return nil
 }
-
 func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaKinerja(ctx context.Context, tx *sql.Tx, rekinId string, tahunBaru string) (domain.RencanaKinerja, error) {
 
 	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
@@ -992,7 +991,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaKinerja(ctx context.
 		)
 		SELECT 
 			?,
-			id_pohon,
+			0,
 			nama_rencana_kinerja,
 			?,
 			'',
