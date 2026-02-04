@@ -117,3 +117,57 @@ func (repository *OpdRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 	}
 	return opd, nil
 }
+
+// ... existing code ...
+
+func (repository *OpdRepositoryImpl) FindAllWithLembaga(ctx context.Context, tx *sql.Tx) ([]domainmaster.Opd, map[string]domainmaster.Lembaga, error) {
+	script := `SELECT 
+		o.id, o.kode_opd, o.nama_opd, o.singkatan, o.alamat, o.telepon, o.fax,
+		o.email, o.website, o.nama_kepala_opd, o.nip_kepala_opd, o.pangkat_kepala,
+		o.id_lembaga,
+		l.id as lembaga_id, l.kode_lembaga, l.nama_lembaga, l.is_active
+		FROM tb_operasional_daerah o
+		LEFT JOIN tb_lembaga l ON o.id_lembaga = l.id`
+
+	rows, err := tx.QueryContext(ctx, script)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var opds []domainmaster.Opd
+	lembagaMap := make(map[string]domainmaster.Lembaga)
+
+	for rows.Next() {
+		opd := domainmaster.Opd{}
+		var lembagaId, kodeLembaga, namaLembaga sql.NullString
+		var isActive sql.NullBool
+
+		err := rows.Scan(
+			&opd.Id, &opd.KodeOpd, &opd.NamaOpd, &opd.Singkatan,
+			&opd.Alamat, &opd.Telepon, &opd.Fax, &opd.Email,
+			&opd.Website, &opd.NamaKepalaOpd, &opd.NIPKepalaOpd,
+			&opd.PangkatKepala, &opd.IdLembaga,
+			&lembagaId, &kodeLembaga, &namaLembaga, &isActive,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		opds = append(opds, opd)
+
+		// Simpan lembaga ke map jika ada
+		if lembagaId.Valid && opd.IdLembaga != "" {
+			if _, exists := lembagaMap[opd.IdLembaga]; !exists {
+				lembagaMap[opd.IdLembaga] = domainmaster.Lembaga{
+					Id:          lembagaId.String,
+					KodeLembaga: kodeLembaga.String,
+					NamaLembaga: namaLembaga.String,
+					IsActive:    isActive.Bool,
+				}
+			}
+		}
+	}
+
+	return opds, lembagaMap, nil
+}
