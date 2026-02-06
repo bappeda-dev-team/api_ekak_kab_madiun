@@ -487,7 +487,7 @@ func NewRouter(
 	router.PUT("/datamaster/rb/:rb_id/update", dataMasterController.UpdateRB)
 	router.DELETE("/datamaster/rb/:rb_id/delete", dataMasterController.DeleteRB)
 	router.GET("/datamaster/rb/findByTahun/:tahunNext", dataMasterController.FindByTahun)
-	router.GET("/datamaster/rb/laporanByTahun/:tahunNext", dataMasterController.LaporanByTahun)
+	router.GET("/datamaster/rb/laporanByTahun/:tahunNext/:jenisRB", dataMasterController.LaporanByTahun)
 
 	return router
 }
