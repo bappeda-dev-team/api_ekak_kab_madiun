@@ -8,6 +8,7 @@ import (
 type RencanaKinerjaResponse struct {
 	Id                    string                      `json:"id_rencana_kinerja,omitempty"`
 	IdPohon               int                         `json:"id_pohon,omitempty"`
+	IdParentPohon         int                         `json:"id_parent_pohon,omitempty"`
 	PerluUbahPohonKinerja bool                        `json:"perlu_ubah_pokin"`
 	NamaPohon             string                      `json:"nama_pohon,omitempty"`
 	LevelPohon            int                         `json:"level_pohon,omitempty"`
