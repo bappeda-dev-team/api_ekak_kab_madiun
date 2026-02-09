@@ -4616,3 +4616,41 @@ func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx co
 
 	return result, nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) FindByIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.PohonKinerja, error) {
+	if len(ids) == 0 {
+		return make(map[int]domain.PohonKinerja), nil
+	}
+
+	// Buat placeholders untuk IN clause
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT id, nama_pohon, tahun, level_pohon 
+		FROM tb_pohon_kinerja 
+		WHERE id IN (%s)`,
+		strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	pohonMap := make(map[int]domain.PohonKinerja)
+	for rows.Next() {
+		var pohon domain.PohonKinerja
+		err := rows.Scan(&pohon.Id, &pohon.NamaPohon, &pohon.Tahun, &pohon.LevelPohon)
+		if err != nil {
+			return nil, err
+		}
+		pohonMap[pohon.Id] = pohon
+	}
+
+	return pohonMap, nil
+}

@@ -240,7 +240,8 @@ func (service *OpdServiceImpl) FindAll(ctx context.Context) ([]opdmaster.OpdResp
 	}
 	defer helper.CommitOrRollback(tx)
 
-	opds, err := service.OpdRepository.FindAll(ctx, tx)
+	// Menggunakan JOIN untuk mengambil semua data sekaligus
+	opds, lembagaMap, err := service.OpdRepository.FindAllWithLembaga(ctx, tx)
 	if err != nil {
 		return []opdmaster.OpdResponse{}, err
 	}
@@ -249,20 +250,21 @@ func (service *OpdServiceImpl) FindAll(ctx context.Context) ([]opdmaster.OpdResp
 	for _, opd := range opds {
 		var lembagaResponse lembaga.LembagaResponse
 
-		lembagaDomain, err := service.LembagaRepository.FindById(ctx, tx, opd.IdLembaga)
-		if err != nil {
-			lembagaResponse = lembaga.LembagaResponse{
-				Id:          "",
-				KodeLembaga: "",
-				NamaLembaga: "",
-				IsActive:    false,
-			}
-		} else {
+		// Ambil dari map yang sudah di-load
+		if lembagaDomain, exists := lembagaMap[opd.IdLembaga]; exists {
 			lembagaResponse = lembaga.LembagaResponse{
 				Id:          lembagaDomain.Id,
 				KodeLembaga: lembagaDomain.KodeLembaga,
 				NamaLembaga: lembagaDomain.NamaLembaga,
 				IsActive:    lembagaDomain.IsActive,
+			}
+		} else {
+			// Default jika lembaga tidak ditemukan
+			lembagaResponse = lembaga.LembagaResponse{
+				Id:          "",
+				KodeLembaga: "",
+				NamaLembaga: "",
+				IsActive:    false,
 			}
 		}
 
@@ -284,7 +286,6 @@ func (service *OpdServiceImpl) FindAll(ctx context.Context) ([]opdmaster.OpdResp
 	}
 	return opdResponses, nil
 }
-
 func (service *OpdServiceImpl) FindByKodeOpd(ctx context.Context, kodeOpd string) (opdmaster.OpdResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {

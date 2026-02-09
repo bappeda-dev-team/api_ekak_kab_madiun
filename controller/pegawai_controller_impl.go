@@ -133,3 +133,26 @@ func (controller *PegawaiControllerImpl) FindAll(writer http.ResponseWriter, req
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *PegawaiControllerImpl) TambahJabatanPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tambahJabatanRequest := pegawai.TambahJabatanRequest{}
+	helper.ReadFromRequestBody(request, &tambahJabatanRequest)
+
+	pegawaiResponse, err := controller.PegawaiService.TambahJabatan(request.Context(), tambahJabatanRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   pegawaiResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

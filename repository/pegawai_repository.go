@@ -13,5 +13,6 @@ type PegawaiRepository interface {
 	FindById(ctx context.Context, tx *sql.Tx, id string) (domainmaster.Pegawai, error)
 	FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domainmaster.Pegawai, error)
 	FindByNip(ctx context.Context, tx *sql.Tx, nip string) (domainmaster.Pegawai, error)
+	FindByNipWithJabatan(ctx context.Context, tx *sql.Tx, nip string) (domainmaster.Pegawai, error)
 	FindPegawaiByNipsBatch(ctx context.Context, tx *sql.Tx, nips []string) (map[string]*domainmaster.Pegawai, error)
 }

@@ -247,6 +247,7 @@ func (service *UserServiceImpl) FindAll(ctx context.Context, kodeOpd string) ([]
 
 		userResponse := user.UserResponse{
 			Id:          u.Id,
+			PegawaiId:   pegawaiDomain.Id,
 			Nip:         u.Nip,
 			Email:       u.Email,
 			NamaPegawai: pegawaiDomain.NamaPegawai,

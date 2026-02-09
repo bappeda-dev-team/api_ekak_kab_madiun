@@ -10,4 +10,5 @@ type JabatanPegawai struct {
 	Tahun     string
 	Pangkat   string
 	Golongan  string
+	KodeOpd   string
 }

@@ -248,7 +248,7 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
         pk.id as pokin_id,
         pk.nama_pohon,
         pk.kode_opd,
-        pk.nama_opd,
+        od.nama_opd,
         pk.jenis_pohon,
         pk.level_pohon,
         pk.tahun as tahun_pohon,
@@ -272,6 +272,7 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
         t.satuan
     FROM tb_sasaran_opd so
     JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+    LEFT JOIN tb_operasional_daerah od ON pk.kode_opd = od.kode_opd
     LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
     LEFT JOIN tb_pegawai p ON pp.pegawai_id = p.id
     LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id

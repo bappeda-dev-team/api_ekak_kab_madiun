@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 )
 
@@ -27,4 +28,6 @@ type RencanaKinerjaService interface {
 	FindRekinAtasan(ctx context.Context, rekinId string) (rencanakinerja.RekinAtasanResponse, error)
 
 	CloneRencanaKinerja(ctx context.Context, rekinId string, tahunBaru string) (rencanakinerja.RencanaKinerjaResponse, error)
+
+	FindByFilter(ctx context.Context, filter domain.FilterParams) ([]rencanakinerja.RencanaKinerjaResponse, error)
 }
