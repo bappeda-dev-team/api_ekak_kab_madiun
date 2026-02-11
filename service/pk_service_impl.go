@@ -91,6 +91,13 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	for _, rk := range rekins {
 		rekinIds = append(rekinIds, rk.Id)
 	}
+	// anggaran by rekin id
+	// [rekinId] = 9999
+	paguByRekinId, err := service.pkOpdRepository.FindTotalPaguAnggaranByRekinIds(ctx, tx, rekinIds)
+	if err != nil {
+		log.Printf("[ERROR] findTotalPagu: %v", err)
+		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
+	}
 
 	// find subkegiatan by rekin id
 	// [rekinId] = { namaSub: ..., kodeSub: ...}
@@ -208,6 +215,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				LevelPk:        level,
 				JenisItem:      translateJenisItem(level),
 				Item:           []pkopd.ItemPk{},
+				TotalPagu:      paguByRekinId[rekin.Id],
 			}
 		}
 		indikatorMap := make(map[string]*pkopd.IndikatorPk)
@@ -269,7 +277,6 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			NamaPemilikPk:    rekin.NamaPegawai,
 			Tahun:            tahun,
 			Indikators:       indikatorPk,
-			PaguAnggaran:     0,
 		}
 
 		// enrich dari PK jika ada
@@ -378,7 +385,6 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	}
 
 	for _, peg := range pkByLevel[4] {
-
 		for _, item := range uniqueProgram {
 			peg.Item = append(peg.Item, item)
 		}

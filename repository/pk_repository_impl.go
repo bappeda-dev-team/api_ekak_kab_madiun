@@ -213,3 +213,51 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
 
 	return subMap, nil
 }
+
+func (repository *PkRepositoryImpl) FindTotalPaguAnggaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]int, error) {
+	if len(rekinIds) == 0 {
+		return make(map[string]int), nil
+	}
+
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+         SELECT ra.rencana_kinerja_id, SUM(rb.anggaran)
+         FROM tb_rincian_belanja rb
+         JOIN tb_rencana_aksi ra ON ra.id = rb.renaksi_id
+         WHERE ra.rencana_kinerja_id IN (%s)
+         GROUP BY ra.rencana_kinerja_id
+    `, strings.Join(placeholders, ","))
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	totalPaguMap := make(map[string]int)
+	for rows.Next() {
+		var rekinIdNs sql.NullString
+		var rekinId string
+		var totalAnggaranNs sql.NullInt64
+		var totalAnggaran int
+		err := rows.Scan(
+			&rekinIdNs,
+			&totalAnggaranNs,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if rekinIdNs.Valid {
+			rekinId = rekinIdNs.String
+		}
+		if totalAnggaranNs.Valid {
+			totalAnggaran = int(totalAnggaranNs.Int64)
+		}
+		totalPaguMap[rekinId] = totalAnggaran
+	}
+	return totalPaguMap, nil
+}

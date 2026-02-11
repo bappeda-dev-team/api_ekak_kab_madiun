@@ -25,6 +25,7 @@ type PkPegawai struct {
 	LevelPk        int      `json:"level_pk"`
 	JenisItem      string   `json:"jenis_item"`
 	Item           []ItemPk `json:"item_pk"`
+	TotalPagu      int      `json:"total_pagu"`
 }
 
 type ItemPk struct {
@@ -51,7 +52,6 @@ type PkAsn struct {
 	Tahun            int           `json:"tahun"`
 	Keterangan       string        `json:"keterangan"`
 	Indikators       []IndikatorPk `json:"indikators"`
-	PaguAnggaran     int           `json:"pagu_anggaran"`
 }
 
 type IndikatorPk struct {
