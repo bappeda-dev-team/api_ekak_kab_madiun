@@ -537,46 +537,42 @@ func (service *PkServiceImpl) HubungkanRekin(
 func (service *PkServiceImpl) HubungkanAtasan(
 	ctx context.Context,
 	request pkopd.HubungkanAtasanRequest,
-) (pkopd.PkOpdResponse, error) {
+) (resp pkopd.PkOpdResponse, err error) {
 
-	// 1. validasi
-	if err := service.Validate.Struct(request); err != nil {
-		log.Printf("Invalid hubungkan atasan request: %v", err)
+	if err = service.Validate.Struct(request); err != nil {
 		return pkopd.PkOpdResponse{}, fmt.Errorf("validasi gagal")
 	}
 
 	tx, err := service.DB.Begin()
 	if err != nil {
-		log.Printf("Gagal memulai transaksi: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("gagal memulai transaksi")
 	}
-	// transaksi ini selalu commit di akhir
-	// defer helper.CommitOrRollback(tx)
 
-	kodeOpd := request.KodeOpd
-	tahun := request.Tahun
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
 
-	// 5. bentuk domain PK OPD
 	strukturOrganisasi := domain.StrukturOrganisasi{
-		KodeOpd:    kodeOpd,
-		Tahun:      tahun,
+		KodeOpd:    request.KodeOpd,
+		Tahun:      request.Tahun,
 		NipAtasan:  request.NipAtasan,
 		NipBawahan: request.NipBawahan,
 	}
 
-	// 6. simpan / update relasi
-	if err := service.strukturOrganisasiRepository.Create(ctx, tx, strukturOrganisasi); err != nil {
-		log.Printf("[ERROR] HubungkanRekin repo: %v", err)
+	if err = service.strukturOrganisasiRepository.Create(ctx, tx, strukturOrganisasi); err != nil {
 		return pkopd.PkOpdResponse{}, fmt.Errorf("gagal menghubungkan rekin")
 	}
 
-	// 6.1 Commit dulu
-	if err := tx.Commit(); err != nil {
-		return pkopd.PkOpdResponse{}, err
+	if err = tx.Commit(); err != nil {
+		return
 	}
 
-	// 7. return FULL RESPONSE TERBARU
-	return service.FindByKodeOpdTahun(ctx, kodeOpd, tahun)
+	return service.FindByKodeOpdTahun(ctx, request.KodeOpd, request.Tahun)
 }
 
 func translateJenisItem(level int) string {
