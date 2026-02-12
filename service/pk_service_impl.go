@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pegawai"
 	"ekak_kabupaten_madiun/model/web/pkopd"
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
@@ -450,10 +451,10 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 func (service *PkServiceImpl) HubungkanRekin(
 	ctx context.Context,
 	request pkopd.PkOpdRequest,
-) (pkopd.PkOpdResponse, error) {
+) (resp pkopd.PkOpdResponse, err error) {
 
 	// 1. validasi
-	if err := service.Validate.Struct(request); err != nil {
+	if err = service.Validate.Struct(request); err != nil {
 		log.Printf("Invalid hubungkan rekin request: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("validasi gagal")
 	}
@@ -463,22 +464,31 @@ func (service *PkServiceImpl) HubungkanRekin(
 		log.Printf("Gagal memulai transaksi: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("gagal memulai transaksi")
 	}
-	// transaksi ini selalu commit di akhir
-	// defer helper.CommitOrRollback(tx)
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
 
 	kodeOpd := request.KodeOpd
 	tahun := request.Tahun
 	tahunStr := strconv.Itoa(tahun)
 
 	// 2. ambil OPD
-	opd, err := service.opdService.FindByKodeOpd(ctx, kodeOpd)
+	var opd opdmaster.OpdResponse
+	opd, err = service.opdService.FindByKodeOpd(ctx, kodeOpd)
 	if err != nil {
 		log.Printf("[ERROR] Find OPD: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("OPD tidak ditemukan")
 	}
 
 	// 3. ambil rekin atasan
-	rekinAtasan, err := service.rekinService.FindById(
+	var rekinAtasan rencanakinerja.RencanaKinerjaResponse
+	rekinAtasan, err = service.rekinService.FindById(
 		ctx,
 		request.IdRekinAtasan,
 		kodeOpd,
@@ -490,7 +500,8 @@ func (service *PkServiceImpl) HubungkanRekin(
 	}
 
 	// 4. ambil rekin pemilik PK
-	rekinPemilik, err := service.rekinService.FindById(
+	var rekinPemilik rencanakinerja.RencanaKinerjaResponse
+	rekinPemilik, err = service.rekinService.FindById(
 		ctx,
 		request.IdRekinPemilikPk,
 		kodeOpd,
@@ -519,18 +530,18 @@ func (service *PkServiceImpl) HubungkanRekin(
 		RekinPemilikPk:   rekinPemilik.NamaRencanaKinerja,
 	}
 
-	// 6. simpan / update relasi
-	if err := service.pkOpdRepository.HubungkanRekin(ctx, tx, pk); err != nil {
+	// 6. simpan relasi
+	if err = service.pkOpdRepository.HubungkanRekin(ctx, tx, pk); err != nil {
 		log.Printf("[ERROR] HubungkanRekin repo: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("gagal menghubungkan rekin")
 	}
 
-	// 6.1 Commit dulu
-	if err := tx.Commit(); err != nil {
-		return pkopd.PkOpdResponse{}, err
+	// 7. commit dulu sebelum read service
+	if err = tx.Commit(); err != nil {
+		return
 	}
 
-	// 7. return FULL RESPONSE TERBARU
+	// 8. ambil full response (transaction baru)
 	return service.FindByKodeOpdTahun(ctx, kodeOpd, tahun)
 }
 
