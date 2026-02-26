@@ -22,3 +22,22 @@ type PkOpd struct {
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
+
+type AllItemPk struct {
+	RekinId         string
+	KodeProgram     string
+	NamaProgram     string
+	KodeKegiatan    string
+	NamaKegiatan    string
+	KodeSubkegiatan string
+	NamaSubkegiatan string
+	PaguAnggaran    int64
+}
+
+type AllSasaranPemdaPk struct {
+	JabatanKepalaPemda string
+	NamaKepalaPemda    string
+	NipKepalaPemda     string
+	SasaranPemdaId     int
+	SasaranPemda       string
+}

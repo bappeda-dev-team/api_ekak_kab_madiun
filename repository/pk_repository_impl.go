@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"strings"
 )
 
 type PkRepositoryImpl struct{}
@@ -145,4 +146,244 @@ func (repository *PkRepositoryImpl) HubungkanRekin(
 	}
 
 	return nil
+}
+
+// tambah kode opd dan tahun untuk spesifik mencari pagu dari input
+// indikator di tahun tsb via matrix-renja
+func (repository *PkRepositoryImpl) FindSubkegiatanByKodeOpdTahunRekinIds(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, rekinIds []string) (map[string]domain.AllItemPk, error) {
+	if len(rekinIds) == 0 {
+		return make(map[string]domain.AllItemPk), nil
+	}
+
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, 0, len(rekinIds)+2)
+
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+
+	script := fmt.Sprintf(`
+		SELECT st.rekin_id,
+          p.kode_program,
+          p.nama_program,
+          k.kode_kegiatan,
+          k.nama_kegiatan,
+          sub.kode_subkegiatan,
+          sub.nama_subkegiatan,
+          i.pagu_anggaran AS pagu_subkegiatan
+		FROM tb_subkegiatan_terpilih st
+        JOIN tb_subkegiatan sub ON sub.id = st.subkegiatan_id
+        LEFT JOIN tb_master_kegiatan k ON k.kode_kegiatan = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5)
+        LEFT JOIN tb_master_program p ON p.kode_program = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 3)
+        LEFT JOIN tb_indikator i ON i.kode = st.kode_subkegiatan AND i.kode_opd = ? AND i.tahun = ?
+		WHERE st.rekin_id IN (%s)`,
+		strings.Join(placeholders, ","))
+
+	finalArgs := make([]any, 0, len(args)+2)
+	finalArgs = append(finalArgs, kodeOpd, tahun)
+	finalArgs = append(finalArgs, args...)
+
+	rows, err := tx.QueryContext(ctx, script, finalArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	subMap := make(map[string]domain.AllItemPk)
+	for rows.Next() {
+		var itemPk domain.AllItemPk
+		var kodeProgram, namaProgram sql.NullString
+		var kodeKegiatan, namaKegiatan sql.NullString
+		var paguSubkegiatan sql.NullInt64
+
+		err := rows.Scan(&itemPk.RekinId,
+			&kodeProgram,
+			&namaProgram,
+			&kodeKegiatan,
+			&namaKegiatan,
+			&itemPk.KodeSubkegiatan,
+			&itemPk.NamaSubkegiatan,
+			&paguSubkegiatan,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if kodeProgram.Valid {
+			itemPk.KodeProgram = kodeProgram.String
+		}
+		if namaProgram.Valid {
+			itemPk.NamaProgram = namaProgram.String
+		}
+		if kodeKegiatan.Valid {
+			itemPk.KodeKegiatan = kodeKegiatan.String
+		}
+		if namaKegiatan.Valid {
+			itemPk.NamaKegiatan = namaKegiatan.String
+		}
+		if paguSubkegiatan.Valid {
+			itemPk.PaguAnggaran = paguSubkegiatan.Int64
+		}
+		subMap[itemPk.RekinId] = itemPk
+	}
+
+	return subMap, nil
+}
+
+func (repository *PkRepositoryImpl) FindTotalPaguAnggaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]int, error) {
+	if len(rekinIds) == 0 {
+		return make(map[string]int), nil
+	}
+
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+         SELECT ra.rencana_kinerja_id, SUM(rb.anggaran)
+         FROM tb_rincian_belanja rb
+         JOIN tb_rencana_aksi ra ON ra.id = rb.renaksi_id
+         WHERE ra.rencana_kinerja_id IN (%s)
+         GROUP BY ra.rencana_kinerja_id
+    `, strings.Join(placeholders, ","))
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	totalPaguMap := make(map[string]int)
+	for rows.Next() {
+		var rekinIdNs sql.NullString
+		var rekinId string
+		var totalAnggaranNs sql.NullInt64
+		var totalAnggaran int
+		err := rows.Scan(
+			&rekinIdNs,
+			&totalAnggaranNs,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if rekinIdNs.Valid {
+			rekinId = rekinIdNs.String
+		}
+		if totalAnggaranNs.Valid {
+			totalAnggaran = int(totalAnggaranNs.Int64)
+		}
+		totalPaguMap[rekinId] = totalAnggaran
+	}
+	return totalPaguMap, nil
+}
+
+func (repository *PkRepositoryImpl) FindSasaranPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun int) ([]domain.AllSasaranPemdaPk, error) {
+	query := `
+	SELECT
+			tp.id,
+			tp.sasaran_pemda,
+            lb.nama_kepala_pemda,
+            lb.nip_kepala_pemda,
+            lb.jabatan_kepala_pemda
+		FROM
+			tb_sasaran_pemda tp,
+            tb_lembaga lb
+		WHERE
+			CAST(tp.tahun_awal AS UNSIGNED) <= ?
+			AND CAST(tp.tahun_akhir AS UNSIGNED) >= ?
+    `
+
+	rows, err := tx.QueryContext(ctx, query, tahun, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.AllSasaranPemdaPk
+
+	for rows.Next() {
+		var item domain.AllSasaranPemdaPk
+		var namaKepalaPemdaNs,
+			nipKepalaPemdaNs,
+			jabatanKepalaPemdaNs sql.NullString
+
+		err := rows.Scan(
+			&item.SasaranPemdaId,
+			&item.SasaranPemda,
+			&namaKepalaPemdaNs,
+			&nipKepalaPemdaNs,
+			&jabatanKepalaPemdaNs,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if namaKepalaPemdaNs.Valid {
+			item.NamaKepalaPemda = namaKepalaPemdaNs.String
+		}
+		if nipKepalaPemdaNs.Valid {
+			item.NipKepalaPemda = nipKepalaPemdaNs.String
+		}
+		if jabatanKepalaPemdaNs.Valid {
+			item.JabatanKepalaPemda = jabatanKepalaPemdaNs.String
+		}
+
+		results = append(results, item)
+	}
+
+	return results, nil
+}
+
+func (repository *PkRepositoryImpl) FindSasaranPemdaById(ctx context.Context, tx *sql.Tx, sasaranPemdaId int) (domain.AllSasaranPemdaPk, error) {
+	query := `
+	SELECT
+			tp.id,
+			tp.sasaran_pemda,
+            lb.nama_kepala_pemda,
+            lb.nip_kepala_pemda,
+            lb.jabatan_kepala_pemda
+		FROM
+			tb_sasaran_pemda tp,
+            tb_lembaga lb
+		WHERE
+            tp.id = ?
+        LIMIT 1
+    `
+
+	rows, err := tx.QueryContext(ctx, query, sasaranPemdaId)
+	if err != nil {
+		return domain.AllSasaranPemdaPk{}, err
+	}
+	defer rows.Close()
+
+	var item domain.AllSasaranPemdaPk
+	var namaKepalaPemdaNs,
+		nipKepalaPemdaNs,
+		jabatanKepalaPemdaNs sql.NullString
+
+	for rows.Next() {
+		err := rows.Scan(
+			&item.SasaranPemdaId,
+			&item.SasaranPemda,
+			&namaKepalaPemdaNs,
+			&nipKepalaPemdaNs,
+			&jabatanKepalaPemdaNs,
+		)
+		if err != nil {
+			return domain.AllSasaranPemdaPk{}, err
+		}
+
+		if namaKepalaPemdaNs.Valid {
+			item.NamaKepalaPemda = namaKepalaPemdaNs.String
+		}
+		if nipKepalaPemdaNs.Valid {
+			item.NipKepalaPemda = nipKepalaPemdaNs.String
+		}
+		if jabatanKepalaPemdaNs.Valid {
+			item.JabatanKepalaPemda = jabatanKepalaPemdaNs.String
+		}
+	}
+
+	return item, nil
 }

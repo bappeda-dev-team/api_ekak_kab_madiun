@@ -45,19 +45,25 @@ func (service *LembagaServiceImpl) Create(ctx context.Context, request lembaga.L
 
 	// Buat objek domain lembaga
 	lembagaDomain := domainmaster.Lembaga{
-		Id:          lembagaId,
-		KodeLembaga: request.KodeLembaga,
-		NamaLembaga: request.NamaLembaga,
-		IsActive:    true, // Tambahkan respons isactive true
+		Id:                 lembagaId,
+		KodeLembaga:        request.KodeLembaga,
+		NamaLembaga:        request.NamaLembaga,
+		NamaKepalaPemda:    request.NamaKepalaPemda,
+		NipKepalaPemda:     request.NipKepalaPemda,
+		JabatanKepalaPemda: request.JabatanKepalaPemda,
+		IsActive:           true, // Tambahkan respons isactive true
 	}
 
 	result := service.LembagaRepository.Create(ctx, tx, lembagaDomain)
 
 	response := lembaga.LembagaResponse{
-		Id:          result.Id,
-		KodeLembaga: result.KodeLembaga,
-		NamaLembaga: result.NamaLembaga,
-		IsActive:    result.IsActive, // Tambahkan respons isactive true
+		Id:                 result.Id,
+		KodeLembaga:        result.KodeLembaga,
+		NamaLembaga:        result.NamaLembaga,
+		NamaKepalaPemda:    result.NamaKepalaPemda,
+		NipKepalaPemda:     result.NipKepalaPemda,
+		JabatanKepalaPemda: result.JabatanKepalaPemda,
+		IsActive:           result.IsActive, // Tambahkan respons isactive true
 	}
 
 	return response, nil
@@ -82,19 +88,25 @@ func (service *LembagaServiceImpl) Update(ctx context.Context, request lembaga.L
 	}
 
 	lembagaDomain := domainmaster.Lembaga{
-		Id:          request.Id,
-		KodeLembaga: request.KodeLembaga,
-		NamaLembaga: request.NamaLembaga,
-		IsActive:    request.IsActive,
+		Id:                 request.Id,
+		KodeLembaga:        request.KodeLembaga,
+		NamaLembaga:        request.NamaLembaga,
+		NamaKepalaPemda:    request.NamaKepalaPemda,
+		NipKepalaPemda:     request.NipKepalaPemda,
+		JabatanKepalaPemda: request.JabatanKepalaPemda,
+		IsActive:           request.IsActive,
 	}
 
 	result := service.LembagaRepository.Update(ctx, tx, lembagaDomain)
 
 	response := lembaga.LembagaResponse{
-		Id:          result.Id,
-		KodeLembaga: result.KodeLembaga,
-		NamaLembaga: result.NamaLembaga,
-		IsActive:    result.IsActive,
+		Id:                 result.Id,
+		KodeLembaga:        result.KodeLembaga,
+		NamaLembaga:        result.NamaLembaga,
+		NamaKepalaPemda:    result.NamaKepalaPemda,
+		NipKepalaPemda:     result.NipKepalaPemda,
+		JabatanKepalaPemda: result.JabatanKepalaPemda,
+		IsActive:           result.IsActive,
 	}
 
 	return response, nil
@@ -113,10 +125,13 @@ func (service *LembagaServiceImpl) FindById(ctx context.Context, id string) (lem
 	}
 
 	response := lembaga.LembagaResponse{
-		Id:          result.Id,
-		KodeLembaga: result.KodeLembaga,
-		NamaLembaga: result.NamaLembaga,
-		IsActive:    result.IsActive,
+		Id:                 result.Id,
+		KodeLembaga:        result.KodeLembaga,
+		NamaLembaga:        result.NamaLembaga,
+		NamaKepalaPemda:    result.NamaKepalaPemda,
+		NipKepalaPemda:     result.NipKepalaPemda,
+		JabatanKepalaPemda: result.JabatanKepalaPemda,
+		IsActive:           result.IsActive,
 	}
 
 	return response, nil
@@ -137,10 +152,13 @@ func (service *LembagaServiceImpl) FindAll(ctx context.Context) ([]lembaga.Lemba
 	response := []lembaga.LembagaResponse{}
 	for _, value := range result {
 		response = append(response, lembaga.LembagaResponse{
-			Id:          value.Id,
-			KodeLembaga: value.KodeLembaga,
-			NamaLembaga: value.NamaLembaga,
-			IsActive:    value.IsActive,
+			Id:                 value.Id,
+			KodeLembaga:        value.KodeLembaga,
+			NamaLembaga:        value.NamaLembaga,
+			NamaKepalaPemda:    value.NamaKepalaPemda,
+			NipKepalaPemda:     value.NipKepalaPemda,
+			JabatanKepalaPemda: value.JabatanKepalaPemda,
+			IsActive:           value.IsActive,
 		})
 	}
 	return response, nil
