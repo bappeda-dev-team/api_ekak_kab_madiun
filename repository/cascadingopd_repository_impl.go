@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"strings"
@@ -620,6 +621,106 @@ func (repository *CascadingOpdRepositoryImpl) FindTargetByIndikatorIdsBatch(ctx 
 			return nil, err
 		}
 		result[target.IndikatorId] = append(result[target.IndikatorId], target)
+	}
+
+	return result, nil
+}
+
+func (repository *CascadingOpdRepositoryImpl) FindIndikatorTargetByPokinIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	pokinIds []int,
+) (map[int][]domain.Indikator, error) {
+
+	const op = "cascadingopd_repository.FindIndikatorTargetByPokinIds"
+
+	if len(pokinIds) == 0 {
+		return map[int][]domain.Indikator{}, nil
+	}
+
+	baseQuery := `
+		SELECT
+			i.id,
+			i.pokin_id,
+			i.indikator,
+			t.id,
+			t.target,
+			t.satuan
+		FROM tb_indikator i
+		LEFT JOIN tb_target t ON i.id = t.indikator_id
+		WHERE i.pokin_id IN (?)
+		ORDER BY i.pokin_id, i.id
+	`
+
+	query, args := helper.BuildInQuery(baseQuery, pokinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// pohonId -> indikatorId -> indikator
+	pohonMap := make(map[int]map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indikatorId string
+			pohonId     int
+			indikator   string
+			targetId    sql.NullString
+			target      sql.NullString
+			satuan      sql.NullString
+		)
+
+		if err := rows.Scan(
+			&indikatorId,
+			&pohonId,
+			&indikator,
+			&targetId,
+			&target,
+			&satuan,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		if pohonMap[pohonId] == nil {
+			pohonMap[pohonId] = make(map[string]*domain.Indikator)
+		}
+
+		if pohonMap[pohonId][indikatorId] == nil {
+			pohonMap[pohonId][indikatorId] = &domain.Indikator{
+				Id:        indikatorId,
+				Indikator: indikator,
+				Target:    make([]domain.Target, 0),
+			}
+		}
+
+		// append target jika ada
+		if targetId.Valid {
+			pohonMap[pohonId][indikatorId].Target = append(
+				pohonMap[pohonId][indikatorId].Target,
+				domain.Target{
+					Id:          targetId.String,
+					IndikatorId: indikatorId,
+					Target:      target.String,
+					Satuan:      satuan.String,
+				},
+			)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	// flatten → map[int][]domain.Indikator
+	result := make(map[int][]domain.Indikator)
+
+	for pohonId, indikatorMap := range pohonMap {
+		for _, ind := range indikatorMap {
+			result[pohonId] = append(result[pohonId], *ind)
+		}
 	}
 
 	return result, nil

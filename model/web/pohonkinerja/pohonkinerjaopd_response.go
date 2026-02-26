@@ -1,6 +1,7 @@
 package pohonkinerja
 
 import (
+	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 )
 
@@ -161,4 +162,43 @@ type LevelDetail struct {
 	Level       int    `json:"level"`
 	JenisPohon  string `json:"jenis_pohon"`
 	JumlahPemda int    `json:"jumlah_pemda"`
+}
+
+func MapTujuanOpdToResponseCascading(
+	tujuans []domain.TujuanOpd,
+) []TujuanOpdCascadingResponse {
+
+	responses := make([]TujuanOpdCascadingResponse, 0, len(tujuans))
+
+	for _, tujuan := range tujuans {
+		indikatorResponses := make([]IndikatorTujuanResponse, 0, len(tujuan.Indikator))
+
+		for _, indikator := range tujuan.Indikator {
+			targetResponses := make([]TargetTujuanResponse, 0, len(indikator.Target))
+
+			for _, target := range indikator.Target {
+				targetResponses = append(targetResponses, TargetTujuanResponse{
+					Tahun:  target.Tahun,
+					Target: target.Target,
+					Satuan: target.Satuan,
+				})
+			}
+
+			indikatorResponses = append(indikatorResponses, IndikatorTujuanResponse{
+				Indikator: indikator.Indikator,
+				Target:    targetResponses,
+			})
+		}
+
+		responses = append(responses, TujuanOpdCascadingResponse{
+			Id:         tujuan.Id,
+			KodeOpd:    tujuan.KodeOpd,
+			Tujuan:     tujuan.Tujuan,
+			KodeBidang: tujuan.KodeBidangUrusan,
+			NamaBidang: tujuan.NamaBidangUrusan,
+			Indikator:  indikatorResponses,
+		})
+	}
+
+	return responses
 }

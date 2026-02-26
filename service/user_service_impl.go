@@ -8,6 +8,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/user"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
+	"sort"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -233,6 +234,24 @@ func (service *UserServiceImpl) FindAll(ctx context.Context, kodeOpd string) ([]
 		return nil, err
 	}
 
+	// Ambil seluruh NIP user secara unik untuk batch query pegawai
+	nipSet := make(map[string]struct{})
+	var nips []string
+	for _, u := range users {
+		if u.Nip == "" {
+			continue
+		}
+		if _, exists := nipSet[u.Nip]; !exists {
+			nipSet[u.Nip] = struct{}{}
+			nips = append(nips, u.Nip)
+		}
+	}
+
+	pegawaiByNip, err := service.PegawaiRepository.FindPegawaiByNipsBatch(ctx, tx, nips)
+	if err != nil {
+		return nil, err
+	}
+
 	var userResponses []user.UserResponse
 	for _, u := range users {
 		var roles []user.RoleResponse
@@ -243,19 +262,32 @@ func (service *UserServiceImpl) FindAll(ctx context.Context, kodeOpd string) ([]
 			})
 		}
 
-		pegawaiDomain, _ := service.PegawaiRepository.FindByNip(ctx, tx, u.Nip)
+		var pegawaiId, namaPegawai, namaJabatan, idJabatan string
+		if pegawaiDomain, ok := pegawaiByNip[u.Nip]; ok && pegawaiDomain != nil {
+			pegawaiId = pegawaiDomain.Id
+			namaPegawai = pegawaiDomain.NamaPegawai
+			namaJabatan = pegawaiDomain.NamaJabatan
+			idJabatan = pegawaiDomain.IdJabatan
+		}
 
 		userResponse := user.UserResponse{
 			Id:          u.Id,
-			PegawaiId:   pegawaiDomain.Id,
+			PegawaiId:   pegawaiId,
 			Nip:         u.Nip,
 			Email:       u.Email,
-			NamaPegawai: pegawaiDomain.NamaPegawai,
+			NamaPegawai: namaPegawai,
+			IdJabatan:   idJabatan,
+			NamaJabatan: namaJabatan,
 			IsActive:    u.IsActive,
 			Role:        roles,
 		}
 		userResponses = append(userResponses, userResponse)
 	}
+
+	sort.Slice(userResponses, func(i, j int) bool {
+		return userResponses[i].NamaPegawai < userResponses[j].NamaPegawai
+
+	})
 
 	return userResponses, nil
 }

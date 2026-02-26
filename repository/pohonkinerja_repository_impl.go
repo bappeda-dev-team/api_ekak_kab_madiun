@@ -4654,3 +4654,47 @@ func (repository *PohonKinerjaRepositoryImpl) FindByIds(ctx context.Context, tx 
 
 	return pohonMap, nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokinBatchForCascading(
+	ctx context.Context,
+	tx *sql.Tx,
+	pohonKinerjaIds []int,
+) ([]domain.PelaksanaPokin, error) {
+	const op = "pohonkinerja_repository.FindPelaksanaPokinBatch"
+
+	if len(pohonKinerjaIds) == 0 {
+		return []domain.PelaksanaPokin{}, nil
+	}
+
+	baseQuery := `
+		SELECT tpokin.id, tpokin.pohon_kinerja_id, tpokin.pegawai_id, pg.nama, pg.nip
+		FROM tb_pelaksana_pokin tpokin
+        JOIN tb_pegawai pg ON tpokin.pegawai_id = pg.id
+		WHERE tpokin.pohon_kinerja_id IN (?)
+	`
+
+	query, args := helper.BuildInQuery(baseQuery, pohonKinerjaIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	var result []domain.PelaksanaPokin
+	for rows.Next() {
+		var pelaksana domain.PelaksanaPokin
+		if err := rows.Scan(
+			&pelaksana.Id,
+			&pelaksana.PohonKinerjaId,
+			&pelaksana.PegawaiId,
+			&pelaksana.NamaPegawai,
+			&pelaksana.Nip,
+		); err != nil {
+			return nil, fmt.Errorf("%s: query failed: %w", op, err)
+		}
+		result = append(result, pelaksana)
+	}
+
+	return result, nil
+}

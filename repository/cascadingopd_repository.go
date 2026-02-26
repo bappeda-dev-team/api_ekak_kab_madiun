@@ -11,6 +11,7 @@ type CascadingOpdRepository interface {
 	FindIndikatorByPokinId(ctx context.Context, tx *sql.Tx, pokinId string) ([]domain.Indikator, error)
 	FindByKodeAndOpdAndTahun(ctx context.Context, tx *sql.Tx, kode string, kodeOpd string, tahun string) ([]domain.Indikator, error)
 	FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error)
+	FindIndikatorTargetByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Indikator, error)
 
 	//by rekin
 	FindPokinByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (domain.PohonKinerja, error)

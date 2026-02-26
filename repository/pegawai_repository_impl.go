@@ -180,9 +180,25 @@ func (repository *PegawaiRepositoryImpl) FindPegawaiByNipsBatch(ctx context.Cont
 	}
 
 	script := fmt.Sprintf(`
-		SELECT id, nip, nama
-		FROM tb_pegawai
-		WHERE nip IN (%s)
+		SELECT
+			peg.id,
+			peg.nip,
+			peg.nama,
+			opd.kode_opd,
+			opd.nama_opd,
+			jab.id,
+			jab.nama_jabatan
+		FROM tb_pegawai peg
+		LEFT JOIN tb_operasional_daerah opd ON peg.kode_opd = opd.kode_opd
+		LEFT JOIN tb_jabatan jab
+			ON jab.id = (
+				SELECT jp.id_jabatan
+				FROM tb_jabatan_pegawai jp
+				WHERE jp.id_pegawai = peg.nip
+				ORDER BY jp.tahun DESC, jp.bulan DESC
+				LIMIT 1
+			)
+		WHERE peg.nip IN (%s)
 	`, strings.Join(placeholders, ","))
 
 	rows, err := tx.QueryContext(ctx, script, args...)
@@ -194,9 +210,33 @@ func (repository *PegawaiRepositoryImpl) FindPegawaiByNipsBatch(ctx context.Cont
 	result := make(map[string]*domainmaster.Pegawai)
 	for rows.Next() {
 		var pegawai domainmaster.Pegawai
-		err := rows.Scan(&pegawai.Id, &pegawai.Nip, &pegawai.NamaPegawai)
+		var kodeOpd, namaOpd sql.NullString
+		var namaJabatan sql.NullString
+		var idJabatan sql.NullString
+
+		err := rows.Scan(
+			&pegawai.Id,
+			&pegawai.Nip,
+			&pegawai.NamaPegawai,
+			&kodeOpd,
+			&namaOpd,
+			&idJabatan,
+			&namaJabatan,
+		)
 		if err != nil {
 			return nil, err
+		}
+		if kodeOpd.Valid {
+			pegawai.KodeOpd = kodeOpd.String
+		}
+		if namaOpd.Valid {
+			pegawai.NamaOpd = namaOpd.String
+		}
+		if namaJabatan.Valid {
+			pegawai.NamaJabatan = namaJabatan.String
+		}
+		if idJabatan.Valid {
+			pegawai.IdJabatan = idJabatan.String
 		}
 		result[pegawai.Nip] = &pegawai
 	}

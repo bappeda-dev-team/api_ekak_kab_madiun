@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
@@ -215,4 +216,104 @@ func (repository *ProgramRepositoryImpl) FindByKodeProgram(ctx context.Context, 
 	}
 
 	return program, nil
+}
+
+// cukup ini saja untuk tarik indikator
+// program, kegiatan, subkegiatan
+func (repository *ProgramRepositoryImpl) FindIndikatorTargetByKodeRelasiBatch(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeRelasis []string,
+) (map[string][]domain.Indikator, error) {
+
+	const op = "program_repository.FindIndikatorTargetByKodeRelasiBatch"
+
+	if len(kodeRelasis) == 0 {
+		return map[string][]domain.Indikator{}, nil
+	}
+
+	baseQuery := `
+		SELECT
+			i.id,
+			i.kode,
+			i.indikator,
+			t.id,
+			t.target,
+			t.satuan
+		FROM tb_indikator i
+		LEFT JOIN tb_target t ON i.id = t.indikator_id
+		WHERE i.kode IN (?)
+		ORDER BY i.kode, i.id
+	`
+
+	query, args := helper.BuildInQueryString(baseQuery, kodeRelasis)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// kodeRelasi -> indikatorId -> indikator
+	indikatorMap := make(map[string]map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indikatorId string
+			kodeRelasi  string
+			indikator   string
+			targetId    sql.NullString
+			target      sql.NullString
+			satuan      sql.NullString
+		)
+
+		if err := rows.Scan(
+			&indikatorId,
+			&kodeRelasi,
+			&indikator,
+			&targetId,
+			&target,
+			&satuan,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		if indikatorMap[kodeRelasi] == nil {
+			indikatorMap[kodeRelasi] = make(map[string]*domain.Indikator)
+		}
+
+		if indikatorMap[kodeRelasi][indikatorId] == nil {
+			indikatorMap[kodeRelasi][indikatorId] = &domain.Indikator{
+				Id:        indikatorId,
+				Indikator: indikator,
+				Target:    make([]domain.Target, 0),
+			}
+		}
+
+		if targetId.Valid {
+			indikatorMap[kodeRelasi][indikatorId].Target = append(
+				indikatorMap[kodeRelasi][indikatorId].Target,
+				domain.Target{
+					Id:          targetId.String,
+					IndikatorId: indikatorId,
+					Target:      target.String,
+					Satuan:      satuan.String,
+				},
+			)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	// flatten → map[string][]domain.Indikator
+	result := make(map[string][]domain.Indikator)
+	for kode, indMap := range indikatorMap {
+		for _, ind := range indMap {
+			result[kode] = append(result[kode], *ind)
+		}
+	}
+
+	return result, nil
 }
