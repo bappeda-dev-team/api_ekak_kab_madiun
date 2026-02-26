@@ -53,8 +53,9 @@ func (service *MatrixRenjaServiceImpl) GetByKodeOpdAndTahun(ctx context.Context,
 
 func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, tx *sql.Tx, data []domain.SubKegiatanQuery, kodeOpd string, tahun string) []programkegiatan.UrusanDetailResponse {
 	// Helper function untuk membuat indikator
-	createIndikator := func(kode string, data []domain.SubKegiatanQuery) programkegiatan.IndikatorResponse {
+	createIndikator := func(kode string, data []domain.SubKegiatanQuery, pagu int64) programkegiatan.IndikatorResponse {
 		for _, item := range data {
+			// JIKA DITEMUKAN INDIKATOR MAKA AMBIL NILAINYA
 			if item.IndikatorKode == kode &&
 				item.IndikatorKodeOpd == kodeOpd &&
 				item.IndikatorTahun == tahun {
@@ -64,7 +65,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 					KodeOpd:      kodeOpd,
 					Indikator:    item.Indikator,
 					Tahun:        tahun,
-					PaguAnggaran: item.PaguAnggaran.Int64,
+					PaguAnggaran: pagu,
 					Target: []programkegiatan.TargetResponse{
 						{
 							Id:     item.TargetId,
@@ -76,12 +77,13 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 			}
 		}
 
+		// JIKA TIDAK DITEMUKAN INDIKATOR
 		return programkegiatan.IndikatorResponse{
 			Kode:         kode,
 			KodeOpd:      kodeOpd,
 			Indikator:    "",
 			Tahun:        tahun,
-			PaguAnggaran: 0,
+			PaguAnggaran: pagu,
 			Target: []programkegiatan.TargetResponse{
 				{
 					Target: "",
@@ -154,6 +156,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 			}
 		}
 
+		// TODO: TIDAK CLEAN, fix biar tidak panggil db
 		pegawai, _ := service.PegawaiRepository.FindByNip(ctx, tx, item.PegawaiId)
 
 		if subKegiatan == nil {
@@ -165,7 +168,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 				PegawaiId:   item.PegawaiId,
 				NamaPegawai: pegawai.NamaPegawai,
 				Indikator: []programkegiatan.IndikatorResponse{
-					createIndikator(item.KodeSubKegiatan, data),
+					createIndikator(item.KodeSubKegiatan, data, item.PaguAnggaran.Int64),
 				},
 			}
 			kegiatan.SubKegiatan = append(kegiatan.SubKegiatan, newSubKegiatan)
@@ -186,7 +189,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 				Nama:  item.NamaProgram,
 				Jenis: "programs",
 				Indikator: []programkegiatan.IndikatorResponse{
-					createIndikator(item.KodeProgram, data),
+					createIndikator(item.KodeProgram, data, 0),
 				},
 				Kegiatan: []programkegiatan.KegiatanResponse{},
 			}
@@ -202,10 +205,26 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 				}
 			}
 			if !exists {
+				paguKegiatan := sumPaguByTahun(kegiatan, tahun)
 				kegiatan.Indikator = append(kegiatan.Indikator,
-					createIndikator(item.KodeKegiatan, data))
+					createIndikator(item.KodeKegiatan, data, paguKegiatan))
 				program.Kegiatan = append(program.Kegiatan, *kegiatan)
 			}
+		}
+	}
+	// enrich program dengan pagu dari kegiatan
+	for _, program := range programMap {
+
+		var total int64
+
+		for _, keg := range program.Kegiatan {
+			for _, ind := range keg.Indikator {
+				total += ind.PaguAnggaran
+			}
+		}
+
+		if len(program.Indikator) > 0 {
+			program.Indikator[0].PaguAnggaran = total
 		}
 	}
 
@@ -222,7 +241,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 				Nama:  item.NamaBidangUrusan,
 				Jenis: "bidang_urusans",
 				Indikator: []programkegiatan.IndikatorResponse{
-					createIndikator(item.KodeBidangUrusan, data),
+					createIndikator(item.KodeBidangUrusan, data, 0),
 				},
 				Program: []programkegiatan.ProgramResponse{},
 			}
@@ -242,6 +261,22 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 			}
 		}
 	}
+	// enrich bidang urusan dengan pagu dari program
+	for _, bidUr := range bidangUrusanMap {
+		var total int64
+
+		for _, program := range bidUr.Program {
+			for _, keg := range program.Kegiatan {
+				for _, ind := range keg.Indikator {
+					total += ind.PaguAnggaran
+				}
+			}
+		}
+
+		if len(bidUr.Indikator) > 0 {
+			bidUr.Indikator[0].PaguAnggaran = total
+		}
+	}
 
 	// 3.3 Kelompokkan bidang urusan ke urusan
 	for _, item := range data {
@@ -256,7 +291,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 				Nama:  item.NamaUrusan,
 				Jenis: "urusans",
 				Indikator: []programkegiatan.IndikatorResponse{
-					createIndikator(item.KodeUrusan, data),
+					createIndikator(item.KodeUrusan, data, 100),
 				},
 				BidangUrusan: []programkegiatan.BidangUrusanResponse{},
 			}
@@ -276,6 +311,24 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 			}
 		}
 	}
+	// enrich urusan dengan pagu dari bidang urusan
+	for _, ur := range urusanMap {
+		var total int64
+
+		for _, bidUr := range ur.BidangUrusan {
+			for _, program := range bidUr.Program {
+				for _, keg := range program.Kegiatan {
+					for _, ind := range keg.Indikator {
+						total += ind.PaguAnggaran
+					}
+				}
+			}
+		}
+
+		if len(ur.Indikator) > 0 {
+			ur.Indikator[0].PaguAnggaran = total
+		}
+	}
 
 	// Konversi map ke slice untuk hasil akhir
 	for _, urusan := range urusanMap {
@@ -283,4 +336,18 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(ctx context.Context, 
 	}
 
 	return []programkegiatan.UrusanDetailResponse{urusanDetail}
+}
+
+func sumPaguByTahun(k *programkegiatan.KegiatanResponse, tahun string) int64 {
+	var total int64
+
+	for _, sub := range k.SubKegiatan {
+		for _, ind := range sub.Indikator {
+			if ind.Tahun == tahun {
+				total += ind.PaguAnggaran
+			}
+		}
+	}
+
+	return total
 }
