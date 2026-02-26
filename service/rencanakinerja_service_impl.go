@@ -2363,8 +2363,10 @@ func (service *RencanaKinerjaServiceImpl) FindByFilter(ctx context.Context, filt
 		return nil, fmt.Errorf("gagal mencari RencanaKinerja: %v", err)
 	}
 
+	nnrekinByFilters := service.filterPohonHilang(ctx, tx, rekinByFilters)
+
 	response := []rencanakinerja.RencanaKinerjaResponse{}
-	for _, rencana := range rekinByFilters {
+	for _, rencana := range nnrekinByFilters {
 		response = append(response, rencanakinerja.RencanaKinerjaResponse{
 			Id:                   rencana.Id,
 			NamaRencanaKinerja:   rencana.NamaRencanaKinerja,
@@ -2386,6 +2388,101 @@ func (service *RencanaKinerjaServiceImpl) FindByFilter(ctx context.Context, filt
 	}
 
 	return response, nil
+}
+
+func (service *RencanaKinerjaServiceImpl) filterPohonHilang(ctx context.Context,
+	tx *sql.Tx,
+	rekins []domain.RencanaKinerja) []domain.RencanaKinerja {
+
+	if len(rekins) == 0 {
+		return rekins
+	}
+
+	var seedIds []int
+	for _, r := range rekins {
+		seedIds = append(seedIds, r.IdPohon)
+	}
+
+	seedIds = unique(seedIds)
+
+	// 2. call repository
+	pohons, err := service.pohonKinerjaRepository.FindAncestorClosure(ctx, tx, seedIds)
+	if err != nil {
+		log.Printf("[ERROR] findancestor error: %w", err)
+		// production: better return error
+		return rekins
+	}
+
+	// 3. build map
+	pohonMap := buildPohonMap(pohons)
+
+	// 4. filter
+	var out []domain.RencanaKinerja
+	for _, r := range rekins {
+		p, ok := pohonMap[r.IdPohon]
+		if !ok {
+			continue
+		}
+
+		if isValidPohon(p, pohonMap) {
+			out = append(out, r)
+		}
+	}
+
+	return out
+}
+
+func buildPohonMap(pohons []domain.PohonMap) map[int]domain.PohonMap {
+	m := make(map[int]domain.PohonMap, len(pohons))
+	for _, p := range pohons {
+		m[p.ID] = p
+	}
+	return m
+}
+
+func isValidPohon(p domain.PohonMap, m map[int]domain.PohonMap) bool {
+
+	current := p
+	visited := map[int]struct{}{} // cycle guard
+
+	for {
+
+		// ⭐ cek kondisi valid
+		if current.Level == 4 && current.Parent == 0 {
+			return true
+		}
+
+		// ⭐ jika sudah root tapi bukan level 4
+		if current.Parent == 0 {
+			return false
+		}
+
+		// ⭐ cycle guard
+		if _, seen := visited[current.ID]; seen {
+			return false
+		}
+		visited[current.ID] = struct{}{}
+
+		// ⭐ naik parent
+		parent, ok := m[current.Parent]
+		if !ok {
+			return false
+		}
+
+		current = parent
+	}
+}
+
+func unique(ids []int) []int {
+	m := map[int]struct{}{}
+	var out []int
+	for _, id := range ids {
+		if _, ok := m[id]; !ok {
+			m[id] = struct{}{}
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func toIndikatorResponses(

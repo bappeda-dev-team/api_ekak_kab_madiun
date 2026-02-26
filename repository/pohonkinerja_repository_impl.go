@@ -4654,3 +4654,72 @@ func (repository *PohonKinerjaRepositoryImpl) FindByIds(ctx context.Context, tx 
 
 	return pohonMap, nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) FindAncestorClosure(ctx context.Context, tx *sql.Tx,
+	seeds []int) ([]domain.PohonMap, error) {
+	if len(seeds) == 0 {
+		return []domain.PohonMap{}, nil
+	}
+	placeholders := makePlaceholders(len(seeds))
+
+	query := fmt.Sprintf(`
+	WITH RECURSIVE pohon_chain AS (
+		-- seed
+		SELECT id, parent, level_pohon
+		FROM tb_pohon_kinerja
+		WHERE id IN (%s)   -- ids dari rekin
+
+		UNION ALL
+
+		-- parent traversal
+		SELECT p.id, p.parent, p.level_pohon
+		FROM tb_pohon_kinerja p
+		JOIN pohon_chain pc ON pc.parent = p.id
+	)
+	SELECT DISTINCT * FROM pohon_chain
+	`, placeholders)
+
+	args := make([]any, len(seeds))
+	for i, id := range seeds {
+		args[i] = id
+	}
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.PohonMap
+
+	for rows.Next() {
+		var p domain.PohonMap
+		err := rows.Scan(
+			&p.ID,
+			&p.Parent,
+			&p.Level,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, p)
+	}
+
+	return result, nil
+}
+
+func makePlaceholders(n int) string {
+	if n == 0 {
+		return ""
+	}
+
+	sb := strings.Builder{}
+	for i := 0; i < n; i++ {
+		sb.WriteString("?")
+		if i < n-1 {
+			sb.WriteString(",")
+		}
+	}
+	return sb.String()
+}
