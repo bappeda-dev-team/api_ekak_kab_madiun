@@ -40,427 +40,433 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatan(ctx context.Contex
 	}
 	defer tx.Rollback()
 
-	// Get data
 	data, err := service.MatrixRenstraRepository.GetByKodeSubKegiatan(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
 	if err != nil {
 		return nil, err
 	}
 
-	// Transform data dengan mengirimkan ctx dan tx
-	result := service.transformToResponse(ctx, tx, data, kodeOpd, tahunAwal, tahunAkhir)
+	result := service.transformToResponse(data, kodeOpd, tahunAwal, tahunAkhir)
 
-	err = tx.Commit()
-	if err != nil {
+	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
 	return result, nil
 }
 
-//perubahan
+// transformToResponse membangun hierarki dari data flat hasil query.
+// Optimasi:
+//   - Tidak ada N+1 query (NamaPegawai sudah dari JOIN di repository)
+//   - Single pass untuk kumpulkan semua metadata + pagu + indikator
+//   - Map-based deduplication (tidak ada linear search di dalam loop)
+//   - Pagu dari tb_pagu (jenis='renstra') ditampilkan di luar indikator
+func (service *MatrixRenstraServiceImpl) transformToResponse(
+	data []domain.SubKegiatanQuery,
+	kodeOpd, tahunAwal, tahunAkhir string,
+) []programkegiatan.UrusanDetailResponse {
 
-func (service *MatrixRenstraServiceImpl) transformToResponse(ctx context.Context, tx *sql.Tx, data []domain.SubKegiatanQuery, kodeOpd string, tahunAwal string, tahunAkhir string) []programkegiatan.UrusanDetailResponse {
-	// Helper function untuk membuat indikator
-	createIndikator := func(kode string, tahun string, pagu int64, data []domain.SubKegiatanQuery) programkegiatan.IndikatorResponse {
-		for _, item := range data {
-			if item.IndikatorKode == kode &&
-				item.IndikatorKodeOpd == kodeOpd &&
-				item.IndikatorTahun == tahun {
-				return programkegiatan.IndikatorResponse{
-					Id:           item.IndikatorId,
-					Kode:         kode,
-					KodeOpd:      kodeOpd,
-					Indikator:    item.Indikator,
-					Tahun:        tahun,
-					PaguAnggaran: pagu,
-					Target: []programkegiatan.TargetResponse{
-						{
-							Id:     item.TargetId,
-							Target: item.Target,
-							Satuan: item.Satuan,
-						},
-					},
-				}
-			}
-		}
-
-		return programkegiatan.IndikatorResponse{
-			Kode:         kode,
-			KodeOpd:      kodeOpd,
-			Indikator:    "",
-			Tahun:        tahun,
-			PaguAnggaran: pagu,
-			Target: []programkegiatan.TargetResponse{
-				{
-					Target: "",
-					Satuan: "",
-				},
-			},
-		}
+	if len(data) == 0 {
+		return []programkegiatan.UrusanDetailResponse{}
 	}
 
-	// Generate tahun range
+	// Build rentang tahun
 	tahunAwalInt, _ := strconv.Atoi(tahunAwal)
 	tahunAkhirInt, _ := strconv.Atoi(tahunAkhir)
-	var tahunRange []string
-	for tahun := tahunAwalInt; tahun <= tahunAkhirInt; tahun++ {
-		tahunRange = append(tahunRange, strconv.Itoa(tahun))
+	tahunRange := make([]string, 0, tahunAkhirInt-tahunAwalInt+1)
+	for t := tahunAwalInt; t <= tahunAkhirInt; t++ {
+		tahunRange = append(tahunRange, strconv.Itoa(t))
 	}
 
-	// Inisialisasi response utama
-	urusanDetail := programkegiatan.UrusanDetailResponse{
-		KodeOpd:           kodeOpd,
-		TahunAwal:         tahunAwal,
-		TahunAkhir:        tahunAkhir,
-		PaguAnggaranTotal: make([]programkegiatan.PaguAnggaranTotalResponse, len(tahunRange)),
-		Urusan:            make([]programkegiatan.UrusanResponse, 0),
+	// -----------------------------------------------------------------------
+	// Helper: bangun []PaguAnggaranTotalResponse dari map[tahun]pagu
+	// -----------------------------------------------------------------------
+	buildAnggaran := func(paguByTahun map[string]int64) []programkegiatan.PaguAnggaranTotalResponse {
+		result := make([]programkegiatan.PaguAnggaranTotalResponse, 0, len(tahunRange))
+		for _, th := range tahunRange {
+			result = append(result, programkegiatan.PaguAnggaranTotalResponse{
+				Tahun:        th,
+				PaguAnggaran: paguByTahun[th],
+			})
+		}
+		return result
 	}
 
-	// Maps untuk menyimpan data
-	urusanMap := make(map[string]*programkegiatan.UrusanResponse)
-	bidangUrusanMap := make(map[string]*programkegiatan.BidangUrusanResponse)
-	programMap := make(map[string]*programkegiatan.ProgramResponse)
-	kegiatanMap := make(map[string]*programkegiatan.KegiatanResponse)
+	// -----------------------------------------------------------------------
+	// Struktur bantu untuk indikator (dengan dedup target)
+	// -----------------------------------------------------------------------
+	type indEntry struct {
+		resp      programkegiatan.IndikatorResponse
+		targetSet map[string]struct{}
+	}
 
-	// Map untuk menyimpan pagu per subkegiatan per tahun
-	paguSubKegiatanMap := make(map[string]map[string]int64)
-	paguGrandTotal := make(map[string]int64)
+	// kode (subkeg/keg/prg/bidang/urusan) → tahun → indikatorId → *indEntry
+	indikatorByKodeTahun := make(map[string]map[string]map[string]*indEntry)
 
-	// 1. Kumpulkan pagu HANYA dari subkegiatan
-	for _, item := range data {
-		if item.KodeSubKegiatan != "" &&
-			item.IndikatorKode == item.KodeSubKegiatan &&
-			item.IndikatorKodeOpd == kodeOpd &&
-			item.PaguAnggaran.Valid {
-			if _, exists := paguSubKegiatanMap[item.KodeSubKegiatan]; !exists {
-				paguSubKegiatanMap[item.KodeSubKegiatan] = make(map[string]int64)
+	collectIndikator := func(item domain.SubKegiatanQuery) {
+		if item.IndikatorId == "" {
+			return
+		}
+		kode := item.IndikatorKode
+		th := item.IndikatorTahun
+
+		if indikatorByKodeTahun[kode] == nil {
+			indikatorByKodeTahun[kode] = make(map[string]map[string]*indEntry)
+		}
+		if indikatorByKodeTahun[kode][th] == nil {
+			indikatorByKodeTahun[kode][th] = make(map[string]*indEntry)
+		}
+		ent, exists := indikatorByKodeTahun[kode][th][item.IndikatorId]
+		if !exists {
+			ent = &indEntry{
+				resp: programkegiatan.IndikatorResponse{
+					Id:        item.IndikatorId,
+					Kode:      kode,
+					KodeOpd:   kodeOpd,
+					Indikator: item.Indikator,
+					Tahun:     th,
+					Target:    make([]programkegiatan.TargetResponse, 0),
+				},
+				targetSet: make(map[string]struct{}),
 			}
-			paguSubKegiatanMap[item.KodeSubKegiatan][item.IndikatorTahun] = item.PaguAnggaran.Int64
-			paguGrandTotal[item.IndikatorTahun] += item.PaguAnggaran.Int64
+			indikatorByKodeTahun[kode][th][item.IndikatorId] = ent
+		}
+		if item.TargetId != "" {
+			if _, seen := ent.targetSet[item.TargetId]; !seen {
+				ent.targetSet[item.TargetId] = struct{}{}
+				ent.resp.Target = append(ent.resp.Target, programkegiatan.TargetResponse{
+					Id:     item.TargetId,
+					Target: item.Target,
+					Satuan: item.Satuan,
+				})
+			}
 		}
 	}
 
-	// Set pagu total
-	for i, tahun := range tahunRange {
-		urusanDetail.PaguAnggaranTotal[i] = programkegiatan.PaguAnggaranTotalResponse{
-			Tahun:        tahun,
-			PaguAnggaran: paguGrandTotal[tahun],
+	// Ambil semua indikator untuk kode tertentu sebagai []IndikatorResponse
+	// (satu entry per tahun, karena matrix renstra multi-tahun)
+	getIndikator := func(kode string) []programkegiatan.IndikatorResponse {
+		tahunMap, ok := indikatorByKodeTahun[kode]
+		if !ok {
+			return []programkegiatan.IndikatorResponse{}
 		}
+		result := make([]programkegiatan.IndikatorResponse, 0)
+		for _, th := range tahunRange {
+			for _, ent := range tahunMap[th] {
+				result = append(result, ent.resp)
+			}
+		}
+		return result
 	}
 
-	// 2. Proses subkegiatan
+	// -----------------------------------------------------------------------
+	// Metadata tiap level hierarki
+	// -----------------------------------------------------------------------
+	type subkegMeta struct{ nama, namaPegawai, pegawaiId, kodeKeg string }
+	type kegMeta struct{ nama, kodePrg string }
+	type prgMeta struct{ nama, kodeBidang string }
+	type bidangMeta struct{ nama, kodeUrusan string }
+
+	subkegData := make(map[string]subkegMeta)
+	kegData := make(map[string]kegMeta)
+	prgData := make(map[string]prgMeta)
+	bidangData := make(map[string]bidangMeta)
+	urusanData := make(map[string]string) // kodeUrusan → namaUrusan
+
+	// pagu per subkegiatan per tahun (dari tb_pagu, jenis='renstra')
+	// key: kodeSubkegiatan → tahun → pagu
+	paguSubkegByTahun := make(map[string]map[string]int64)
+
+	// Ordered, deduplicated children
+	seenSubkeg := make(map[string]struct{})
+	seenKeg := make(map[string]struct{})
+	seenPrg := make(map[string]struct{})
+	seenBidang := make(map[string]struct{})
+	seenUrusan := make(map[string]struct{})
+
+	subkegByKeg := make(map[string][]string)
+	kegByPrg := make(map[string][]string)
+	prgByBidang := make(map[string][]string)
+	bidangByUrusan := make(map[string][]string)
+	var urusanOrder []string
+
+	// -----------------------------------------------------------------------
+	// PASS 1: satu kali iterasi — kumpulkan semua data
+	// -----------------------------------------------------------------------
 	for _, item := range data {
+		collectIndikator(item)
+
 		if item.KodeSubKegiatan == "" {
 			continue
 		}
 
-		kegiatan, exists := kegiatanMap[item.KodeKegiatan]
-		if !exists {
-			kegiatan = &programkegiatan.KegiatanResponse{
-				Kode:        item.KodeKegiatan,
-				Nama:        item.NamaKegiatan,
-				Jenis:       "kegiatans",
-				Indikator:   make([]programkegiatan.IndikatorResponse, len(tahunRange)),
-				SubKegiatan: []programkegiatan.SubKegiatanResponse{},
+		// Subkegiatan: catat satu kali per (subkegiatan)
+		if _, ok := seenSubkeg[item.KodeSubKegiatan]; !ok {
+			seenSubkeg[item.KodeSubKegiatan] = struct{}{}
+			subkegData[item.KodeSubKegiatan] = subkegMeta{
+				nama:        item.NamaSubKegiatan,
+				namaPegawai: item.NamaPegawai,
+				pegawaiId:   item.PegawaiId,
+				kodeKeg:     item.KodeKegiatan,
 			}
-			kegiatanMap[item.KodeKegiatan] = kegiatan
-		}
-
-		var subKegiatan *programkegiatan.SubKegiatanResponse
-		for i := range kegiatan.SubKegiatan {
-			if kegiatan.SubKegiatan[i].Kode == item.KodeSubKegiatan {
-				subKegiatan = &kegiatan.SubKegiatan[i]
-				break
+			if item.KodeKegiatan != "" {
+				subkegByKeg[item.KodeKegiatan] = append(subkegByKeg[item.KodeKegiatan], item.KodeSubKegiatan)
 			}
 		}
 
-		pegawai, _ := service.PegawaiRepository.FindByNip(ctx, tx, item.PegawaiId)
+		// Pagu subkegiatan per tahun (dari tb_pagu, sama nilainya per row — set saja, idempoten)
+		if paguSubkegByTahun[item.KodeSubKegiatan] == nil {
+			paguSubkegByTahun[item.KodeSubKegiatan] = make(map[string]int64)
+		}
+		// PaguSubKegiatan sudah di-COALESCE di query, selalu ada nilai (0 jika tidak ada di tb_pagu)
+		paguSubkegByTahun[item.KodeSubKegiatan][item.TahunSubKegiatan] = item.PaguSubKegiatan
 
-		if subKegiatan == nil {
-			newSubKegiatan := programkegiatan.SubKegiatanResponse{
-				Kode:        item.KodeSubKegiatan,
-				Nama:        item.NamaSubKegiatan,
-				Jenis:       "subkegiatans",
-				PegawaiId:   item.PegawaiId,
-				NamaPegawai: pegawai.NamaPegawai,
-				Indikator:   make([]programkegiatan.IndikatorResponse, len(tahunRange)),
+		// Kegiatan
+		if item.KodeKegiatan != "" {
+			if _, ok := seenKeg[item.KodeKegiatan]; !ok {
+				seenKeg[item.KodeKegiatan] = struct{}{}
+				kegData[item.KodeKegiatan] = kegMeta{nama: item.NamaKegiatan, kodePrg: item.KodeProgram}
+				if item.KodeProgram != "" {
+					kegByPrg[item.KodeProgram] = append(kegByPrg[item.KodeProgram], item.KodeKegiatan)
+				}
 			}
+		}
 
-			// Inisialisasi indikator untuk setiap tahun
-			for i, tahun := range tahunRange {
-				pagu := paguSubKegiatanMap[item.KodeSubKegiatan][tahun]
-				newSubKegiatan.Indikator[i] = createIndikator(
-					item.KodeSubKegiatan,
-					tahun,
-					pagu,
-					data,
-				)
+		// Program
+		if item.KodeProgram != "" {
+			if _, ok := seenPrg[item.KodeProgram]; !ok {
+				seenPrg[item.KodeProgram] = struct{}{}
+				prgData[item.KodeProgram] = prgMeta{nama: item.NamaProgram, kodeBidang: item.KodeBidangUrusan}
+				if item.KodeBidangUrusan != "" {
+					prgByBidang[item.KodeBidangUrusan] = append(prgByBidang[item.KodeBidangUrusan], item.KodeProgram)
+				}
 			}
+		}
 
-			kegiatan.SubKegiatan = append(kegiatan.SubKegiatan, newSubKegiatan)
+		// Bidang Urusan
+		if item.KodeBidangUrusan != "" {
+			if _, ok := seenBidang[item.KodeBidangUrusan]; !ok {
+				seenBidang[item.KodeBidangUrusan] = struct{}{}
+				bidangData[item.KodeBidangUrusan] = bidangMeta{nama: item.NamaBidangUrusan, kodeUrusan: item.KodeUrusan}
+				if item.KodeUrusan != "" {
+					bidangByUrusan[item.KodeUrusan] = append(bidangByUrusan[item.KodeUrusan], item.KodeBidangUrusan)
+				}
+			}
+		}
+
+		// Urusan
+		if item.KodeUrusan != "" {
+			if _, ok := seenUrusan[item.KodeUrusan]; !ok {
+				seenUrusan[item.KodeUrusan] = struct{}{}
+				urusanData[item.KodeUrusan] = item.NamaUrusan
+				urusanOrder = append(urusanOrder, item.KodeUrusan)
+			}
 		}
 	}
 
-	// 3. Build struktur dari bawah ke atas
-	// 3.1 Kelompokkan kegiatan ke program
-	for _, item := range data {
-		if item.KodeProgram == "" {
-			continue
-		}
-
-		program, exists := programMap[item.KodeProgram]
-		if !exists {
-			program = &programkegiatan.ProgramResponse{
-				Kode:      item.KodeProgram,
-				Nama:      item.NamaProgram,
-				Jenis:     "programs",
-				Indikator: make([]programkegiatan.IndikatorResponse, len(tahunRange)),
-				Kegiatan:  []programkegiatan.KegiatanResponse{},
-			}
-			programMap[item.KodeProgram] = program
-		}
-
-		if kegiatan, ok := kegiatanMap[item.KodeKegiatan]; ok {
-			var exists bool
-			for _, existingKegiatan := range program.Kegiatan {
-				if existingKegiatan.Kode == kegiatan.Kode {
-					exists = true
-					break
-				}
-			}
-			if !exists {
-				// Hitung pagu kegiatan dari subkegiatan
-				paguKegiatan := make(map[string]int64)
-				for _, subKegiatan := range kegiatan.SubKegiatan {
-					for _, tahun := range tahunRange {
-						if pagu, exists := paguSubKegiatanMap[subKegiatan.Kode][tahun]; exists {
-							paguKegiatan[tahun] += pagu
-						}
-					}
-				}
-
-				// Set indikator kegiatan
-				for i, tahun := range tahunRange {
-					kegiatan.Indikator[i] = createIndikator(
-						item.KodeKegiatan,
-						tahun,
-						paguKegiatan[tahun],
-						data,
-					)
-				}
-
-				program.Kegiatan = append(program.Kegiatan, *kegiatan)
+	// -----------------------------------------------------------------------
+	// Helper: hitung pagu per tahun untuk suatu level dari sum subkegiatan
+	// -----------------------------------------------------------------------
+	sumPaguSubkeg := func(kodeSubkegList []string) map[string]int64 {
+		hasil := make(map[string]int64, len(tahunRange))
+		for _, kodeSubkeg := range kodeSubkegList {
+			for _, th := range tahunRange {
+				hasil[th] += paguSubkegByTahun[kodeSubkeg][th]
 			}
 		}
+		return hasil
+	}
 
-		// Hitung pagu program dari subkegiatan
-		paguProgram := make(map[string]int64)
-		for _, keg := range program.Kegiatan {
-			for _, subKeg := range keg.SubKegiatan {
-				for _, tahun := range tahunRange {
-					if pagu, exists := paguSubKegiatanMap[subKeg.Kode][tahun]; exists {
-						paguProgram[tahun] += pagu
-					}
-				}
-			}
+	// Kumpulkan semua kode subkegiatan per level untuk hitung pagu ke atas
+	// kegiatan → program → bidang → urusan
+	allSubkegByKeg := func(kodeKeg string) []string {
+		return subkegByKeg[kodeKeg]
+	}
+	allSubkegByPrg := func(kodePrg string) []string {
+		var result []string
+		for _, kodeKeg := range kegByPrg[kodePrg] {
+			result = append(result, allSubkegByKeg(kodeKeg)...)
 		}
+		return result
+	}
+	allSubkegByBidang := func(kodeBidang string) []string {
+		var result []string
+		for _, kodePrg := range prgByBidang[kodeBidang] {
+			result = append(result, allSubkegByPrg(kodePrg)...)
+		}
+		return result
+	}
+	allSubkegByUrusan := func(kodeUrusan string) []string {
+		var result []string
+		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
+			result = append(result, allSubkegByBidang(kodeBidang)...)
+		}
+		return result
+	}
 
-		// Set indikator program
-		for i, tahun := range tahunRange {
-			program.Indikator[i] = createIndikator(
-				item.KodeProgram,
-				tahun,
-				paguProgram[tahun],
-				data,
-			)
+	// Grand total pagu per tahun (sum semua subkegiatan)
+	grandPaguByTahun := make(map[string]int64, len(tahunRange))
+	for _, kodeSubkeg := range func() []string {
+		var all []string
+		for k := range paguSubkegByTahun {
+			all = append(all, k)
+		}
+		return all
+	}() {
+		for _, th := range tahunRange {
+			grandPaguByTahun[th] += paguSubkegByTahun[kodeSubkeg][th]
 		}
 	}
 
-	// 3.2 Kelompokkan program ke bidang urusan
-	for _, item := range data {
-		if item.KodeBidangUrusan == "" {
-			continue
+	// -----------------------------------------------------------------------
+	// PASS 2: bangun response hierarki dari maps yang sudah terkumpul
+	// -----------------------------------------------------------------------
+	urusanDetail := programkegiatan.UrusanDetailResponse{
+		KodeOpd:           kodeOpd,
+		TahunAwal:         tahunAwal,
+		TahunAkhir:        tahunAkhir,
+		PaguAnggaranTotal: buildAnggaran(grandPaguByTahun),
+		Urusan:            make([]programkegiatan.UrusanResponse, 0, len(urusanOrder)),
+	}
+
+	for _, kodeUrusan := range urusanOrder {
+		paguUrusan := sumPaguSubkeg(allSubkegByUrusan(kodeUrusan))
+
+		urusanResp := programkegiatan.UrusanResponse{
+			Kode:         kodeUrusan,
+			Nama:         urusanData[kodeUrusan],
+			Jenis:        "urusans",
+			Anggaran:     buildAnggaran(paguUrusan),
+			Indikator:    getIndikator(kodeUrusan),
+			BidangUrusan: make([]programkegiatan.BidangUrusanResponse, 0),
 		}
 
-		bidangUrusan, exists := bidangUrusanMap[item.KodeBidangUrusan]
-		if !exists {
-			bidangUrusan = &programkegiatan.BidangUrusanResponse{
-				Kode:      item.KodeBidangUrusan,
-				Nama:      item.NamaBidangUrusan,
+		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
+			paguBidang := sumPaguSubkeg(allSubkegByBidang(kodeBidang))
+			bd := bidangData[kodeBidang]
+
+			bidangResp := programkegiatan.BidangUrusanResponse{
+				Kode:      kodeBidang,
+				Nama:      bd.nama,
 				Jenis:     "bidang_urusans",
-				Indikator: make([]programkegiatan.IndikatorResponse, len(tahunRange)),
-				Program:   []programkegiatan.ProgramResponse{},
+				Anggaran:  buildAnggaran(paguBidang),
+				Indikator: getIndikator(kodeBidang),
+				Program:   make([]programkegiatan.ProgramResponse, 0),
 			}
-			bidangUrusanMap[item.KodeBidangUrusan] = bidangUrusan
-		}
 
-		if program, ok := programMap[item.KodeProgram]; ok {
-			var exists bool
-			for _, existingProgram := range bidangUrusan.Program {
-				if existingProgram.Kode == program.Kode {
-					exists = true
-					break
+			for _, kodePrg := range prgByBidang[kodeBidang] {
+				paguPrg := sumPaguSubkeg(allSubkegByPrg(kodePrg))
+				pd := prgData[kodePrg]
+
+				prgResp := programkegiatan.ProgramResponse{
+					Kode:      kodePrg,
+					Nama:      pd.nama,
+					Jenis:     "programs",
+					Anggaran:  buildAnggaran(paguPrg),
+					Indikator: getIndikator(kodePrg),
+					Kegiatan:  make([]programkegiatan.KegiatanResponse, 0),
 				}
-			}
-			if !exists {
-				bidangUrusan.Program = append(bidangUrusan.Program, *program)
-			}
-		}
 
-		// Hitung pagu bidang urusan dari subkegiatan
-		paguBidangUrusan := make(map[string]int64)
-		for _, prog := range bidangUrusan.Program {
-			for _, keg := range prog.Kegiatan {
-				for _, subKeg := range keg.SubKegiatan {
-					for _, tahun := range tahunRange {
-						if pagu, exists := paguSubKegiatanMap[subKeg.Kode][tahun]; exists {
-							paguBidangUrusan[tahun] += pagu
-						}
+				for _, kodeKeg := range kegByPrg[kodePrg] {
+					paguKeg := sumPaguSubkeg(allSubkegByKeg(kodeKeg))
+					kd := kegData[kodeKeg]
+
+					kegResp := programkegiatan.KegiatanResponse{
+						Kode:        kodeKeg,
+						Nama:        kd.nama,
+						Jenis:       "kegiatans",
+						Anggaran:    buildAnggaran(paguKeg),
+						Indikator:   getIndikator(kodeKeg),
+						SubKegiatan: make([]programkegiatan.SubKegiatanResponse, 0),
 					}
-				}
-			}
-		}
 
-		// Set indikator bidang urusan
-		for i, tahun := range tahunRange {
-			bidangUrusan.Indikator[i] = createIndikator(
-				item.KodeBidangUrusan,
-				tahun,
-				paguBidangUrusan[tahun],
-				data,
-			)
-		}
-	}
-
-	// 3.3 Kelompokkan bidang urusan ke urusan
-	for _, item := range data {
-		if item.KodeUrusan == "" {
-			continue
-		}
-
-		urusan, exists := urusanMap[item.KodeUrusan]
-		if !exists {
-			urusan = &programkegiatan.UrusanResponse{
-				Kode:         item.KodeUrusan,
-				Nama:         item.NamaUrusan,
-				Jenis:        "urusans",
-				Indikator:    make([]programkegiatan.IndikatorResponse, len(tahunRange)),
-				BidangUrusan: []programkegiatan.BidangUrusanResponse{},
-			}
-			urusanMap[item.KodeUrusan] = urusan
-		}
-
-		if bidangUrusan, ok := bidangUrusanMap[item.KodeBidangUrusan]; ok {
-			var exists bool
-			for _, existingBidangUrusan := range urusan.BidangUrusan {
-				if existingBidangUrusan.Kode == bidangUrusan.Kode {
-					exists = true
-					break
-				}
-			}
-			if !exists {
-				urusan.BidangUrusan = append(urusan.BidangUrusan, *bidangUrusan)
-			}
-		}
-
-		// Hitung pagu urusan dari subkegiatan
-		paguUrusan := make(map[string]int64)
-		for _, bidangUrusan := range urusan.BidangUrusan {
-			for _, prog := range bidangUrusan.Program {
-				for _, keg := range prog.Kegiatan {
-					for _, subKeg := range keg.SubKegiatan {
-						for _, tahun := range tahunRange {
-							if pagu, exists := paguSubKegiatanMap[subKeg.Kode][tahun]; exists {
-								paguUrusan[tahun] += pagu
-							}
+					for _, kodeSubkeg := range subkegByKeg[kodeKeg] {
+						sd := subkegData[kodeSubkeg]
+						subkegResp := programkegiatan.SubKegiatanResponse{
+							Kode:        kodeSubkeg,
+							Nama:        sd.nama,
+							Jenis:       "subkegiatans",
+							PegawaiId:   sd.pegawaiId,
+							NamaPegawai: sd.namaPegawai,
+							Anggaran:    buildAnggaran(paguSubkegByTahun[kodeSubkeg]),
+							Indikator:   getIndikator(kodeSubkeg),
 						}
+						kegResp.SubKegiatan = append(kegResp.SubKegiatan, subkegResp)
 					}
+
+					prgResp.Kegiatan = append(prgResp.Kegiatan, kegResp)
 				}
+
+				bidangResp.Program = append(bidangResp.Program, prgResp)
 			}
+
+			urusanResp.BidangUrusan = append(urusanResp.BidangUrusan, bidangResp)
 		}
 
-		// Set indikator urusan
-		for i, tahun := range tahunRange {
-			urusan.Indikator[i] = createIndikator(
-				item.KodeUrusan,
-				tahun,
-				paguUrusan[tahun],
-				data,
-			)
-		}
-	}
-
-	// Konversi map ke slice untuk hasil akhir
-	for _, urusan := range urusanMap {
-		urusanDetail.Urusan = append(urusanDetail.Urusan, *urusan)
+		urusanDetail.Urusan = append(urusanDetail.Urusan, urusanResp)
 	}
 
 	return []programkegiatan.UrusanDetailResponse{urusanDetail}
 }
 
 // crud
-func (service *MatrixRenstraServiceImpl) CreateIndikator(ctx context.Context, request programkegiatan.IndikatorRenstraCreateRequest) (programkegiatan.IndikatorResponse, error) {
+func (service *MatrixRenstraServiceImpl) CreateIndikator(ctx context.Context, requests []programkegiatan.IndikatorRenstraCreateRequest) ([]programkegiatan.IndikatorResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
+		return nil, err
 	}
 	defer tx.Rollback()
 
-	// Generate ID dengan format IND-MTRX-uuid7
+	var responses []programkegiatan.IndikatorResponse
 
-	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
-	uuId := fmt.Sprintf("IND-RNST-%s", randomDigits)
+	for _, request := range requests {
+		randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
+		uuId := fmt.Sprintf("IND-RNST-%s", randomDigits)
 
-	// Simpan indikator
-	indikator := domain.Indikator{
-		Id:           uuId,
-		Kode:         request.Kode,
-		KodeOpd:      request.KodeOpd,
-		Indikator:    request.Indikator,
-		Tahun:        request.Tahun,
-		PaguAnggaran: request.PaguAnggaran,
-	}
+		indikator := domain.Indikator{
+			Id:        uuId,
+			Kode:      request.Kode,
+			KodeOpd:   request.KodeOpd,
+			Indikator: request.Indikator,
+			Tahun:     request.Tahun,
+			// PaguAnggaran = 0, pagu dihandle UpsertAnggaran
+		}
 
-	err = service.MatrixRenstraRepository.SaveIndikator(ctx, tx, indikator)
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
+		err = service.MatrixRenstraRepository.SaveIndikator(ctx, tx, indikator)
+		if err != nil {
+			return nil, err
+		}
 
-	// Simpan target
-	uuIdTarget := fmt.Sprintf("TRG-RNST-%s", randomDigits)
+		uuIdTarget := fmt.Sprintf("TRG-RNST-%s", randomDigits)
+		target := domain.Target{
+			Id:          uuIdTarget,
+			IndikatorId: indikator.Id,
+			Target:      request.Target,
+			Satuan:      request.Satuan,
+			// Jenis = 'renstra' diinject di repository SaveTarget
+		}
 
-	target := domain.Target{
-		Id:          uuIdTarget,
-		IndikatorId: indikator.Id,
-		Target:      request.Target,
-		Satuan:      request.Satuan,
-	}
+		err = service.MatrixRenstraRepository.SaveTarget(ctx, tx, target)
+		if err != nil {
+			return nil, err
+		}
 
-	err = service.MatrixRenstraRepository.SaveTarget(ctx, tx, target)
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-
-	return programkegiatan.IndikatorResponse{
-		Id:           indikator.Id,
-		Kode:         request.Kode,
-		KodeOpd:      request.KodeOpd,
-		Indikator:    request.Indikator,
-		Tahun:        request.Tahun,
-		PaguAnggaran: request.PaguAnggaran,
-		Target: []programkegiatan.TargetResponse{
-			{
-				Id:     target.Id,
-				Target: request.Target,
-				Satuan: request.Satuan,
+		responses = append(responses, programkegiatan.IndikatorResponse{
+			Id:        indikator.Id,
+			Kode:      request.Kode,
+			KodeOpd:   request.KodeOpd,
+			Indikator: request.Indikator,
+			Tahun:     request.Tahun,
+			Target: []programkegiatan.TargetResponse{
+				{Id: target.Id, Target: request.Target, Satuan: request.Satuan},
 			},
-		},
-	}, nil
+		})
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return responses, nil
 }
 
 func (service *MatrixRenstraServiceImpl) UpdateIndikator(ctx context.Context, request programkegiatan.UpdateIndikatorRequest) (programkegiatan.IndikatorResponse, error) {
@@ -478,12 +484,11 @@ func (service *MatrixRenstraServiceImpl) UpdateIndikator(ctx context.Context, re
 
 	// Update indikator
 	indikator := domain.Indikator{
-		Id:           request.Id,
-		Kode:         request.Kode,
-		KodeOpd:      request.KodeOpd,
-		Indikator:    request.Indikator,
-		Tahun:        request.Tahun,
-		PaguAnggaran: request.PaguAnggaran,
+		Id:        request.Id,
+		Kode:      request.Kode,
+		KodeOpd:   request.KodeOpd,
+		Indikator: request.Indikator,
+		Tahun:     request.Tahun,
 	}
 
 	err = service.MatrixRenstraRepository.UpdateIndikator(ctx, tx, indikator)
@@ -510,12 +515,11 @@ func (service *MatrixRenstraServiceImpl) UpdateIndikator(ctx context.Context, re
 	}
 
 	return programkegiatan.IndikatorResponse{
-		Id:           request.Id,
-		Kode:         request.Kode,
-		KodeOpd:      request.KodeOpd,
-		Indikator:    request.Indikator,
-		Tahun:        request.Tahun,
-		PaguAnggaran: request.PaguAnggaran,
+		Id:        request.Id,
+		Kode:      request.Kode,
+		KodeOpd:   request.KodeOpd,
+		Indikator: request.Indikator,
+		Tahun:     request.Tahun,
 		Target: []programkegiatan.TargetResponse{
 			{
 				Id:     target.Id,
@@ -563,13 +567,13 @@ func (service *MatrixRenstraServiceImpl) FindIndikatorById(ctx context.Context, 
 
 	// Transform ke response
 	response := programkegiatan.IndikatorResponse{
-		Id:           indikator.Id,
-		Kode:         indikator.Kode,
-		KodeOpd:      indikator.KodeOpd,
-		Indikator:    indikator.Indikator,
-		Tahun:        indikator.Tahun,
-		PaguAnggaran: indikator.PaguAnggaran,
-		Target:       make([]programkegiatan.TargetResponse, 0),
+		Id:        indikator.Id,
+		Kode:      indikator.Kode,
+		KodeOpd:   indikator.KodeOpd,
+		Indikator: indikator.Indikator,
+		Tahun:     indikator.Tahun,
+		// PaguAnggaran: indikator.PaguAnggaran,
+		Target: make([]programkegiatan.TargetResponse, 0),
 	}
 
 	// Tambahkan target ke response
@@ -587,4 +591,30 @@ func (service *MatrixRenstraServiceImpl) FindIndikatorById(ctx context.Context, 
 	}
 
 	return response, nil
+}
+
+func (service *MatrixRenstraServiceImpl) UpsertAnggaran(ctx context.Context, request programkegiatan.AnggaranRenstraRequest) (programkegiatan.AnggaranRenstraResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.AnggaranRenstraResponse{}, err
+	}
+	defer tx.Rollback()
+
+	err = service.MatrixRenstraRepository.UpsertAnggaran(
+		ctx, tx,
+		request.KodeSubKegiatan,
+		request.KodeOpd,
+		request.Tahun,
+		request.Pagu,
+	)
+	if err != nil {
+		return programkegiatan.AnggaranRenstraResponse{}, err
+	}
+
+	return programkegiatan.AnggaranRenstraResponse{
+		KodeSubKegiatan: request.KodeSubKegiatan,
+		KodeOpd:         request.KodeOpd,
+		Tahun:           request.Tahun,
+		Pagu:            request.Pagu,
+	}, nil
 }

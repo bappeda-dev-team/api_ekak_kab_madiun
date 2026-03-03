@@ -12,4 +12,5 @@ type MatrixRenstraController interface {
 	UpdateIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeleteIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindIndikatorById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpsertAnggaran(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

@@ -7,5 +7,8 @@ import (
 )
 
 type MatrixRenjaRepository interface {
-	GetByKodeOpdAndTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.SubKegiatanQuery, error)
+	GetRenjaRanwal(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.SubKegiatanQuery, error)
+	GetRenjaRankhir(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.SubKegiatanQuery, error)
+	SaveTargetRenja(ctx context.Context, tx *sql.Tx, target domain.Target) error
+	UpdateTargetRenja(ctx context.Context, tx *sql.Tx, target domain.Target) error
 }

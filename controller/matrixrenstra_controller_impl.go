@@ -44,7 +44,7 @@ func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatan(writer http.
 }
 
 func (controller *MatrixRenstraControllerImpl) CreateIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	IndikatorRenstraCreateRequest := programkegiatan.IndikatorRenstraCreateRequest{}
+	IndikatorRenstraCreateRequest := []programkegiatan.IndikatorRenstraCreateRequest{}
 	helper.ReadFromRequestBody(request, &IndikatorRenstraCreateRequest)
 
 	IndikatorRenstraResponse, err := controller.MatrixRenstraService.CreateIndikator(request.Context(), IndikatorRenstraCreateRequest)
@@ -129,4 +129,27 @@ func (controller *MatrixRenstraControllerImpl) FindIndikatorById(writer http.Res
 		Data:   indikatorResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *MatrixRenstraControllerImpl) UpsertAnggaran(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	AnggaranRenstraRequest := programkegiatan.AnggaranRenstraRequest{}
+	helper.ReadFromRequestBody(request, &AnggaranRenstraRequest)
+
+	AnggaranRenstraResponse, err := controller.MatrixRenstraService.UpsertAnggaran(request.Context(), AnggaranRenstraRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success upsert anggaran renstra",
+		Data:   AnggaranRenstraResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+
 }
