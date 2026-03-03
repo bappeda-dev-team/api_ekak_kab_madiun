@@ -407,6 +407,7 @@ func NewRouter(
 	router.GET("/matrix_renstra/indikator/detail/:id", matrixRenstraController.FindIndikatorById)
 	router.POST("/matrix_renstra/indikator/create_indikator", matrixRenstraController.CreateIndikator)
 	router.PUT("/matrix_renstra/indikator/update_indikator/:id", matrixRenstraController.UpdateIndikator)
+	router.POST("/matrix_renstra/upsert_anggaran", matrixRenstraController.UpsertAnggaran)
 	router.DELETE("/matrix_renstra/indikator/delete/:id", matrixRenstraController.DeleteIndikator)
 
 	//cascading opd
@@ -451,7 +452,9 @@ func NewRouter(
 	router.POST("/program_unggulan/findbyidterkait", programUnggulanController.FindByIdTerkait)
 
 	//matrix renja
-	router.GET("/matrix_renja/opd/:kode_opd/:tahun", matrixRenjaController.GetByKodeOpdAndTahun)
+	router.GET("/matrix_renja/opd/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)
+	router.GET("/matrix_renja/rankhir/:kode_opd/:tahun", matrixRenjaController.GetRenjaRankhir)
+	router.POST("/matrix_renja/upsert_target", matrixRenjaController.CreateOrUpdateTarget)
 
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)

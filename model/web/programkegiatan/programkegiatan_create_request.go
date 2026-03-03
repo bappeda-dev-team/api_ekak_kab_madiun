@@ -26,12 +26,31 @@ type TargetCreateRequest struct {
 	Satuan      string `json:"satuan"`
 }
 
+type BatchIndikatorRenstraCreateRequest struct {
+	Indikator []IndikatorRenstraCreateRequest `json:"indikator" validate:"required,min=1"`
+}
+
 type IndikatorRenstraCreateRequest struct {
-	Kode         string `json:"kode"`
-	KodeOpd      string `json:"kode_opd"`
-	Indikator    string `json:"indikator"`
-	Tahun        string `json:"tahun"`
-	PaguAnggaran int64  `json:"pagu_anggaran"`
-	Target       string `json:"target"`
-	Satuan       string `json:"satuan"`
+	Kode      string `json:"kode"`
+	KodeOpd   string `json:"kode_opd"`
+	Indikator string `json:"indikator"`
+	Tahun     string `json:"tahun"`
+	Target    string `json:"target"`
+	Satuan    string `json:"satuan"`
+}
+
+// Fungsi khusus anggaran (upsert)
+type AnggaranRenstraRequest struct {
+	KodeSubKegiatan string `json:"kode_subkegiatan" validate:"required"`
+	KodeOpd         string `json:"kode_opd"         validate:"required"`
+	Tahun           string `json:"tahun"            validate:"required"`
+	Pagu            int64  `json:"pagu_indikatif" validate:"required"`
+}
+
+type TargetRenjaRequest struct {
+	Id          string `json:"id"`
+	IndikatorId string `json:"indikator_id"`
+	Target      string `json:"target"`
+	Satuan      string `json:"satuan"`
+	Jenis       string `json:"jenis"`
 }
