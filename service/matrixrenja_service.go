@@ -6,5 +6,7 @@ import (
 )
 
 type MatrixRenjaService interface {
-	GetByKodeOpdAndTahun(ctx context.Context, kodeOpd string, tahun string) ([]programkegiatan.UrusanDetailResponse, error)
+	GetRenjaRanwal(ctx context.Context, kodeOpd string, tahun string) ([]programkegiatan.UrusanDetailResponse, error)
+	GetRenjaRankhir(ctx context.Context, kodeOpd string, tahun string) ([]programkegiatan.UrusanDetailResponse, error)
+	CreateOrUpdateTarget(ctx context.Context, request programkegiatan.TargetRenjaRequest) (programkegiatan.TargetResponse, error)
 }

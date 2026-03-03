@@ -18,6 +18,7 @@ type IndikatorResponse struct {
 	PaguAnggaran int64            `json:"pagu_anggaran,omitempty"`
 	Tahun        string           `json:"tahun"`
 	Target       []TargetResponse `json:"target"`
+	StatusTarget bool             `json:"status_target_renja,omitempty"`
 }
 
 type TargetResponse struct {

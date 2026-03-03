@@ -46,3 +46,11 @@ type AnggaranRenstraRequest struct {
 	Tahun           string `json:"tahun"            validate:"required"`
 	Pagu            int64  `json:"pagu_indikatif" validate:"required"`
 }
+
+type TargetRenjaRequest struct {
+	Id          string `json:"id"`
+	IndikatorId string `json:"indikator_id"`
+	Target      string `json:"target"`
+	Satuan      string `json:"satuan"`
+	Jenis       string `json:"jenis"`
+}
