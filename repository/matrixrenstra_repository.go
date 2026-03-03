@@ -15,4 +15,5 @@ type MatrixRenstraRepository interface {
 	UpdateTarget(ctx context.Context, tx *sql.Tx, target domain.Target) error
 	DeleteIndikator(ctx context.Context, tx *sql.Tx, indikatorId string) error
 	DeleteTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error
+	UpsertAnggaran(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun string, pagu int64) error
 }
