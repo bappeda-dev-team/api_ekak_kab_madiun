@@ -599,7 +599,6 @@ func (service *MatrixRenstraServiceImpl) UpsertAnggaran(ctx context.Context, req
 		return programkegiatan.AnggaranRenstraResponse{}, err
 	}
 	defer tx.Rollback()
-
 	err = service.MatrixRenstraRepository.UpsertAnggaran(
 		ctx, tx,
 		request.KodeSubKegiatan,
@@ -610,7 +609,10 @@ func (service *MatrixRenstraServiceImpl) UpsertAnggaran(ctx context.Context, req
 	if err != nil {
 		return programkegiatan.AnggaranRenstraResponse{}, err
 	}
-
+	// ← TAMBAHKAN INI sebelum return
+	if err = tx.Commit(); err != nil {
+		return programkegiatan.AnggaranRenstraResponse{}, err
+	}
 	return programkegiatan.AnggaranRenstraResponse{
 		KodeSubKegiatan: request.KodeSubKegiatan,
 		KodeOpd:         request.KodeOpd,
