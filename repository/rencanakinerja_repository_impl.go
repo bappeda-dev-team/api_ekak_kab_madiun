@@ -1415,7 +1415,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.C
         LEFT JOIN tb_target t ON i.id = t.indikator_id
         LEFT JOIN tb_manual_ik m ON i.id = m.indikator_id
         LEFT JOIN tb_operasional_daerah opd ON opd.kode_opd = rk.kode_opd
-        WHERE 1=1`
+        WHERE 1=1 AND rk.status_rencana_kinerja = 'aktif'`
 
 	args := []any{}
 
