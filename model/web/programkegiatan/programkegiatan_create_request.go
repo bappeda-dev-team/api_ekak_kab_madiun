@@ -47,10 +47,30 @@ type AnggaranRenstraRequest struct {
 	Pagu            int64  `json:"pagu_indikatif" validate:"required"`
 }
 
+type AnggaranRenjaRequest struct {
+	KodeSubKegiatan string `json:"kode_subkegiatan" validate:"required"`
+	KodeOpd         string `json:"kode_opd"         validate:"required"`
+	Tahun           string `json:"tahun"            validate:"required"`
+	Pagu            int64  `json:"pagu_indikatif" validate:"required"`
+}
+
 type TargetRenjaRequest struct {
 	Id          string `json:"id"`
 	IndikatorId string `json:"indikator_id"`
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
-	Jenis       string `json:"jenis"`
+}
+
+type BatchIndikatorRenjaRequest struct {
+	Kode      string               `json:"kode" validate:"required"`
+	KodeOpd   string               `json:"kode_opd" validate:"required"`
+	Tahun     string               `json:"tahun" validate:"required"` // ← wajib ada
+	Jenis     string               `json:"jenis" validate:"required"` // "ranwal"/"rankhir"
+	Indikator []IndikatorRenjaItem `json:"indikator" validate:"required,min=1"`
+}
+
+type IndikatorRenjaItem struct {
+	KodeIndikator string             `json:"kode_indikator"`
+	Indikator     string             `json:"indikator" validate:"required"`
+	Target        TargetRenjaRequest `json:"target"`
 }

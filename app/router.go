@@ -464,9 +464,13 @@ func NewRouter(
 	router.POST("/program_unggulan/findbyidterkait", programUnggulanController.FindByIdTerkait)
 
 	//matrix renja
-	router.GET("/matrix_renja/opd/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)
+	router.GET("/matrix_renja/ranwal/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)
 	router.GET("/matrix_renja/rankhir/:kode_opd/:tahun", matrixRenjaController.GetRenjaRankhir)
-	router.POST("/matrix_renja/upsert_target", matrixRenjaController.CreateOrUpdateTarget)
+	router.GET("/matrix_renja/penetapan/:kode_opd/:tahun", matrixRenjaController.GetRenjaPenetapan)
+	router.POST("/matrix_renja/indikator/ranwal/upsert", matrixRenjaController.UpsertBatchIndikatorRenjaRanwal)
+	router.POST("/matrix_renja/indikator/rankhir/upsert", matrixRenjaController.UpsertBatchIndikatorRenjaRankhir)
+	router.POST("/matrix_renja/indikator/penetapan/upsert", matrixRenjaController.UpsertBatchIndikatorRenjaPenetapan)
+	router.POST("/matrix_renja/anggaran_penetapan/upsert", matrixRenjaController.UpsertAnggaran)
 
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)

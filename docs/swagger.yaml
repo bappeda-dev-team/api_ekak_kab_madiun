@@ -1,5 +1,76 @@
 basePath: /
 definitions:
+  programkegiatan.AnggaranRenjaRequest:
+    properties:
+      kode_opd:
+        type: string
+      kode_subkegiatan:
+        type: string
+      pagu_indikatif:
+        type: integer
+      tahun:
+        type: string
+    required:
+    - kode_opd
+    - kode_subkegiatan
+    - pagu_indikatif
+    - tahun
+    type: object
+  programkegiatan.AnggaranRenjaResponse:
+    properties:
+      kode_opd:
+        type: string
+      kode_subkegiatan:
+        type: string
+      pagu_indikatif:
+        type: integer
+      tahun:
+        type: string
+    required:
+    - kode_opd
+    - kode_subkegiatan
+    - pagu_indikatif
+    - tahun
+    type: object
+  programkegiatan.BatchIndikatorRenjaRequest:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorRenjaItem'
+        minItems: 1
+        type: array
+      jenis:
+        description: '"ranwal"/"rankhir"'
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        description: ← wajib ada
+        type: string
+    required:
+    - indikator
+    - jenis
+    - kode
+    - kode_opd
+    - tahun
+    type: object
+  programkegiatan.BatchIndikatorRenjaResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorRenjaUpsertResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+    type: object
   programkegiatan.BidangUrusanResponse:
     properties:
       anggaran:
@@ -20,6 +91,28 @@ definitions:
         items:
           $ref: '#/definitions/programkegiatan.ProgramResponse'
         type: array
+    type: object
+  programkegiatan.IndikatorRenjaItem:
+    properties:
+      indikator:
+        type: string
+      kode_indikator:
+        type: string
+      target:
+        $ref: '#/definitions/programkegiatan.TargetRenjaRequest'
+    required:
+    - indikator
+    type: object
+  programkegiatan.IndikatorRenjaUpsertResponse:
+    properties:
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      target:
+        $ref: '#/definitions/programkegiatan.TargetResponse'
     type: object
   programkegiatan.IndikatorResponse:
     properties:
@@ -117,6 +210,17 @@ definitions:
         type: string
       total_anggaran:
         type: integer
+    type: object
+  programkegiatan.TargetRenjaRequest:
+    properties:
+      id:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      target:
+        type: string
     type: object
   programkegiatan.TargetResponse:
     properties:
@@ -632,17 +736,231 @@ definitions:
       status:
         type: string
     type: object
-host: localhost:8080
 info:
   contact:
-    email: dev@madiunkab.go.id
     name: Tim Pengembang
-  description: API Backend Evaluasi Kinerja dan Anggaran Kabupaten Madiun
+  description: API Backend Kertas Kerja Kabupaten Madiun
   termsOfService: http://swagger.io/terms/
   title: EKAK Kabupaten Madiun API
   version: "1.0"
 paths:
-  /matrix_renja/opd/{kode_opd}/{tahun}:
+  /matrix_renja/anggaran_penetapan/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert anggaran renja.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.AnggaranRenjaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.AnggaranRenjaResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Anggaran Renja
+      tags:
+      - Matrix Renja
+  /matrix_renja/indikator/penetapan/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert batch indikator renja penetapan.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Batch Indikator Renja Penetapan
+      tags:
+      - Matrix Renja
+  /matrix_renja/indikator/rankhir/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert batch indikator renja rankhir.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Batch Indikator Renja Rankhir
+      tags:
+      - Matrix Renja
+  /matrix_renja/indikator/ranwal/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert batch indikator renja rancangan awal.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Batch Indikator Renja Rancangan Awal
+      tags:
+      - Matrix Renja
+  /matrix_renja/penetapan/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data matrix renja rancangan penetapan berdasarkan kode
+        OPD dan tahun. Anggaran diambil dari tb_pagu jenis='penetapan'.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.UrusanDetailResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renja Penetapan
+      tags:
+      - Matrix Renja
+  /matrix_renja/rankhir/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data matrix renja rancangan rankhir berdasarkan kode
+        OPD dan tahun. Anggaran diambil dari tb_pagu jenis='rankhir'.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.UrusanDetailResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renja Rankhir
+      tags:
+      - Matrix Renja
+  /matrix_renja/ranwal/{kode_opd}/{tahun}:
     get:
       consumes:
       - application/json
@@ -684,6 +1002,53 @@ paths:
       summary: Matrix Renja Rancangan Awal
       tags:
       - Matrix Renja
+  /matrix_renstra/opd/{kode_opd}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data matrix renstra berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun Awal
+        example: '"2025"'
+        in: query
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        example: '"2026"'
+        in: query
+        name: tahun_akhir
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.UrusanDetailResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renstra
+      tags:
+      - Matrix Renstra
   /sasaran_opd/create:
     post:
       consumes:
@@ -1550,6 +1915,9 @@ paths:
       summary: Login User
       tags:
       - Auth
+schemes:
+- http
+- https
 securityDefinitions:
   BearerAuth:
     in: header

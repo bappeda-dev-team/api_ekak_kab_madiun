@@ -7,8 +7,10 @@ import (
 )
 
 type MatrixRenjaRepository interface {
-	GetRenjaRanwal(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.SubKegiatanQuery, error)
-	GetRenjaRankhir(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.SubKegiatanQuery, error)
-	SaveTargetRenja(ctx context.Context, tx *sql.Tx, target domain.Target) error
-	UpdateTargetRenja(ctx context.Context, tx *sql.Tx, target domain.Target) error
+	GetRenja(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisIndikator, jenisPagu string) ([]domain.SubKegiatanQuery, error)
+	GetRenjaRankhir(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisIndikator string) ([]domain.SubKegiatanQuery, error)
+	UpsertBatchIndikatorRenja(ctx context.Context, tx *sql.Tx, items []domain.Indikator) error
+	CountKodeIndikatorByPrefix(ctx context.Context, tx *sql.Tx, prefix string) (int, error)
+	FindIndikatorRenjaByKode(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.Indikator, error)
+	UpsertAnggaran(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun string, pagu int64) error
 }

@@ -11,15 +11,376 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
-            "name": "Tim Pengembang",
-            "email": "dev@madiunkab.go.id"
+            "name": "Tim Pengembang"
         },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/matrix_renja/opd/{kode_opd}/{tahun}": {
+        "/matrix_renja/anggaran_penetapan/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert anggaran renja.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Anggaran Renja",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.AnggaranRenjaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.AnggaranRenjaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/indikator/penetapan/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert batch indikator renja penetapan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Batch Indikator Renja Penetapan",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/indikator/rankhir/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert batch indikator renja rankhir.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Batch Indikator Renja Rankhir",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/indikator/ranwal/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert batch indikator renja rancangan awal.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Batch Indikator Renja Rancangan Awal",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/penetapan/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data matrix renja rancangan penetapan berdasarkan kode OPD dan tahun. Anggaran diambil dari tb_pagu jenis='penetapan'.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Matrix Renja Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.UrusanDetailResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/rankhir/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data matrix renja rancangan rankhir berdasarkan kode OPD dan tahun. Anggaran diambil dari tb_pagu jenis='rankhir'.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Matrix Renja Rankhir",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.UrusanDetailResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/ranwal/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
                     {
@@ -52,6 +413,81 @@ const docTemplate = `{
                         "description": "Tahun",
                         "name": "tahun",
                         "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.UrusanDetailResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/opd/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data matrix renstra berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Matrix Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun Awal",
+                        "name": "tahun_awal",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2026\"",
+                        "description": "Tahun Akhir",
+                        "name": "tahun_akhir",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -1509,6 +1945,108 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "programkegiatan.AnggaranRenjaRequest": {
+            "type": "object",
+            "required": [
+                "kode_opd",
+                "kode_subkegiatan",
+                "pagu_indikatif",
+                "tahun"
+            ],
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "pagu_indikatif": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.AnggaranRenjaResponse": {
+            "type": "object",
+            "required": [
+                "kode_opd",
+                "kode_subkegiatan",
+                "pagu_indikatif",
+                "tahun"
+            ],
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "pagu_indikatif": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.BatchIndikatorRenjaRequest": {
+            "type": "object",
+            "required": [
+                "indikator",
+                "jenis",
+                "kode",
+                "kode_opd",
+                "tahun"
+            ],
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorRenjaItem"
+                    }
+                },
+                "jenis": {
+                    "description": "\"ranwal\"/\"rankhir\"",
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "description": "← wajib ada",
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.BatchIndikatorRenjaResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorRenjaUpsertResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
         "programkegiatan.BidangUrusanResponse": {
             "type": "object",
             "properties": {
@@ -1538,6 +2076,40 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/programkegiatan.ProgramResponse"
                     }
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenjaItem": {
+            "type": "object",
+            "required": [
+                "indikator"
+            ],
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/programkegiatan.TargetRenjaRequest"
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenjaUpsertResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/programkegiatan.TargetResponse"
                 }
             }
         },
@@ -1686,6 +2258,23 @@ const docTemplate = `{
                 },
                 "total_anggaran": {
                     "type": "integer"
+                }
+            }
+        },
+        "programkegiatan.TargetRenjaRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
                 }
             }
         },
@@ -2483,11 +3072,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "",
 	BasePath:         "/",
-	Schemes:          []string{},
+	Schemes:          []string{"http", "https"},
 	Title:            "EKAK Kabupaten Madiun API",
-	Description:      "API Backend Evaluasi Kinerja dan Anggaran Kabupaten Madiun",
+	Description:      "API Backend Kertas Kerja Kabupaten Madiun",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
