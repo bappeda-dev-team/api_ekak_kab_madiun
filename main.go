@@ -1,10 +1,9 @@
 // @title           EKAK Kabupaten Madiun API
 // @version         1.0
-// @description     API Backend Evaluasi Kinerja dan Anggaran Kabupaten Madiun
+// @description     API Backend Kertas Kerja Kabupaten Madiun
 // @termsOfService  http://swagger.io/terms/
 // @contact.name    Tim Pengembang
-// @contact.email   dev@madiunkab.go.id
-// @host      localhost:8080
+// @schemes http https
 // @BasePath  /
 // @securityDefinitions.apikey BearerAuth
 // @in header
