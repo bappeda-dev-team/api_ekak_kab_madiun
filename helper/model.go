@@ -550,7 +550,7 @@ func ToTujuanOpdResponse(tujuanOpd domain.TujuanOpd) tujuanopd.TujuanOpdResponse
 		for _, target := range indikator.Target {
 			targetResponse := tujuanopd.TargetResponse{
 				Id:              target.Id,
-				IndikatorId:     indikator.Id,
+				IndikatorId:     indikator.KodeIndikator, // IndikatorId:     indikator.Id,
 				TargetIndikator: target.Target,
 				SatuanIndikator: target.Satuan,
 				Tahun:           target.Tahun,
@@ -561,6 +561,7 @@ func ToTujuanOpdResponse(tujuanOpd domain.TujuanOpd) tujuanopd.TujuanOpdResponse
 		// Konversi indikator
 		indikatorResponse := tujuanopd.IndikatorResponse{
 			Id:               indikator.Id,
+			KodeIndikator:    indikator.KodeIndikator,
 			NamaIndikator:    indikator.Indikator,
 			RumusPerhitungan: indikator.RumusPerhitungan.String,
 			SumberData:       indikator.SumberData.String,

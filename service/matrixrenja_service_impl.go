@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -33,51 +34,64 @@ func NewMatrixRenjaServiceImpl(
 	}
 }
 
-func (service *MatrixRenjaServiceImpl) GetRenjaRanwal(ctx context.Context, kodeOpd string, tahun string) ([]programkegiatan.UrusanDetailResponse, error) {
+func (service *MatrixRenjaServiceImpl) GetRenja(ctx context.Context, kodeOpd, tahun, jenisIndikator, jenisPagu string) ([]programkegiatan.UrusanDetailResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
-
-	data, err := service.MatrixRenjaRepository.GetRenjaRanwal(ctx, tx, kodeOpd, tahun)
+	// Service yang menentukan jenis indikator dan jenis pagu
+	data, err := service.MatrixRenjaRepository.GetRenja(ctx, tx, kodeOpd, tahun, jenisIndikator, jenisPagu)
 	if err != nil {
 		return nil, err
 	}
-
-	result := service.transformToResponseRanwal(data, kodeOpd, tahun)
-
-	err = tx.Commit()
+	result := service.transformToResponse(data, kodeOpd, tahun)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+func (service *MatrixRenjaServiceImpl) GetRenjaRankhir(
+	ctx context.Context, kodeOpd, tahun string,
+) ([]programkegiatan.UrusanDetailResponse, error) {
+	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
-
+	defer tx.Rollback()
+	// Rankhir: sumber subkegiatan dari cascading OPD, pagu dari rincian_belanja
+	data, err := service.MatrixRenjaRepository.GetRenjaRankhir(ctx, tx, kodeOpd, tahun, "rankhir")
+	if err != nil {
+		return nil, err
+	}
+	result := service.transformToResponse(data, kodeOpd, tahun)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
-func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
+// transformToResponse: unified untuk ranwal & rankhir.
+// Ranwal: pagu di PaguSubKegiatan | Rankhir: pagu di TotalAnggaranSubKegiatan
+// Cukup penjumlahan keduanya karena hanya satu yang terisi per item.
+func (service *MatrixRenjaServiceImpl) transformToResponse(
 	data []domain.SubKegiatanQuery,
 	kodeOpd, tahun string,
 ) []programkegiatan.UrusanDetailResponse {
-
 	if len(data) == 0 {
 		return []programkegiatan.UrusanDetailResponse{}
 	}
-
-	// Helper: buat Anggaran slice (single tahun untuk ranwal)
 	mkAnggaran := func(pagu int64) []programkegiatan.PaguAnggaranTotalResponse {
 		return []programkegiatan.PaguAnggaranTotalResponse{
 			{Tahun: tahun, PaguAnggaran: pagu},
 		}
 	}
-
-	// ── Indikator collector ──
+	// ── Indikator collector dengan dedup target ──
 	type indEntry struct {
 		resp      programkegiatan.IndikatorResponse
 		targetSet map[string]struct{}
 	}
 	indikatorByKode := make(map[string]map[string]*indEntry)
-
 	collectIndikator := func(item domain.SubKegiatanQuery) {
 		if item.IndikatorId == "" {
 			return
@@ -90,12 +104,11 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
 		if !exists {
 			ent = &indEntry{
 				resp: programkegiatan.IndikatorResponse{
-					Id:           item.IndikatorId,
+					Id:           item.IndikatorId, // = kode_indikator
 					Kode:         kode,
 					KodeOpd:      kodeOpd,
 					Indikator:    item.Indikator,
-					Tahun:        tahun,
-					PaguAnggaran: 0, // pagu di luar indikator
+					Tahun:        item.IndikatorTahun, // dari im.tahun
 					StatusTarget: false,
 					Target:       make([]programkegiatan.TargetResponse, 0),
 				},
@@ -115,46 +128,41 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
 			}
 		}
 	}
-
 	getIndikator := func(kode string) []programkegiatan.IndikatorResponse {
 		m, ok := indikatorByKode[kode]
 		if !ok {
 			return []programkegiatan.IndikatorResponse{}
 		}
-		slice := make([]programkegiatan.IndikatorResponse, 0, len(m))
+		out := make([]programkegiatan.IndikatorResponse, 0, len(m))
 		for _, e := range m {
-			slice = append(slice, e.resp)
+			out = append(out, e.resp)
 		}
-		return slice
+		return out
 	}
-
 	// ── Metadata ──
 	type subkegMeta struct{ nama, kodeKeg, pegawaiId, namaPegawai string }
 	type kegMeta struct{ nama, kodePrg string }
 	type prgMeta struct{ nama, kodeBidang string }
 	type bidangMeta struct{ nama, kodeUrusan string }
-
 	subkegData := make(map[string]subkegMeta)
 	kegData := make(map[string]kegMeta)
 	prgData := make(map[string]prgMeta)
 	bidangData := make(map[string]bidangMeta)
 	urusanData := make(map[string]string)
-
-	paguSubkeg := make(map[string]int64) // sumber: tb_pagu jenis='ranwal'
-
+	// Pagu efektif: ranwal → PaguSubKegiatan, rankhir → TotalAnggaranSubKegiatan
+	// Hanya satu yang terisi, keduanya dijumlahkan
+	paguSubkeg := make(map[string]int64)
 	seenSubkeg := make(map[string]struct{})
 	seenKeg := make(map[string]struct{})
 	seenPrg := make(map[string]struct{})
 	seenBidang := make(map[string]struct{})
 	seenUrusan := make(map[string]struct{})
-
 	subkegByKeg := make(map[string][]string)
 	kegByPrg := make(map[string][]string)
 	prgByBidang := make(map[string][]string)
 	bidangByUrusan := make(map[string][]string)
 	var urusanOrder []string
-
-	// ── PASS 1: satu iterasi ──
+	// ── PASS 1: single-pass collect ──
 	for _, item := range data {
 		collectIndikator(item)
 		if item.KodeSubKegiatan == "" {
@@ -168,7 +176,8 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
 				pegawaiId:   item.PegawaiId,
 				namaPegawai: item.NamaPegawai,
 			}
-			paguSubkeg[item.KodeSubKegiatan] = item.PaguSubKegiatan // ← dari tb_pagu
+			// Pagu efektif: ambil yang ada nilainya
+			paguSubkeg[item.KodeSubKegiatan] = item.PaguSubKegiatan + item.TotalAnggaranSubKegiatan
 			subkegByKeg[item.KodeKegiatan] = append(subkegByKeg[item.KodeKegiatan], item.KodeSubKegiatan)
 		}
 		if item.KodeKegiatan != "" {
@@ -200,31 +209,28 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
 			}
 		}
 	}
-
-	// ── Agregasi pagu bottom-up: subkeg → keg → prg → bidang → urusan ──
-	// O(N) total karena setiap node hanya diproses sekali
+	// ── Agregasi pagu bottom-up ──
 	paguKeg := make(map[string]int64)
 	paguPrg := make(map[string]int64)
 	paguBidang := make(map[string]int64)
 	paguUrusan := make(map[string]int64)
-
-	for kodeKeg, subkegList := range subkegByKeg {
-		for _, ks := range subkegList {
+	for kodeKeg, list := range subkegByKeg {
+		for _, ks := range list {
 			paguKeg[kodeKeg] += paguSubkeg[ks]
 		}
 	}
-	for kodePrg, kegList := range kegByPrg {
-		for _, kk := range kegList {
+	for kodePrg, list := range kegByPrg {
+		for _, kk := range list {
 			paguPrg[kodePrg] += paguKeg[kk]
 		}
 	}
-	for kodeBidang, prgList := range prgByBidang {
-		for _, kp := range prgList {
+	for kodeBidang, list := range prgByBidang {
+		for _, kp := range list {
 			paguBidang[kodeBidang] += paguPrg[kp]
 		}
 	}
-	for kodeUrusan, bidangList := range bidangByUrusan {
-		for _, kb := range bidangList {
+	for kodeUrusan, list := range bidangByUrusan {
+		for _, kb := range list {
 			paguUrusan[kodeUrusan] += paguBidang[kb]
 		}
 	}
@@ -232,7 +238,6 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
 	for _, p := range paguUrusan {
 		paguTotal += p
 	}
-
 	// ── PASS 2: bangun hierarki ──
 	urusanDetail := programkegiatan.UrusanDetailResponse{
 		KodeOpd: kodeOpd,
@@ -242,7 +247,6 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
 		},
 		Urusan: make([]programkegiatan.UrusanResponse, 0),
 	}
-
 	for _, kodeUrusan := range urusanOrder {
 		urusanResp := programkegiatan.UrusanResponse{
 			Kode:         kodeUrusan,
@@ -303,29 +307,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRanwal(
 		}
 		urusanDetail.Urusan = append(urusanDetail.Urusan, urusanResp)
 	}
-
 	return []programkegiatan.UrusanDetailResponse{urusanDetail}
-}
-
-func (service *MatrixRenjaServiceImpl) GetRenjaRankhir(ctx context.Context, kodeOpd string, tahun string) ([]programkegiatan.UrusanDetailResponse, error) {
-	tx, err := service.DB.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	data, err := service.MatrixRenjaRepository.GetRenjaRankhir(ctx, tx, kodeOpd, tahun)
-	if err != nil {
-		return nil, err
-	}
-
-	result := service.transformToResponseRankhir(data, kodeOpd, tahun)
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 // transformToResponseAkhir mengubah data flat menjadi hierarki terstruktur.
@@ -612,52 +594,132 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRankhir(
 	return []programkegiatan.UrusanDetailResponse{urusanDetail}
 }
 
-func (service *MatrixRenjaServiceImpl) CreateOrUpdateTarget(ctx context.Context, request programkegiatan.TargetRenjaRequest) (programkegiatan.TargetResponse, error) {
+func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Context, request programkegiatan.BatchIndikatorRenjaRequest) (programkegiatan.BatchIndikatorRenjaResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return programkegiatan.TargetResponse{}, err
+		return programkegiatan.BatchIndikatorRenjaResponse{}, err
 	}
 	defer tx.Rollback()
-
-	var targetId string
-
-	if request.Id == "" {
-		// CREATE: generate ID baru
-		randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
-		targetId = fmt.Sprintf("TRG-%s-%s", strings.ToUpper(request.Jenis), randomDigits)
-
-		target := domain.Target{
-			Id:          targetId,
-			IndikatorId: request.IndikatorId,
-			Target:      request.Target,
-			Satuan:      request.Satuan,
-			Jenis:       request.Jenis,
-		}
-		err = service.MatrixRenjaRepository.SaveTargetRenja(ctx, tx, target)
-	} else {
-		// UPDATE: gunakan ID yang dikirim FE
-		targetId = request.Id
-		target := domain.Target{
-			Id:          request.Id,
-			IndikatorId: request.IndikatorId,
-			Target:      request.Target,
-			Satuan:      request.Satuan,
-			Jenis:       request.Jenis,
-		}
-		err = service.MatrixRenjaRepository.UpdateTargetRenja(ctx, tx, target)
-	}
-
+	// Prefix pakai request.Tahun (tahun target), bukan tanggal input
+	// Format: {kode}-{kodeOpd}-{tahun}-
+	// Contoh: 5.01.03.2.02.0002-5.01.5.05.0.00.01.0000-2025-
+	prefixBase := fmt.Sprintf("%s-%s-%s-", request.Kode, request.KodeOpd, request.Tahun)
+	// Hitung sekali di awal untuk sequence NNN pada hari ini di tahun ini
+	existingCount, err := service.MatrixRenjaRepository.CountKodeIndikatorByPrefix(ctx, tx, prefixBase)
 	if err != nil {
-		return programkegiatan.TargetResponse{}, err
+		return programkegiatan.BatchIndikatorRenjaResponse{},
+			fmt.Errorf("gagal menghitung urutan indikator: %w", err)
+	}
+	// nextUrutan di-increment per item CREATE dalam batch yang sama (dalam 1 transaksi)
+	nextUrutan := existingCount + 1
+	var (
+		domainItems []domain.Indikator
+		respItems   []programkegiatan.IndikatorRenjaUpsertResponse
+	)
+	for _, item := range request.Indikator {
+		var kodeIndikator string
+		var targetId string
+		if item.KodeIndikator == "" {
+			// ── CREATE: generate kode_indikator baru ─────────────────────
+			// Contoh hasil: 5.01.03.2.02.0002-5.01.5.05...-2025-001
+			kodeIndikator = fmt.Sprintf("%s%03d", prefixBase, nextUrutan)
+			nextUrutan++ // increment lokal agar item CREATE berikutnya tidak tabrakan
+			targetId = fmt.Sprintf("TRG-%s-%05d",
+				strings.ToUpper(request.Jenis),
+				uuid.New().ID()%100000)
+		} else {
+			// ── UPDATE: kode_indikator dikirim dari FE ────────────────────
+			kodeIndikator = item.KodeIndikator
+			// Tentukan targetId:
+			// Prioritas 1 → ID dikirim FE (update target yang sudah ada)
+			// Prioritas 2 → Ambil ID target dari DB
+			// Prioritas 3 → Generate baru jika belum ada target
+			if item.Target.Id != "" {
+				targetId = item.Target.Id
+			} else {
+				existing, err := service.MatrixRenjaRepository.FindIndikatorRenjaByKode(ctx, tx, kodeIndikator)
+				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+					return programkegiatan.BatchIndikatorRenjaResponse{}, err
+				}
+				if len(existing.Target) > 0 {
+					targetId = existing.Target[0].Id
+				} else {
+					targetId = fmt.Sprintf("TRG-%s-%05d",
+						strings.ToUpper(request.Jenis),
+						uuid.New().ID()%100000)
+				}
+			}
+		}
+		// Tahun target selalu dari request.Tahun (renja per-tahun)
+		domainItems = append(domainItems, domain.Indikator{
+			KodeIndikator: kodeIndikator,
+			Kode:          request.Kode,
+			KodeOpd:       request.KodeOpd,
+			Indikator:     item.Indikator,
+			Tahun:         request.Tahun,
+			Jenis:         request.Jenis,
+			Target: []domain.Target{{
+				Id:          targetId,
+				IndikatorId: kodeIndikator,
+				Tahun:       request.Tahun, // ← dari batch level, bukan item level
+				Target:      item.Target.Target,
+				Satuan:      item.Target.Satuan,
+				Jenis:       request.Jenis,
+			}},
+		})
+		respItems = append(respItems, programkegiatan.IndikatorRenjaUpsertResponse{
+			KodeIndikator: kodeIndikator,
+			Indikator:     item.Indikator,
+			Jenis:         request.Jenis,
+			Target: programkegiatan.TargetResponse{
+				Id:          targetId,
+				IndikatorId: kodeIndikator,
+				Tahun:       request.Tahun,
+				Target:      item.Target.Target,
+				Satuan:      item.Target.Satuan,
+			},
+		})
+	}
+	// Semua item dieksekusi dalam 1 transaksi (atomic)
+	if err := service.MatrixRenjaRepository.UpsertBatchIndikatorRenja(ctx, tx, domainItems); err != nil {
+		return programkegiatan.BatchIndikatorRenjaResponse{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return programkegiatan.BatchIndikatorRenjaResponse{}, err
+	}
+	return programkegiatan.BatchIndikatorRenjaResponse{
+		Kode:      request.Kode,
+		KodeOpd:   request.KodeOpd,
+		Tahun:     request.Tahun,
+		Jenis:     request.Jenis,
+		Indikator: respItems,
+	}, nil
+}
+
+func (service *MatrixRenjaServiceImpl) UpsertAnggaran(ctx context.Context, request programkegiatan.AnggaranRenjaRequest) (programkegiatan.AnggaranRenjaResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.AnggaranRenjaResponse{}, err
+	}
+	defer tx.Rollback()
+	err = service.MatrixRenjaRepository.UpsertAnggaran(
+		ctx, tx,
+		request.KodeSubKegiatan,
+		request.KodeOpd,
+		request.Tahun,
+		request.Pagu,
+	)
+	if err != nil {
+		return programkegiatan.AnggaranRenjaResponse{}, err
 	}
 
 	if err = tx.Commit(); err != nil {
-		return programkegiatan.TargetResponse{}, err
+		return programkegiatan.AnggaranRenjaResponse{}, err
 	}
-
-	return programkegiatan.TargetResponse{
-		Id:     targetId,
-		Target: request.Target,
-		Satuan: request.Satuan,
+	return programkegiatan.AnggaranRenjaResponse{
+		KodeSubKegiatan: request.KodeSubKegiatan,
+		KodeOpd:         request.KodeOpd,
+		Tahun:           request.Tahun,
+		Pagu:            request.Pagu,
 	}, nil
 }

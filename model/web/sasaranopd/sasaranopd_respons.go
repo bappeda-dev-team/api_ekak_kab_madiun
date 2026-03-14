@@ -31,11 +31,14 @@ type PelaksanaOpdResponse struct {
 }
 
 type IndikatorResponse struct {
-	Id               string           `json:"id"`
-	Indikator        string           `json:"indikator"`
-	RumusPerhitungan string           `json:"rumus_perhitungan"`
-	SumberData       string           `json:"sumber_data"`
-	Target           []TargetResponse `json:"target"`
+	Id                  string           `json:"id"`
+	KodeIndikator       string           `json:"kode_indikator"`
+	Jenis               string           `json:"jenis"`
+	DefinisiOperasional string           `json:"definisi_operasional"`
+	Indikator           string           `json:"indikator"`
+	RumusPerhitungan    string           `json:"rumus_perhitungan"`
+	SumberData          string           `json:"sumber_data"`
+	Target              []TargetResponse `json:"target"`
 }
 
 type ManualIKResponse struct {
@@ -63,11 +66,14 @@ type SasaranOpdCreateResponse struct {
 }
 
 type IndikatorDetail struct {
-	Id               string         `json:"id"`
-	Indikator        string         `json:"indikator"`
-	RumusPerhitungan string         `json:"rumus_perhitungan"`
-	SumberData       string         `json:"sumber_data"`
-	Target           []TargetDetail `json:"target"`
+	Id                  string         `json:"id"`
+	KodeIndikator       string         `json:"kode_indikator"`
+	Jenis               string         `json:"jenis"`
+	DefinisiOperasional string         `json:"definisi_operasional"`
+	Indikator           string         `json:"indikator"`
+	RumusPerhitungan    string         `json:"rumus_perhitungan"`
+	SumberData          string         `json:"sumber_data"`
+	Target              []TargetDetail `json:"target"`
 }
 
 type TargetDetail struct {

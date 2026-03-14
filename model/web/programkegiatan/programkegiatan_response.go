@@ -97,3 +97,24 @@ type AnggaranRenstraResponse struct {
 	Tahun           string `json:"tahun"            validate:"required"`
 	Pagu            int64  `json:"pagu_indikatif" validate:"required"`
 }
+
+type AnggaranRenjaResponse struct {
+	KodeSubKegiatan string `json:"kode_subkegiatan" validate:"required"`
+	KodeOpd         string `json:"kode_opd"         validate:"required"`
+	Tahun           string `json:"tahun"            validate:"required"`
+	Pagu            int64  `json:"pagu_indikatif" validate:"required"`
+}
+
+type BatchIndikatorRenjaResponse struct {
+	Kode      string                         `json:"kode"`
+	KodeOpd   string                         `json:"kode_opd"`
+	Tahun     string                         `json:"tahun"`
+	Jenis     string                         `json:"jenis"`
+	Indikator []IndikatorRenjaUpsertResponse `json:"indikator"`
+}
+type IndikatorRenjaUpsertResponse struct {
+	KodeIndikator string         `json:"kode_indikator"`
+	Indikator     string         `json:"indikator"`
+	Jenis         string         `json:"jenis"`
+	Target        TargetResponse `json:"target"`
+}

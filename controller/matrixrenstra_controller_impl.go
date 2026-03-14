@@ -18,6 +18,18 @@ func NewMatrixRenstraControllerImpl(matrixRenstraService service.MatrixRenstraSe
 	return &MatrixRenstraControllerImpl{MatrixRenstraService: matrixRenstraService}
 }
 
+// @Summary      Matrix Renstra
+// @Description  Mendapatkan data matrix renstra berdasarkan kode OPD dan tahun.
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun_awal  query     string  true  "Tahun Awal"      example("2025")
+// @Param        tahun_akhir  query     string  true  "Tahun Akhir"      example("2026")
+// @Success      200  {object}  web.WebResponse{data=[]programkegiatan.UrusanDetailResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renstra/opd/{kode_opd} [get]
 func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahunAwal := request.URL.Query().Get("tahun_awal")
