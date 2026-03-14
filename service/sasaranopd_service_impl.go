@@ -270,24 +270,26 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 
 	// Proses indikator
 	for _, indReq := range request.Indikator {
-		indikatorId := fmt.Sprintf("IND-SAS-%d", uuid.New().ID()%100000)
+		kodeIndikator := fmt.Sprintf("IND-SAR-%s", uuid.New().String()[:5])
 
 		indikator := domain.Indikator{
-			Id:               indikatorId,
-			Indikator:        indReq.Indikator,
-			RumusPerhitungan: sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
-			SumberData:       sql.NullString{String: indReq.SumberData, Valid: true},
-			Target:           make([]domain.Target, 0),
+			KodeIndikator:       kodeIndikator,
+			Indikator:           indReq.Indikator,
+			Jenis:               "renstra",
+			DefinisiOperasional: sql.NullString{String: indReq.DefinisiOperasional, Valid: true},
+			RumusPerhitungan:    sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
+			SumberData:          sql.NullString{String: indReq.SumberData, Valid: true},
+			Target:              make([]domain.Target, 0),
 		}
 
 		// Proses target
 		for _, targetReq := range indReq.Target {
 			if targetReq.Target != "" {
-				targetId := fmt.Sprintf("TRG-SAS-%d-%s", uuid.New().ID()%100000, targetReq.Tahun)
+				targetId := fmt.Sprintf("TRG-SAR-%d-%s", uuid.New().ID()%100000, targetReq.Tahun)
 
 				target := domain.Target{
 					Id:          targetId,
-					IndikatorId: indikator.Id,
+					IndikatorId: kodeIndikator,
 					Tahun:       targetReq.Tahun,
 					Target:      targetReq.Target,
 					Satuan:      targetReq.Satuan,
@@ -323,11 +325,13 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 	// Convert indikator untuk response
 	for _, indikator := range sasaranOpd.Indikator {
 		indResponse := sasaranopd.IndikatorDetail{
-			Id:               indikator.Id,
-			Indikator:        indikator.Indikator,
-			RumusPerhitungan: indikator.RumusPerhitungan.String,
-			SumberData:       indikator.SumberData.String,
-			Target:           make([]sasaranopd.TargetDetail, 0),
+			Id:                  indikator.Id,
+			Indikator:           indikator.Indikator,
+			Jenis:               "renstra",
+			DefinisiOperasional: indikator.DefinisiOperasional.String,
+			RumusPerhitungan:    indikator.RumusPerhitungan.String,
+			SumberData:          indikator.SumberData.String,
+			Target:              make([]sasaranopd.TargetDetail, 0),
 		}
 
 		// Convert target untuk response
@@ -347,19 +351,15 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 }
 
 func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasaranopd.SasaranOpdUpdateRequest) (*sasaranopd.SasaranOpdCreateResponse, error) {
-	// Validasi awal tetap sama
-	err := service.validate.Struct(request)
-	if err != nil {
+	if err := service.validate.Struct(request); err != nil {
 		return nil, err
 	}
-
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
-
-	// Validasi periode tetap sama
+	// Validasi tahun
 	tahunAwalInt, err := strconv.Atoi(request.TahunAwal)
 	if err != nil {
 		return nil, errors.New("format tahun awal tidak valid")
@@ -371,53 +371,52 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 	if tahunAkhirInt < tahunAwalInt {
 		return nil, errors.New("tahun akhir tidak boleh lebih kecil dari tahun awal")
 	}
-
-	// Cek apakah data sasaran OPD ada
+	// Validasi sasaran OPD ada
 	existingSasaran, err := service.sasaranOpdRepository.FindByIdSasaran(ctx, tx, request.IdSasaranOpd)
 	if err != nil {
 		return nil, errors.New("sasaran opd tidak ditemukan")
 	}
-
-	// Persiapkan data indikator
+	// Validasi tujuan OPD ada
+	tujuanOpd, err := service.tujuanOpdRepository.FindById(ctx, tx, request.IdTujuanOpd)
+	if err != nil {
+		return nil, errors.New("tujuan opd tidak ditemukan")
+	}
+	// Bangun daftar indikator domain + response
 	var indikatorList []domain.Indikator
 	var indikatorResponses []sasaranopd.IndikatorDetail
-
 	for _, indikatorReq := range request.Indikator {
-		var indikatorId string
-
-		// Cek apakah indikator sudah ada
-		if indikatorReq.Id != "" {
-			// Gunakan ID yang sudah ada
-			indikatorId = indikatorReq.Id
-		} else {
-			// Generate ID baru untuk indikator baru
-			indikatorId = fmt.Sprintf("IND-SAS-%s", uuid.New().String()[:4])
+		// Tentukan kode_indikator: prioritas KodeIndikator → Id → generate baru
+		var kodeIndikator string
+		switch {
+		case indikatorReq.KodeIndikator != "":
+			kodeIndikator = indikatorReq.KodeIndikator
+		case indikatorReq.Id != "":
+			kodeIndikator = indikatorReq.Id
+		default:
+			kodeIndikator = fmt.Sprintf("IND-SAS-%s", uuid.New().String()[:5])
 		}
-
+		// Validasi: setiap indikator wajib punya minimal 1 target
+		if len(indikatorReq.Target) == 0 {
+			return nil, fmt.Errorf("indikator '%s' harus memiliki minimal 1 target", indikatorReq.Indikator)
+		}
 		var targetList []domain.Target
 		var targetResponses []sasaranopd.TargetDetail
-
 		for _, targetReq := range indikatorReq.Target {
+			// Tentukan ID target
 			var targetId string
-
-			// Cek apakah target sudah ada
 			if targetReq.Id != "" {
-				// Gunakan ID yang sudah ada
 				targetId = targetReq.Id
 			} else {
-				// Generate ID baru untuk target baru
-				targetId = fmt.Sprintf("TRG-SAS-%d-%s-%s", request.IdSasaranOpd, indikatorId, targetReq.Tahun)
+				targetId = fmt.Sprintf("TRG-SAS-%d-%s-%s",
+					request.IdSasaranOpd, kodeIndikator, targetReq.Tahun)
 			}
-
-			target := domain.Target{
+			targetList = append(targetList, domain.Target{
 				Id:          targetId,
-				IndikatorId: indikatorId,
+				IndikatorId: kodeIndikator, // referensi ke kode_indikator
 				Tahun:       targetReq.Tahun,
 				Target:      targetReq.Target,
 				Satuan:      targetReq.Satuan,
-			}
-			targetList = append(targetList, target)
-
+			})
 			targetResponses = append(targetResponses, sasaranopd.TargetDetail{
 				Id:     targetId,
 				Tahun:  targetReq.Tahun,
@@ -425,11 +424,16 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 				Satuan: targetReq.Satuan,
 			})
 		}
-
-		indikator := domain.Indikator{
-			Id:           indikatorId,
-			SasaranOpdId: request.IdSasaranOpd,
-			Indikator:    indikatorReq.Indikator,
+		indikatorList = append(indikatorList, domain.Indikator{
+			Id:            kodeIndikator,
+			KodeIndikator: kodeIndikator,
+			SasaranOpdId:  request.IdSasaranOpd,
+			Indikator:     indikatorReq.Indikator,
+			Jenis:         "renstra", // ← hardcode
+			DefinisiOperasional: sql.NullString{
+				String: indikatorReq.DefinisiOperasional,
+				Valid:  true,
+			},
 			RumusPerhitungan: sql.NullString{
 				String: indikatorReq.RumusPerhitungan,
 				Valid:  true,
@@ -439,24 +443,18 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 				Valid:  true,
 			},
 			Target: targetList,
-		}
-		indikatorList = append(indikatorList, indikator)
-
+		})
 		indikatorResponses = append(indikatorResponses, sasaranopd.IndikatorDetail{
-			Id:               indikatorId,
-			Indikator:        indikatorReq.Indikator,
-			RumusPerhitungan: indikatorReq.RumusPerhitungan,
-			SumberData:       indikatorReq.SumberData,
-			Target:           targetResponses,
+			Id:                  kodeIndikator,
+			KodeIndikator:       kodeIndikator,
+			Jenis:               "renstra",
+			DefinisiOperasional: indikatorReq.DefinisiOperasional,
+			Indikator:           indikatorReq.Indikator,
+			RumusPerhitungan:    indikatorReq.RumusPerhitungan,
+			SumberData:          indikatorReq.SumberData,
+			Target:              targetResponses,
 		})
 	}
-
-	TujuanOpd, err := service.tujuanOpdRepository.FindById(ctx, tx, request.IdTujuanOpd)
-	if err != nil {
-		return nil, errors.New("tujuan opd tidak ditemukan")
-	}
-
-	// Persiapkan data update
 	sasaranOpdUpdate := domain.SasaranOpdDetail{
 		Id:             request.IdSasaranOpd,
 		IdPohon:        existingSasaran.IdPohon,
@@ -467,25 +465,19 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 		JenisPeriode:   request.JenisPeriode,
 		Indikator:      indikatorList,
 	}
-
-	// Lakukan update
 	updatedSasaranOpd, err := service.sasaranOpdRepository.Update(ctx, tx, sasaranOpdUpdate)
 	if err != nil {
 		return nil, err
 	}
-
-	// Buat response
-	response := &sasaranopd.SasaranOpdCreateResponse{
+	return &sasaranopd.SasaranOpdCreateResponse{
 		IdPohon:        updatedSasaranOpd.IdPohon,
 		NamaSasaranOpd: updatedSasaranOpd.NamaSasaranOpd,
-		NamaTujuanOpd:  TujuanOpd.Tujuan,
+		NamaTujuanOpd:  tujuanOpd.Tujuan,
 		TahunAwal:      updatedSasaranOpd.TahunAwal,
 		TahunAkhir:     updatedSasaranOpd.TahunAkhir,
 		JenisPeriode:   updatedSasaranOpd.JenisPeriode,
 		Indikator:      indikatorResponses,
-	}
-
-	return response, nil
+	}, nil
 }
 
 func (service *SasaranOpdServiceImpl) Delete(ctx context.Context, id string) error {
@@ -794,4 +786,264 @@ func (service *SasaranOpdServiceImpl) FindByTahun(ctx context.Context, kodeOpd s
 	}
 
 	return responses, nil
+}
+
+func (s *SasaranOpdServiceImpl) FindSasaranRenstra(
+	ctx context.Context, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode string,
+) ([]sasaranopd.SasaranOpdResponse, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	sasaranOpds, err := s.sasaranOpdRepository.FindSasaranByPeriod(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+}
+func (s *SasaranOpdServiceImpl) FindSasaranRanwal(
+	ctx context.Context, kodeOpd, tahun, jenisPeriode string,
+) ([]sasaranopd.SasaranOpdResponse, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	sasaranOpds, err := s.sasaranOpdRepository.FindSasaranByTahun(ctx, tx, kodeOpd, tahun, jenisPeriode, "ranwal")
+	if err != nil {
+		return nil, err
+	}
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+}
+func (s *SasaranOpdServiceImpl) FindSasaranRankhir(
+	ctx context.Context, kodeOpd, tahun, jenisPeriode string,
+) ([]sasaranopd.SasaranOpdResponse, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	sasaranOpds, err := s.sasaranOpdRepository.FindSasaranByTahun(ctx, tx, kodeOpd, tahun, jenisPeriode, "rankhir")
+	if err != nil {
+		return nil, err
+	}
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+}
+
+// Helper bersama untuk build response (menghindari duplikasi)
+func (s *SasaranOpdServiceImpl) buildSasaranResponse(
+	ctx context.Context, tx *sql.Tx,
+	kodeOpd string, sasaranOpds []domain.SasaranOpd,
+) ([]sasaranopd.SasaranOpdResponse, error) {
+	if len(sasaranOpds) == 0 {
+		return []sasaranopd.SasaranOpdResponse{}, nil
+	}
+	opd, _ := s.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	// ── Batch fetch tujuan_opd (hindari N+1) ──────────────────
+	tujuanCache := make(map[int]domain.TujuanOpd)
+	for _, so := range sasaranOpds {
+		for _, sas := range so.SasaranOpd {
+			if sas.IdTujuanOpd == 0 {
+				continue
+			}
+			if _, exists := tujuanCache[sas.IdTujuanOpd]; !exists {
+				tujuan, err := s.tujuanOpdRepository.FindById(ctx, tx, sas.IdTujuanOpd)
+				if err == nil {
+					tujuanCache[sas.IdTujuanOpd] = tujuan
+				}
+			}
+		}
+	}
+	var responses []sasaranopd.SasaranOpdResponse
+	for _, so := range sasaranOpds {
+		resp := sasaranopd.SasaranOpdResponse{
+			IdPohon: so.IdPohon, KodeOpd: so.KodeOpd, NamaOpd: opd.NamaOpd,
+			NamaPohon: so.NamaPohon, JenisPohon: so.JenisPohon,
+			LevelPohon: so.LevelPohon, TahunPohon: so.TahunPohon,
+			Pelaksana:  []sasaranopd.PelaksanaOpdResponse{},
+			SasaranOpd: []sasaranopd.SasaranOpdDetailResponse{},
+		}
+		for _, pl := range so.Pelaksana {
+			resp.Pelaksana = append(resp.Pelaksana, sasaranopd.PelaksanaOpdResponse{
+				Id: pl.Id, PegawaiId: pl.PegawaiId, Nip: pl.Nip, NamaPegawai: pl.NamaPegawai,
+			})
+		}
+		for _, sas := range so.SasaranOpd {
+			tujuan := tujuanCache[sas.IdTujuanOpd] // pakai cache, tidak re-query
+			sasResp := sasaranopd.SasaranOpdDetailResponse{
+				Id: strconv.Itoa(sas.Id), NamaSasaranOpd: sas.NamaSasaranOpd,
+				IdTujuanOpd: tujuan.Id, NamaTujuanOpd: tujuan.Tujuan,
+				TahunAwal: sas.TahunAwal, TahunAkhir: sas.TahunAkhir,
+				JenisPeriode: sas.JenisPeriode,
+				Indikator:    []sasaranopd.IndikatorResponse{},
+			}
+			for _, ind := range sas.Indikator {
+				indResp := sasaranopd.IndikatorResponse{
+					Id: ind.KodeIndikator, KodeIndikator: ind.KodeIndikator,
+					Jenis: ind.Jenis, DefinisiOperasional: ind.DefinisiOperasional.String,
+					Indikator:        ind.Indikator,
+					RumusPerhitungan: ind.RumusPerhitungan.String,
+					SumberData:       ind.SumberData.String,
+					Target:           []sasaranopd.TargetResponse{},
+				}
+				for _, t := range ind.Target {
+					indResp.Target = append(indResp.Target, sasaranopd.TargetResponse{
+						Id: t.Id, Tahun: t.Tahun, Target: t.Target, Satuan: t.Satuan,
+					})
+				}
+				sasResp.Indikator = append(sasResp.Indikator, indResp)
+			}
+			resp.SasaranOpd = append(resp.SasaranOpd, sasResp)
+		}
+		responses = append(responses, resp)
+	}
+	return responses, nil
+}
+
+func (service *SasaranOpdServiceImpl) CreateRenjaIndikator(
+	ctx context.Context,
+	sasaranOpdId int,
+	jenis string,
+	requests []sasaranopd.IndikatorCreateRequest,
+) ([]sasaranopd.IndikatorResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	_, err = service.sasaranOpdRepository.FindById(ctx, tx, sasaranOpdId) // ← lowercase
+	if err != nil {
+		return nil, fmt.Errorf("sasaran opd id %d tidak ditemukan", sasaranOpdId)
+	}
+	var indikatorDomains []domain.Indikator
+	var responses []sasaranopd.IndikatorResponse
+	for _, req := range requests {
+		if req.Indikator == "" {
+			return nil, fmt.Errorf("nama indikator tidak boleh kosong")
+		}
+		if len(req.Target) != 1 {
+			return nil, fmt.Errorf("setiap indikator harus memiliki tepat 1 target")
+		}
+		if req.Target[0].Target == "" {
+			return nil, fmt.Errorf("nilai target tidak boleh kosong")
+		}
+		if req.Target[0].Satuan == "" {
+			return nil, fmt.Errorf("satuan tidak boleh kosong")
+		}
+		if req.Target[0].Tahun == "" {
+			return nil, fmt.Errorf("tahun target tidak boleh kosong")
+		}
+		kodeIndikator := fmt.Sprintf("IND-SAR-%s", uuid.New().String()[:5])
+		targetId := fmt.Sprintf("TRG-SAR-%s", uuid.New().String()[:5])
+		ind := domain.Indikator{
+			KodeIndikator:       kodeIndikator,
+			Jenis:               jenis,
+			DefinisiOperasional: sql.NullString{String: req.DefinisiOperasional, Valid: true},
+			Indikator:           req.Indikator,
+			RumusPerhitungan:    sql.NullString{String: req.RumusPerhitungan, Valid: true},
+			SumberData:          sql.NullString{String: req.SumberData, Valid: true},
+			Target: []domain.Target{{
+				Id: targetId, IndikatorId: kodeIndikator,
+				Target: req.Target[0].Target, Satuan: req.Target[0].Satuan, Tahun: req.Target[0].Tahun,
+			}},
+		}
+		indikatorDomains = append(indikatorDomains, ind)
+		responses = append(responses, sasaranopd.IndikatorResponse{
+			Id:                  kodeIndikator,
+			KodeIndikator:       kodeIndikator,
+			Indikator:           req.Indikator,
+			RumusPerhitungan:    req.RumusPerhitungan,
+			SumberData:          req.SumberData,
+			DefinisiOperasional: req.DefinisiOperasional,
+			Jenis:               jenis,
+			Target: []sasaranopd.TargetResponse{{
+				Id:     targetId,
+				Tahun:  req.Target[0].Tahun,
+				Target: req.Target[0].Target,
+				Satuan: req.Target[0].Satuan,
+			}},
+		})
+	}
+	if err := service.sasaranOpdRepository.CreateRenjaIndikator(ctx, tx, sasaranOpdId, indikatorDomains); err != nil {
+		return nil, err
+	}
+	return responses, nil
+}
+
+func (service *SasaranOpdServiceImpl) UpdateRenjaIndikator(ctx context.Context, kodeIndikator string, jenis string, request sasaranopd.IndikatorUpdateRequest) (sasaranopd.IndikatorResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return sasaranopd.IndikatorResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+	_, err = service.sasaranOpdRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return sasaranopd.IndikatorResponse{}, fmt.Errorf("indikator dengan kode %s tidak ditemukan", kodeIndikator)
+		}
+		return sasaranopd.IndikatorResponse{}, err
+	}
+	if request.Indikator == "" {
+		return sasaranopd.IndikatorResponse{}, fmt.Errorf("nama indikator tidak boleh kosong")
+	}
+	if len(request.Target) != 1 {
+		return sasaranopd.IndikatorResponse{}, fmt.Errorf("harus memiliki tepat 1 target")
+	}
+	if request.Target[0].Target == "" {
+		return sasaranopd.IndikatorResponse{}, fmt.Errorf("nilai target tidak boleh kosong")
+	}
+	if request.Target[0].Tahun == "" {
+		return sasaranopd.IndikatorResponse{}, fmt.Errorf("tahun target tidak boleh kosong")
+	}
+	targetId := request.Target[0].Id
+	if targetId == "" {
+		targetId = fmt.Sprintf("TRG-SAR-%s", uuid.New().String()[:5])
+	}
+	ind := domain.Indikator{
+		KodeIndikator:       kodeIndikator,
+		Jenis:               jenis,
+		DefinisiOperasional: sql.NullString{String: request.DefinisiOperasional, Valid: true},
+		Indikator:           request.Indikator,
+		RumusPerhitungan:    sql.NullString{String: request.RumusPerhitungan, Valid: true},
+		SumberData:          sql.NullString{String: request.SumberData, Valid: true},
+		Target: []domain.Target{{
+			Id: targetId, IndikatorId: kodeIndikator,
+			Target: request.Target[0].Target, Satuan: request.Target[0].Satuan, Tahun: request.Target[0].Tahun,
+		}},
+	}
+	if err := service.sasaranOpdRepository.UpdateRenjaIndikator(ctx, tx, []domain.Indikator{ind}); err != nil {
+		return sasaranopd.IndikatorResponse{}, err
+	}
+	return sasaranopd.IndikatorResponse{
+		Id:                  kodeIndikator,
+		KodeIndikator:       kodeIndikator,
+		Indikator:           request.Indikator,
+		RumusPerhitungan:    request.RumusPerhitungan,
+		SumberData:          request.SumberData,
+		DefinisiOperasional: request.DefinisiOperasional,
+		Jenis:               jenis,
+		Target: []sasaranopd.TargetResponse{{
+			Id:     targetId,
+			Tahun:  request.Target[0].Tahun,
+			Target: request.Target[0].Target,
+			Satuan: request.Target[0].Satuan,
+		}},
+	}, nil
+}
+
+func (service *SasaranOpdServiceImpl) DeleteRenjaIndikator(ctx context.Context, kodeIndikator string) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	_, err = service.sasaranOpdRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator) // ← lowercase
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("kode indikator %s tidak ditemukan", kodeIndikator)
+		}
+		return err
+	}
+	return service.sasaranOpdRepository.DeleteIndikatorTargetRenja(ctx, tx, kodeIndikator) // ← lowercase
 }
