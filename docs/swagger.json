@@ -80,6 +80,175 @@
                 }
             }
         },
+        "/sasaran_opd/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat data sasaran opd baru.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd Renstra"
+                ],
+                "summary": "Create Sasaran Opd",
+                "parameters": [
+                    {
+                        "description": "Payload Create Sasaran OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sasaranopd.SasaranOpdCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sasaranopd.SasaranOpdCreateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus data sasaran opd yang sudah ada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd Renstra"
+                ],
+                "summary": "Delete Sasaran Opd",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "ID Sasaran OPD",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/indikator/delete/{kodeIndikator}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus data indikator sasaran opd renja yang sudah ada berdasarkan Kode Indikator.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd Renja Ranwal",
+                    "Sasaran Opd Renja Rankhir"
+                ],
+                "summary": "Delete Indikator Sasaran Opd Renja",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kodeIndikator",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sasaran_opd/rankhir/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -95,9 +264,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Rankhir"
+                    "Sasaran Opd Renja Rankhir"
                 ],
-                "summary": "Sasaran Opd Rankhir",
+                "summary": "Sasaran Opd Renja Rankhir",
                 "parameters": [
                     {
                         "type": "string",
@@ -147,71 +316,6 @@
                 }
             }
         },
-        "/sasaran_opd/rankhir/{sasaran_opd_id}/indikator": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Memperbarui data sasaran opd rankhir yang sudah ada berdasarkan ID.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Sasaran Opd Rankhir"
-                ],
-                "summary": "Upsert Sasaran Opd Rankhir",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "example": 1,
-                        "description": "ID Sasaran OPD",
-                        "name": "sasaran_opd_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Payload Upsert Sasaran OPD",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/sasaranopd.IndikatorCreateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/web.WebResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/sasaranopd.IndikatorDetail"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/web.WebResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/sasaran_opd/ranwal/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -227,7 +331,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Ranwal"
+                    "Sasaran Opd Renja Ranwal"
                 ],
                 "summary": "Sasaran Opd Ranwal",
                 "parameters": [
@@ -279,14 +383,14 @@
                 }
             }
         },
-        "/sasaran_opd/ranwal/{sasaran_opd_id}/indikator": {
-            "put": {
+        "/sasaran_opd/renja/rankhir/indikator/create/{sasaranopdId}": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Memperbarui data sasaran opd ranwal yang sudah ada berdasarkan ID.",
+                "description": "Membuat data indikator sasaran opd ranwal baru.",
                 "consumes": [
                     "application/json"
                 ],
@@ -294,25 +398,98 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Ranwal"
+                    "Sasaran Opd Renja Rankhir"
                 ],
-                "summary": "Upsert Sasaran Opd Ranwal",
+                "summary": "Create Indikator Sasaran Opd Ranwal",
                 "parameters": [
                     {
                         "type": "integer",
                         "example": 1,
                         "description": "ID Sasaran OPD",
-                        "name": "sasaran_opd_id",
+                        "name": "sasaranopdId",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Payload Upsert Sasaran OPD",
+                        "description": "Payload Create Indikator Sasaran OPD",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/sasaranopd.IndikatorCreateRequest"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/sasaranopd.IndikatorCreateRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranopd.IndikatorResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/renja/rankhir/indikator/update/{kodeIndikator}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui data indikator sasaran opd ranwal yang sudah ada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd Renja Rankhir"
+                ],
+                "summary": "Update Indikator Sasaran Opd Ranwal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kodeIndikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload Update Indikator Sasaran OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/sasaranopd.IndikatorUpdateRequest"
+                            }
                         }
                     }
                 ],
@@ -328,7 +505,145 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/sasaranopd.IndikatorDetail"
+                                            "$ref": "#/definitions/sasaranopd.IndikatorResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/renja/ranwal/indikator/create/{sasaranopdId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat data indikator sasaran opd ranwal baru.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd Renja Ranwal"
+                ],
+                "summary": "Create Indikator Sasaran Opd Ranwal",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "ID Sasaran OPD",
+                        "name": "sasaranopdId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload Create Indikator Sasaran OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/sasaranopd.IndikatorCreateRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranopd.IndikatorResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/renja/ranwal/indikator/update/{kodeIndikator}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui data indikator sasaran opd ranwal yang sudah ada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd Renja Ranwal"
+                ],
+                "summary": "Update Indikator Sasaran Opd Ranwal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kodeIndikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload Update Indikator Sasaran OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/sasaranopd.IndikatorUpdateRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sasaranopd.IndikatorResponse"
                                         }
                                     }
                                 }
@@ -427,14 +742,14 @@
                 }
             }
         },
-        "/sasaran_opd/renstra/{sasaran_opd_id}/indikator": {
+        "/sasaran_opd/update/{id}": {
             "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Memperbarui data sasaran opd renstra yang sudah ada berdasarkan ID.",
+                "description": "Memperbarui data sasaran opd yang sudah ada.",
                 "consumes": [
                     "application/json"
                 ],
@@ -444,29 +759,29 @@
                 "tags": [
                     "Sasaran Opd Renstra"
                 ],
-                "summary": "Upsert Sasaran Opd Renstra",
+                "summary": "Update Sasaran Opd Renstra",
                 "parameters": [
                     {
                         "type": "integer",
                         "example": 1,
                         "description": "ID Sasaran OPD",
-                        "name": "sasaran_opd_id",
+                        "name": "sasaranopdId",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Payload Upsert Sasaran OPD",
+                        "description": "Payload  Sasaran OPD",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/sasaranopd.IndikatorCreateRequest"
+                            "$ref": "#/definitions/sasaranopd.SasaranOpdUpdateRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
                             "allOf": [
                                 {
@@ -476,7 +791,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/sasaranopd.IndikatorDetail"
+                                            "$ref": "#/definitions/sasaranopd.SasaranOpdResponse"
                                         }
                                     }
                                 }
@@ -1545,6 +1860,35 @@
                 }
             }
         },
+        "sasaranopd.IndikatorUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranopd.TargetUpdateRequest"
+                    }
+                }
+            }
+        },
         "sasaranopd.PelaksanaOpdResponse": {
             "type": "object",
             "properties": {
@@ -1558,6 +1902,71 @@
                     "type": "string"
                 },
                 "pegawai_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranopd.SasaranOpdCreateRequest": {
+            "type": "object",
+            "required": [
+                "id_tujuan_opd",
+                "jenis_periode",
+                "nama_sasaran",
+                "tahun_akhir",
+                "tahun_awal"
+            ],
+            "properties": {
+                "id_pohon": {
+                    "type": "integer"
+                },
+                "id_tujuan_opd": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranopd.IndikatorCreateRequest"
+                    }
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "nama_sasaran": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranopd.SasaranOpdCreateResponse": {
+            "type": "object",
+            "properties": {
+                "id_pohon": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranopd.IndikatorDetail"
+                    }
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "nama_sasaran_opd": {
+                    "type": "string"
+                },
+                "nama_tujuan_opd": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
                     "type": "string"
                 }
             }
@@ -1632,6 +2041,42 @@
                 }
             }
         },
+        "sasaranopd.SasaranOpdUpdateRequest": {
+            "type": "object",
+            "required": [
+                "id_tujuan_opd",
+                "jenis_periode",
+                "nama_sasaran",
+                "tahun_akhir",
+                "tahun_awal"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_tujuan_opd": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranopd.IndikatorUpdateRequest"
+                    }
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "nama_sasaran": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
         "sasaranopd.TargetCreateRequest": {
             "type": "object",
             "properties": {
@@ -1667,6 +2112,23 @@
             }
         },
         "sasaranopd.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranopd.TargetUpdateRequest": {
             "type": "object",
             "properties": {
                 "id": {

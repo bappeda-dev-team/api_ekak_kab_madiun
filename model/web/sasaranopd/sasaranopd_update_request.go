@@ -11,11 +11,13 @@ type SasaranOpdUpdateRequest struct {
 }
 
 type IndikatorUpdateRequest struct {
-	Id               string                `json:"id"`
-	Indikator        string                `json:"indikator"`
-	RumusPerhitungan string                `json:"rumus_perhitungan"`
-	SumberData       string                `json:"sumber_data"`
-	Target           []TargetUpdateRequest `json:"target"`
+	Id                  string                `json:"id"`
+	KodeIndikator       string                `json:"kode_indikator"`
+	DefinisiOperasional string                `json:"definisi_operasional"`
+	Indikator           string                `json:"indikator"`
+	RumusPerhitungan    string                `json:"rumus_perhitungan"`
+	SumberData          string                `json:"sumber_data"`
+	Target              []TargetUpdateRequest `json:"target"`
 }
 
 type TargetUpdateRequest struct {
