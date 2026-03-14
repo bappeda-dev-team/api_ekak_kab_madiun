@@ -1,0 +1,1274 @@
+basePath: /
+definitions:
+  programkegiatan.BidangUrusanResponse:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      program:
+        items:
+          $ref: '#/definitions/programkegiatan.ProgramResponse'
+        type: array
+    type: object
+  programkegiatan.IndikatorResponse:
+    properties:
+      id:
+        type: string
+      indikator:
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      pagu_anggaran:
+        type: integer
+      program_id:
+        type: string
+      status_target_renja:
+        type: boolean
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetResponse'
+        type: array
+    type: object
+  programkegiatan.KegiatanResponse:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      subkegiatan:
+        items:
+          $ref: '#/definitions/programkegiatan.SubKegiatanResponse'
+        type: array
+    type: object
+  programkegiatan.PaguAnggaranTotalResponse:
+    properties:
+      pagu_indikatif:
+        type: integer
+      tahun:
+        type: string
+    type: object
+  programkegiatan.ProgramResponse:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+        type: array
+      jenis:
+        type: string
+      kegiatan:
+        items:
+          $ref: '#/definitions/programkegiatan.KegiatanResponse'
+        type: array
+      kode:
+        type: string
+      nama:
+        type: string
+    type: object
+  programkegiatan.SubKegiatanResponse:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      nama_pegawai:
+        type: string
+      pegawai_id:
+        type: string
+      tahun:
+        type: string
+      total_anggaran:
+        type: integer
+    type: object
+  programkegiatan.TargetResponse:
+    properties:
+      id:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  programkegiatan.UrusanDetailResponse:
+    properties:
+      kode_opd:
+        type: string
+      pagu_total:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      tahun:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      urusan:
+        items:
+          $ref: '#/definitions/programkegiatan.UrusanResponse'
+        type: array
+    type: object
+  programkegiatan.UrusanResponse:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      bidang_urusan:
+        items:
+          $ref: '#/definitions/programkegiatan.BidangUrusanResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+    type: object
+  sasaranopd.IndikatorCreateRequest:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/sasaranopd.TargetCreateRequest'
+        type: array
+    type: object
+  sasaranopd.IndikatorDetail:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/sasaranopd.TargetDetail'
+        type: array
+    type: object
+  sasaranopd.IndikatorResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/sasaranopd.TargetResponse'
+        type: array
+    type: object
+  sasaranopd.PelaksanaOpdResponse:
+    properties:
+      id:
+        type: string
+      nama_pegawai:
+        type: string
+      nip:
+        type: string
+      pegawai_id:
+        type: string
+    type: object
+  sasaranopd.SasaranOpdDetailResponse:
+    properties:
+      id:
+        type: string
+      id_tujuan_opd:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/sasaranopd.IndikatorResponse'
+        type: array
+      jenis_periode:
+        type: string
+      nama_sasaran_opd:
+        type: string
+      nama_tujuan_opd:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+    type: object
+  sasaranopd.SasaranOpdResponse:
+    properties:
+      id_pohon:
+        type: integer
+      jenis_pohon:
+        type: string
+      kode_opd:
+        type: string
+      level_pohon:
+        type: integer
+      nama_opd:
+        type: string
+      nama_pohon:
+        type: string
+      pelaksana:
+        items:
+          $ref: '#/definitions/sasaranopd.PelaksanaOpdResponse'
+        type: array
+      sasaran_opd:
+        items:
+          $ref: '#/definitions/sasaranopd.SasaranOpdDetailResponse'
+        type: array
+      tahun_pohon:
+        type: string
+    type: object
+  sasaranopd.TargetCreateRequest:
+    properties:
+      id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  sasaranopd.TargetDetail:
+    properties:
+      id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  sasaranopd.TargetResponse:
+    properties:
+      id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  tujuanopd.IndikatorCreateRequest:
+    properties:
+      definisi_operasional:
+        type: string
+      id_tujuan_opd:
+        type: string
+      indikator:
+        type: string
+      jenis:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/tujuanopd.TargetCreateRequest'
+        type: array
+    type: object
+  tujuanopd.IndikatorResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      id_tujuan_opd:
+        type: integer
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/tujuanopd.TargetResponse'
+        type: array
+    type: object
+  tujuanopd.IndikatorUpdateRequest:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      id_tujuan_opd:
+        type: string
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/tujuanopd.TargetUpdateRequest'
+        type: array
+    type: object
+  tujuanopd.TargetCreateRequest:
+    properties:
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  tujuanopd.TargetResponse:
+    properties:
+      id:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  tujuanopd.TargetUpdateRequest:
+    properties:
+      id:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  tujuanopd.TujuanOpdCreateRequest:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/tujuanopd.IndikatorCreateRequest'
+        type: array
+      jenis_periode:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      kode_opd:
+        type: string
+      periode_id:
+        type: integer
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      tujuan:
+        type: string
+    type: object
+  tujuanopd.TujuanOpdResponse:
+    properties:
+      id_tujuan_opd:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/tujuanopd.IndikatorResponse'
+        type: array
+      jenis_periode:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      kode_opd:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      nama_opd:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      tujuan:
+        type: string
+    type: object
+  tujuanopd.TujuanOpdUpdateRequest:
+    properties:
+      id:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/tujuanopd.IndikatorUpdateRequest'
+        type: array
+      jenis_periode:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      kode_opd:
+        type: string
+      periode_id:
+        type: integer
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      tujuan:
+        type: string
+    type: object
+  tujuanopd.TujuanOpdwithBidangUrusanResponse:
+    properties:
+      kode_bidang_urusan:
+        type: string
+      kode_opd:
+        type: string
+      kode_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      nama_opd:
+        type: string
+      tujuan_opd:
+        items:
+          $ref: '#/definitions/tujuanopd.TujuanOpdResponse'
+        type: array
+      urusan:
+        type: string
+    type: object
+  user.UserLoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  web.WebResponse:
+    properties:
+      code:
+        type: integer
+      data: {}
+      status:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: dev@madiunkab.go.id
+    name: Tim Pengembang
+  description: API Backend Evaluasi Kinerja dan Anggaran Kabupaten Madiun
+  termsOfService: http://swagger.io/terms/
+  title: EKAK Kabupaten Madiun API
+  version: "1.0"
+paths:
+  /matrix_renja/opd/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data matrix renja rancangan awal berdasarkan kode OPD
+        dan tahun. Anggaran diambil dari tb_pagu jenis='ranwal'.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.UrusanDetailResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renja Rancangan Awal
+      tags:
+      - Matrix Renja
+  /sasaran_opd/rankhir/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data sasaran opd rankhir berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranopd.SasaranOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Sasaran Opd Rankhir
+      tags:
+      - Sasaran Opd Rankhir
+  /sasaran_opd/rankhir/{sasaran_opd_id}/indikator:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data sasaran opd rankhir yang sudah ada berdasarkan
+        ID.
+      parameters:
+      - description: ID Sasaran OPD
+        example: 1
+        in: path
+        name: sasaran_opd_id
+        required: true
+        type: integer
+      - description: Payload Upsert Sasaran OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sasaranopd.IndikatorCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sasaranopd.IndikatorDetail'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Sasaran Opd Rankhir
+      tags:
+      - Sasaran Opd Rankhir
+  /sasaran_opd/ranwal/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data sasaran opd ranwal berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranopd.SasaranOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Sasaran Opd Ranwal
+      tags:
+      - Sasaran Opd Ranwal
+  /sasaran_opd/ranwal/{sasaran_opd_id}/indikator:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data sasaran opd ranwal yang sudah ada berdasarkan
+        ID.
+      parameters:
+      - description: ID Sasaran OPD
+        example: 1
+        in: path
+        name: sasaran_opd_id
+        required: true
+        type: integer
+      - description: Payload Upsert Sasaran OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sasaranopd.IndikatorCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sasaranopd.IndikatorDetail'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Sasaran Opd Ranwal
+      tags:
+      - Sasaran Opd Ranwal
+  /sasaran_opd/renstra/{kode_opd}/{tahun_awal}/{tahun_akhir}/{jenis_periode}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data sasaran opd renstra berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun Awal
+        example: '"2025"'
+        in: path
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        example: '"2026"'
+        in: path
+        name: tahun_akhir
+        required: true
+        type: string
+      - description: Jenis Periode
+        example: '"RPJMD"'
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranopd.SasaranOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Sasaran Opd Renstra
+      tags:
+      - Sasaran Opd Renstra
+  /sasaran_opd/renstra/{sasaran_opd_id}/indikator:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data sasaran opd renstra yang sudah ada berdasarkan
+        ID.
+      parameters:
+      - description: ID Sasaran OPD
+        example: 1
+        in: path
+        name: sasaran_opd_id
+        required: true
+        type: integer
+      - description: Payload Upsert Sasaran OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sasaranopd.IndikatorCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sasaranopd.IndikatorDetail'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Sasaran Opd Renstra
+      tags:
+      - Sasaran Opd Renstra
+  /tujuan_opd/rankhir/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan opd rankhir berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TujuanOpdwithBidangUrusanResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Opd Renja Rankhir
+      tags:
+      - Tujuan Opd Renja Rankhir
+  /tujuan_opd/ranwal/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan opd ranwal berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TujuanOpdwithBidangUrusanResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Opd Renja Ranwal
+      tags:
+      - Tujuan Opd Renja Ranwal
+  /tujuan_opd/renja/indikator/delete/{kodeIndikator}:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus data indikator tujuan opd renja yang sudah ada berdasarkan
+        Kode Indikator.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kodeIndikator
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Indikator Tujuan Opd Renja
+      tags:
+      - Tujuan Opd Renja Rankhir
+      - Tujuan Opd Renja Ranwal
+  /tujuan_opd/renja/rankhir/indikator/create/{tujuanOpdId}:
+    post:
+      consumes:
+      - application/json
+      description: Memasukkan data indikator tujuan opd renja rankhir baru ke dalam
+        sistem.
+      parameters:
+      - description: ID Tujuan OPD
+        example: 1
+        in: path
+        name: tujuanOpdId
+        required: true
+        type: integer
+      - description: Payload Create Indikator Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.IndikatorCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.IndikatorResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tambah Indikator Tujuan Opd Renja Rankhir
+      tags:
+      - Tujuan Opd Renja Rankhir
+  /tujuan_opd/renja/rankhir/indikator/update/{kodeIndikator}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data indikator tujuan opd renja rankhir yang sudah
+        ada berdasarkan ID.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kodeIndikator
+        required: true
+        type: string
+      - description: Payload Update Indikator Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.IndikatorUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.IndikatorResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Indikator Tujuan Opd Renja Rankhir
+      tags:
+      - Tujuan Opd Renja Rankhir
+  /tujuan_opd/renja/ranwal/indikator/create/{tujuanOpdId}:
+    post:
+      consumes:
+      - application/json
+      description: Memasukkan data indikator tujuan opd renja ranwal baru ke dalam
+        sistem.
+      parameters:
+      - description: ID Tujuan OPD
+        example: 1
+        in: path
+        name: tujuanOpdId
+        required: true
+        type: integer
+      - description: Payload Create Indikator Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/tujuanopd.IndikatorCreateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.IndikatorResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tambah Indikator Tujuan Opd Renja Ranwal
+      tags:
+      - Tujuan Opd Renja Ranwal
+  /tujuan_opd/renja/ranwal/indikator/update/{kodeIndikator}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data indikator tujuan opd renja ranwal yang sudah ada
+        berdasarkan ID.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kodeIndikator
+        required: true
+        type: string
+      - description: Payload Update Indikator Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.IndikatorUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.IndikatorResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Indikator Tujuan Opd Renja Ranwal
+      tags:
+      - Tujuan Opd Renja Ranwal
+  /tujuan_opd/renstra/{kode_opd}/{tahun_awal}/{tahun_akhir}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan opd renstra berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun Awal
+        example: '"2025"'
+        in: path
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        example: '"2030"'
+        in: path
+        name: tahun_akhir
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TujuanOpdwithBidangUrusanResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Opd Renstra
+      tags:
+      - Tujuan Opd Renstra
+  /tujuan_opd/renstra/create:
+    post:
+      consumes:
+      - application/json
+      description: Memasukkan data tujuan opd renstra baru ke dalam sistem.
+      parameters:
+      - description: Payload Create Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.TujuanOpdCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.TujuanOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tambah Tujuan Opd Renstra
+      tags:
+      - Tujuan Opd Renstra
+  /tujuan_opd/renstra/update/{tujuanOpdId}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data tujuan opd renstra yang sudah ada berdasarkan
+        ID.
+      parameters:
+      - description: ID Tujuan OPD
+        example: 1
+        in: path
+        name: tujuanOpdId
+        required: true
+        type: integer
+      - description: Payload Update Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.TujuanOpdUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.TujuanOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Tujuan Opd Renstra
+      tags:
+      - Tujuan Opd Renstra
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: Autentikasi user untuk mendapatkan JWT Token
+      parameters:
+      - description: Credentials User
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Berhasil Login
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Input tidak valid atau Login Gagal
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Login User
+      tags:
+      - Auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

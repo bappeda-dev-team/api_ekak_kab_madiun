@@ -1,3 +1,14 @@
+// @title           EKAK Kabupaten Madiun API
+// @version         1.0
+// @description     API Backend Evaluasi Kinerja dan Anggaran Kabupaten Madiun
+// @termsOfService  http://swagger.io/terms/
+// @contact.name    Tim Pengembang
+// @contact.email   dev@madiunkab.go.id
+// @host      localhost:8080
+// @BasePath  /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -8,6 +19,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	_ "ekak_kabupaten_madiun/docs"
 
 	"github.com/joho/godotenv"
 )

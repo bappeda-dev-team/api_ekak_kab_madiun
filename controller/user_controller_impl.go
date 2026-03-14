@@ -161,6 +161,16 @@ func (controller *UserControllerImpl) FindById(writer http.ResponseWriter, reque
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// Login
+// @Summary      Login User
+// @Description  Autentikasi user untuk mendapatkan JWT Token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      user.UserLoginRequest  true  "Credentials User"
+// @Success      200      {object}  web.WebResponse        "Berhasil Login"
+// @Failure      400      {object}  web.WebResponse        "Input tidak valid atau Login Gagal"
+// @Router       /user/login [post]
 func (controller *UserControllerImpl) Login(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	loginRequest := user.UserLoginRequest{}
 	helper.ReadFromRequestBody(request, &loginRequest)
