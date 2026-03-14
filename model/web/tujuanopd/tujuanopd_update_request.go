@@ -13,12 +13,15 @@ type TujuanOpdUpdateRequest struct {
 }
 
 type IndikatorUpdateRequest struct {
-	Id               string                `json:"id"`
-	IdTujuanOpd      string                `json:"id_tujuan_opd"`
-	Indikator        string                `json:"indikator"`
-	RumusPerhitungan string                `json:"rumus_perhitungan"`
-	SumberData       string                `json:"sumber_data"`
-	Target           []TargetUpdateRequest `json:"target"`
+	Id                  string                `json:"id"`
+	IdTujuanOpd         string                `json:"id_tujuan_opd"`
+	KodeIndikator       string                `json:"kode_indikator"`
+	Jenis               string                `json:"jenis"`
+	DefinisiOperasional string                `json:"definisi_operasional"`
+	Indikator           string                `json:"indikator"`
+	RumusPerhitungan    string                `json:"rumus_perhitungan"`
+	SumberData          string                `json:"sumber_data"`
+	Target              []TargetUpdateRequest `json:"target"`
 }
 
 type TargetUpdateRequest struct {
