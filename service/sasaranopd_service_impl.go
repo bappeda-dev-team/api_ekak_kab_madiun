@@ -270,24 +270,26 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 
 	// Proses indikator
 	for _, indReq := range request.Indikator {
-		indikatorId := fmt.Sprintf("IND-SAS-%d", uuid.New().ID()%100000)
+		kodeIndikator := fmt.Sprintf("IND-SAR-%s", uuid.New().String()[:5])
 
 		indikator := domain.Indikator{
-			Id:               indikatorId,
-			Indikator:        indReq.Indikator,
-			RumusPerhitungan: sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
-			SumberData:       sql.NullString{String: indReq.SumberData, Valid: true},
-			Target:           make([]domain.Target, 0),
+			KodeIndikator:       kodeIndikator,
+			Indikator:           indReq.Indikator,
+			Jenis:               "renstra",
+			DefinisiOperasional: sql.NullString{String: indReq.DefinisiOperasional, Valid: true},
+			RumusPerhitungan:    sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
+			SumberData:          sql.NullString{String: indReq.SumberData, Valid: true},
+			Target:              make([]domain.Target, 0),
 		}
 
 		// Proses target
 		for _, targetReq := range indReq.Target {
 			if targetReq.Target != "" {
-				targetId := fmt.Sprintf("TRG-SAS-%d-%s", uuid.New().ID()%100000, targetReq.Tahun)
+				targetId := fmt.Sprintf("TRG-SAR-%d-%s", uuid.New().ID()%100000, targetReq.Tahun)
 
 				target := domain.Target{
 					Id:          targetId,
-					IndikatorId: indikator.Id,
+					IndikatorId: kodeIndikator,
 					Tahun:       targetReq.Tahun,
 					Target:      targetReq.Target,
 					Satuan:      targetReq.Satuan,
@@ -323,11 +325,13 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 	// Convert indikator untuk response
 	for _, indikator := range sasaranOpd.Indikator {
 		indResponse := sasaranopd.IndikatorDetail{
-			Id:               indikator.Id,
-			Indikator:        indikator.Indikator,
-			RumusPerhitungan: indikator.RumusPerhitungan.String,
-			SumberData:       indikator.SumberData.String,
-			Target:           make([]sasaranopd.TargetDetail, 0),
+			Id:                  indikator.Id,
+			Indikator:           indikator.Indikator,
+			Jenis:               "renstra",
+			DefinisiOperasional: indikator.DefinisiOperasional.String,
+			RumusPerhitungan:    indikator.RumusPerhitungan.String,
+			SumberData:          indikator.SumberData.String,
+			Target:              make([]sasaranopd.TargetDetail, 0),
 		}
 
 		// Convert target untuk response

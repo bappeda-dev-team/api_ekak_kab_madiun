@@ -662,7 +662,7 @@ func (repository *SasaranOpdRepositoryImpl) Update(ctx context.Context, tx *sql.
 func (repository *SasaranOpdRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id string) error {
 	// Delete targets first (cascade)
 	scriptDeleteTargets := `DELETE t FROM tb_target t 
-                           INNER JOIN tb_indikator i ON t.indikator_id = i.id 
+                           INNER JOIN tb_indikator_matrix i ON t.indikator_id = i.kode_indikator 
                            WHERE i.sasaran_opd_id = ?`
 	_, err := tx.ExecContext(ctx, scriptDeleteTargets, id)
 	if err != nil {
@@ -670,7 +670,7 @@ func (repository *SasaranOpdRepositoryImpl) Delete(ctx context.Context, tx *sql.
 	}
 
 	// Delete indikators
-	scriptDeleteIndikators := `DELETE FROM tb_indikator WHERE sasaran_opd_id = ?`
+	scriptDeleteIndikators := `DELETE FROM tb_indikator_matrix WHERE sasaran_opd_id = ?`
 	_, err = tx.ExecContext(ctx, scriptDeleteIndikators, id)
 	if err != nil {
 		return err
