@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"strings"
 )
 
 type MatrixRenjaRepositoryImpl struct {
@@ -480,5 +481,56 @@ func (repository *MatrixRenjaRepositoryImpl) UpsertAnggaran(ctx context.Context,
         ON DUPLICATE KEY UPDATE pagu = VALUES(pagu)
     `
 	_, err := tx.ExecContext(ctx, query, kodeSubkegiatan, kodeOpd, tahun, pagu)
+	return err
+}
+
+func (r *MatrixRenjaRepositoryImpl) DeleteIndicatorsExcept(
+	ctx context.Context, tx *sql.Tx,
+	kode, kodeOpd, tahun, jenis string, keepList []string,
+) error {
+	if len(keepList) == 0 {
+		// Hapus semua target dalam scope
+		delTarget := `
+            DELETE FROM tb_target
+            WHERE indikator_id IN (
+                SELECT kode_indikator FROM tb_indikator_matrix
+                WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = ?
+            )
+        `
+		if _, err := tx.ExecContext(ctx, delTarget, kode, kodeOpd, tahun, jenis); err != nil {
+			return err
+		}
+		// Hapus semua indikator dalam scope
+		delInd := `DELETE FROM tb_indikator_matrix WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = ?`
+		_, err := tx.ExecContext(ctx, delInd, kode, kodeOpd, tahun, jenis)
+		return err
+	}
+	placeholders := make([]string, len(keepList))
+	args := make([]interface{}, 0, 4+len(keepList))
+	args = append(args, kode, kodeOpd, tahun, jenis)
+	for i, k := range keepList {
+		placeholders[i] = "?"
+		args = append(args, k)
+	}
+	inClause := strings.Join(placeholders, ",")
+	// Hapus target dari indikator yang TIDAK ada di keepList
+	delTarget := fmt.Sprintf(`
+        DELETE FROM tb_target
+        WHERE indikator_id IN (
+            SELECT kode_indikator FROM tb_indikator_matrix
+            WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = ?
+              AND kode_indikator NOT IN (%s)
+        )
+    `, inClause)
+	if _, err := tx.ExecContext(ctx, delTarget, args...); err != nil {
+		return err
+	}
+	// Hapus indikator yang TIDAK ada di keepList
+	delInd := fmt.Sprintf(`
+        DELETE FROM tb_indikator_matrix
+        WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = ?
+          AND kode_indikator NOT IN (%s)
+    `, inClause)
+	_, err := tx.ExecContext(ctx, delInd, args...)
 	return err
 }

@@ -8,8 +8,6 @@ import (
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
 	"strconv"
-
-	"github.com/google/uuid"
 )
 
 type MatrixRenstraServiceImpl struct {
@@ -64,22 +62,15 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 	data []domain.SubKegiatanQuery,
 	kodeOpd, tahunAwal, tahunAkhir string,
 ) []programkegiatan.UrusanDetailResponse {
-
 	if len(data) == 0 {
 		return []programkegiatan.UrusanDetailResponse{}
 	}
-
-	// Build rentang tahun
 	tahunAwalInt, _ := strconv.Atoi(tahunAwal)
 	tahunAkhirInt, _ := strconv.Atoi(tahunAkhir)
 	tahunRange := make([]string, 0, tahunAkhirInt-tahunAwalInt+1)
 	for t := tahunAwalInt; t <= tahunAkhirInt; t++ {
 		tahunRange = append(tahunRange, strconv.Itoa(t))
 	}
-
-	// -----------------------------------------------------------------------
-	// Helper: bangun []PaguAnggaranTotalResponse dari map[tahun]pagu
-	// -----------------------------------------------------------------------
 	buildAnggaran := func(paguByTahun map[string]int64) []programkegiatan.PaguAnggaranTotalResponse {
 		result := make([]programkegiatan.PaguAnggaranTotalResponse, 0, len(tahunRange))
 		for _, th := range tahunRange {
@@ -90,25 +81,17 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		}
 		return result
 	}
-
-	// -----------------------------------------------------------------------
-	// Struktur bantu untuk indikator (dengan dedup target)
-	// -----------------------------------------------------------------------
+	// Indikator: IndikatorMatrixResponse dengan Target & Satuan flat
 	type indEntry struct {
-		resp      programkegiatan.IndikatorResponse
-		targetSet map[string]struct{}
+		resp programkegiatan.IndikatorMatrixResponse
 	}
-
-	// kode (subkeg/keg/prg/bidang/urusan) → tahun → indikatorId → *indEntry
 	indikatorByKodeTahun := make(map[string]map[string]map[string]*indEntry)
-
 	collectIndikator := func(item domain.SubKegiatanQuery) {
 		if item.IndikatorId == "" {
 			return
 		}
 		kode := item.IndikatorKode
 		th := item.IndikatorTahun
-
 		if indikatorByKodeTahun[kode] == nil {
 			indikatorByKodeTahun[kode] = make(map[string]map[string]*indEntry)
 		}
@@ -118,38 +101,28 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		ent, exists := indikatorByKodeTahun[kode][th][item.IndikatorId]
 		if !exists {
 			ent = &indEntry{
-				resp: programkegiatan.IndikatorResponse{
-					Id:        item.IndikatorId,
-					Kode:      kode,
-					KodeOpd:   kodeOpd,
-					Indikator: item.Indikator,
-					Tahun:     th,
-					Target:    make([]programkegiatan.TargetResponse, 0),
+				resp: programkegiatan.IndikatorMatrixResponse{
+					KodeIndikator: item.IndikatorId,
+					Kode:          kode,
+					KodeOpd:       kodeOpd,
+					Indikator:     item.Indikator,
+					Tahun:         th,
+					Target:        item.Target,
+					Satuan:        item.Satuan,
 				},
-				targetSet: make(map[string]struct{}),
 			}
 			indikatorByKodeTahun[kode][th][item.IndikatorId] = ent
-		}
-		if item.TargetId != "" {
-			if _, seen := ent.targetSet[item.TargetId]; !seen {
-				ent.targetSet[item.TargetId] = struct{}{}
-				ent.resp.Target = append(ent.resp.Target, programkegiatan.TargetResponse{
-					Id:     item.TargetId,
-					Target: item.Target,
-					Satuan: item.Satuan,
-				})
-			}
+		} else if item.TargetId != "" && ent.resp.Target == "" {
+			ent.resp.Target = item.Target
+			ent.resp.Satuan = item.Satuan
 		}
 	}
-
-	// Ambil semua indikator untuk kode tertentu sebagai []IndikatorResponse
-	// (satu entry per tahun, karena matrix renstra multi-tahun)
-	getIndikator := func(kode string) []programkegiatan.IndikatorResponse {
+	getIndikator := func(kode string) []programkegiatan.IndikatorMatrixResponse {
 		tahunMap, ok := indikatorByKodeTahun[kode]
 		if !ok {
-			return []programkegiatan.IndikatorResponse{}
+			return []programkegiatan.IndikatorMatrixResponse{}
 		}
-		result := make([]programkegiatan.IndikatorResponse, 0)
+		result := make([]programkegiatan.IndikatorMatrixResponse, 0)
 		for _, th := range tahunRange {
 			for _, ent := range tahunMap[th] {
 				result = append(result, ent.resp)
@@ -157,49 +130,31 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		}
 		return result
 	}
-
-	// -----------------------------------------------------------------------
-	// Metadata tiap level hierarki
-	// -----------------------------------------------------------------------
 	type subkegMeta struct{ nama, namaPegawai, pegawaiId, kodeKeg string }
 	type kegMeta struct{ nama, kodePrg string }
 	type prgMeta struct{ nama, kodeBidang string }
 	type bidangMeta struct{ nama, kodeUrusan string }
-
 	subkegData := make(map[string]subkegMeta)
 	kegData := make(map[string]kegMeta)
 	prgData := make(map[string]prgMeta)
 	bidangData := make(map[string]bidangMeta)
-	urusanData := make(map[string]string) // kodeUrusan → namaUrusan
-
-	// pagu per subkegiatan per tahun (dari tb_pagu, jenis='renstra')
-	// key: kodeSubkegiatan → tahun → pagu
+	urusanData := make(map[string]string)
 	paguSubkegByTahun := make(map[string]map[string]int64)
-
-	// Ordered, deduplicated children
 	seenSubkeg := make(map[string]struct{})
 	seenKeg := make(map[string]struct{})
 	seenPrg := make(map[string]struct{})
 	seenBidang := make(map[string]struct{})
 	seenUrusan := make(map[string]struct{})
-
 	subkegByKeg := make(map[string][]string)
 	kegByPrg := make(map[string][]string)
 	prgByBidang := make(map[string][]string)
 	bidangByUrusan := make(map[string][]string)
 	var urusanOrder []string
-
-	// -----------------------------------------------------------------------
-	// PASS 1: satu kali iterasi — kumpulkan semua data
-	// -----------------------------------------------------------------------
 	for _, item := range data {
 		collectIndikator(item)
-
 		if item.KodeSubKegiatan == "" {
 			continue
 		}
-
-		// Subkegiatan: catat satu kali per (subkegiatan)
 		if _, ok := seenSubkeg[item.KodeSubKegiatan]; !ok {
 			seenSubkeg[item.KodeSubKegiatan] = struct{}{}
 			subkegData[item.KodeSubKegiatan] = subkegMeta{
@@ -212,15 +167,10 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 				subkegByKeg[item.KodeKegiatan] = append(subkegByKeg[item.KodeKegiatan], item.KodeSubKegiatan)
 			}
 		}
-
-		// Pagu subkegiatan per tahun (dari tb_pagu, sama nilainya per row — set saja, idempoten)
 		if paguSubkegByTahun[item.KodeSubKegiatan] == nil {
 			paguSubkegByTahun[item.KodeSubKegiatan] = make(map[string]int64)
 		}
-		// PaguSubKegiatan sudah di-COALESCE di query, selalu ada nilai (0 jika tidak ada di tb_pagu)
 		paguSubkegByTahun[item.KodeSubKegiatan][item.TahunSubKegiatan] = item.PaguSubKegiatan
-
-		// Kegiatan
 		if item.KodeKegiatan != "" {
 			if _, ok := seenKeg[item.KodeKegiatan]; !ok {
 				seenKeg[item.KodeKegiatan] = struct{}{}
@@ -230,8 +180,6 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 				}
 			}
 		}
-
-		// Program
 		if item.KodeProgram != "" {
 			if _, ok := seenPrg[item.KodeProgram]; !ok {
 				seenPrg[item.KodeProgram] = struct{}{}
@@ -241,8 +189,6 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 				}
 			}
 		}
-
-		// Bidang Urusan
 		if item.KodeBidangUrusan != "" {
 			if _, ok := seenBidang[item.KodeBidangUrusan]; !ok {
 				seenBidang[item.KodeBidangUrusan] = struct{}{}
@@ -252,8 +198,6 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 				}
 			}
 		}
-
-		// Urusan
 		if item.KodeUrusan != "" {
 			if _, ok := seenUrusan[item.KodeUrusan]; !ok {
 				seenUrusan[item.KodeUrusan] = struct{}{}
@@ -262,10 +206,6 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 			}
 		}
 	}
-
-	// -----------------------------------------------------------------------
-	// Helper: hitung pagu per tahun untuk suatu level dari sum subkegiatan
-	// -----------------------------------------------------------------------
 	sumPaguSubkeg := func(kodeSubkegList []string) map[string]int64 {
 		hasil := make(map[string]int64, len(tahunRange))
 		for _, kodeSubkeg := range kodeSubkegList {
@@ -275,9 +215,6 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		}
 		return hasil
 	}
-
-	// Kumpulkan semua kode subkegiatan per level untuk hitung pagu ke atas
-	// kegiatan → program → bidang → urusan
 	allSubkegByKeg := func(kodeKeg string) []string {
 		return subkegByKeg[kodeKeg]
 	}
@@ -302,24 +239,12 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		}
 		return result
 	}
-
-	// Grand total pagu per tahun (sum semua subkegiatan)
 	grandPaguByTahun := make(map[string]int64, len(tahunRange))
-	for _, kodeSubkeg := range func() []string {
-		var all []string
-		for k := range paguSubkegByTahun {
-			all = append(all, k)
-		}
-		return all
-	}() {
+	for kodeSubkeg := range paguSubkegByTahun {
 		for _, th := range tahunRange {
 			grandPaguByTahun[th] += paguSubkegByTahun[kodeSubkeg][th]
 		}
 	}
-
-	// -----------------------------------------------------------------------
-	// PASS 2: bangun response hierarki dari maps yang sudah terkumpul
-	// -----------------------------------------------------------------------
 	urusanDetail := programkegiatan.UrusanDetailResponse{
 		KodeOpd:           kodeOpd,
 		TahunAwal:         tahunAwal,
@@ -327,10 +252,8 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		PaguAnggaranTotal: buildAnggaran(grandPaguByTahun),
 		Urusan:            make([]programkegiatan.UrusanResponse, 0, len(urusanOrder)),
 	}
-
 	for _, kodeUrusan := range urusanOrder {
 		paguUrusan := sumPaguSubkeg(allSubkegByUrusan(kodeUrusan))
-
 		urusanResp := programkegiatan.UrusanResponse{
 			Kode:         kodeUrusan,
 			Nama:         urusanData[kodeUrusan],
@@ -339,11 +262,9 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 			Indikator:    getIndikator(kodeUrusan),
 			BidangUrusan: make([]programkegiatan.BidangUrusanResponse, 0),
 		}
-
 		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
 			paguBidang := sumPaguSubkeg(allSubkegByBidang(kodeBidang))
 			bd := bidangData[kodeBidang]
-
 			bidangResp := programkegiatan.BidangUrusanResponse{
 				Kode:      kodeBidang,
 				Nama:      bd.nama,
@@ -352,11 +273,9 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 				Indikator: getIndikator(kodeBidang),
 				Program:   make([]programkegiatan.ProgramResponse, 0),
 			}
-
 			for _, kodePrg := range prgByBidang[kodeBidang] {
 				paguPrg := sumPaguSubkeg(allSubkegByPrg(kodePrg))
 				pd := prgData[kodePrg]
-
 				prgResp := programkegiatan.ProgramResponse{
 					Kode:      kodePrg,
 					Nama:      pd.nama,
@@ -365,11 +284,9 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 					Indikator: getIndikator(kodePrg),
 					Kegiatan:  make([]programkegiatan.KegiatanResponse, 0),
 				}
-
 				for _, kodeKeg := range kegByPrg[kodePrg] {
 					paguKeg := sumPaguSubkeg(allSubkegByKeg(kodeKeg))
 					kd := kegData[kodeKeg]
-
 					kegResp := programkegiatan.KegiatanResponse{
 						Kode:        kodeKeg,
 						Nama:        kd.nama,
@@ -378,7 +295,6 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 						Indikator:   getIndikator(kodeKeg),
 						SubKegiatan: make([]programkegiatan.SubKegiatanResponse, 0),
 					}
-
 					for _, kodeSubkeg := range subkegByKeg[kodeKeg] {
 						sd := subkegData[kodeSubkeg]
 						subkegResp := programkegiatan.SubKegiatanResponse{
@@ -392,205 +308,71 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 						}
 						kegResp.SubKegiatan = append(kegResp.SubKegiatan, subkegResp)
 					}
-
 					prgResp.Kegiatan = append(prgResp.Kegiatan, kegResp)
 				}
-
 				bidangResp.Program = append(bidangResp.Program, prgResp)
 			}
-
 			urusanResp.BidangUrusan = append(urusanResp.BidangUrusan, bidangResp)
 		}
-
 		urusanDetail.Urusan = append(urusanDetail.Urusan, urusanResp)
 	}
-
 	return []programkegiatan.UrusanDetailResponse{urusanDetail}
 }
 
 // crud
-func (service *MatrixRenstraServiceImpl) CreateIndikator(ctx context.Context, requests []programkegiatan.IndikatorRenstraCreateRequest) ([]programkegiatan.IndikatorResponse, error) {
-	tx, err := service.DB.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
 
-	var responses []programkegiatan.IndikatorResponse
-
-	for _, request := range requests {
-		randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
-		uuId := fmt.Sprintf("IND-RNST-%s", randomDigits)
-
-		indikator := domain.Indikator{
-			Id:        uuId,
-			Kode:      request.Kode,
-			KodeOpd:   request.KodeOpd,
-			Indikator: request.Indikator,
-			Tahun:     request.Tahun,
-			// PaguAnggaran = 0, pagu dihandle UpsertAnggaran
-		}
-
-		err = service.MatrixRenstraRepository.SaveIndikator(ctx, tx, indikator)
-		if err != nil {
-			return nil, err
-		}
-
-		uuIdTarget := fmt.Sprintf("TRG-RNST-%s", randomDigits)
-		target := domain.Target{
-			Id:          uuIdTarget,
-			IndikatorId: indikator.Id,
-			Target:      request.Target,
-			Satuan:      request.Satuan,
-			// Jenis = 'renstra' diinject di repository SaveTarget
-		}
-
-		err = service.MatrixRenstraRepository.SaveTarget(ctx, tx, target)
-		if err != nil {
-			return nil, err
-		}
-
-		responses = append(responses, programkegiatan.IndikatorResponse{
-			Id:        indikator.Id,
-			Kode:      request.Kode,
-			KodeOpd:   request.KodeOpd,
-			Indikator: request.Indikator,
-			Tahun:     request.Tahun,
-			Target: []programkegiatan.TargetResponse{
-				{Id: target.Id, Target: request.Target, Satuan: request.Satuan},
-			},
-		})
-	}
-
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return responses, nil
-}
-
-func (service *MatrixRenstraServiceImpl) UpdateIndikator(ctx context.Context, request programkegiatan.UpdateIndikatorRequest) (programkegiatan.IndikatorResponse, error) {
-	tx, err := service.DB.Begin()
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-	defer tx.Rollback()
-
-	// Cek apakah indikator exists
-	existingIndikator, err := service.MatrixRenstraRepository.FindIndikatorById(ctx, tx, request.Id)
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-
-	// Update indikator
-	indikator := domain.Indikator{
-		Id:        request.Id,
-		Kode:      request.Kode,
-		KodeOpd:   request.KodeOpd,
-		Indikator: request.Indikator,
-		Tahun:     request.Tahun,
-	}
-
-	err = service.MatrixRenstraRepository.UpdateIndikator(ctx, tx, indikator)
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-
-	// Update target
-	target := domain.Target{
-		Id:          existingIndikator.Target[0].Id, // Ambil ID target yang sudah ada
-		IndikatorId: request.Id,
-		Target:      request.Target,
-		Satuan:      request.Satuan,
-	}
-
-	err = service.MatrixRenstraRepository.UpdateTarget(ctx, tx, target)
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-
-	return programkegiatan.IndikatorResponse{
-		Id:        request.Id,
-		Kode:      request.Kode,
-		KodeOpd:   request.KodeOpd,
-		Indikator: request.Indikator,
-		Tahun:     request.Tahun,
-		Target: []programkegiatan.TargetResponse{
-			{
-				Id:     target.Id,
-				Target: request.Target,
-				Satuan: request.Satuan,
-			},
-		},
-	}, nil
-}
-
-func (service *MatrixRenstraServiceImpl) DeleteIndikator(ctx context.Context, indikatorId string) error {
+func (service *MatrixRenstraServiceImpl) DeleteIndikator(ctx context.Context, kodeIndikator string) error {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-
-	// Hapus target terlebih dahulu (karena foreign key)
-	err = service.MatrixRenstraRepository.DeleteTargetByIndikatorId(ctx, tx, indikatorId)
+	_, err = service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("indikator %s tidak ditemukan", kodeIndikator)
+		}
 		return err
 	}
-
-	// Hapus indikator
-	err = service.MatrixRenstraRepository.DeleteIndikator(ctx, tx, indikatorId)
-	if err != nil {
+	if err = service.MatrixRenstraRepository.DeleteTargetByIndikatorId(ctx, tx, kodeIndikator); err != nil {
 		return err
 	}
-
+	if err = service.MatrixRenstraRepository.DeleteIndikator(ctx, tx, kodeIndikator); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
-func (service *MatrixRenstraServiceImpl) FindIndikatorById(ctx context.Context, indikatorId string) (programkegiatan.IndikatorResponse, error) {
+func (service *MatrixRenstraServiceImpl) FindIndikatorByKodeIndikator(ctx context.Context, kodeIndikator string) (programkegiatan.IndikatorResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return programkegiatan.IndikatorResponse{}, err
 	}
 	defer tx.Rollback()
-
-	// Cari indikator berdasarkan ID
-	indikator, err := service.MatrixRenstraRepository.FindIndikatorById(ctx, tx, indikatorId)
+	ind, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return programkegiatan.IndikatorResponse{}, fmt.Errorf("indikator %s tidak ditemukan", kodeIndikator)
+		}
 		return programkegiatan.IndikatorResponse{}, err
 	}
-
-	// Transform ke response
-	response := programkegiatan.IndikatorResponse{
-		Id:        indikator.Id,
-		Kode:      indikator.Kode,
-		KodeOpd:   indikator.KodeOpd,
-		Indikator: indikator.Indikator,
-		Tahun:     indikator.Tahun,
-		// PaguAnggaran: indikator.PaguAnggaran,
-		Target: make([]programkegiatan.TargetResponse, 0),
+	resp := programkegiatan.IndikatorResponse{
+		KodeIndikator: ind.KodeIndikator,
+		Kode:          ind.Kode,
+		KodeOpd:       ind.KodeOpd,
+		Indikator:     ind.Indikator,
+		Tahun:         ind.Tahun,
+		Target:        make([]programkegiatan.TargetResponse, 0),
 	}
-
-	// Tambahkan target ke response
-	if len(indikator.Target) > 0 {
-		response.Target = append(response.Target, programkegiatan.TargetResponse{
-			Id:     indikator.Target[0].Id,
-			Target: indikator.Target[0].Target,
-			Satuan: indikator.Target[0].Satuan,
+	for _, t := range ind.Target {
+		resp.Target = append(resp.Target, programkegiatan.TargetResponse{
+			Id:     t.Id,
+			Target: t.Target,
+			Satuan: t.Satuan,
 		})
 	}
-
-	err = tx.Commit()
-	if err != nil {
-		return programkegiatan.IndikatorResponse{}, err
-	}
-
-	return response, nil
+	_ = tx.Commit()
+	return resp, nil
 }
 
 func (service *MatrixRenstraServiceImpl) UpsertAnggaran(ctx context.Context, request programkegiatan.AnggaranRenstraRequest) (programkegiatan.AnggaranRenstraResponse, error) {
@@ -619,4 +401,99 @@ func (service *MatrixRenstraServiceImpl) UpsertAnggaran(ctx context.Context, req
 		Tahun:           request.Tahun,
 		Pagu:            request.Pagu,
 	}, nil
+}
+
+func (service *MatrixRenstraServiceImpl) UpsertBatchIndikator(ctx context.Context, requests []programkegiatan.IndikatorRenstraCreateRequest) ([]programkegiatan.IndikatorUpsertResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	var responses []programkegiatan.IndikatorUpsertResponse
+	prefixCounter := make(map[string]int)
+	// Kumpulkan kode_indikator yang diproses per scope (kode+kodeOpd+tahun)
+	// untuk keperluan delete-not-in-list di akhir
+	type scopeKey struct{ kode, kodeOpd, tahun string }
+	processedPerScope := make(map[scopeKey][]string)
+	for _, req := range requests {
+		scope := scopeKey{req.Kode, req.KodeOpd, req.Tahun}
+		kodeIndikator := req.KodeIndikator
+		existingTargetId := ""
+		if kodeIndikator == "" {
+			// CREATE: generate kode_indikator baru
+			prefix := fmt.Sprintf("RENS-%s-%s", req.KodeOpd, req.Tahun)
+			if _, loaded := prefixCounter[prefix]; !loaded {
+				count, err := service.MatrixRenstraRepository.CountKodeIndikatorByPrefix(ctx, tx, prefix)
+				if err != nil {
+					return nil, err
+				}
+				prefixCounter[prefix] = count
+			}
+			prefixCounter[prefix]++
+			kodeIndikator = fmt.Sprintf("%s-%03d", prefix, prefixCounter[prefix])
+		} else {
+			// UPDATE: ambil target.id lama dari DB
+			existing, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+			if len(existing.Target) > 0 && existing.Target[0].Id != "" {
+				existingTargetId = existing.Target[0].Id
+			}
+		}
+		// Catat kode_indikator ini sebagai "keep" untuk scope-nya
+		processedPerScope[scope] = append(processedPerScope[scope], kodeIndikator)
+		// Upsert indikator
+		ind := domain.Indikator{
+			KodeIndikator: kodeIndikator,
+			Kode:          req.Kode,
+			KodeOpd:       req.KodeOpd,
+			Indikator:     req.Indikator,
+			Tahun:         req.Tahun,
+			Jenis:         "renstra",
+		}
+		if err := service.MatrixRenstraRepository.UpsertIndikator(ctx, tx, ind); err != nil {
+			return nil, err
+		}
+		// Upsert target
+		targetId := existingTargetId
+		if targetId == "" {
+			targetId = fmt.Sprintf("TRG-RNST-%s", kodeIndikator)
+		}
+		target := domain.Target{
+			Id:          targetId,
+			IndikatorId: kodeIndikator,
+			Target:      req.Target,
+			Satuan:      req.Satuan,
+			Tahun:       req.Tahun,
+		}
+		if err := service.MatrixRenstraRepository.UpsertTarget(ctx, tx, target); err != nil {
+			return nil, err
+		}
+		responses = append(responses, programkegiatan.IndikatorUpsertResponse{
+			KodeIndikator: kodeIndikator,
+			Kode:          req.Kode,
+			KodeOpd:       req.KodeOpd,
+			Indikator:     req.Indikator,
+			Tahun:         req.Tahun,
+			Jenis:         "renstra",
+			Target:        req.Target,
+			Satuan:        req.Satuan,
+		})
+	}
+	// ── SYNC: hapus indikator di DB yang tidak ada di request ──
+	for scope, keepList := range processedPerScope {
+		err := service.MatrixRenstraRepository.DeleteIndicatorsExcept(
+			ctx, tx,
+			scope.kode, scope.kodeOpd, scope.tahun,
+			keepList,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return responses, nil
 }
