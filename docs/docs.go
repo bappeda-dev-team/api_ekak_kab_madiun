@@ -100,7 +100,10 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaRequest"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/programkegiatan.IndikatorRenjaCreateRequest"
+                            }
                         }
                     }
                 ],
@@ -116,7 +119,10 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaResponse"
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.IndikatorUpsertResponse"
+                                            }
                                         }
                                     }
                                 }
@@ -157,7 +163,10 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaRequest"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/programkegiatan.IndikatorRenjaCreateRequest"
+                            }
                         }
                     }
                 ],
@@ -173,7 +182,10 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaResponse"
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.IndikatorUpsertResponse"
+                                            }
                                         }
                                     }
                                 }
@@ -214,7 +226,10 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaRequest"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/programkegiatan.IndikatorRenjaCreateRequest"
+                            }
                         }
                     }
                 ],
@@ -230,7 +245,10 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/programkegiatan.BatchIndikatorRenjaResponse"
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.IndikatorUpsertResponse"
+                                            }
                                         }
                                     }
                                 }
@@ -442,6 +460,176 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/anggaran/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert anggaran renstra.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Upsert Anggaran Renstra",
+                "parameters": [
+                    {
+                        "description": "Anggaran Renstra",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.AnggaranRenstraRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.AnggaranRenstraResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/indikator/delete/{kode_indikator}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus data indikator renstra yang sudah ada berdasarkan Kode Indikator.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Delete Indikator Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"RENS-1.01.1.01.0.00.01.0000-2025-01\"",
+                        "description": "Kode Indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/indikator/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "kode_indikator kosong = create baru, isi = update",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Upsert Batch Indikator Renstra",
+                "parameters": [
+                    {
+                        "description": "Array of indikator",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/programkegiatan.IndikatorRenstraCreateRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.IndikatorResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -1991,56 +2179,46 @@ const docTemplate = `{
                 }
             }
         },
-        "programkegiatan.BatchIndikatorRenjaRequest": {
+        "programkegiatan.AnggaranRenstraRequest": {
             "type": "object",
             "required": [
-                "indikator",
-                "jenis",
-                "kode",
                 "kode_opd",
+                "kode_subkegiatan",
+                "pagu_indikatif",
                 "tahun"
             ],
             "properties": {
-                "indikator": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "$ref": "#/definitions/programkegiatan.IndikatorRenjaItem"
-                    }
-                },
-                "jenis": {
-                    "description": "\"ranwal\"/\"rankhir\"",
-                    "type": "string"
-                },
-                "kode": {
-                    "type": "string"
-                },
                 "kode_opd": {
                     "type": "string"
                 },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "pagu_indikatif": {
+                    "type": "integer"
+                },
                 "tahun": {
-                    "description": "← wajib ada",
                     "type": "string"
                 }
             }
         },
-        "programkegiatan.BatchIndikatorRenjaResponse": {
+        "programkegiatan.AnggaranRenstraResponse": {
             "type": "object",
+            "required": [
+                "kode_opd",
+                "kode_subkegiatan",
+                "pagu_indikatif",
+                "tahun"
+            ],
             "properties": {
-                "indikator": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/programkegiatan.IndikatorRenjaUpsertResponse"
-                    }
-                },
-                "jenis": {
-                    "type": "string"
-                },
-                "kode": {
-                    "type": "string"
-                },
                 "kode_opd": {
                     "type": "string"
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "pagu_indikatif": {
+                    "type": "integer"
                 },
                 "tahun": {
                     "type": "string"
@@ -2059,7 +2237,7 @@ const docTemplate = `{
                 "indikator": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/programkegiatan.IndikatorResponse"
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
                 "jenis": {
@@ -2079,25 +2257,52 @@ const docTemplate = `{
                 }
             }
         },
-        "programkegiatan.IndikatorRenjaItem": {
+        "programkegiatan.IndikatorMatrixResponse": {
             "type": "object",
-            "required": [
-                "indikator"
-            ],
             "properties": {
+                "id": {
+                    "type": "string"
+                },
                 "indikator": {
+                    "type": "string"
+                },
+                "kode": {
                     "type": "string"
                 },
                 "kode_indikator": {
                     "type": "string"
                 },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "program_id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "status_target_renja": {
+                    "type": "boolean"
+                },
+                "tahun": {
+                    "description": "PaguAnggaran  int64  ` + "`" + `json:\"pagu_anggaran,omitempty\"` + "`" + `",
+                    "type": "string"
+                },
                 "target": {
-                    "$ref": "#/definitions/programkegiatan.TargetRenjaRequest"
+                    "type": "string"
                 }
             }
         },
-        "programkegiatan.IndikatorRenjaUpsertResponse": {
+        "programkegiatan.IndikatorRenjaCreateRequest": {
             "type": "object",
+            "required": [
+                "indikator",
+                "kode",
+                "kode_opd",
+                "satuan",
+                "tahun",
+                "target"
+            ],
             "properties": {
                 "indikator": {
                     "type": "string"
@@ -2105,11 +2310,49 @@ const docTemplate = `{
                 "jenis": {
                     "type": "string"
                 },
+                "kode": {
+                    "type": "string"
+                },
                 "kode_indikator": {
                     "type": "string"
                 },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
                 "target": {
-                    "$ref": "#/definitions/programkegiatan.TargetResponse"
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenstraCreateRequest": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
                 }
             }
         },
@@ -2123,6 +2366,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
                     "type": "string"
                 },
                 "kode_opd": {
@@ -2148,6 +2394,42 @@ const docTemplate = `{
                 }
             }
         },
+        "programkegiatan.IndikatorUpsertResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Target        TargetResponse ` + "`" + `json:\"target\"` + "`" + `",
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "programkegiatan.KegiatanResponse": {
             "type": "object",
             "properties": {
@@ -2160,7 +2442,7 @@ const docTemplate = `{
                 "indikator": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/programkegiatan.IndikatorResponse"
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
                 "jenis": {
@@ -2203,7 +2485,7 @@ const docTemplate = `{
                 "indikator": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/programkegiatan.IndikatorResponse"
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
                 "jenis": {
@@ -2235,7 +2517,7 @@ const docTemplate = `{
                 "indikator": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/programkegiatan.IndikatorResponse"
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
                 "jenis": {
@@ -2258,23 +2540,6 @@ const docTemplate = `{
                 },
                 "total_anggaran": {
                     "type": "integer"
-                }
-            }
-        },
-        "programkegiatan.TargetRenjaRequest": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "indikator_id": {
-                    "type": "string"
-                },
-                "satuan": {
-                    "type": "string"
-                },
-                "target": {
-                    "type": "string"
                 }
             }
         },
@@ -2345,7 +2610,7 @@ const docTemplate = `{
                 "indikator": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/programkegiatan.IndikatorResponse"
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
                 "jenis": {

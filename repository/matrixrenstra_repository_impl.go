@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
+	"strings"
 )
 
 type MatrixRenstraRepositoryImpl struct{}
@@ -79,14 +80,14 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
         h.pegawai_id,
         COALESCE(pg.nama, '')    AS nama_pegawai,
         COALESCE(tp.pagu, 0)     AS pagu_subkegiatan,
-        i.id                     AS indikator_id,
-        i.kode                   AS indikator_kode,
-        i.indikator,
-        i.tahun                  AS indikator_tahun,
-        i.kode_opd               AS indikator_kode_opd,
-        t.id                     AS target_id,
-        t.target,
-        t.satuan
+		im.kode_indikator        AS indikator_id,  
+		im.kode                  AS indikator_kode,
+		im.indikator,
+		im.tahun                 AS indikator_tahun,
+		im.kode_opd              AS indikator_kode_opd,
+      	COALESCE(t.id, '')     AS target_id,
+		COALESCE(t.target, '') AS target,
+		COALESCE(t.satuan, '') AS satuan
     FROM hierarchy h
     LEFT JOIN tb_pegawai pg
         ON pg.nip = h.pegawai_id
@@ -95,24 +96,24 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
         AND tp.kode_opd         = ?
         AND tp.jenis            = 'renstra'
         AND tp.tahun            = h.tahun_subkegiatan
-    LEFT JOIN tb_indikator i ON (
-            i.kode = h.kode_urusan         OR
-            i.kode = h.kode_bidang_urusan  OR
-            i.kode = h.kode_program        OR
-            i.kode = h.kode_kegiatan       OR
-            i.kode = h.kode_subkegiatan
-        )
-        AND i.kode_opd = ?
-        AND i.tahun BETWEEN ? AND ?
-    LEFT JOIN tb_target t ON t.indikator_id = i.id
-    	AND t.jenis = 'renstra'
+	LEFT JOIN tb_indikator_matrix im ON (
+		im.kode = h.kode_urusan         OR
+		im.kode = h.kode_bidang_urusan  OR
+		im.kode = h.kode_program        OR
+		im.kode = h.kode_kegiatan       OR
+		im.kode = h.kode_subkegiatan
+	)
+		AND im.kode_opd = ?
+		AND im.jenis    = 'renstra'
+		AND im.tahun BETWEEN ? AND ?
+	LEFT JOIN tb_target t ON t.indikator_id = im.kode_indikator
     ORDER BY
         h.kode_urusan,
         h.kode_bidang_urusan,
         h.kode_program,
         h.kode_kegiatan,
         h.kode_subkegiatan,
-        i.tahun
+        im.tahun
     `
 
 	rows, err := tx.QueryContext(ctx, query,
@@ -181,85 +182,16 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 	return result, nil
 }
 
-func (repository *MatrixRenstraRepositoryImpl) SaveIndikator(ctx context.Context, tx *sql.Tx, indikator domain.Indikator) error {
-	query := `INSERT INTO tb_indikator (id, kode, kode_opd, indikator, tahun, pagu_anggaran) VALUES (?, ?, ?, ?, ?, ?)`
-	_, err := tx.ExecContext(ctx, query, indikator.Id, indikator.Kode, indikator.KodeOpd, indikator.Indikator, indikator.Tahun, indikator.PaguAnggaran)
+func (r *MatrixRenstraRepositoryImpl) DeleteIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM tb_indikator_matrix WHERE kode_indikator = ?`, kodeIndikator)
 	return err
 }
 
-func (repository *MatrixRenstraRepositoryImpl) SaveTarget(ctx context.Context, tx *sql.Tx, target domain.Target) error {
-	query := `INSERT INTO tb_target (id, indikator_id, target, satuan, jenis) VALUES (?, ?, ?, ?, 'renstra')`
-	_, err := tx.ExecContext(ctx, query, target.Id, target.IndikatorId, target.Target, target.Satuan)
+func (r *MatrixRenstraRepositoryImpl) DeleteTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error {
+	// indikatorId = kode_indikator dari tb_indikator_matrix
+	_, err := tx.ExecContext(ctx, `DELETE FROM tb_target WHERE indikator_id = ?`, indikatorId)
 	return err
 }
-
-func (repository *MatrixRenstraRepositoryImpl) FindIndikatorById(ctx context.Context, tx *sql.Tx, indikatorId string) (domain.Indikator, error) {
-	query := `
-        SELECT 
-        i.id, i.kode, i.kode_opd, i.indikator, i.tahun, i.pagu_anggaran,
-        t.id as target_id, t.target, t.satuan 
-    FROM tb_indikator i 
-    LEFT JOIN tb_target t ON t.indikator_id = i.id AND t.jenis = 'renstra'
-    WHERE i.id = ?
-    `
-	var indikator domain.Indikator
-	var target domain.Target
-	// Gunakan NullString dan NullInt64 untuk handle nilai NULL
-	var targetId, targetValue, targetSatuan sql.NullString
-
-	err := tx.QueryRowContext(ctx, query, indikatorId).Scan(
-		&indikator.Id,
-		&indikator.Kode,
-		&indikator.KodeOpd,
-		&indikator.Indikator,
-		&indikator.Tahun,
-		&indikator.PaguAnggaran,
-		&targetId,
-		&targetValue,
-		&targetSatuan,
-	)
-	if err != nil {
-		return domain.Indikator{}, err
-	}
-
-	// Set target jika ada nilainya
-	if targetId.Valid {
-		target = domain.Target{
-			Id:     targetId.String,
-			Target: targetValue.String,
-			Satuan: targetSatuan.String,
-		}
-		indikator.Target = []domain.Target{target}
-	} else {
-		indikator.Target = []domain.Target{} // Set empty slice jika tidak ada target
-	}
-
-	return indikator, nil
-}
-func (repository *MatrixRenstraRepositoryImpl) UpdateIndikator(ctx context.Context, tx *sql.Tx, indikator domain.Indikator) error {
-	query := `UPDATE tb_indikator SET kode = ?, kode_opd = ?, indikator = ?, tahun = ?, pagu_anggaran = ? WHERE id = ?`
-	_, err := tx.ExecContext(ctx, query, indikator.Kode, indikator.KodeOpd, indikator.Indikator, indikator.Tahun, indikator.PaguAnggaran, indikator.Id)
-	return err
-}
-
-func (repository *MatrixRenstraRepositoryImpl) UpdateTarget(ctx context.Context, tx *sql.Tx, target domain.Target) error {
-	query := `UPDATE tb_target SET target = ?, satuan = ? WHERE id = ? AND jenis = 'renstra'`
-	_, err := tx.ExecContext(ctx, query, target.Target, target.Satuan, target.Id)
-	return err
-}
-
-func (repository *MatrixRenstraRepositoryImpl) DeleteIndikator(ctx context.Context, tx *sql.Tx, indikatorId string) error {
-	query := `DELETE FROM tb_indikator WHERE id = ?`
-	_, err := tx.ExecContext(ctx, query, indikatorId)
-	return err
-}
-
-func (repository *MatrixRenstraRepositoryImpl) DeleteTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error {
-	query := `DELETE FROM tb_target WHERE indikator_id = ? AND jenis = 'renstra'`
-	_, err := tx.ExecContext(ctx, query, indikatorId)
-	return err
-}
-
 func (repository *MatrixRenstraRepositoryImpl) UpsertAnggaran(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun string, pagu int64) error {
 	query := `
         INSERT INTO tb_pagu (kode_subkegiatan, kode_opd, tahun, jenis, pagu)
@@ -267,5 +199,168 @@ func (repository *MatrixRenstraRepositoryImpl) UpsertAnggaran(ctx context.Contex
         ON DUPLICATE KEY UPDATE pagu = VALUES(pagu)
     `
 	_, err := tx.ExecContext(ctx, query, kodeSubkegiatan, kodeOpd, tahun, pagu)
+	return err
+}
+
+func (r *MatrixRenstraRepositoryImpl) UpsertIndikator(ctx context.Context, tx *sql.Tx, ind domain.Indikator) error {
+	query := `
+        INSERT INTO tb_indikator_matrix
+            (kode_indikator, kode, kode_opd, indikator, tahun, jenis)
+        VALUES (?, ?, ?, ?, ?, 'renstra')
+        ON DUPLICATE KEY UPDATE
+            indikator = VALUES(indikator),
+            tahun     = VALUES(tahun)
+    `
+	_, err := tx.ExecContext(ctx, query,
+		ind.KodeIndikator,
+		ind.Kode,
+		ind.KodeOpd,
+		ind.Indikator,
+		ind.Tahun,
+	)
+	return err
+}
+func (r *MatrixRenstraRepositoryImpl) UpsertTarget(ctx context.Context, tx *sql.Tx, t domain.Target) error {
+	query := `
+        INSERT INTO tb_target (id, indikator_id, target, satuan, tahun)
+        VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            target  = VALUES(target),
+            satuan  = VALUES(satuan),
+            tahun   = VALUES(tahun)
+    `
+	_, err := tx.ExecContext(ctx, query,
+		t.Id,
+		t.IndikatorId, // = kode_indikator dari indikator
+		t.Target,
+		t.Satuan,
+		t.Tahun,
+	)
+	return err
+}
+
+func (r *MatrixRenstraRepositoryImpl) FindIndikatorByKodeIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.Indikator, error) {
+	query := `
+        SELECT
+            im.kode_indikator,
+            im.kode,
+            im.kode_opd,
+            im.indikator,
+            im.tahun,
+            COALESCE(im.rumus_perhitungan, '')    AS rumus_perhitungan,
+            COALESCE(im.sumber_data, '')          AS sumber_data,
+            COALESCE(im.definisi_operasional, '') AS definisi_operasional,
+            COALESCE(t.id, '')                    AS target_id,
+            COALESCE(t.target, '')                AS target,
+            COALESCE(t.satuan, '')                AS satuan,
+            COALESCE(t.tahun, '')                 AS target_tahun
+        FROM tb_indikator_matrix im
+        LEFT JOIN tb_target t ON t.indikator_id = im.kode_indikator
+        WHERE im.kode_indikator = ?
+          AND im.jenis = 'renstra'
+    `
+	rows, err := tx.QueryContext(ctx, query, kodeIndikator)
+	if err != nil {
+		return domain.Indikator{}, err
+	}
+	defer rows.Close()
+	var ind domain.Indikator
+	found := false
+	for rows.Next() {
+		var (
+			targetId, targetVal, targetSatuan, targetTahun string
+			rumus, sumber, definisi                        string
+		)
+		err := rows.Scan(
+			&ind.KodeIndikator,
+			&ind.Kode,
+			&ind.KodeOpd,
+			&ind.Indikator,
+			&ind.Tahun,
+			&rumus, &sumber, &definisi,
+			&targetId, &targetVal, &targetSatuan, &targetTahun,
+		)
+		if err != nil {
+			return domain.Indikator{}, err
+		}
+		ind.RumusPerhitungan = sql.NullString{String: rumus, Valid: rumus != ""}
+		ind.SumberData = sql.NullString{String: sumber, Valid: sumber != ""}
+		ind.DefinisiOperasional = sql.NullString{String: definisi, Valid: definisi != ""}
+		found = true
+		if targetId != "" {
+			ind.Target = append(ind.Target, domain.Target{
+				Id:          targetId,
+				IndikatorId: ind.KodeIndikator,
+				Target:      targetVal,
+				Satuan:      targetSatuan,
+				Tahun:       targetTahun,
+			})
+		}
+	}
+	if !found {
+		return domain.Indikator{}, sql.ErrNoRows
+	}
+	return ind, nil
+}
+
+func (r *MatrixRenstraRepositoryImpl) CountKodeIndikatorByPrefix(ctx context.Context, tx *sql.Tx, prefix string) (int, error) {
+	query := `SELECT COUNT(*) FROM tb_indikator_matrix WHERE kode_indikator LIKE ? AND jenis = 'renstra'`
+	var count int
+	err := tx.QueryRowContext(ctx, query, prefix+"%").Scan(&count)
+	return count, err
+}
+
+func (r *MatrixRenstraRepositoryImpl) DeleteIndicatorsExcept(
+	ctx context.Context, tx *sql.Tx,
+	kode, kodeOpd, tahun string, keepList []string,
+) error {
+	if len(keepList) == 0 {
+		// Hapus semua target dalam scope ini
+		delTarget := `
+            DELETE FROM tb_target
+            WHERE indikator_id IN (
+                SELECT kode_indikator FROM tb_indikator_matrix
+                WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = 'renstra'
+            )
+        `
+		if _, err := tx.ExecContext(ctx, delTarget, kode, kodeOpd, tahun); err != nil {
+			return err
+		}
+		// Hapus semua indikator dalam scope ini
+		delInd := `
+            DELETE FROM tb_indikator_matrix
+            WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = 'renstra'
+        `
+		_, err := tx.ExecContext(ctx, delInd, kode, kodeOpd, tahun)
+		return err
+	}
+	// Bangun placeholder IN (?,?,...)
+	placeholders := make([]string, len(keepList))
+	args := make([]interface{}, 0, 3+len(keepList))
+	args = append(args, kode, kodeOpd, tahun)
+	for i, k := range keepList {
+		placeholders[i] = "?"
+		args = append(args, k)
+	}
+	inClause := strings.Join(placeholders, ",")
+	// Hapus target dari indikator yang TIDAK ada di keepList
+	delTarget := fmt.Sprintf(`
+        DELETE FROM tb_target
+        WHERE indikator_id IN (
+            SELECT kode_indikator FROM tb_indikator_matrix
+            WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = 'renstra'
+              AND kode_indikator NOT IN (%s)
+        )
+    `, inClause)
+	if _, err := tx.ExecContext(ctx, delTarget, args...); err != nil {
+		return err
+	}
+	// Hapus indikator yang TIDAK ada di keepList
+	delInd := fmt.Sprintf(`
+        DELETE FROM tb_indikator_matrix
+        WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = 'renstra'
+          AND kode_indikator NOT IN (%s)
+    `, inClause)
+	_, err := tx.ExecContext(ctx, delInd, args...)
 	return err
 }
