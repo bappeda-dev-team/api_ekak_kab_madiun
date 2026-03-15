@@ -12,11 +12,13 @@ type TujuanOpdCreateRequest struct {
 }
 
 type IndikatorCreateRequest struct {
-	IdTujuanOpd      string                `json:"id_tujuan_opd"`
-	Indikator        string                `json:"indikator"`
-	RumusPerhitungan string                `json:"rumus_perhitungan"`
-	SumberData       string                `json:"sumber_data"`
-	Target           []TargetCreateRequest `json:"target"`
+	IdTujuanOpd         string                `json:"id_tujuan_opd"`
+	Indikator           string                `json:"indikator"`
+	RumusPerhitungan    string                `json:"rumus_perhitungan"`
+	SumberData          string                `json:"sumber_data"`
+	Jenis               string                `json:"jenis"`
+	DefinisiOperasional string                `json:"definisi_operasional"`
+	Target              []TargetCreateRequest `json:"target"`
 }
 
 type TargetCreateRequest struct {
@@ -24,4 +26,19 @@ type TargetCreateRequest struct {
 	Target      string `json:"target"`
 	Tahun       string `json:"tahun"`
 	Satuan      string `json:"satuan"`
+}
+
+type IndikatorUpsertRequest struct {
+	KodeIndikator       string                `json:"kode_indikator"` // kosong = CREATE baru
+	Indikator           string                `json:"indikator"`
+	DefinisiOperasional string                `json:"definisi_operasional"`
+	RumusPerhitungan    string                `json:"rumus_perhitungan"`
+	SumberData          string                `json:"sumber_data"`
+	Target              []TargetUpsertRequest `json:"target"`
+}
+type TargetUpsertRequest struct {
+	Id     string `json:"id"` // kosong = CREATE baru
+	Tahun  string `json:"tahun"`
+	Target string `json:"target"`
+	Satuan string `json:"satuan"`
 }

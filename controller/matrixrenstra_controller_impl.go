@@ -18,6 +18,18 @@ func NewMatrixRenstraControllerImpl(matrixRenstraService service.MatrixRenstraSe
 	return &MatrixRenstraControllerImpl{MatrixRenstraService: matrixRenstraService}
 }
 
+// @Summary      Matrix Renstra
+// @Description  Mendapatkan data matrix renstra berdasarkan kode OPD dan tahun.
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun_awal  query     string  true  "Tahun Awal"      example("2025")
+// @Param        tahun_akhir  query     string  true  "Tahun Akhir"      example("2026")
+// @Success      200  {object}  web.WebResponse{data=[]programkegiatan.UrusanDetailResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renstra/opd/{kode_opd} [get]
 func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahunAwal := request.URL.Query().Get("tahun_awal")
@@ -44,7 +56,7 @@ func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatan(writer http.
 }
 
 func (controller *MatrixRenstraControllerImpl) CreateIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	IndikatorRenstraCreateRequest := programkegiatan.IndikatorRenstraCreateRequest{}
+	IndikatorRenstraCreateRequest := []programkegiatan.IndikatorRenstraCreateRequest{}
 	helper.ReadFromRequestBody(request, &IndikatorRenstraCreateRequest)
 
 	IndikatorRenstraResponse, err := controller.MatrixRenstraService.CreateIndikator(request.Context(), IndikatorRenstraCreateRequest)
@@ -129,4 +141,27 @@ func (controller *MatrixRenstraControllerImpl) FindIndikatorById(writer http.Res
 		Data:   indikatorResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *MatrixRenstraControllerImpl) UpsertAnggaran(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	AnggaranRenstraRequest := programkegiatan.AnggaranRenstraRequest{}
+	helper.ReadFromRequestBody(request, &AnggaranRenstraRequest)
+
+	AnggaranRenstraResponse, err := controller.MatrixRenstraService.UpsertAnggaran(request.Context(), AnggaranRenstraRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success upsert anggaran renstra",
+		Data:   AnggaranRenstraResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+
 }

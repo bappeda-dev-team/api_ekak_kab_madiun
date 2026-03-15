@@ -7,4 +7,5 @@ type Target struct {
 	Satuan      string
 	Tahun       string
 	CloneFrom   string
+	Jenis       string
 }

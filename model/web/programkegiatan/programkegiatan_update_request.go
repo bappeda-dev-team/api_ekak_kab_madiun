@@ -27,12 +27,11 @@ type TargetUpdateRequest struct {
 }
 
 type UpdateIndikatorRequest struct {
-	Id           string `json:"id" validate:"required"`
-	Kode         string `json:"kode" validate:"required"`
-	KodeOpd      string `json:"kode_opd" validate:"required"`
-	Indikator    string `json:"indikator" validate:"required"`
-	Tahun        string `json:"tahun" validate:"required"`
-	PaguAnggaran int64  `json:"pagu_anggaran"`
-	Target       string `json:"target" validate:"required"`
-	Satuan       string `json:"satuan" validate:"required"`
+	Id        string `json:"id" validate:"required"`
+	Kode      string `json:"kode" validate:"required"`
+	KodeOpd   string `json:"kode_opd" validate:"required"`
+	Indikator string `json:"indikator" validate:"required"`
+	Tahun     string `json:"tahun" validate:"required"`
+	Target    string `json:"target" validate:"required"`
+	Satuan    string `json:"satuan" validate:"required"`
 }

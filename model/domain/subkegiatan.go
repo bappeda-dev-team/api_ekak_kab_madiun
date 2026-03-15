@@ -35,27 +35,30 @@ type PaguSubKegiatan struct {
 }
 
 type SubKegiatanQuery struct {
-	KodeUrusan       string
-	NamaUrusan       string
-	KodeBidangUrusan string
-	NamaBidangUrusan string
-	KodeProgram      string
-	NamaProgram      string
-	KodeKegiatan     string
-	NamaKegiatan     string
-	KodeSubKegiatan  string
-	NamaSubKegiatan  string
-	TahunSubKegiatan string
-	PegawaiId        string
-	IndikatorId      string
-	IndikatorKode    string
-	Indikator        string
-	IndikatorTahun   string
-	IndikatorKodeOpd string
-	Target           string
-	Satuan           string
-	TargetId         string
-	PaguAnggaran     sql.NullInt64
+	KodeUrusan               string
+	NamaUrusan               string
+	KodeBidangUrusan         string
+	NamaBidangUrusan         string
+	KodeProgram              string
+	NamaProgram              string
+	KodeKegiatan             string
+	NamaKegiatan             string
+	KodeSubKegiatan          string
+	NamaSubKegiatan          string
+	TahunSubKegiatan         string
+	PegawaiId                string
+	NamaPegawai              string
+	PaguSubKegiatan          int64
+	IndikatorId              string
+	IndikatorKode            string
+	Indikator                string
+	IndikatorTahun           string
+	IndikatorKodeOpd         string
+	Target                   string
+	Satuan                   string
+	TargetId                 string
+	PaguAnggaran             sql.NullInt64
+	TotalAnggaranSubKegiatan int64
 }
 
 type SubKegiatanKAKQuery struct {
