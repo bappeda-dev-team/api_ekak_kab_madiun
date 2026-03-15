@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"errors"
 	"fmt"
@@ -1530,6 +1531,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.C
 		if !exists {
 			indikator = domain.Indikator{
 				Id:               indikatorId.String,
+				RencanaKinerjaId: rk.Id,
 				Indikator:        indikatorNama.String,
 				Tahun:            indikatorTahun.String,
 				RumusPerhitungan: formula,
@@ -1559,4 +1561,205 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.C
 	}
 
 	return results, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error) {
+	const op = "rencanakinerja_repository.FindByPokinIds"
+
+	if len(pokinIds) == 0 {
+		return []domain.RencanaKinerja{}, nil
+	}
+
+	baseQuery := `
+        SELECT
+            r.id,
+            r.id_pohon,
+            p.level_pohon,
+            p.parent,
+            r.nama_rencana_kinerja,
+            r.tahun,
+            r.pegawai_id,
+            r.kode_opd,
+            sub.kode_subkegiatan,
+            subkeg.nama_subkegiatan,
+            keg.kode_kegiatan,
+            keg.nama_kegiatan,
+            prg.kode_program,
+            prg.nama_program
+        FROM tb_rencana_kinerja r
+        JOIN tb_pohon_kinerja p ON r.id_pohon = p.id
+        LEFT JOIN tb_subkegiatan_terpilih sub ON r.id = sub.rekin_id
+        LEFT JOIN tb_subkegiatan subkeg ON sub.kode_subkegiatan = subkeg.kode_subkegiatan
+        LEFT JOIN tb_master_kegiatan keg ON keg.kode_kegiatan = SUBSTRING_INDEX(subkeg.kode_subkegiatan, '.', 5)
+        LEFT JOIN tb_master_program prg ON prg.kode_program = SUBSTRING_INDEX(subkeg.kode_subkegiatan, '.', 3)
+        WHERE r.id_pohon IN (?)`
+
+	query, args := helper.BuildInQuery(baseQuery, pokinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	results := make([]domain.RencanaKinerja, 0)
+
+	for rows.Next() {
+		var rk domain.RencanaKinerja
+		var (
+			levelPohon sql.NullInt64
+			parent     sql.NullInt64
+			kodeSub    sql.NullString
+			namaSub    sql.NullString
+			kodeKeg    sql.NullString
+			namaKeg    sql.NullString
+			kodePrg    sql.NullString
+			namaPrg    sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&levelPohon,
+			&parent,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.PegawaiId,
+			&rk.KodeOpd,
+			&kodeSub,
+			&namaSub,
+			&kodeKeg,
+			&namaKeg,
+			&kodePrg,
+			&namaPrg,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// mapping nullable → struct
+		if levelPohon.Valid {
+			rk.LevelPohon = int(levelPohon.Int64)
+		}
+		if parent.Valid {
+			rk.ParentPohon = int(parent.Int64)
+		}
+		if kodeSub.Valid {
+			rk.KodeSubKegiatan = kodeSub.String
+		}
+		if namaSub.Valid {
+			rk.NamaSubKegiatan = namaSub.String
+		}
+		if kodeKeg.Valid {
+			rk.KodeKegiatan = kodeKeg.String
+		}
+		if namaKeg.Valid {
+			rk.NamaKegiatan = namaKeg.String
+		}
+		if kodePrg.Valid {
+			rk.KodeProgram = kodePrg.String
+		}
+		if namaPrg.Valid {
+			rk.Program = namaPrg.String
+		}
+
+		results = append(results, rk)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	return results, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) IndikatorTargetSasaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string][]domain.Indikator, error) {
+	const op = "rencanakinerja_repository.IndikatorTargetSasaranByRekinIds"
+
+	if len(rekinIds) == 0 {
+		return map[string][]domain.Indikator{}, nil
+	}
+
+	baseQuery := `
+          SELECT ind.id,
+                 ind.rencana_kinerja_id,
+                 ind.indikator,
+                 ind.tahun,
+                 tgt.id as target_id,
+                 tgt.target,
+                 tgt.satuan,
+                 tgt.tahun as target_tahun
+          FROM tb_indikator ind
+          LEFT JOIN tb_target tgt ON ind.id = tgt.indikator_id
+          WHERE rencana_kinerja_id IN (?)
+		  ORDER BY ind.id
+    `
+
+	query, args := helper.BuildInQueryString(baseQuery, rekinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// rekinId -> indikatorId -> indikator
+	rekinMap := make(map[string]map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId, rekinId, indikator, tahun      string
+			targetId, target, satuan, tahunTarget sql.NullString
+		)
+
+		if err := rows.Scan(
+			&indId,
+			&rekinId,
+			&indikator,
+			&tahun,
+			&targetId,
+			&target,
+			&satuan,
+			&tahunTarget,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		// init rekinMap
+		if rekinMap[rekinId] == nil {
+			rekinMap[rekinId] = make(map[string]*domain.Indikator)
+		}
+		if rekinMap[rekinId][indId] == nil {
+			rekinMap[rekinId][indId] = &domain.Indikator{
+				Id:               indId,
+				RencanaKinerjaId: rekinId,
+				Indikator:        indikator,
+				Tahun:            tahun,
+				Target:           make([]domain.Target, 0),
+			}
+		}
+		if targetId.Valid {
+			rekinMap[rekinId][indId].Target = append(
+				rekinMap[rekinId][indId].Target,
+				domain.Target{
+					Id:          targetId.String,
+					IndikatorId: indId,
+					Target:      target.String,
+					Satuan:      satuan.String,
+					Tahun:       tahunTarget.String,
+				},
+			)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+	result := make(map[string][]domain.Indikator)
+	for rekinId, indikatorMap := range rekinMap {
+		for _, ind := range indikatorMap {
+			result[rekinId] = append(result[rekinId], *ind)
+		}
+	}
+
+	return result, nil
 }

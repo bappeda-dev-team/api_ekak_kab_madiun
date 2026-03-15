@@ -2492,6 +2492,12 @@ func toIndikatorResponses(
 	responses := make([]rencanakinerja.IndikatorResponse, 0, len(indikators))
 
 	for _, indikator := range indikators {
+		// skip indikator yang kosong namanya
+		nama := strings.TrimSpace(indikator.Indikator)
+		if nama == "" {
+			continue
+		}
+
 		responses = append(responses, rencanakinerja.IndikatorResponse{
 			Id:               indikator.Id,
 			RencanaKinerjaId: indikator.RencanaKinerjaId,

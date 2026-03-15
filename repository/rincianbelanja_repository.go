@@ -17,4 +17,5 @@ type RincianBelanjaRepository interface {
 	LaporanRincianBelanjaOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RincianBelanjaAsn, error)
 	LaporanRincianBelanjaPegawai(ctx context.Context, tx *sql.Tx, pegawaiId string, tahun string) ([]domain.RincianBelanjaAsn, error)
 	Upsert(ctx context.Context, tx *sql.Tx, rincianBelanja domain.RincianBelanja) (domain.RincianBelanja, error)
+	TotalAnggaranByIdRekins(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]int64, error)
 }

@@ -37,4 +37,5 @@ type RencanaKinerja struct {
 	KodeProgram        string
 	Program            string
 	PaguProgram        string
+	TotalAnggaran      int64
 }

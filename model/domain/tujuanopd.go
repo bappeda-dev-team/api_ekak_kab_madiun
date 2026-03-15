@@ -5,6 +5,7 @@ type TujuanOpd struct {
 	KodeOpd          string
 	NamaOpd          string
 	KodeBidangUrusan string
+	NamaBidangUrusan string
 	Tujuan           string
 	PeriodeId        Periode
 	TahunAwal        string

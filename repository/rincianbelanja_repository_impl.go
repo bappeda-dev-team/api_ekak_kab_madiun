@@ -727,3 +727,52 @@ func (repository *RincianBelanjaRepositoryImpl) Upsert(ctx context.Context, tx *
 	// Jika data belum ada, lakukan create
 	return repository.Create(ctx, tx, rincianBelanja)
 }
+
+func (repository *RincianBelanjaRepositoryImpl) TotalAnggaranByIdRekins(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]int64, error) {
+
+	const op = "rincianbelanja_repository.TotalAnggaranByIdRekins"
+
+	if len(rekinIds) == 0 {
+		return map[string]int64{}, nil
+	}
+
+	baseQuery := `
+		SELECT rn.rencana_kinerja_id,
+               rb.anggaran
+        FROM tb_rencana_aksi rn
+        JOIN tb_rincian_belanja rb ON rb.renaksi_id = rn.id
+        WHERE rn.rencana_kinerja_id IN (?)
+        ORDER BY rn.rencana_kinerja_id
+	`
+	query, args := helper.BuildInQueryString(baseQuery, rekinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	results := make(map[string]int64)
+	for rows.Next() {
+		var (
+			rekinId  string
+			anggaran sql.NullInt64
+		)
+
+		if err := rows.Scan(
+			&rekinId,
+			&anggaran,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		if anggaran.Valid {
+			results[rekinId] += anggaran.Int64
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	return results, nil
+}

@@ -11,14 +11,18 @@ type SasaranOpdCreateRequest struct {
 }
 
 type IndikatorCreateRequest struct {
-	Id               string                `json:"id"`
-	Indikator        string                `json:"indikator"`
-	RumusPerhitungan string                `json:"rumus_perhitungan"`
-	SumberData       string                `json:"sumber_data"`
-	Target           []TargetCreateRequest `json:"target"`
+	Id                  string                `json:"id"`
+	Indikator           string                `json:"indikator"`
+	KodeIndikator       string                `json:"kode_indikator"`
+	Jenis               string                `json:"jenis"`
+	DefinisiOperasional string                `json:"definisi_operasional"`
+	RumusPerhitungan    string                `json:"rumus_perhitungan"`
+	SumberData          string                `json:"sumber_data"`
+	Target              []TargetCreateRequest `json:"target"`
 }
 
 type TargetCreateRequest struct {
+	Id     string `json:"id"`
 	Tahun  string `json:"tahun"`
 	Target string `json:"target"`
 	Satuan string `json:"satuan"`
