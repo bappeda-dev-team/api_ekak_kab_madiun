@@ -13,4 +13,5 @@ type MatrixRenjaRepository interface {
 	CountKodeIndikatorByPrefix(ctx context.Context, tx *sql.Tx, prefix string) (int, error)
 	FindIndikatorRenjaByKode(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.Indikator, error)
 	UpsertAnggaran(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun string, pagu int64) error
+	DeleteIndicatorsExcept(ctx context.Context, tx *sql.Tx, kode, kodeOpd, tahun, jenis string, keepList []string) error
 }
