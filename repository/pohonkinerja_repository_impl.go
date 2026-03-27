@@ -3582,8 +3582,8 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Contex
 	// 3. Insert pohon kinerja baru
 	scriptInsert := `
 		INSERT INTO tb_pohon_kinerja 
-		(nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from, is_active)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		(nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from, is_active, keterangan_tahun_clone)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	result, err := tx.ExecContext(ctx, scriptInsert,
@@ -3595,8 +3595,9 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Contex
 		source.Keterangan,
 		targetTahun,
 		newStatus,
-		0, // ✅ clone_from = 0 (default)
+		sourceId, // ✅ clone_from = 0 (default)
 		source.IsActive,
+		targetTahun,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("gagal insert pohon kinerja: %w", err)
@@ -3614,10 +3615,10 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Contex
 	}
 
 	// 5. Clone pelaksana
-	err = repository.clonePelaksana(ctx, tx, sourceId, newPokinId)
-	if err != nil {
-		fmt.Printf("Warning: Gagal clone pelaksana: %v\n", err)
-	}
+	// err = repository.clonePelaksana(ctx, tx, sourceId, newPokinId)
+	// if err != nil {
+	// 	fmt.Printf("Warning: Gagal clone pelaksana: %v\n", err)
+	// }
 
 	return newPokinId, nil
 }
@@ -4697,4 +4698,31 @@ func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokinBatchForCascadin
 	}
 
 	return result, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) CheckIfSourceAlreadyCloned(
+	ctx context.Context,
+	tx *sql.Tx,
+	sourceId int,
+	tahunTarget string,
+) (bool, error) {
+
+	script := `
+        SELECT 1
+        FROM tb_pohon_kinerja pk
+        WHERE pk.clone_from = ? AND pk.keterangan_tahun_clone = ?
+        LIMIT 1
+    `
+
+	var exists int
+	err := tx.QueryRowContext(ctx, script, sourceId, tahunTarget).Scan(&exists)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

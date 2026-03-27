@@ -99,4 +99,6 @@ type PohonKinerjaRepository interface {
 	FindTematikByCloneFromBatch(ctx context.Context, tx *sql.Tx, cloneFromIds []int) (map[int]*domain.PohonKinerja, error)
 	FindByIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.PohonKinerja, error)
 	FindPelaksanaPokinBatchForCascading(ctx context.Context, tx *sql.Tx, pohonKinerjaIds []int) ([]domain.PelaksanaPokin, error)
+
+	CheckIfSourceAlreadyCloned(ctx context.Context, tx *sql.Tx, sourceId int, tahunTarget string) (bool, error)
 }
