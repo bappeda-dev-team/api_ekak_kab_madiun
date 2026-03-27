@@ -619,6 +619,12 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 	for _, item := range request.Indikator {
 		var kodeIndikator string
 		var targetId string
+		// ambil target pertama
+		// TODO: multiple target dalam satu indikator
+		var firstTarget programkegiatan.TargetRenjaRequest
+		if len(item.Target) > 0 {
+			firstTarget = item.Target[0]
+		}
 		if item.KodeIndikator == "" {
 			// ── CREATE: generate kode_indikator baru ─────────────────────
 			// Contoh hasil: 5.01.03.2.02.0002-5.01.5.05...-2025-001
@@ -632,11 +638,10 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 			kodeIndikator = item.KodeIndikator
 			// Tentukan targetId:
 			// Prioritas 1 → ID dikirim FE (update target yang sudah ada)
-			// Prioritas 2 → Ambil ID target dari DB
-			// Prioritas 3 → Generate baru jika belum ada target
-			if item.Target.Id != "" {
-				targetId = item.Target.Id
+			if firstTarget.Id != "" {
+				targetId = firstTarget.Id
 			} else {
+				// Prioritas 2 → Ambil ID target dari DB
 				existing, err := service.MatrixRenjaRepository.FindIndikatorRenjaByKode(ctx, tx, kodeIndikator)
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					return programkegiatan.BatchIndikatorRenjaResponse{}, err
@@ -644,6 +649,7 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 				if len(existing.Target) > 0 {
 					targetId = existing.Target[0].Id
 				} else {
+					// Prioritas 3 → Generate baru jika belum ada target
 					targetId = fmt.Sprintf("TRG-%s-%05d",
 						strings.ToUpper(request.Jenis),
 						uuid.New().ID()%100000)
@@ -662,8 +668,8 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 				Id:          targetId,
 				IndikatorId: kodeIndikator,
 				Tahun:       request.Tahun, // ← dari batch level, bukan item level
-				Target:      item.Target.Target,
-				Satuan:      item.Target.Satuan,
+				Target:      firstTarget.Target,
+				Satuan:      firstTarget.Satuan,
 				Jenis:       request.Jenis,
 			}},
 		})
@@ -675,8 +681,8 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 				Id:          targetId,
 				IndikatorId: kodeIndikator,
 				Tahun:       request.Tahun,
-				Target:      item.Target.Target,
-				Satuan:      item.Target.Satuan,
+				Target:      firstTarget.Target,
+				Satuan:      firstTarget.Satuan,
 			},
 		})
 	}

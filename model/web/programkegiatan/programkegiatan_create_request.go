@@ -70,7 +70,7 @@ type BatchIndikatorRenjaRequest struct {
 }
 
 type IndikatorRenjaItem struct {
-	KodeIndikator string             `json:"kode_indikator"`
-	Indikator     string             `json:"indikator" validate:"required"`
-	Target        TargetRenjaRequest `json:"target"`
+	KodeIndikator string               `json:"kode_indikator"`
+	Indikator     string               `json:"indikator" validate:"required"`
+	Target        []TargetRenjaRequest `json:"target"`
 }
