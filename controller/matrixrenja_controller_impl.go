@@ -133,11 +133,11 @@ func (controller *MatrixRenjaControllerImpl) GetRenjaPenetapan(writer http.Respo
 // @Security     BearerAuth
 // @Router       /matrix_renja/indikator/ranwal/upsert [post]
 func (controller *MatrixRenjaControllerImpl) UpsertBatchIndikatorRenjaRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	BatchIndikatorRenjaRequest := []programkegiatan.IndikatorRenjaCreateRequest{}
+	BatchIndikatorRenjaRequest := programkegiatan.BatchIndikatorRenjaRequest{}
 	helper.ReadFromRequestBody(request, &BatchIndikatorRenjaRequest)
-	for i := range BatchIndikatorRenjaRequest {
-		BatchIndikatorRenjaRequest[i].Jenis = "ranwal"
-	}
+
+	BatchIndikatorRenjaRequest.Jenis = "ranwal"
+
 	BatchIndikatorRenjaResponse, err := controller.MatrixRenjaService.UpsertBatchIndikatorRenja(request.Context(), BatchIndikatorRenjaRequest)
 	if err != nil {
 		webResponse := web.WebResponse{
@@ -168,12 +168,10 @@ func (controller *MatrixRenjaControllerImpl) UpsertBatchIndikatorRenjaRanwal(wri
 // @Security     BearerAuth
 // @Router       /matrix_renja/indikator/rankhir/upsert [post]
 func (controller *MatrixRenjaControllerImpl) UpsertBatchIndikatorRenjaRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	BatchIndikatorRenjaRequest := []programkegiatan.IndikatorRenjaCreateRequest{}
+	BatchIndikatorRenjaRequest := programkegiatan.BatchIndikatorRenjaRequest{}
 	helper.ReadFromRequestBody(request, &BatchIndikatorRenjaRequest)
 
-	for i := range BatchIndikatorRenjaRequest {
-		BatchIndikatorRenjaRequest[i].Jenis = "rankhir"
-	}
+	BatchIndikatorRenjaRequest.Jenis = "rankhir"
 
 	BatchIndikatorRenjaResponse, err := controller.MatrixRenjaService.UpsertBatchIndikatorRenja(request.Context(), BatchIndikatorRenjaRequest)
 	if err != nil {
@@ -205,12 +203,10 @@ func (controller *MatrixRenjaControllerImpl) UpsertBatchIndikatorRenjaRankhir(wr
 // @Security     BearerAuth
 // @Router       /matrix_renja/indikator/penetapan/upsert [post]
 func (controller *MatrixRenjaControllerImpl) UpsertBatchIndikatorRenjaPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	BatchIndikatorRenjaRequest := []programkegiatan.IndikatorRenjaCreateRequest{}
+	BatchIndikatorRenjaRequest := programkegiatan.BatchIndikatorRenjaRequest{}
 	helper.ReadFromRequestBody(request, &BatchIndikatorRenjaRequest)
 
-	for i := range BatchIndikatorRenjaRequest {
-		BatchIndikatorRenjaRequest[i].Jenis = "penetapan"
-	}
+	BatchIndikatorRenjaRequest.Jenis = "penetapan"
 
 	BatchIndikatorRenjaResponse, err := controller.MatrixRenjaService.UpsertBatchIndikatorRenja(request.Context(), BatchIndikatorRenjaRequest)
 	if err != nil {
