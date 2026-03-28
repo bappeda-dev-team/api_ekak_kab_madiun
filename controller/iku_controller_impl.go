@@ -46,6 +46,19 @@ func (controller *IkuControllerImpl) FindAll(writer http.ResponseWriter, request
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// @Summary     Get IKU Renstra OPD
+// @Description  Get IKU Renstra by kode OPD, tahun awal, tahun akhir, and jenis periode.
+// @Tags         IKU Renstra
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param         tahun_awal path 	string true "Tahun Awal"
+// @Param         tahun_akhir path 	string true "Tahun Akhir"
+// @Param         jenis_periode path string true "Jenis Periode"
+// @Success      200  {object}  web.WebResponse{data=[]iku.IkuOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /indikator_utama/opd/{kode_opd}/{tahun_awal}/{tahun_akhir}/{jenis_periode} [GET]
 func (controller *IkuControllerImpl) FindAllIkuOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahunAwal := params.ByName("tahun_awal")
@@ -80,6 +93,29 @@ func (controller *IkuControllerImpl) UpdateIkuActive(writer http.ResponseWriter,
 	id := params.ByName("indikator_id")
 
 	err := controller.IkuService.UpdateIkuActive(request.Context(), id, ikuUpdateActiveRequest)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   "Berhasil mengupdate status IKU",
+	})
+}
+
+func (controller *IkuControllerImpl) UpdateIkuOpdActive(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ikuUpdateActiveRequest := iku.IkuUpdateActiveRequest{}
+	helper.ReadFromRequestBody(request, &ikuUpdateActiveRequest)
+
+	id := params.ByName("indikator_id")
+
+	err := controller.IkuService.UpdateIkuOpdActive(request.Context(), id, ikuUpdateActiveRequest)
 	if err != nil {
 		helper.WriteToResponseBody(writer, web.WebResponse{
 			Code:   http.StatusBadRequest,

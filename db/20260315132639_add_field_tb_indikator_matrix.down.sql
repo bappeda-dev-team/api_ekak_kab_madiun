@@ -1,0 +1,1 @@
+ALTER TABLE tb_indikator_matrix DROP COLUMN iku_active;

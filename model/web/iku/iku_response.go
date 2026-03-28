@@ -24,17 +24,19 @@ type TargetResponse struct {
 }
 
 type IkuOpdResponse struct {
-	IndikatorId      string              `json:"indikator_id"`
-	AsalIku          string              `json:"asal_iku"`
-	Indikator        string              `json:"indikator"`
-	IkuActive        bool                `json:"iku_active"`
-	CreatedAt        time.Time           `json:"created_at"`
-	RumusPerhitungan string              `json:"rumus_perhitungan"`
-	SumberData       string              `json:"sumber_data"`
-	TahunAwal        string              `json:"tahun_awal"`
-	TahunAkhir       string              `json:"tahun_akhir"`
-	JenisPeriode     string              `json:"jenis_periode"`
-	Target           []TargetOpdResponse `json:"target"`
+	IndikatorId         string              `json:"indikator_id"`
+	AsalIku             string              `json:"asal_iku"`
+	Indikator           string              `json:"indikator"`
+	IkuActive           bool                `json:"iku_active"`
+	CreatedAt           time.Time           `json:"created_at"`
+	DefinisiOperasional string              `json:"definisi_operasional"`
+	RumusPerhitungan    string              `json:"rumus_perhitungan"`
+	SumberData          string              `json:"sumber_data"`
+	Jenis               string              `json:"jenis"`
+	TahunAwal           string              `json:"tahun_awal"`
+	TahunAkhir          string              `json:"tahun_akhir"`
+	JenisPeriode        string              `json:"jenis_periode"`
+	Target              []TargetOpdResponse `json:"target"`
 }
 
 type TargetOpdResponse struct {

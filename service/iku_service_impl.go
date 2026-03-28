@@ -99,17 +99,18 @@ func (service *IkuServiceImpl) FindAllIkuOpd(ctx context.Context, kodeOpd string
 		}
 
 		responses = append(responses, iku.IkuOpdResponse{
-			IndikatorId:      item.Id,
-			AsalIku:          item.AsalIku,
-			Indikator:        item.Indikator,
-			IkuActive:        item.IkuActive,
-			RumusPerhitungan: item.RumusPerhitungan.String,
-			SumberData:       item.SumberData.String,
-			CreatedAt:        item.CreatedAt,
-			TahunAwal:        item.TahunAwal,
-			TahunAkhir:       item.TahunAkhir,
-			JenisPeriode:     item.JenisPeriode,
-			Target:           targetResponses,
+			IndikatorId:         item.Id,
+			AsalIku:             item.AsalIku,
+			Indikator:           item.Indikator,
+			IkuActive:           item.IkuActive,
+			RumusPerhitungan:    item.RumusPerhitungan.String,
+			SumberData:          item.SumberData.String,
+			CreatedAt:           item.CreatedAt,
+			TahunAwal:           item.TahunAwal,
+			TahunAkhir:          item.TahunAkhir,
+			DefinisiOperasional: item.DefinisiOperasional.String,
+			JenisPeriode:        item.JenisPeriode,
+			Target:              targetResponses,
 		})
 	}
 
@@ -133,6 +134,21 @@ func (service *IkuServiceImpl) UpdateIkuActive(ctx context.Context, id string, r
 	defer helper.CommitOrRollback(tx)
 
 	err = service.IkuRepository.UpdateIkuActive(ctx, tx, id, request.IsActive)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *IkuServiceImpl) UpdateIkuOpdActive(ctx context.Context, id string, request iku.IkuUpdateActiveRequest) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	err = service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
 	if err != nil {
 		return err
 	}
