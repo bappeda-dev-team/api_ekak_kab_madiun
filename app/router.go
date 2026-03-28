@@ -512,11 +512,15 @@ func NewRouter(
 	router.PUT("/tujuan_opd/renja/rankhir/indikator/update/:kodeIndikator", tujuanOpdController.UpdateTujuanRenjaRankhirIndikator)
 	router.GET("/tujuan_opd/ranwal/:kode_opd/:tahun", tujuanOpdController.FindTujuanOpdRanwal)
 	router.GET("/tujuan_opd/rankhir/:kode_opd/:tahun", tujuanOpdController.FindTujuanOpdRankhir)
+	router.GET("/tujuan_opd/penetapan/:kode_opd/:tahun", tujuanOpdController.FindTujuanOpdPenetapan)
+	router.POST("/tujuan_opd/renja/penetapan/indikator/create/:tujuanOpdId", tujuanOpdController.CreateTujuanRenjaPenetapanIndikator)
+	router.PUT("/tujuan_opd/renja/penetapan/indikator/update/:kodeIndikator", tujuanOpdController.UpdateTujuanRenjaPenetapanIndikator)
 
 	// Sasaran OPD - Renstra & Renja
 	router.GET("/sasaran_opd/renstra/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", sasaranOpdController.FindSasaranRenstra)
 	router.GET("/sasaran_opd/ranwal/:kode_opd/:tahun", sasaranOpdController.FindSasaranRanwal)
 	router.GET("/sasaran_opd/rankhir/:kode_opd/:tahun", sasaranOpdController.FindSasaranRankhir)
+	router.GET("/sasaran_opd/penetapan/:kode_opd/:tahun", sasaranOpdController.FindSasaranPenetapan)
 
 	//sasaran renja
 	router.POST("/sasaran_opd/renja/ranwal/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorRanwal)
@@ -524,6 +528,8 @@ func NewRouter(
 	router.DELETE("/sasaran_opd/renja/indikator/delete/:kodeIndikator", sasaranOpdController.DeleteIndikatorTargetRenja)
 	router.POST("/sasaran_opd/renja/rankhir/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorRankhir)
 	router.PUT("/sasaran_opd/renja/rankhir/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorRankhir)
+	router.POST("/sasaran_opd/renja/penetapan/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorPenetapan)
+	router.PUT("/sasaran_opd/renja/penetapan/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorPenetapan)
 
 	return router
 }
