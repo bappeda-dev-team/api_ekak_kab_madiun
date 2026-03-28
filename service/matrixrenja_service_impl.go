@@ -604,13 +604,37 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 	for _, item := range requests {
 		var kodeIndikator string
 		var targetId string
+		// ambil target pertama
+		// TODO: multiple target dalam satu indikator
+		var firstTarget programkegiatan.TargetRenjaRequest
+		if len(item.Target) > 0 {
+			firstTarget = item.Target[0]
+		}
 		if item.KodeIndikator == "" {
 			kodeIndikator = fmt.Sprintf("%s%03d", prefixBase, nextUrutan)
 			nextUrutan++
 			targetId = fmt.Sprintf("TRG-%s-%05d", strings.ToUpper(requests[0].Jenis), uuid.New().ID()%100000)
 		} else {
 			kodeIndikator = item.KodeIndikator
-			targetId = fmt.Sprintf("TRG-%s-%05d", strings.ToUpper(requests[0].Jenis), uuid.New().ID()%100000)
+			// Tentukan targetId:
+			// Prioritas 1 → ID dikirim FE (update target yang sudah ada)
+			if firstTarget.Id != "" {
+				targetId = firstTarget.Id
+			} else {
+				// Prioritas 2 → Ambil ID target dari DB
+				existing, err := service.MatrixRenjaRepository.FindIndikatorRenjaByKode(ctx, tx, kodeIndikator)
+				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+					return programkegiatan.BatchIndikatorRenjaResponse{}, err
+				}
+				if len(existing.Target) > 0 {
+					targetId = existing.Target[0].Id
+				} else {
+					// Prioritas 3 → Generate baru jika belum ada target
+					targetId = fmt.Sprintf("TRG-%s-%05d",
+						strings.ToUpper(request.Jenis),
+						uuid.New().ID()%100000)
+				}
+			}
 		}
 		keepList = append(keepList, kodeIndikator) // ← TAMBAH INI
 		domainItems = append(domainItems, domain.Indikator{
@@ -623,10 +647,10 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 			Target: []domain.Target{{
 				Id:          targetId,
 				IndikatorId: kodeIndikator,
-				Tahun:       requests[0].Tahun,
-				Target:      item.Target,
-				Satuan:      item.Satuan,
-				Jenis:       requests[0].Jenis,
+				Tahun:       request.Tahun, // ← dari batch level, bukan item level
+				Target:      firstTarget.Target,
+				Satuan:      firstTarget.Satuan,
+				Jenis:       request.Jenis,
 			}},
 		})
 		respItems = append(respItems, programkegiatan.IndikatorUpsertResponse{
@@ -634,10 +658,14 @@ func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Con
 			Kode:          requests[0].Kode,
 			KodeOpd:       requests[0].KodeOpd,
 			Indikator:     item.Indikator,
-			Jenis:         requests[0].Jenis,
-			Tahun:         requests[0].Tahun,
-			Target:        item.Target,
-			Satuan:        item.Satuan,
+			Jenis:         request.Jenis,
+			Target: programkegiatan.TargetResponse{
+				Id:          targetId,
+				IndikatorId: kodeIndikator,
+				Tahun:       request.Tahun,
+				Target:      firstTarget.Target,
+				Satuan:      firstTarget.Satuan,
+			},
 		})
 	}
 	if err := service.MatrixRenjaRepository.UpsertBatchIndikatorRenja(ctx, tx, domainItems); err != nil {
