@@ -18,6 +18,86 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/indikator_utama/opd/{kode_opd}/{tahun_awal}/{tahun_akhir}/{jenis_periode}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get IKU Renstra by kode OPD, tahun awal, tahun akhir, and jenis periode.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IKU Renstra"
+                ],
+                "summary": "Get IKU Renstra OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun Awal",
+                        "name": "tahun_awal",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun Akhir",
+                        "name": "tahun_akhir",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Jenis Periode",
+                        "name": "jenis_periode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/iku.IkuOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -2133,6 +2213,67 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "iku.IkuOpdResponse": {
+            "type": "object",
+            "properties": {
+                "asal_iku": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "iku_active": {
+                    "type": "boolean"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/iku.TargetOpdResponse"
+                    }
+                }
+            }
+        },
+        "iku.TargetOpdResponse": {
+            "type": "object",
+            "properties": {
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "programkegiatan.AnggaranRenjaRequest": {
             "type": "object",
             "required": [

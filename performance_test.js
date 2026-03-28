@@ -2,59 +2,54 @@ import http from 'k6/http';
 import { sleep, check } from 'k6';
 import { Trend } from 'k6/metrics';
 
-const responseTimeA = new Trend('response_time_url_A');
-const responseTimeB = new Trend('response_time_url_B');
+// Karena sekarang hanya fokus ke 1 jenis URL utama
+const responseTimeMatrix = new Trend('response_time_matrix_renstra');
 
 export const options = {
   stages: [
-    { duration: '30s', target: 50 },
-    { duration: '30s', target: 100 },
-    { duration: '30s', target: 200 },
-    { duration: '30s', target: 0 },
+    { duration: '1m', target: 20 },
+    { duration: '2m', target: 40 },
+    { duration: '5m', target: 40 },  // sustain 5 menit
+    { duration: '1m', target: 0 },
   ],
   thresholds: {
-    checks: ['rate>0.99'], // 🔥 INI YANG BENAR
-    response_time_url_A: ['p(95)<200'],
-    response_time_url_B: ['p(95)<200'],
+    checks: ['rate>0.99'],
+    'response_time_matrix_renstra': ['p(95)<500'],
   },
 };
 
 const BASE_URL = 'http://localhost:8080';
-const kode_opd = '5.01.5.05.0.00.01.0000';
-const tahun = '2025';
+const KODE_OPD = '5.01.5.05.0.00.01.0000';
+const THN_AWAL = '2025';
+const THN_AKHIR = '2030';
 
 const params = {
   timeout: '120s',
   headers: {
-    Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrdW5fdGVzdF9sZXZlbF8zQGdtYWlsLmNvbSIsImV4cCI6MTc2NjIwMjEwOSwiaWF0IjoxNzY2MTE1NzA5LCJpc3MiOiIiLCJrb2RlX29wZCI6IjUuMDEuNS4wNS4wLjAwLjAxLjAwMDAiLCJuYW1hX29wZCI6IkJhZGFuIFBlcmVuY2FuYWFuIFBlbWJhbmd1bmFuIFJpc2V0LCBkYW4gSW5vdmFzaSBEYWVyYWgiLCJuYW1hX3BlZ2F3YWkiOiJha3VuIHRlc3QgbGV2ZWwgMyIsIm5pcCI6ImFrdW5fdGVzdF9sZXZlbF8zIiwicGVnYXdhaV9pZCI6IlBFRy0yMDI1MDExNS01MjY5YmIxNCIsInJvbGVzIjpbImxldmVsXzMiXSwidXNlcl9pZCI6NTU2fQ.qYf3rtkCrWt7xoocECKzotUnpg4ShO-1riZEYd5zQd4',
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQG1hZGl1bmthYnRlc3QuY29tIiwiZXhwIjoxNzczNjY4NDc5LCJpYXQiOjE3NzM1ODIwNzksImlzcyI6IiIsImtvZGVfb3BkIjoiIiwibmFtYV9vcGQiOiIiLCJuYW1hX3BlZ2F3YWkiOiJzdXBlciBhZG1pbiBzYXR1IiwibmlwIjoiYWRtaW4xIiwicGVnYXdhaV9pZCI6IkFETUlOLWM1ZTgiLCJyb2xlcyI6WyJzdXBlcl9hZG1pbiJdLCJ1c2VyX2lkIjo0NTR9.g-YmYQ66LV2lCCauSHEusnkxsKhUk3f1wLO3PThB0rE', // Gunakan token kamu
+    'Content-Type': 'application/json',
   },
 };
 
 export default function () {
-  const isUrlA = Math.random() < 0.5;
+  // Konstruksi URL dengan Path Parameter dan Query Parameter
+  // Format: /matrix_renstra/opd/:kode_opd?tahun_awal=xxx&tahun_akhir=xxx
+  const url = `${BASE_URL}/matrix_renstra/opd/${KODE_OPD}?tahun_awal=${THN_AWAL}&tahun_akhir=${THN_AKHIR}`;
 
-  const urlA = `${BASE_URL}/cascading_opd/findall/${kode_opd}/${tahun}`;
-  const urlB = `${BASE_URL}/pohon_kinerja_opd/findall/${kode_opd}/${tahun}`;
+  const res = http.get(url, params);
 
-  const url = isUrlA ? urlA : urlB;
-
-  const res = http.get(url, {
-    ...params,
-    tags: { endpoint: isUrlA ? 'A' : 'B' },
-  });
-
-  // 🔍 VALIDASI STATUS
+  // 🔍 VALIDASI
   const ok = check(res, {
     'status is 200': (r) => r.status === 200,
+    'response has data': (r) => r.json().data !== undefined,
   });
 
   if (ok) {
-    if (isUrlA) {
-      responseTimeA.add(res.timings.duration);
-    } else {
-      responseTimeB.add(res.timings.duration);
-    }
+    responseTimeMatrix.add(res.timings.duration);
+  } else {
+    // Log jika terjadi error untuk memudahkan debugging
+    console.error(`Request failed! Status: ${res.status}, Body: ${res.body}`);
   }
 
-  sleep(1);
+  sleep(1); // Jeda antar request per VU (Virtual User)
 }

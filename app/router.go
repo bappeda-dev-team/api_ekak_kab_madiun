@@ -379,6 +379,7 @@ func NewRouter(
 	router.GET("/indikator_utama/periode/:tahun_awal/:tahun_akhir/:jenis_periode", ikuController.FindAll)
 	router.GET("/indikator_utama/opd/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", ikuController.FindAllIkuOpd)
 	router.PUT("/indikator_utama/status/:indikator_id", ikuController.UpdateIkuActive)
+	router.PUT("/indikator_utama/opd/status/:indikator_id", ikuController.UpdateIkuOpdActive)
 
 	//sasaran opd
 	// router.GET("/sasaran_opd/findall/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", sasaranOpdController.FindAll)
