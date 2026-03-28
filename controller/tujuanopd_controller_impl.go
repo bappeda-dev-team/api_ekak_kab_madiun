@@ -522,6 +522,7 @@ func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaRankhirIndikator(wri
 // @Description  Menghapus data indikator tujuan opd renja yang sudah ada berdasarkan Kode Indikator.
 // @Tags         Tujuan Opd Renja Rankhir
 // @Tags         Tujuan Opd Renja Ranwal
+// @Tags         Tujuan Opd Renja Penetapan
 // @Accept       json
 // @Produce      json
 // @Param        kodeIndikator       path      string                              true  "Kode Indikator"
@@ -549,4 +550,113 @@ func (controller *TujuanOpdControllerImpl) DeleteTujuanRenjaIndikator(writer htt
 		Data:   nil,
 	})
 
+}
+
+// GetRenjaRanwal godoc
+// @Summary      Tujuan Opd Renja Penetapan
+// @Description  Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.
+// @Tags         Tujuan Opd Renja Penetapan
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path     string  true  "Tahun"      example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TujuanOpdwithBidangUrusanResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/penetapan/{kode_opd}/{tahun} [get]
+func (controller *TujuanOpdControllerImpl) FindTujuanOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	tujuanOpdResponses, err := controller.TujuanOpdService.FindTujuanPenetapan(request.Context(), kodeOpd, tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success",
+		Data:   tujuanOpdResponses,
+	})
+}
+
+// Create Indikator TujuanOpd godoc
+// @Summary      Tambah Indikator Tujuan Opd Renja Penetapan
+// @Description  Memasukkan data indikator tujuan opd renja penetapan baru ke dalam sistem.
+// @Tags         Tujuan Opd Renja Penetapan
+// @Accept       json
+// @Produce      json
+// @Param        tujuanOpdId       path      int                              true  "ID Tujuan OPD" example(1)
+// @Param        request  body      []tujuanopd.IndikatorCreateRequest  true  "Payload Create Indikator Tujuan OPD"
+// @Success      201      {object}  web.WebResponse{data=tujuanopd.IndikatorResponse}
+// @Failure      400      {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/renja/penetapan/indikator/create/{tujuanOpdId} [post]
+func (controller *TujuanOpdControllerImpl) CreateTujuanRenjaPenetapanIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tujuanOpdId := params.ByName("tujuanOpdId")
+	tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	indikatorCreateRequests := []tujuanopd.IndikatorCreateRequest{}
+	helper.ReadFromRequestBody(request, &indikatorCreateRequests)
+	indikatorResponses, err := controller.TujuanOpdService.CreateTujuanRenjaIndikator(request.Context(), tujuanOpdIdInt, "penetapan", indikatorCreateRequests)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success create tujuan renja penetapan indikator",
+		Data:   indikatorResponses,
+	})
+}
+
+// Update Indikator TujuanOpd godoc
+// @Summary      Update Indikator Tujuan Opd Renja Penetapan
+// @Description  Memperbarui data indikator tujuan opd renja penetapan yang sudah ada berdasarkan ID.
+// @Tags         Tujuan Opd Renja Penetapan
+// @Accept       json
+// @Produce      json
+// @Param        kodeIndikator       path      string                              true  "Kode Indikator"
+// @Param        request  body      tujuanopd.IndikatorUpdateRequest  true  "Payload Update Indikator Tujuan OPD"
+// @Success      201      {object}  web.WebResponse{data=tujuanopd.IndikatorResponse}
+// @Failure      400      {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/renja/penetapan/indikator/update/{kodeIndikator} [put]
+func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaPenetapanIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeIndikator := params.ByName("kodeIndikator")
+
+	indikatorUpdateRequests := tujuanopd.IndikatorUpdateRequest{}
+	helper.ReadFromRequestBody(request, &indikatorUpdateRequests)
+	indikatorResponses, err := controller.TujuanOpdService.UpdateTujuanRenjaIndikator(request.Context(), kodeIndikator, "penetapan", indikatorUpdateRequests)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success update tujuan renja penetapan indikator",
+		Data:   indikatorResponses,
+	})
 }

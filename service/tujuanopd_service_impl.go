@@ -1102,3 +1102,38 @@ func (service *TujuanOpdServiceImpl) DeleteTujuanRenjaIndikator(ctx context.Cont
 	}
 	return service.TujuanOpdRepository.DeleteIndikatorTargetRenja(ctx, tx, kodeIndikator)
 }
+
+func (service *TujuanOpdServiceImpl) FindTujuanPenetapan(
+	ctx context.Context,
+	kodeOpd, tahun, jenisPeriode string,
+) ([]tujuanopd.TujuanOpdwithBidangUrusanResponse, error) {
+	if len(tahun) != 4 {
+		return nil, fmt.Errorf("format tahun tidak valid")
+	}
+	if _, err := strconv.Atoi(tahun); err != nil {
+		return nil, fmt.Errorf("tahun harus berupa angka")
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	tujuanOpds, err := service.TujuanOpdRepository.FindAllByTahun(
+		ctx, tx, kodeOpd, tahun, jenisPeriode, "penetapan",
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0), nil
+		}
+		return nil, err
+	}
+	bidangUrusanMap, err := service.fetchBidangUrusanMap(ctx, tx, tujuanOpds)
+	if err != nil {
+		return nil, err
+	}
+	return service.buildTujuanOpdResponse(tujuanOpds, opd, bidangUrusanMap), nil
+}

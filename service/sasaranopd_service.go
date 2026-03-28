@@ -18,6 +18,7 @@ type SasaranOpdService interface {
 	FindSasaranRenstra(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
 	FindSasaranRanwal(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
 	FindSasaranRankhir(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
+	FindSasaranPenetapan(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
 	CreateRenjaIndikator(ctx context.Context, sasaranOpdId int, jenis string, requests []sasaranopd.IndikatorCreateRequest) ([]sasaranopd.IndikatorResponse, error)
 	UpdateRenjaIndikator(ctx context.Context, kodeIndikator string, jenis string, request sasaranopd.IndikatorUpdateRequest) (sasaranopd.IndikatorResponse, error)
 	DeleteRenjaIndikator(ctx context.Context, kodeIndikator string) error
