@@ -8,9 +8,7 @@ import (
 
 type MatrixRenstraController interface {
 	GetByKodeSubKegiatan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
-	CreateIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
-	UpdateIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeleteIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
-	FindIndikatorById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpsertAnggaran(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpsertBatchIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

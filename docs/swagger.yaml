@@ -1,5 +1,45 @@
 basePath: /
 definitions:
+  iku.IkuOpdResponse:
+    properties:
+      asal_iku:
+        type: string
+      created_at:
+        type: string
+      definisi_operasional:
+        type: string
+      iku_active:
+        type: boolean
+      indikator:
+        type: string
+      indikator_id:
+        type: string
+      jenis:
+        type: string
+      jenis_periode:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/iku.TargetOpdResponse'
+        type: array
+    type: object
+  iku.TargetOpdResponse:
+    properties:
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
   programkegiatan.AnggaranRenjaRequest:
     properties:
       kode_opd:
@@ -32,44 +72,37 @@ definitions:
     - pagu_indikatif
     - tahun
     type: object
-  programkegiatan.BatchIndikatorRenjaRequest:
+  programkegiatan.AnggaranRenstraRequest:
     properties:
-      indikator:
-        items:
-          $ref: '#/definitions/programkegiatan.IndikatorRenjaItem'
-        minItems: 1
-        type: array
-      jenis:
-        description: '"ranwal"/"rankhir"'
-        type: string
-      kode:
-        type: string
       kode_opd:
         type: string
+      kode_subkegiatan:
+        type: string
+      pagu_indikatif:
+        type: integer
       tahun:
-        description: ← wajib ada
         type: string
     required:
-    - indikator
-    - jenis
-    - kode
     - kode_opd
+    - kode_subkegiatan
+    - pagu_indikatif
     - tahun
     type: object
-  programkegiatan.BatchIndikatorRenjaResponse:
+  programkegiatan.AnggaranRenstraResponse:
     properties:
-      indikator:
-        items:
-          $ref: '#/definitions/programkegiatan.IndikatorRenjaUpsertResponse'
-        type: array
-      jenis:
-        type: string
-      kode:
-        type: string
       kode_opd:
         type: string
+      kode_subkegiatan:
+        type: string
+      pagu_indikatif:
+        type: integer
       tahun:
         type: string
+    required:
+    - kode_opd
+    - kode_subkegiatan
+    - pagu_indikatif
+    - tahun
     type: object
   programkegiatan.BidangUrusanResponse:
     properties:
@@ -79,7 +112,7 @@ definitions:
         type: array
       indikator:
         items:
-          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       jenis:
         type: string
@@ -92,27 +125,72 @@ definitions:
           $ref: '#/definitions/programkegiatan.ProgramResponse'
         type: array
     type: object
-  programkegiatan.IndikatorRenjaItem:
+  programkegiatan.IndikatorMatrixResponse:
     properties:
+      id:
+        type: string
       indikator:
+        type: string
+      kode:
         type: string
       kode_indikator:
         type: string
+      kode_opd:
+        type: string
+      program_id:
+        type: string
+      satuan:
+        type: string
+      status_target_renja:
+        type: boolean
+      tahun:
+        description: PaguAnggaran  int64  `json:"pagu_anggaran,omitempty"`
+        type: string
       target:
-        $ref: '#/definitions/programkegiatan.TargetRenjaRequest'
-    required:
-    - indikator
+        type: string
     type: object
-  programkegiatan.IndikatorRenjaUpsertResponse:
+  programkegiatan.IndikatorRenjaCreateRequest:
     properties:
       indikator:
         type: string
       jenis:
         type: string
+      kode:
+        type: string
       kode_indikator:
         type: string
+      kode_opd:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
       target:
-        $ref: '#/definitions/programkegiatan.TargetResponse'
+        type: string
+    required:
+    - indikator
+    - kode
+    - kode_opd
+    - satuan
+    - tahun
+    - target
+    type: object
+  programkegiatan.IndikatorRenstraCreateRequest:
+    properties:
+      indikator:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
     type: object
   programkegiatan.IndikatorResponse:
     properties:
@@ -121,6 +199,8 @@ definitions:
       indikator:
         type: string
       kode:
+        type: string
+      kode_indikator:
         type: string
       kode_opd:
         type: string
@@ -137,6 +217,30 @@ definitions:
           $ref: '#/definitions/programkegiatan.TargetResponse'
         type: array
     type: object
+  programkegiatan.IndikatorUpsertResponse:
+    properties:
+      id:
+        description: Target        TargetResponse `json:"target"`
+        type: string
+      indikator:
+        type: string
+      indikator_id:
+        type: string
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
   programkegiatan.KegiatanResponse:
     properties:
       anggaran:
@@ -145,7 +249,7 @@ definitions:
         type: array
       indikator:
         items:
-          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       jenis:
         type: string
@@ -173,7 +277,7 @@ definitions:
         type: array
       indikator:
         items:
-          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       jenis:
         type: string
@@ -194,7 +298,7 @@ definitions:
         type: array
       indikator:
         items:
-          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       jenis:
         type: string
@@ -210,17 +314,6 @@ definitions:
         type: string
       total_anggaran:
         type: integer
-    type: object
-  programkegiatan.TargetRenjaRequest:
-    properties:
-      id:
-        type: string
-      indikator_id:
-        type: string
-      satuan:
-        type: string
-      target:
-        type: string
     type: object
   programkegiatan.TargetResponse:
     properties:
@@ -266,7 +359,7 @@ definitions:
         type: array
       indikator:
         items:
-          $ref: '#/definitions/programkegiatan.IndikatorResponse'
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       jenis:
         type: string
@@ -744,6 +837,57 @@ info:
   title: EKAK Kabupaten Madiun API
   version: "1.0"
 paths:
+  /indikator_utama/opd/{kode_opd}/{tahun_awal}/{tahun_akhir}/{jenis_periode}:
+    get:
+      consumes:
+      - application/json
+      description: Get IKU Renstra by kode OPD, tahun awal, tahun akhir, and jenis
+        periode.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun Awal
+        in: path
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        in: path
+        name: tahun_akhir
+        required: true
+        type: string
+      - description: Jenis Periode
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/iku.IkuOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get IKU Renstra OPD
+      tags:
+      - IKU Renstra
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:
@@ -788,7 +932,9 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaRequest'
+          items:
+            $ref: '#/definitions/programkegiatan.IndikatorRenjaCreateRequest'
+          type: array
       produces:
       - application/json
       responses:
@@ -799,7 +945,9 @@ paths:
             - $ref: '#/definitions/web.WebResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaResponse'
+                  items:
+                    $ref: '#/definitions/programkegiatan.IndikatorUpsertResponse'
+                  type: array
               type: object
         "400":
           description: Bad Request
@@ -821,7 +969,9 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaRequest'
+          items:
+            $ref: '#/definitions/programkegiatan.IndikatorRenjaCreateRequest'
+          type: array
       produces:
       - application/json
       responses:
@@ -832,7 +982,9 @@ paths:
             - $ref: '#/definitions/web.WebResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaResponse'
+                  items:
+                    $ref: '#/definitions/programkegiatan.IndikatorUpsertResponse'
+                  type: array
               type: object
         "400":
           description: Bad Request
@@ -854,7 +1006,9 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaRequest'
+          items:
+            $ref: '#/definitions/programkegiatan.IndikatorRenjaCreateRequest'
+          type: array
       produces:
       - application/json
       responses:
@@ -865,7 +1019,9 @@ paths:
             - $ref: '#/definitions/web.WebResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/programkegiatan.BatchIndikatorRenjaResponse'
+                  items:
+                    $ref: '#/definitions/programkegiatan.IndikatorUpsertResponse'
+                  type: array
               type: object
         "400":
           description: Bad Request
@@ -1002,6 +1158,106 @@ paths:
       summary: Matrix Renja Rancangan Awal
       tags:
       - Matrix Renja
+  /matrix_renstra/anggaran/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert anggaran renstra.
+      parameters:
+      - description: Anggaran Renstra
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.AnggaranRenstraRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.AnggaranRenstraResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Anggaran Renstra
+      tags:
+      - Matrix Renstra
+  /matrix_renstra/indikator/delete/{kode_indikator}:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus data indikator renstra yang sudah ada berdasarkan Kode
+        Indikator.
+      parameters:
+      - description: Kode Indikator
+        example: '"RENS-1.01.1.01.0.00.01.0000-2025-01"'
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Indikator Renstra
+      tags:
+      - Matrix Renstra
+  /matrix_renstra/indikator/upsert:
+    post:
+      consumes:
+      - application/json
+      description: kode_indikator kosong = create baru, isi = update
+      parameters:
+      - description: Array of indikator
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/programkegiatan.IndikatorRenstraCreateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.IndikatorResponse'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Upsert Batch Indikator Renstra
+      tags:
+      - Matrix Renstra
   /matrix_renstra/opd/{kode_opd}:
     get:
       consumes:
@@ -1149,6 +1405,49 @@ paths:
       tags:
       - Sasaran Opd Renja Ranwal
       - Sasaran Opd Renja Rankhir
+      - Sasaran Opd Renja Penetapan
+  /sasaran_opd/penetapan/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data sasaran opd penetapan berdasarkan kode OPD dan
+        tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranopd.SasaranOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Sasaran Opd Penetapan
+      tags:
+      - Sasaran Opd Renja Penetapan
   /sasaran_opd/rankhir/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -1231,6 +1530,89 @@ paths:
       summary: Sasaran Opd Ranwal
       tags:
       - Sasaran Opd Renja Ranwal
+  /sasaran_opd/renja/penetapan/indikator/create/{sasaranopdId}:
+    post:
+      consumes:
+      - application/json
+      description: Membuat data indikator sasaran opd penetapan baru.
+      parameters:
+      - description: ID Sasaran OPD
+        example: 1
+        in: path
+        name: sasaranopdId
+        required: true
+        type: integer
+      - description: Payload Create Indikator Sasaran OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/sasaranopd.IndikatorCreateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranopd.IndikatorResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Indikator Sasaran Opd Penetapan
+      tags:
+      - Sasaran Opd Renja Penetapan
+  /sasaran_opd/renja/penetapan/indikator/update/{kodeIndikator}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data indikator sasaran opd ranwal yang sudah ada.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kodeIndikator
+        required: true
+        type: string
+      - description: Payload Update Indikator Sasaran OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/sasaranopd.IndikatorUpdateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sasaranopd.IndikatorResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Indikator Sasaran Opd Penetapan
+      tags:
+      - Sasaran Opd Renja Penetapan
   /sasaran_opd/renja/rankhir/indikator/create/{sasaranopdId}:
     post:
       consumes:
@@ -1489,6 +1871,48 @@ paths:
       summary: Update Sasaran Opd Renstra
       tags:
       - Sasaran Opd Renstra
+  /tujuan_opd/penetapan/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan
+        tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TujuanOpdwithBidangUrusanResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Opd Renja Penetapan
+      tags:
+      - Tujuan Opd Renja Penetapan
   /tujuan_opd/rankhir/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -1605,6 +2029,88 @@ paths:
       tags:
       - Tujuan Opd Renja Rankhir
       - Tujuan Opd Renja Ranwal
+      - Tujuan Opd Renja Penetapan
+  /tujuan_opd/renja/penetapan/indikator/create/{tujuanOpdId}:
+    post:
+      consumes:
+      - application/json
+      description: Memasukkan data indikator tujuan opd renja penetapan baru ke dalam
+        sistem.
+      parameters:
+      - description: ID Tujuan OPD
+        example: 1
+        in: path
+        name: tujuanOpdId
+        required: true
+        type: integer
+      - description: Payload Create Indikator Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/tujuanopd.IndikatorCreateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.IndikatorResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tambah Indikator Tujuan Opd Renja Penetapan
+      tags:
+      - Tujuan Opd Renja Penetapan
+  /tujuan_opd/renja/penetapan/indikator/update/{kodeIndikator}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data indikator tujuan opd renja penetapan yang sudah
+        ada berdasarkan ID.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kodeIndikator
+        required: true
+        type: string
+      - description: Payload Update Indikator Tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.IndikatorUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.IndikatorResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Indikator Tujuan Opd Renja Penetapan
+      tags:
+      - Tujuan Opd Renja Penetapan
   /tujuan_opd/renja/rankhir/indikator/create/{tujuanOpdId}:
     post:
       consumes:

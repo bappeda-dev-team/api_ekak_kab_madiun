@@ -831,6 +831,21 @@ func (s *SasaranOpdServiceImpl) FindSasaranRankhir(
 	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
 }
 
+func (s *SasaranOpdServiceImpl) FindSasaranPenetapan(
+	ctx context.Context, kodeOpd, tahun, jenisPeriode string,
+) ([]sasaranopd.SasaranOpdResponse, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	sasaranOpds, err := s.sasaranOpdRepository.FindSasaranByTahun(ctx, tx, kodeOpd, tahun, jenisPeriode, "penetapan")
+	if err != nil {
+		return nil, err
+	}
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+}
+
 // Helper bersama untuk build response (menghindari duplikasi)
 func (s *SasaranOpdServiceImpl) buildSasaranResponse(
 	ctx context.Context, tx *sql.Tx,

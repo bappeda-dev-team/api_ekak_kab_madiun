@@ -10,15 +10,30 @@ type ProgramKegiatanResponse struct {
 }
 
 type IndikatorResponse struct {
-	Id           string           `json:"id"`
-	Kode         string           `json:"kode,omitempty"`
-	KodeOpd      string           `json:"kode_opd,omitempty"`
-	ProgramId    string           `json:"program_id,omitempty"`
-	Indikator    string           `json:"indikator"`
-	PaguAnggaran int64            `json:"pagu_anggaran,omitempty"`
-	Tahun        string           `json:"tahun"`
-	Target       []TargetResponse `json:"target"`
-	StatusTarget bool             `json:"status_target_renja,omitempty"`
+	Id            string           `json:"id,omitempty"`
+	KodeIndikator string           `json:"kode_indikator"`
+	Kode          string           `json:"kode,omitempty"`
+	KodeOpd       string           `json:"kode_opd,omitempty"`
+	ProgramId     string           `json:"program_id,omitempty"`
+	Indikator     string           `json:"indikator"`
+	PaguAnggaran  int64            `json:"pagu_anggaran,omitempty"`
+	Tahun         string           `json:"tahun"`
+	Target        []TargetResponse `json:"target"`
+	StatusTarget  bool             `json:"status_target_renja,omitempty"`
+}
+
+type IndikatorMatrixResponse struct {
+	Id            string `json:"id,omitempty"`
+	KodeIndikator string `json:"kode_indikator"`
+	Kode          string `json:"kode,omitempty"`
+	KodeOpd       string `json:"kode_opd,omitempty"`
+	ProgramId     string `json:"program_id,omitempty"`
+	Indikator     string `json:"indikator"`
+	// PaguAnggaran  int64  `json:"pagu_anggaran,omitempty"`
+	Tahun        string `json:"tahun"`
+	Target       string `json:"target"`
+	Satuan       string `json:"satuan"`
+	StatusTarget bool   `json:"status_target_renja,omitempty"`
 }
 
 type TargetResponse struct {
@@ -43,7 +58,7 @@ type UrusanResponse struct {
 	Nama         string                      `json:"nama"`
 	Jenis        string                      `json:"jenis"`
 	Anggaran     []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator    []IndikatorResponse         `json:"indikator"`
+	Indikator    []IndikatorMatrixResponse   `json:"indikator"`
 	BidangUrusan []BidangUrusanResponse      `json:"bidang_urusan"`
 }
 
@@ -52,7 +67,7 @@ type BidangUrusanResponse struct {
 	Nama      string                      `json:"nama"`
 	Jenis     string                      `json:"jenis"`
 	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator []IndikatorResponse         `json:"indikator"`
+	Indikator []IndikatorMatrixResponse   `json:"indikator"`
 	Program   []ProgramResponse           `json:"program"`
 }
 
@@ -61,7 +76,7 @@ type ProgramResponse struct {
 	Nama      string                      `json:"nama"`
 	Jenis     string                      `json:"jenis"`
 	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator []IndikatorResponse         `json:"indikator"`
+	Indikator []IndikatorMatrixResponse   `json:"indikator"`
 	Kegiatan  []KegiatanResponse          `json:"kegiatan"`
 }
 
@@ -70,7 +85,7 @@ type KegiatanResponse struct {
 	Nama        string                      `json:"nama"`
 	Jenis       string                      `json:"jenis"`
 	Anggaran    []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator   []IndikatorResponse         `json:"indikator"`
+	Indikator   []IndikatorMatrixResponse   `json:"indikator"`
 	SubKegiatan []SubKegiatanResponse       `json:"subkegiatan"`
 }
 
@@ -83,7 +98,7 @@ type SubKegiatanResponse struct {
 	NamaPegawai   string                      `json:"nama_pegawai"`
 	Anggaran      []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
 	TotalAnggaran int64                       `json:"total_anggaran,omitempty"`
-	Indikator     []IndikatorResponse         `json:"indikator"`
+	Indikator     []IndikatorMatrixResponse   `json:"indikator"`
 }
 
 type PaguAnggaranTotalResponse struct {
@@ -117,4 +132,18 @@ type IndikatorRenjaUpsertResponse struct {
 	Indikator     string         `json:"indikator"`
 	Jenis         string         `json:"jenis"`
 	Target        TargetResponse `json:"target"`
+}
+
+type IndikatorUpsertResponse struct {
+	KodeIndikator string `json:"kode_indikator"`
+	Kode          string `json:"kode"`
+	KodeOpd       string `json:"kode_opd"`
+	Indikator     string `json:"indikator"`
+	Tahun         string `json:"tahun"`
+	Jenis         string `json:"jenis,omitempty"`
+	// Target        TargetResponse `json:"target"`
+	Id          string `json:"id"`
+	IndikatorId string `json:"indikator_id"`
+	Target      string `json:"target"`
+	Satuan      string `json:"satuan"`
 }
