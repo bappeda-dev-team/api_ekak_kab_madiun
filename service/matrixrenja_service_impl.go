@@ -6,7 +6,6 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -585,112 +584,77 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 // 	return []programkegiatan.UrusanDetailResponse{urusanDetail}
 // }
 
-func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Context, request programkegiatan.BatchIndikatorRenjaRequest) (programkegiatan.BatchIndikatorRenjaResponse, error) {
+func (service *MatrixRenjaServiceImpl) UpsertBatchIndikatorRenja(ctx context.Context, requests []programkegiatan.IndikatorRenjaCreateRequest) ([]programkegiatan.IndikatorUpsertResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return programkegiatan.BatchIndikatorRenjaResponse{}, err
+		return nil, err
 	}
 	defer tx.Rollback()
-	// Prefix pakai request.Tahun (tahun target), bukan tanggal input
-	// Format: {kode}-{kodeOpd}-{tahun}-
-	// Contoh: 5.01.03.2.02.0002-5.01.5.05.0.00.01.0000-2025-
-	prefixBase := fmt.Sprintf("%s-%s-%s-", request.Kode, request.KodeOpd, request.Tahun)
-	// Hitung sekali di awal untuk sequence NNN pada hari ini di tahun ini
+	prefixBase := fmt.Sprintf("RENJA-%s-%s-%s-", requests[0].Kode, requests[0].KodeOpd, requests[0].Tahun)
 	existingCount, err := service.MatrixRenjaRepository.CountKodeIndikatorByPrefix(ctx, tx, prefixBase)
 	if err != nil {
-		return programkegiatan.BatchIndikatorRenjaResponse{},
-			fmt.Errorf("gagal menghitung urutan indikator: %w", err)
+		return nil, fmt.Errorf("gagal menghitung urutan indikator: %w", err)
 	}
-	// nextUrutan di-increment per item CREATE dalam batch yang sama (dalam 1 transaksi)
 	nextUrutan := existingCount + 1
 	var (
 		domainItems []domain.Indikator
-		respItems   []programkegiatan.IndikatorRenjaUpsertResponse
+		respItems   []programkegiatan.IndikatorUpsertResponse
+		keepList    []string // ← TAMBAH INI
 	)
-	for _, item := range request.Indikator {
+	for _, item := range requests {
 		var kodeIndikator string
 		var targetId string
-		// ambil target pertama
-		// TODO: multiple target dalam satu indikator
-		var firstTarget programkegiatan.TargetRenjaRequest
-		if len(item.Target) > 0 {
-			firstTarget = item.Target[0]
-		}
 		if item.KodeIndikator == "" {
-			// ── CREATE: generate kode_indikator baru ─────────────────────
-			// Contoh hasil: 5.01.03.2.02.0002-5.01.5.05...-2025-001
 			kodeIndikator = fmt.Sprintf("%s%03d", prefixBase, nextUrutan)
-			nextUrutan++ // increment lokal agar item CREATE berikutnya tidak tabrakan
-			targetId = fmt.Sprintf("TRG-%s-%05d",
-				strings.ToUpper(request.Jenis),
-				uuid.New().ID()%100000)
+			nextUrutan++
+			targetId = fmt.Sprintf("TRG-%s-%05d", strings.ToUpper(requests[0].Jenis), uuid.New().ID()%100000)
 		} else {
-			// ── UPDATE: kode_indikator dikirim dari FE ────────────────────
 			kodeIndikator = item.KodeIndikator
-			// Tentukan targetId:
-			// Prioritas 1 → ID dikirim FE (update target yang sudah ada)
-			if firstTarget.Id != "" {
-				targetId = firstTarget.Id
-			} else {
-				// Prioritas 2 → Ambil ID target dari DB
-				existing, err := service.MatrixRenjaRepository.FindIndikatorRenjaByKode(ctx, tx, kodeIndikator)
-				if err != nil && !errors.Is(err, sql.ErrNoRows) {
-					return programkegiatan.BatchIndikatorRenjaResponse{}, err
-				}
-				if len(existing.Target) > 0 {
-					targetId = existing.Target[0].Id
-				} else {
-					// Prioritas 3 → Generate baru jika belum ada target
-					targetId = fmt.Sprintf("TRG-%s-%05d",
-						strings.ToUpper(request.Jenis),
-						uuid.New().ID()%100000)
-				}
-			}
+			targetId = fmt.Sprintf("TRG-%s-%05d", strings.ToUpper(requests[0].Jenis), uuid.New().ID()%100000)
 		}
-		// Tahun target selalu dari request.Tahun (renja per-tahun)
+		keepList = append(keepList, kodeIndikator) // ← TAMBAH INI
 		domainItems = append(domainItems, domain.Indikator{
 			KodeIndikator: kodeIndikator,
-			Kode:          request.Kode,
-			KodeOpd:       request.KodeOpd,
+			Kode:          requests[0].Kode,
+			KodeOpd:       requests[0].KodeOpd,
 			Indikator:     item.Indikator,
-			Tahun:         request.Tahun,
-			Jenis:         request.Jenis,
+			Tahun:         requests[0].Tahun,
+			Jenis:         requests[0].Jenis,
 			Target: []domain.Target{{
 				Id:          targetId,
 				IndikatorId: kodeIndikator,
-				Tahun:       request.Tahun, // ← dari batch level, bukan item level
-				Target:      firstTarget.Target,
-				Satuan:      firstTarget.Satuan,
-				Jenis:       request.Jenis,
+				Tahun:       requests[0].Tahun,
+				Target:      item.Target,
+				Satuan:      item.Satuan,
+				Jenis:       requests[0].Jenis,
 			}},
 		})
-		respItems = append(respItems, programkegiatan.IndikatorRenjaUpsertResponse{
+		respItems = append(respItems, programkegiatan.IndikatorUpsertResponse{
 			KodeIndikator: kodeIndikator,
+			Kode:          requests[0].Kode,
+			KodeOpd:       requests[0].KodeOpd,
 			Indikator:     item.Indikator,
-			Jenis:         request.Jenis,
-			Target: programkegiatan.TargetResponse{
-				Id:          targetId,
-				IndikatorId: kodeIndikator,
-				Tahun:       request.Tahun,
-				Target:      firstTarget.Target,
-				Satuan:      firstTarget.Satuan,
-			},
+			Jenis:         requests[0].Jenis,
+			Tahun:         requests[0].Tahun,
+			Target:        item.Target,
+			Satuan:        item.Satuan,
 		})
 	}
-	// Semua item dieksekusi dalam 1 transaksi (atomic)
 	if err := service.MatrixRenjaRepository.UpsertBatchIndikatorRenja(ctx, tx, domainItems); err != nil {
-		return programkegiatan.BatchIndikatorRenjaResponse{}, err
+		return nil, err
+	}
+	// ── SYNC: hapus indikator di DB yang tidak ada di request ──  ← TAMBAH INI
+	if err := service.MatrixRenjaRepository.DeleteIndicatorsExcept(
+		ctx, tx,
+		requests[0].Kode, requests[0].KodeOpd, requests[0].Tahun, requests[0].Jenis,
+		keepList,
+	); err != nil {
+		return nil, fmt.Errorf("gagal menghapus indikator: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
-		return programkegiatan.BatchIndikatorRenjaResponse{}, err
+		return nil, err
 	}
-	return programkegiatan.BatchIndikatorRenjaResponse{
-		Kode:      request.Kode,
-		KodeOpd:   request.KodeOpd,
-		Tahun:     request.Tahun,
-		Jenis:     request.Jenis,
-		Indikator: respItems,
-	}, nil
+	return respItems, nil
 }
 
 func (service *MatrixRenjaServiceImpl) UpsertAnggaran(ctx context.Context, request programkegiatan.AnggaranRenjaRequest) (programkegiatan.AnggaranRenjaResponse, error) {
