@@ -383,7 +383,7 @@ func NewRouter(
 	router.GET("/indikator_utama/periode/:tahun_awal/:tahun_akhir/:jenis_periode", ikuController.FindAll)
 	router.GET("/indikator_utama/opd/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", ikuController.FindAllIkuOpd)
 	router.PUT("/indikator_utama/status/:indikator_id", ikuController.UpdateIkuActive)
-	router.PUT("/indikator_utama/opd/status/:indikator_id", ikuController.UpdateIkuOpdActive)
+	router.PUT("/indikator_utama/opd/status/:kode_indikator", ikuController.UpdateIkuOpdActive)
 
 	//sasaran opd
 	// router.GET("/sasaran_opd/findall/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", sasaranOpdController.FindAll)
@@ -534,6 +534,11 @@ func NewRouter(
 	router.PUT("/sasaran_opd/renja/rankhir/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorRankhir)
 	router.POST("/sasaran_opd/renja/penetapan/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorPenetapan)
 	router.PUT("/sasaran_opd/renja/penetapan/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorPenetapan)
+
+	// IKU Renja Opd
+	router.GET("/iku_renja_opd/ranwal/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRanwal)
+	router.GET("/iku_renja_opd/rankhir/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRankhir)
+	router.GET("/iku_renja_opd/penetapan/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdPenetapan)
 
 	return router
 }

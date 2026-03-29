@@ -31,6 +31,13 @@ definitions:
           $ref: '#/definitions/iku.TargetOpdResponse'
         type: array
     type: object
+  iku.IkuUpdateActiveRequest:
+    properties:
+      indikator_id:
+        type: string
+      is_active:
+        type: boolean
+    type: object
   iku.TargetOpdResponse:
     properties:
       satuan:
@@ -975,6 +982,132 @@ info:
   title: EKAK Kabupaten Madiun API
   version: "1.0"
 paths:
+  /iku_renja_opd/penetapan/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua IKU Renja Opd Penetapan berdasarkan kode OPD
+        dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/iku.IkuOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All IKU Renja Opd Penetapan
+      tags:
+      - IKU Renja Opd
+  /iku_renja_opd/rankhir/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua IKU Renja Opd Rankhir berdasarkan kode OPD dan
+        tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/iku.IkuOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All IKU Renja Opd Rankhir
+      tags:
+      - IKU Renja Opd
+  /iku_renja_opd/ranwal/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua IKU Renja Opd Ranwal berdasarkan kode OPD dan
+        tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/iku.IkuOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All IKU Renja Opd Ranwal
+      tags:
+      - IKU Renja Opd
   /indikator_utama/opd/{kode_opd}/{tahun_awal}/{tahun_akhir}/{jenis_periode}:
     get:
       consumes:
@@ -1026,6 +1159,44 @@ paths:
       summary: Get IKU Renstra OPD
       tags:
       - IKU Renstra
+  /indikator_utama/opd/status/{kode_indikator}:
+    put:
+      consumes:
+      - application/json
+      description: Mengupdate status IKU Opd berdasarkan ID Indikator.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      - description: Data untuk mengupdate status IKU
+        in: body
+        name: iku_update_active_request
+        required: true
+        schema:
+          $ref: '#/definitions/iku.IkuUpdateActiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update IKU Opd Active
+      tags:
+      - IKU Renja Opd
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:
