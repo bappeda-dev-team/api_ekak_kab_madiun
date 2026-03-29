@@ -460,7 +460,7 @@ func (repository *IkuRepositoryImpl) UpdateIkuActive(ctx context.Context, tx *sq
 }
 
 func (repository *IkuRepositoryImpl) UpdateIkuOpdActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) error {
-	script := `UPDATE tb_indikator_matrix SET iku_active = ? WHERE id = ?`
+	script := `UPDATE tb_indikator_matrix SET iku_active = ? WHERE kode_indikator = ?`
 
 	result, err := tx.ExecContext(ctx, script, ikuActive, indikatorId)
 	if err != nil {
@@ -477,4 +477,159 @@ func (repository *IkuRepositoryImpl) UpdateIkuOpdActive(ctx context.Context, tx 
 	}
 
 	return nil
+}
+
+func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string, jenisIndikator string) ([]domain.Indikator, error) {
+	// Renja: tujuan/sasaran yang periode-nya mencakup tahun; indikator hanya jika ada target di tb_target untuk tahun tersebut.
+	scriptTujuan := `
+       SELECT 
+		'Tujuan OPD' as jenis,
+		t.id as parent_id,
+		t.tujuan as nama_parent,
+		i.kode_indikator as indikator_id,
+		i.indikator,
+		COALESCE(i.definisi_operasional, '') as definisi_operasional,
+		COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
+		COALESCE(i.sumber_data, '') as sumber_data,
+		i.iku_active,
+		tg.id as target_id,
+		tg.target,
+		tg.satuan,
+		tg.tahun
+		FROM tb_tujuan_opd t
+		INNER JOIN tb_indikator_matrix i ON t.id = i.tujuan_opd_id AND i.jenis = ?
+		INNER JOIN tb_target tg ON i.kode_indikator = tg.indikator_id AND tg.tahun = ?
+		WHERE t.kode_opd = ?
+		AND t.jenis_periode = ?
+		AND CAST(t.tahun_awal AS SIGNED) <= CAST(? AS SIGNED)
+		AND CAST(t.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
+    `
+	scriptSasaran := `
+	SELECT 
+		'Sasaran OPD' as jenis,
+		so.id as parent_id,
+		so.nama_sasaran_opd as nama_parent,
+		i.kode_indikator as indikator_id,
+		i.indikator,
+		COALESCE(i.definisi_operasional, '') as definisi_operasional,
+		COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
+		COALESCE(i.sumber_data, '') as sumber_data,
+		i.iku_active,
+		tg.id as target_id,
+		tg.target,
+		tg.satuan,
+		tg.tahun
+		FROM tb_sasaran_opd so
+		INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+		INNER JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id AND i.jenis = ?
+		INNER JOIN tb_target tg ON i.kode_indikator = tg.indikator_id AND tg.tahun = ?
+		WHERE pk.kode_opd = ?
+		AND so.jenis_periode = ?
+		AND CAST(so.tahun_awal AS SIGNED) <= CAST(? AS SIGNED)
+		AND CAST(so.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
+		`
+	ikuMap := make(map[string]*domain.Indikator)
+	processRows := func(rows *sql.Rows) error {
+		for rows.Next() {
+			var (
+				jenis                        string
+				parentId, namaParent         sql.NullString
+				indikatorId, namaIndikator   sql.NullString
+				definisiOperasional          sql.NullString
+				rumusPerhitungan, sumberData sql.NullString
+				ikuActive                    sql.NullBool
+				targetId                     sql.NullString
+				target                       sql.NullString
+				satuan                       sql.NullString
+				tahunTarget                  sql.NullString
+			)
+			err := rows.Scan(
+				&jenis,
+				&parentId,
+				&namaParent,
+				&indikatorId,
+				&namaIndikator,
+				&definisiOperasional,
+				&rumusPerhitungan,
+				&sumberData,
+				&ikuActive,
+				&targetId,
+				&target,
+				&satuan,
+				&tahunTarget,
+			)
+			if err != nil {
+				return err
+			}
+			active := ikuActive.Valid && ikuActive.Bool
+			if !indikatorId.Valid || !targetId.Valid || !tahunTarget.Valid {
+				continue
+			}
+			key := fmt.Sprintf("%s-%s-%s", jenis,
+				helper.GetNullStringValue(parentId),
+				indikatorId.String)
+			tg := domain.Target{
+				Id:          targetId.String,
+				IndikatorId: indikatorId.String,
+				Target:      helper.GetNullStringValue(target),
+				Satuan:      helper.GetNullStringValue(satuan),
+				Tahun:       tahunTarget.String,
+			}
+			ikuRow, exists := ikuMap[key]
+			if !exists {
+				ikuRow = &domain.Indikator{
+					Id:               indikatorId.String,
+					AsalIku:          jenis,
+					ParentOpdId:      helper.GetNullStringValue(parentId),
+					ParentName:       helper.GetNullStringValue(namaParent),
+					Indikator:        helper.GetNullStringValue(namaIndikator),
+					RumusPerhitungan: rumusPerhitungan,
+					SumberData:       sumberData,
+					TahunAwal:        tahun,
+					TahunAkhir:       tahun,
+					JenisPeriode:     jenisPeriode,
+					Jenis:            jenisIndikator,
+					Target:           []domain.Target{tg},
+					IkuActive:        active,
+				}
+				ikuRow.DefinisiOperasional = definisiOperasional
+				ikuMap[key] = ikuRow
+				continue
+			}
+			if len(ikuRow.Target) > 0 {
+				ikuRow.Target[0] = tg
+			} else {
+				ikuRow.Target = []domain.Target{tg}
+			}
+		}
+		return nil
+	}
+	args := []interface{}{jenisIndikator, tahun, kodeOpd, jenisPeriode, tahun, tahun}
+	rowsTujuan, err := tx.QueryContext(ctx, scriptTujuan, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsTujuan.Close()
+	if err := processRows(rowsTujuan); err != nil {
+		return nil, err
+	}
+	rowsSasaran, err := tx.QueryContext(ctx, scriptSasaran, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsSasaran.Close()
+	if err := processRows(rowsSasaran); err != nil {
+		return nil, err
+	}
+	var result []domain.Indikator
+	for _, ikuRow := range ikuMap {
+		result = append(result, *ikuRow)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].AsalIku != result[j].AsalIku {
+			return result[i].AsalIku == "Tujuan OPD"
+		}
+		return result[i].Indikator < result[j].Indikator
+	})
+	return result, nil
 }

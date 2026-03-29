@@ -22,6 +22,7 @@ type PohonKinerjaOpdResponse struct {
 	Tagging                []TaggingResponse      `json:"tagging"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 	UpdatedBy              string                 `json:"updated_by"`
+	KeteranganTahunClone   string                 `json:"keterangan_tahun_clone,omitempty"`
 }
 
 type PohonKinerjaOpdAllResponse struct {

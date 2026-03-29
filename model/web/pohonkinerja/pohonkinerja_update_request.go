@@ -66,3 +66,8 @@ type KeteranganTaggingUpdateRequest struct {
 	KodeProgramUnggulan string `json:"kode_program_unggulan"`
 	Tahun               string `json:"tahun"`
 }
+
+type PohonKinerjaUpdateParentRequest struct {
+	Id     int `json:"id"`
+	Parent int `json:"parent"`
+}

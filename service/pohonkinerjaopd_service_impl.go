@@ -2140,7 +2140,7 @@ func (service *PohonKinerjaOpdServiceImpl) DeletePokinPemdaInOpd(ctx context.Con
 	return nil
 }
 
-func (service *PohonKinerjaOpdServiceImpl) UpdateParent(ctx context.Context, pohonKinerja pohonkinerja.PohonKinerjaUpdateRequest) (pohonkinerja.PohonKinerjaOpdResponse, error) {
+func (service *PohonKinerjaOpdServiceImpl) UpdateParent(ctx context.Context, pohonKinerja pohonkinerja.PohonKinerjaUpdateParentRequest) (pohonkinerja.PohonKinerjaOpdResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, fmt.Errorf("gagal memulai transaksi: %v", err)
@@ -2721,4 +2721,35 @@ func (service *PohonKinerjaOpdServiceImpl) ClearLeaderboardCache(tahun string) {
 	leaderboardCacheLock.Lock()
 	delete(leaderboardCache, cacheKey)
 	leaderboardCacheLock.Unlock()
+}
+
+func (service *PohonKinerjaOpdServiceImpl) FindAllPokinParentClonePokinOpd(ctx context.Context, kodeOpd, tahun string, levelPohon *int) ([]pohonkinerja.PohonKinerjaOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	if _, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd); err != nil {
+		return nil, errors.New("kode opd tidak ditemukan")
+	}
+	pokins, err := service.pohonKinerjaOpdRepository.FindPokinByParentClonePokinOpd(ctx, tx, kodeOpd, tahun, levelPohon)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]pohonkinerja.PohonKinerjaOpdResponse, 0, len(pokins))
+	for _, p := range pokins {
+		out = append(out, pohonkinerja.PohonKinerjaOpdResponse{
+			Id:                   p.Id,
+			Parent:               strconv.Itoa(p.Parent),
+			NamaPohon:            p.NamaPohon,
+			JenisPohon:           p.JenisPohon,
+			LevelPohon:           p.LevelPohon,
+			KodeOpd:              p.KodeOpd,
+			Tahun:                p.Tahun,
+			Status:               p.Status,
+			Keterangan:           p.Keterangan,
+			KeteranganTahunClone: p.KeteranganTahunClone,
+		})
+	}
+	return out, nil
 }

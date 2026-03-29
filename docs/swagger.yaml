@@ -31,8 +31,153 @@ definitions:
           $ref: '#/definitions/iku.TargetOpdResponse'
         type: array
     type: object
+  iku.IkuUpdateActiveRequest:
+    properties:
+      indikator_id:
+        type: string
+      is_active:
+        type: boolean
+    type: object
   iku.TargetOpdResponse:
     properties:
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  pohonkinerja.IndikatorResponse:
+    properties:
+      id_indikator:
+        type: string
+      id_pokin:
+        type: string
+      id_rekin:
+        type: string
+      kode:
+        type: string
+      nama_indikator:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/pohonkinerja.TargetResponse'
+        type: array
+    type: object
+  pohonkinerja.KeteranganTaggingResponse:
+    properties:
+      id:
+        type: integer
+      id_tagging:
+        type: integer
+      keterangan_tagging_program:
+        type: string
+      kode_program_unggulan:
+        type: string
+      tahun:
+        type: string
+    type: object
+  pohonkinerja.PelaksanaOpdResponse:
+    properties:
+      id_pelaksana:
+        type: string
+      nama_pegawai:
+        type: string
+      nip:
+        type: string
+      pegawai_id:
+        type: string
+      pohon_kinerja_id:
+        type: string
+    type: object
+  pohonkinerja.PohonKinerjaCloneRequest:
+    properties:
+      kode_opd:
+        type: string
+      tahun_sumber:
+        maxLength: 4
+        minLength: 4
+        type: string
+      tahun_tujuan:
+        maxLength: 4
+        minLength: 4
+        type: string
+    required:
+    - kode_opd
+    - tahun_sumber
+    - tahun_tujuan
+    type: object
+  pohonkinerja.PohonKinerjaOpdResponse:
+    properties:
+      id:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorResponse'
+        type: array
+      jenis_pohon:
+        type: string
+      jumlah_review:
+        type: integer
+      keterangan:
+        type: string
+      keterangan_crosscutting:
+        type: string
+      keterangan_tahun_clone:
+        type: string
+      kode_opd:
+        type: string
+      level_pohon:
+        type: integer
+      nama_opd:
+        type: string
+      nama_pohon:
+        type: string
+      parent:
+        type: string
+      pelaksana:
+        items:
+          $ref: '#/definitions/pohonkinerja.PelaksanaOpdResponse'
+        type: array
+      status:
+        type: string
+      tagging:
+        items:
+          $ref: '#/definitions/pohonkinerja.TaggingResponse'
+        type: array
+      tahun:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  pohonkinerja.PohonKinerjaUpdateParentRequest:
+    properties:
+      id:
+        type: integer
+      parent:
+        type: integer
+    type: object
+  pohonkinerja.TaggingResponse:
+    properties:
+      clone_from:
+        type: integer
+      id:
+        type: integer
+      id_pokin:
+        type: integer
+      keterangan_tagging_program:
+        items:
+          $ref: '#/definitions/pohonkinerja.KeteranganTaggingResponse'
+        type: array
+      nama_tagging:
+        type: string
+    type: object
+  pohonkinerja.TargetResponse:
+    properties:
+      id_target:
+        type: string
+      indikator_id:
+        type: string
       satuan:
         type: string
       tahun:
@@ -837,6 +982,132 @@ info:
   title: EKAK Kabupaten Madiun API
   version: "1.0"
 paths:
+  /iku_renja_opd/penetapan/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua IKU Renja Opd Penetapan berdasarkan kode OPD
+        dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/iku.IkuOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All IKU Renja Opd Penetapan
+      tags:
+      - IKU Renja Opd
+  /iku_renja_opd/rankhir/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua IKU Renja Opd Rankhir berdasarkan kode OPD dan
+        tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/iku.IkuOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All IKU Renja Opd Rankhir
+      tags:
+      - IKU Renja Opd
+  /iku_renja_opd/ranwal/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua IKU Renja Opd Ranwal berdasarkan kode OPD dan
+        tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/iku.IkuOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All IKU Renja Opd Ranwal
+      tags:
+      - IKU Renja Opd
   /indikator_utama/opd/{kode_opd}/{tahun_awal}/{tahun_akhir}/{jenis_periode}:
     get:
       consumes:
@@ -888,6 +1159,44 @@ paths:
       summary: Get IKU Renstra OPD
       tags:
       - IKU Renstra
+  /indikator_utama/opd/status/{kode_indikator}:
+    put:
+      consumes:
+      - application/json
+      description: Mengupdate status IKU Opd berdasarkan ID Indikator.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      - description: Data untuk mengupdate status IKU
+        in: body
+        name: iku_update_active_request
+        required: true
+        schema:
+          $ref: '#/definitions/iku.IkuUpdateActiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update IKU Opd Active
+      tags:
+      - IKU Renja Opd
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:
@@ -1305,6 +1614,131 @@ paths:
       summary: Matrix Renstra
       tags:
       - Matrix Renstra
+  /pohon_kinerja_opd/clone:
+    post:
+      consumes:
+      - application/json
+      description: Melakukan cloning pohon kinerja dari tahun sumber ke tahun tujuan
+        untuk OPD tertentu.
+      parameters:
+      - description: Data untuk cloning pohon kinerja
+        in: body
+        name: pohon_kinerja_clone_request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.PohonKinerjaCloneRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Clone Pohon Kinerja opd
+      tags:
+      - Clone Pohon Kinerja Opd
+  /pohon_kinerja_opd/pindah_parent/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Mengupdate parent pohon kinerja opd berdasarkan ID.
+      parameters:
+      - description: ID Pohon Kinerja
+        example: '"1"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data untuk mengupdate parent pohon kinerja
+        in: body
+        name: pohon_kinerja_update_parent_request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.PohonKinerjaUpdateParentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Parent Pohon Kinerja Opd
+      tags:
+      - Clone Pohon Kinerja Opd
+  /pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua pohon kinerja parent clone pohon kinerja opd
+        berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Level Pohon
+        example: '"1"'
+        in: path
+        name: level_pohon
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/pohonkinerja.PohonKinerjaOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All Pokin Parent Clone Pokin Opd
+      tags:
+      - Clone Pohon Kinerja Opd
   /sasaran_opd/create:
     post:
       consumes:

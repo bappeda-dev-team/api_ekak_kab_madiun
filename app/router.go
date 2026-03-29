@@ -66,8 +66,11 @@ func NewRouter(
 		handler := httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 			httpSwagger.PersistAuthorization(true),
+			httpSwagger.UIConfig(map[string]string{
+				"docExpansion": "\"none\"",
+				"filter":       "true",
+			}),
 		)
-
 		handler.ServeHTTP(w, r)
 	})
 	//rencana_kinerja
@@ -193,6 +196,7 @@ func NewRouter(
 	router.DELETE("/pohon_kinerja_opd/delete_pelaksana/:id", pohonKinerjaOpdController.DeletePelaksana)
 	router.DELETE("/pohon_kinerja_opd/delete_pokin_pemda/:id", pohonKinerjaOpdController.DeletePokinPemdaInOpd)
 	router.PUT("/pohon_kinerja_opd/pindah_parent/:id", pohonKinerjaOpdController.UpdateParent)
+	router.GET("/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/:kode_opd/:tahun/:level_pohon", pohonKinerjaOpdController.FindAllPokinParentClonePokinOpd)
 
 	//pohon kinerja admin
 	router.POST("/pohon_kinerja_admin/create", pohonKinerjaAdminController.Create)
@@ -379,7 +383,7 @@ func NewRouter(
 	router.GET("/indikator_utama/periode/:tahun_awal/:tahun_akhir/:jenis_periode", ikuController.FindAll)
 	router.GET("/indikator_utama/opd/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", ikuController.FindAllIkuOpd)
 	router.PUT("/indikator_utama/status/:indikator_id", ikuController.UpdateIkuActive)
-	router.PUT("/indikator_utama/opd/status/:indikator_id", ikuController.UpdateIkuOpdActive)
+	router.PUT("/indikator_utama/opd/status/:kode_indikator", ikuController.UpdateIkuOpdActive)
 
 	//sasaran opd
 	// router.GET("/sasaran_opd/findall/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", sasaranOpdController.FindAll)
@@ -530,6 +534,11 @@ func NewRouter(
 	router.PUT("/sasaran_opd/renja/rankhir/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorRankhir)
 	router.POST("/sasaran_opd/renja/penetapan/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorPenetapan)
 	router.PUT("/sasaran_opd/renja/penetapan/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorPenetapan)
+
+	// IKU Renja Opd
+	router.GET("/iku_renja_opd/ranwal/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRanwal)
+	router.GET("/iku_renja_opd/rankhir/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRankhir)
+	router.GET("/iku_renja_opd/penetapan/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdPenetapan)
 
 	return router
 }
