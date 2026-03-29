@@ -3783,7 +3783,7 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Contex
 	// 3. Insert pohon kinerja baru
 	scriptInsert := `
 		INSERT INTO tb_pohon_kinerja 
-		(nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from, is_active, keterangan_tahun_clone)
+		(nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, is_active, keterangan_tahun_clone, keterangan_clone_dari)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
@@ -3796,9 +3796,9 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Contex
 		source.Keterangan,
 		targetTahun,
 		newStatus,
-		sourceId, // ✅ clone_from = 0 (default)
 		source.IsActive,
 		targetTahun,
+		sourceId, // ✅ clone_from = 0 (default)
 	)
 	if err != nil {
 		return 0, fmt.Errorf("gagal insert pohon kinerja: %w", err)
@@ -4911,7 +4911,7 @@ func (repository *PohonKinerjaRepositoryImpl) CheckIfSourceAlreadyCloned(
 	script := `
         SELECT 1
         FROM tb_pohon_kinerja pk
-        WHERE pk.clone_from = ? AND pk.keterangan_tahun_clone = ?
+        WHERE pk.keterangan_clone_dari = ? AND pk.keterangan_tahun_clone = ?
         LIMIT 1
     `
 
