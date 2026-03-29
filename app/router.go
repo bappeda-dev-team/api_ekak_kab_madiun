@@ -66,8 +66,11 @@ func NewRouter(
 		handler := httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 			httpSwagger.PersistAuthorization(true),
+			httpSwagger.UIConfig(map[string]string{
+				"docExpansion": "\"none\"",
+				"filter":       "true",
+			}),
 		)
-
 		handler.ServeHTTP(w, r)
 	})
 	//rencana_kinerja
@@ -193,6 +196,7 @@ func NewRouter(
 	router.DELETE("/pohon_kinerja_opd/delete_pelaksana/:id", pohonKinerjaOpdController.DeletePelaksana)
 	router.DELETE("/pohon_kinerja_opd/delete_pokin_pemda/:id", pohonKinerjaOpdController.DeletePokinPemdaInOpd)
 	router.PUT("/pohon_kinerja_opd/pindah_parent/:id", pohonKinerjaOpdController.UpdateParent)
+	router.GET("/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/:kode_opd/:tahun/:level_pohon", pohonKinerjaOpdController.FindAllPokinParentClonePokinOpd)
 
 	//pohon kinerja admin
 	router.POST("/pohon_kinerja_admin/create", pohonKinerjaAdminController.Create)

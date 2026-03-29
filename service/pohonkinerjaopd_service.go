@@ -15,10 +15,11 @@ type PohonKinerjaOpdService interface {
 	DeletePelaksana(ctx context.Context, pelaksanaId string) error
 	FindPokinByPelaksana(ctx context.Context, pegawaiId string, tahun string) ([]pohonkinerja.PohonKinerjaOpdResponse, error)
 	DeletePokinPemdaInOpd(ctx context.Context, id int) error
-	UpdateParent(ctx context.Context, pohonKinerja pohonkinerja.PohonKinerjaUpdateRequest) (pohonkinerja.PohonKinerjaOpdResponse, error)
+	UpdateParent(ctx context.Context, pohonKinerja pohonkinerja.PohonKinerjaUpdateParentRequest) (pohonkinerja.PohonKinerjaOpdResponse, error)
 	FindidPokinWithAllTema(ctx context.Context, id int) (pohonkinerja.PohonKinerjaAdminResponse, error)
 	CloneByKodeOpdAndTahun(ctx context.Context, request pohonkinerja.PohonKinerjaCloneRequest) error
 	CheckPokinExistsByTahun(ctx context.Context, kodeOpd string, tahun string) (bool, error)
+	FindAllPokinParentClonePokinOpd(ctx context.Context, kodeOpd, tahun string, levelPohon *int) ([]pohonkinerja.PohonKinerjaOpdResponse, error)
 	CountPokinPemda(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.CountPokinPemdaResponse, error)
 	FindPokinAtasan(ctx context.Context, id int) (pohonkinerja.PokinAtasanResponse, error)
 	ControlPokinOpd(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.ControlPokinOpdResponse, error)

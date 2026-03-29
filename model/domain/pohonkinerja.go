@@ -31,21 +31,22 @@ type PohonKinerja struct {
 	IsActive               bool
 	UpdatedBy              string
 	//tambahan
-	RencanaKinerja   []RencanaKinerja
-	KegiatanId       sql.NullString
-	SubkegiatanId    sql.NullString
-	IsDeleted        bool
-	NamaKegiatan     sql.NullString
-	KodeKegiatan     sql.NullString
-	NamaSubkegiatan  sql.NullString
-	KodeSubkegiatan  sql.NullString
-	Strategi         string
-	PelaksanaIds     string
-	ListOpd          []OpdList
-	NamaPohonParent  string
-	JenisPohonParent string
-	LevelPohonParent int
-	TaggingPokin     []TaggingPokin
+	RencanaKinerja       []RencanaKinerja
+	KegiatanId           sql.NullString
+	SubkegiatanId        sql.NullString
+	IsDeleted            bool
+	NamaKegiatan         sql.NullString
+	KodeKegiatan         sql.NullString
+	NamaSubkegiatan      sql.NullString
+	KodeSubkegiatan      sql.NullString
+	Strategi             string
+	PelaksanaIds         string
+	ListOpd              []OpdList
+	NamaPohonParent      string
+	JenisPohonParent     string
+	LevelPohonParent     int
+	TaggingPokin         []TaggingPokin
+	KeteranganTahunClone string
 }
 
 type CSF struct {

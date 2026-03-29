@@ -787,6 +787,209 @@
                 }
             }
         },
+        "/pohon_kinerja_opd/clone": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Melakukan cloning pohon kinerja dari tahun sumber ke tahun tujuan untuk OPD tertentu.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clone Pohon Kinerja Opd"
+                ],
+                "summary": "Clone Pohon Kinerja opd",
+                "parameters": [
+                    {
+                        "description": "Data untuk cloning pohon kinerja",
+                        "name": "pohon_kinerja_clone_request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaCloneRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/pindah_parent/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengupdate parent pohon kinerja opd berdasarkan ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clone Pohon Kinerja Opd"
+                ],
+                "summary": "Update Parent Pohon Kinerja Opd",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1\"",
+                        "description": "ID Pohon Kinerja",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data untuk mengupdate parent pohon kinerja",
+                        "name": "pohon_kinerja_update_parent_request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaUpdateParentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua pohon kinerja parent clone pohon kinerja opd berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clone Pohon Kinerja Opd"
+                ],
+                "summary": "Find All Pokin Parent Clone Pokin Opd",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"1\"",
+                        "description": "Level Pohon",
+                        "name": "level_pohon",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/pohonkinerja.PohonKinerjaOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sasaran_opd/create": {
             "post": {
                 "security": [
@@ -2666,6 +2869,214 @@
         "iku.TargetOpdResponse": {
             "type": "object",
             "properties": {
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "id_indikator": {
+                    "type": "string"
+                },
+                "id_pokin": {
+                    "type": "string"
+                },
+                "id_rekin": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama_indikator": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TargetResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.KeteranganTaggingResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_tagging": {
+                    "type": "integer"
+                },
+                "keterangan_tagging_program": {
+                    "type": "string"
+                },
+                "kode_program_unggulan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.PelaksanaOpdResponse": {
+            "type": "object",
+            "properties": {
+                "id_pelaksana": {
+                    "type": "string"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "nip": {
+                    "type": "string"
+                },
+                "pegawai_id": {
+                    "type": "string"
+                },
+                "pohon_kinerja_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.PohonKinerjaCloneRequest": {
+            "type": "object",
+            "required": [
+                "kode_opd",
+                "tahun_sumber",
+                "tahun_tujuan"
+            ],
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun_sumber": {
+                    "type": "string",
+                    "maxLength": 4,
+                    "minLength": 4
+                },
+                "tahun_tujuan": {
+                    "type": "string",
+                    "maxLength": 4,
+                    "minLength": 4
+                }
+            }
+        },
+        "pohonkinerja.PohonKinerjaOpdResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "keterangan_tahun_clone": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "string"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.PohonKinerjaUpdateParentRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "parent": {
+                    "type": "integer"
+                }
+            }
+        },
+        "pohonkinerja.TaggingResponse": {
+            "type": "object",
+            "properties": {
+                "clone_from": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_pokin": {
+                    "type": "integer"
+                },
+                "keterangan_tagging_program": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.KeteranganTaggingResponse"
+                    }
+                },
+                "nama_tagging": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id_target": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
                 "satuan": {
                     "type": "string"
                 },
