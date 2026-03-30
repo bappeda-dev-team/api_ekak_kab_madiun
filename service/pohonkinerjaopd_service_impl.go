@@ -2753,3 +2753,271 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllPokinParentClonePokinOpd(ctx c
 	}
 	return out, nil
 }
+
+func (service *PohonKinerjaOpdServiceImpl) UpdateParentClone(ctx context.Context, req pohonkinerja.PohonKinerjaUpdateParentRequest) (pohonkinerja.PohonKinerjaUpdateParentCloneResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.PohonKinerjaUpdateParentCloneResponse{}, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+	pokin := domain.PohonKinerja{Id: req.Id, Parent: req.Parent}
+	pokin, err = service.pohonKinerjaOpdRepository.UpdateParent(ctx, tx, pokin)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaUpdateParentCloneResponse{}, err
+	}
+	pokinFull, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, pokin.Id)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaUpdateParentCloneResponse{}, err
+	}
+	main, err := service.pohonKinerjaOpdResponseFromPokinDomain(ctx, tx, pokinFull)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaUpdateParentCloneResponse{}, err
+	}
+	out := pohonkinerja.PohonKinerjaUpdateParentCloneResponse{Pokin: main}
+	// Hanya isi anak jika node punya parent (bukan root parent=0)
+	if pokinFull.Parent != 0 {
+		kids, err := service.pohonKinerjaOpdRepository.FindChildPokins(ctx, tx, int64(pokinFull.Id))
+		if err != nil {
+			return pohonkinerja.PohonKinerjaUpdateParentCloneResponse{}, err
+		}
+		if len(kids) == 0 {
+			return out, nil
+		}
+		childIds := make([]int, len(kids))
+		for i := range kids {
+			childIds[i] = kids[i].Id
+		}
+		out.Childs, err = service.pohonKinerjaOpdResponsesBatchForPokinIds(ctx, tx, kids)
+		if err != nil {
+			return pohonkinerja.PohonKinerjaUpdateParentCloneResponse{}, err
+		}
+	}
+	return out, nil
+}
+
+func (service *PohonKinerjaOpdServiceImpl) pohonKinerjaOpdResponseFromPokinDomain(ctx context.Context, tx *sql.Tx, pokin domain.PohonKinerja) (pohonkinerja.PohonKinerjaOpdResponse, error) {
+	if pokin.Id == 0 {
+		return pohonkinerja.PohonKinerjaOpdResponse{}, errors.New("data tidak ditemukan")
+	}
+
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, pokin.KodeOpd)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaOpdResponse{}, errors.New("data opd tidak ditemukan")
+	}
+
+	pelaksanaList, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(pokin.Id))
+	if err != nil {
+		return pohonkinerja.PohonKinerjaOpdResponse{}, errors.New("gagal mengambil data pelaksana")
+	}
+
+	// 5. Proses data pelaksana
+	var pelaksanaResponses []pohonkinerja.PelaksanaOpdResponse
+	for _, pelaksana := range pelaksanaList {
+		pegawaiPelaksana, err := service.pegawaiRepository.FindById(ctx, tx, pelaksana.PegawaiId)
+		if err != nil {
+			continue // Skip jika pegawai tidak ditemukan
+		}
+
+		pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
+			Id:          pelaksana.Id,
+			PegawaiId:   pegawaiPelaksana.Id,
+			Nip:         pegawaiPelaksana.Nip,
+			NamaPegawai: pegawaiPelaksana.NamaPegawai,
+		})
+	}
+
+	// 6. Ambil data indikator dan target
+	var indikatorResponses []pohonkinerja.IndikatorResponse
+	indikatorList, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(pokin.Id))
+	if err == nil {
+		for _, indikator := range indikatorList {
+			// Ambil target untuk setiap indikator
+			targetList, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
+			if err != nil {
+				continue
+			}
+
+			var targetResponses []pohonkinerja.TargetResponse
+			for _, target := range targetList {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
+				})
+			}
+
+			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+				Id:            indikator.Id,
+				IdPokin:       indikator.PokinId,
+				NamaIndikator: indikator.Indikator,
+				Target:        targetResponses,
+			})
+		}
+	}
+
+	// Tambahkan: Ambil data tagging
+	var taggingResponses []pohonkinerja.TaggingResponse
+	taggingList, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinId(ctx, tx, pokin.Id)
+	if err == nil {
+		for _, tagging := range taggingList {
+			// Konversi keterangan program ke response
+			var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
+			for _, keterangan := range tagging.KeteranganTaggingProgram {
+				programUnggulan, err := service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  keterangan.Id,
+					IdTagging:           keterangan.IdTagging,
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: programUnggulan.KeteranganProgramUnggulan,
+					Tahun:               keterangan.Tahun,
+				})
+			}
+
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                       tagging.Id,
+				IdPokin:                  tagging.IdPokin,
+				NamaTagging:              tagging.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
+			})
+		}
+	}
+
+	// Susun response
+	response := pohonkinerja.PohonKinerjaOpdResponse{
+		Id:         pokin.Id,
+		Parent:     strconv.Itoa(pokin.Parent),
+		NamaPohon:  pokin.NamaPohon,
+		JenisPohon: pokin.JenisPohon,
+		LevelPohon: pokin.LevelPohon,
+		KodeOpd:    pokin.KodeOpd,
+		NamaOpd:    opd.NamaOpd,
+		Keterangan: pokin.Keterangan,
+		Tahun:      pokin.Tahun,
+		Status:     pokin.Status,
+		Pelaksana:  pelaksanaResponses,
+		Indikator:  indikatorResponses,
+		Tagging:    taggingResponses,
+	}
+
+	return response, nil
+}
+
+func (service *PohonKinerjaOpdServiceImpl) pohonKinerjaOpdResponsesBatchForPokinIds(ctx context.Context, tx *sql.Tx, pokins []domain.PohonKinerja) ([]pohonkinerja.PohonKinerjaOpdResponse, error) {
+	if len(pokins) == 0 {
+		return nil, nil
+	}
+	ids := make([]int, len(pokins))
+	for i := range pokins {
+		ids[i] = pokins[i].Id
+	}
+	// Satu OPD (anak biasanya sama kode_opd)
+	var namaOpd string
+	if pokins[0].KodeOpd != "" {
+		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, pokins[0].KodeOpd)
+		if err == nil {
+			namaOpd = opd.NamaOpd
+		}
+	}
+	pelMap, err := service.pohonKinerjaOpdRepository.FindPelaksanaPokinBatch(ctx, tx, ids)
+	if err != nil {
+		return nil, err
+	}
+	indMap, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinIdsBatch(ctx, tx, ids)
+	if err != nil {
+		return nil, err
+	}
+	var allIndikatorIds []string
+	seenInd := make(map[string]struct{})
+	for _, inds := range indMap {
+		for _, ind := range inds {
+			if _, ok := seenInd[ind.Id]; !ok {
+				seenInd[ind.Id] = struct{}{}
+				allIndikatorIds = append(allIndikatorIds, ind.Id)
+			}
+		}
+	}
+	targetMap, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+	if err != nil {
+		return nil, err
+	}
+	tagMap, err := service.pohonKinerjaOpdRepository.FindTaggingByPokinIdsBatch(ctx, tx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]pohonkinerja.PohonKinerjaOpdResponse, 0, len(pokins))
+	for _, p := range pokins {
+		pid := p.Id
+		var pelRes []pohonkinerja.PelaksanaOpdResponse
+		for _, pl := range pelMap[pid] {
+			pelRes = append(pelRes, pohonkinerja.PelaksanaOpdResponse{
+				Id:          pl.Id,
+				PegawaiId:   pl.PegawaiId,
+				Nip:         pl.Nip,
+				NamaPegawai: pl.NamaPegawai,
+			})
+		}
+		var indRes []pohonkinerja.IndikatorResponse
+		for _, ind := range indMap[pid] {
+			var tgtRes []pohonkinerja.TargetResponse
+			for _, t := range targetMap[ind.Id] {
+				tgtRes = append(tgtRes, pohonkinerja.TargetResponse{
+					Id:              t.Id,
+					IndikatorId:     t.IndikatorId,
+					TargetIndikator: t.Target,
+					SatuanIndikator: t.Satuan,
+				})
+			}
+			idPokin := ind.PokinId
+			if idPokin == "" {
+				idPokin = fmt.Sprint(pid)
+			}
+			indRes = append(indRes, pohonkinerja.IndikatorResponse{
+				Id:            ind.Id,
+				IdPokin:       idPokin,
+				NamaIndikator: ind.Indikator,
+				Target:        tgtRes,
+			})
+		}
+		var tagRes []pohonkinerja.TaggingResponse
+		for _, tagging := range tagMap[pid] {
+			var ketRes []pohonkinerja.KeteranganTaggingResponse
+			for _, k := range tagging.KeteranganTaggingProgram {
+				ketRes = append(ketRes, pohonkinerja.KeteranganTaggingResponse{
+					Id:                  k.Id,
+					IdTagging:           k.IdTagging,
+					KodeProgramUnggulan: k.KodeProgramUnggulan,
+					RencanaImplementasi: k.RencanaImplementasi,
+					Tahun:               k.Tahun,
+				})
+			}
+			tagRes = append(tagRes, pohonkinerja.TaggingResponse{
+				Id:                       tagging.Id,
+				IdPokin:                  tagging.IdPokin,
+				NamaTagging:              tagging.NamaTagging,
+				KeteranganTaggingProgram: ketRes,
+				CloneFrom:                tagging.CloneFrom,
+			})
+		}
+		out = append(out, pohonkinerja.PohonKinerjaOpdResponse{
+			Id:                   p.Id,
+			Parent:               strconv.Itoa(p.Parent),
+			NamaPohon:            p.NamaPohon,
+			JenisPohon:           p.JenisPohon,
+			LevelPohon:           p.LevelPohon,
+			KodeOpd:              p.KodeOpd,
+			NamaOpd:              namaOpd,
+			Keterangan:           p.Keterangan,
+			Tahun:                p.Tahun,
+			Status:               p.Status,
+			KeteranganTahunClone: p.KeteranganTahunClone,
+			Pelaksana:            pelRes,
+			Indikator:            indRes,
+			Tagging:              tagRes,
+		})
+	}
+	return out, nil
+}
