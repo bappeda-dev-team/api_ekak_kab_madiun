@@ -1112,71 +1112,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/pohon_kinerja_opd/pindah_parent/{id}": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengupdate parent pohon kinerja opd berdasarkan ID.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Clone Pohon Kinerja Opd"
-                ],
-                "summary": "Update Parent Pohon Kinerja Opd",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "\"1\"",
-                        "description": "ID Pohon Kinerja",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Data untuk mengupdate parent pohon kinerja",
-                        "name": "pohon_kinerja_update_parent_request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaUpdateParentRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/web.WebResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/web.WebResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon}": {
             "get": {
                 "security": [
@@ -1251,6 +1186,71 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/update_parent_clone/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengupdate parent pohon kinerja opd clone berdasarkan ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clone Pohon Kinerja Opd"
+                ],
+                "summary": "Update Parent Pohon Kinerja Opd Clone",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1\"",
+                        "description": "ID Pohon Kinerja",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data untuk mengupdate parent pohon kinerja",
+                        "name": "pohon_kinerja_update_parent_clone_request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaUpdateParentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }

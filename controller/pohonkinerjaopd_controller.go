@@ -25,4 +25,5 @@ type PohonKinerjaOpdController interface {
 	ControlPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	LeaderboardPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllPokinParentClonePokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpdateParentClone(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

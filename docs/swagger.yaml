@@ -1648,45 +1648,6 @@ paths:
       summary: Clone Pohon Kinerja opd
       tags:
       - Clone Pohon Kinerja Opd
-  /pohon_kinerja_opd/pindah_parent/{id}:
-    put:
-      consumes:
-      - application/json
-      description: Mengupdate parent pohon kinerja opd berdasarkan ID.
-      parameters:
-      - description: ID Pohon Kinerja
-        example: '"1"'
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Data untuk mengupdate parent pohon kinerja
-        in: body
-        name: pohon_kinerja_update_parent_request
-        required: true
-        schema:
-          $ref: '#/definitions/pohonkinerja.PohonKinerjaUpdateParentRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/web.WebResponse'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/web.WebResponse'
-      security:
-      - BearerAuth: []
-      summary: Update Parent Pohon Kinerja Opd
-      tags:
-      - Clone Pohon Kinerja Opd
   /pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon}:
     get:
       consumes:
@@ -1737,6 +1698,45 @@ paths:
       security:
       - BearerAuth: []
       summary: Find All Pokin Parent Clone Pokin Opd
+      tags:
+      - Clone Pohon Kinerja Opd
+  /pohon_kinerja_opd/update_parent_clone/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Mengupdate parent pohon kinerja opd clone berdasarkan ID.
+      parameters:
+      - description: ID Pohon Kinerja
+        example: '"1"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data untuk mengupdate parent pohon kinerja
+        in: body
+        name: pohon_kinerja_update_parent_clone_request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.PohonKinerjaUpdateParentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Parent Pohon Kinerja Opd Clone
       tags:
       - Clone Pohon Kinerja Opd
   /sasaran_opd/create:

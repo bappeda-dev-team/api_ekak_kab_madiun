@@ -24,4 +24,5 @@ type PohonKinerjaOpdService interface {
 	FindPokinAtasan(ctx context.Context, id int) (pohonkinerja.PokinAtasanResponse, error)
 	ControlPokinOpd(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.ControlPokinOpdResponse, error)
 	LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error)
+	UpdateParentClone(ctx context.Context, req pohonkinerja.PohonKinerjaUpdateParentRequest) (pohonkinerja.PohonKinerjaUpdateParentCloneResponse, error)
 }

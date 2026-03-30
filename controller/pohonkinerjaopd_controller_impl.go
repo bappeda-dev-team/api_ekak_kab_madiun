@@ -344,17 +344,6 @@ func (controller *PohonKinerjaOpdControllerImpl) DeletePokinPemdaInOpd(writer ht
 
 }
 
-// @Summary      Update Parent Pohon Kinerja Opd
-// @Description  Mengupdate parent pohon kinerja opd berdasarkan ID.
-// @Tags         Clone Pohon Kinerja Opd
-// @Accept       json
-// @Produce      json
-// @Param        id  path     string  true  "ID Pohon Kinerja"  example("1")
-// @Param        pohon_kinerja_update_parent_request  body     pohonkinerja.PohonKinerjaUpdateParentRequest  true  "Data untuk mengupdate parent pohon kinerja"
-// @Success      200  {object}  web.WebResponse{data=string}
-// @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
-// @Router       /pohon_kinerja_opd/pindah_parent/{id} [put]
 func (controller *PohonKinerjaOpdControllerImpl) UpdateParent(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	pohonKinerjaUpdateParentRequest := pohonkinerja.PohonKinerjaUpdateParentRequest{}
 	helper.ReadFromRequestBody(request, &pohonKinerjaUpdateParentRequest)
@@ -622,6 +611,52 @@ func (controller *PohonKinerjaOpdControllerImpl) FindAllPokinParentClonePokinOpd
 		Code:   200,
 		Status: "Success Get All Pokin Parent Clone Pokin Opd",
 		Data:   pohonKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// @Summary      Update Parent Pohon Kinerja Opd Clone
+// @Description  Mengupdate parent pohon kinerja opd clone berdasarkan ID.
+// @Tags         Clone Pohon Kinerja Opd
+// @Accept       json
+// @Produce      json
+// @Param        id  path     string  true  "ID Pohon Kinerja"  example("1")
+// @Param        pohon_kinerja_update_parent_clone_request  body     pohonkinerja.PohonKinerjaUpdateParentRequest  true  "Data untuk mengupdate parent pohon kinerja"
+// @Success      200  {object}  web.WebResponse{data=string}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/update_parent_clone/{id} [put]
+func (controller *PohonKinerjaOpdControllerImpl) UpdateParentClone(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	pohonKinerjaUpdateParentCloneRequest := pohonkinerja.PohonKinerjaUpdateParentRequest{}
+	helper.ReadFromRequestBody(request, &pohonKinerjaUpdateParentCloneRequest)
+
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "ID harus berupa angka",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	pohonKinerjaUpdateParentCloneRequest.Id = id
+
+	updateCloneResponse, err := controller.PohonKinerjaOpdService.UpdateParentClone(request.Context(), pohonKinerjaUpdateParentCloneRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Update Parent",
+		Data:   updateCloneResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }

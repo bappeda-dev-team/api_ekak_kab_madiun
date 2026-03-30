@@ -203,3 +203,8 @@ func MapTujuanOpdToResponseCascading(
 
 	return responses
 }
+
+type PohonKinerjaUpdateParentCloneResponse struct {
+	Pokin  PohonKinerjaOpdResponse   `json:"pokin"`
+	Childs []PohonKinerjaOpdResponse `json:"childs,omitempty"`
+}
