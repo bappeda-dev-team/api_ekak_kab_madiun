@@ -2374,7 +2374,7 @@ func (service *RencanaKinerjaServiceImpl) getKegiatanSubkegiatanForRekinAtasan(
 }
 
 func (service *RencanaKinerjaServiceImpl) FindBatchDetails(ctx context.Context, rekinIds []string, bulan int, tahun int) ([]rencanakinerja.DataRincianKerja, error) {
-	if tahun <= 0 || bulan <= 0 || bulan > 12 {
+	if tahun <= 0 || bulan <= 0 || bulan > 14 {
 		return nil, errors.New("tahun atau bulan tidak valid")
 	}
 
