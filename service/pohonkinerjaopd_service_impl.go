@@ -2773,7 +2773,25 @@ func (service *PohonKinerjaOpdServiceImpl) UpdateParentClone(ctx context.Context
 	if err != nil {
 		return pohonkinerja.PohonKinerjaUpdateParentCloneResponse{}, err
 	}
-	out := pohonkinerja.PohonKinerjaUpdateParentCloneResponse{Pokin: main}
+	out := pohonkinerja.PohonKinerjaUpdateParentCloneResponse{
+		Id:                     main.Id,
+		Parent:                 main.Parent,
+		NamaPohon:              main.NamaPohon,
+		JenisPohon:             main.JenisPohon,
+		LevelPohon:             main.LevelPohon,
+		KodeOpd:                main.KodeOpd,
+		NamaOpd:                main.NamaOpd,
+		Keterangan:             main.Keterangan,
+		Tahun:                  main.Tahun,
+		CountReview:            main.CountReview,
+		Status:                 main.Status,
+		Pelaksana:              main.Pelaksana,
+		Indikator:              main.Indikator,
+		Tagging:                main.Tagging,
+		KeteranganCrosscutting: main.KeteranganCrosscutting,
+		UpdatedBy:              main.UpdatedBy,
+		KeteranganTahunClone:   main.KeteranganTahunClone,
+	}
 	// Hanya isi anak jika node punya parent (bukan root parent=0)
 	if pokinFull.Parent != 0 {
 		kids, err := service.pohonKinerjaOpdRepository.FindChildPokins(ctx, tx, int64(pokinFull.Id))
