@@ -1,12 +1,20 @@
 package pkopd
 
 type PkOpdResponse struct {
-	KodeOpd      string         `json:"kode_opd"`
-	NamaOpd      string         `json:"nama_opd"`
-	KepalaOpd    string         `json:"nama_kepala_opd"`
-	NipKepalaOpd string         `json:"nip_kepala_opd"`
-	Tahun        int            `json:"tahun"`
-	PkItem       []PkOpdByLevel `json:"pk_item"`
+	KodeOpd       string           `json:"kode_opd"`
+	NamaOpd       string           `json:"nama_opd"`
+	KepalaOpd     string           `json:"nama_kepala_opd"`
+	NipKepalaOpd  string           `json:"nip_kepala_opd"`
+	Tahun         int              `json:"tahun"`
+	PkItem        []PkOpdByLevel   `json:"pk_item"`
+	SasaranPemdas []SasaranPemdaPk `json:"sasaran_pemdas"`
+}
+
+type SasaranPemdaPk struct {
+	NamaKepalaPemda  string `json:"nama_kepala_pemda"`
+	NipKepalaPemda   string `json:"nip_kepala_pemda"`
+	IdSasaranPemda   int    `json:"id_sasaran_pemda"`
+	NamaSasaranPemda string `json:"sasaran_pemda"`
 }
 
 type PkOpdByLevel struct {
@@ -25,13 +33,14 @@ type PkPegawai struct {
 	LevelPk        int      `json:"level_pk"`
 	JenisItem      string   `json:"jenis_item"`
 	Item           []ItemPk `json:"item_pk"`
-	TotalPagu      int      `json:"total_pagu"`
+	TotalPagu      int64    `json:"total_pagu"`
 }
 
 type ItemPk struct {
 	RekinId  string `json:"id_rekin"`
 	KodeItem string `json:"kode_item"`
 	NamaItem string `json:"nama_item"`
+	PaguItem int64  `json:"pagu_item"`
 }
 
 type PkAsn struct {
