@@ -684,3 +684,20 @@ func (service *MatrixRenjaServiceImpl) UpsertAnggaran(ctx context.Context, reque
 		Pagu:            request.Pagu,
 	}, nil
 }
+
+func (service *MatrixRenjaServiceImpl) GetRenjaPenetapan(ctx context.Context, kodeOpd, tahun, jenisPagu string) ([]programkegiatan.UrusanDetailResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	data, err := service.MatrixRenjaRepository.GetRenjaPenetapan(ctx, tx, kodeOpd, tahun, jenisPagu)
+	if err != nil {
+		return nil, err
+	}
+	result := service.transformToResponse(data, kodeOpd, tahun)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}

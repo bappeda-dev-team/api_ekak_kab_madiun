@@ -101,9 +101,8 @@ func (controller *MatrixRenjaControllerImpl) GetRenjaRankhir(writer http.Respons
 func (controller *MatrixRenjaControllerImpl) GetRenjaPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
-	jenisIndikator := "penetapan"
 	jenisPagu := "penetapan"
-	matrixRenjaResponses, err := controller.MatrixRenjaService.GetRenja(request.Context(), kodeOpd, tahun, jenisIndikator, jenisPagu)
+	matrixRenjaResponses, err := controller.MatrixRenjaService.GetRenjaPenetapan(request.Context(), kodeOpd, tahun, jenisPagu)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   400,
