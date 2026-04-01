@@ -853,7 +853,7 @@ func replaceKode(kode, kodeOpd string) string {
 		return kode
 	}
 	// hanya replace jika prefix = X.XX
-	if kParts[0] != opdParts[0] || kParts[1] != opdParts[1] {
+	if kParts[0] != "X" || kParts[1] != "XX" {
 		return kode
 	}
 
@@ -863,7 +863,7 @@ func replaceKode(kode, kodeOpd string) string {
 	}
 
 	// ambil 2 segment pertama
-	newPrefix := "X" + "." + "XX"
+	newPrefix := opdParts[0] + "." + opdParts[1]
 
 	// gabungkan dengan sisa kode lama
 	return newPrefix + "." + strings.Join(kParts[2:], ".")

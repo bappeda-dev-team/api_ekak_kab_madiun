@@ -12,16 +12,16 @@ func TestReplaceKode(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "normal case, kode depan sama dengan kode opd",
-			kode:     "5.01.01.2.01.0001",
-			kodeOpd:  "5.01.5.05.0.00.01.0000",
-			expected: "X.XX.01.2.01.0001",
-		},
-		{
-			name:     "terdeteksi X.XX",
+			name:     "normal case",
 			kode:     "X.XX.01.2.01.0001",
 			kodeOpd:  "5.01.5.05.0.00.01.0000",
-			expected: "X.XX.01.2.01.0001",
+			expected: "5.01.01.2.01.0001",
+		},
+		{
+			name:     "tidak terdeteksi X.XX",
+			kode:     "5.01.01.2.01.0001",
+			kodeOpd:  "5.01.5.05.0.00.01.0000",
+			expected: "5.01.01.2.01.0001",
 		},
 		{
 			name:     "tidak sama dengan kode opd",
