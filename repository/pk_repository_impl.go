@@ -168,17 +168,11 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
           k.kode_kegiatan,
           k.nama_kegiatan,
           sub.kode_subkegiatan,
-          sub.nama_subkegiatan,
-          pg.pagu
+          sub.nama_subkegiatan
 		FROM tb_subkegiatan_terpilih st
-        JOIN tb_rencana_kinerja rk ON rk.id = st.rekin_id
         JOIN tb_subkegiatan sub ON sub.id = st.subkegiatan_id
         LEFT JOIN tb_master_kegiatan k ON k.kode_kegiatan = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5)
         LEFT JOIN tb_master_program p ON p.kode_program = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 3)
-        LEFT JOIN tb_pagu pg
-           ON pg.kode_subkegiatan = st.kode_subkegiatan
-           AND pg.jenis = 'penetapan'
-           AND pg.kode_opd = rk.kode_opd
 		WHERE st.rekin_id IN (%s)`,
 		strings.Join(placeholders, ","))
 	rows, err := tx.QueryContext(ctx, script, args...)
@@ -191,7 +185,6 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
 		var itemPk domain.AllItemPk
 		var kodeProgram, namaProgram sql.NullString
 		var kodeKegiatan, namaKegiatan sql.NullString
-		var paguNi sql.NullInt64
 
 		err := rows.Scan(&itemPk.RekinId,
 			&kodeProgram,
@@ -199,8 +192,7 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
 			&kodeKegiatan,
 			&namaKegiatan,
 			&itemPk.KodeSubkegiatan,
-			&itemPk.NamaSubkegiatan,
-			&paguNi)
+			&itemPk.NamaSubkegiatan)
 		if err != nil {
 			return nil, err
 		}
@@ -215,9 +207,6 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
 		}
 		if namaKegiatan.Valid {
 			itemPk.NamaKegiatan = namaKegiatan.String
-		}
-		if paguNi.Valid {
-			itemPk.PaguSubkegiatan = paguNi.Int64
 		}
 		subMap[itemPk.RekinId] = itemPk
 	}
@@ -428,4 +417,42 @@ func (repository *PkRepositoryImpl) FindSasaranPemdaById(ctx context.Context, tx
 	}
 
 	return item, nil
+}
+
+func (repository *PkRepositoryImpl) PaguPkByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string]int64, error) {
+	paguSubkegiatanMap := make(map[string]int64)
+
+	script := `
+         SELECT pg.kode_subkegiatan, pg.pagu
+         FROM tb_pagu pg
+         WHERE pg.jenis = 'penetapan'
+         AND pg.kode_opd = ?
+         AND pg.tahun = ?
+    `
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var kodeSubkegiatanNs sql.NullString
+		var paguNi sql.NullInt64
+		var kodeSubkegiatan string
+		var pagu int64
+		err := rows.Scan(
+			&kodeSubkegiatanNs,
+			&paguNi,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if kodeSubkegiatanNs.Valid {
+			kodeSubkegiatan = kodeSubkegiatanNs.String
+		}
+		if paguNi.Valid {
+			pagu = paguNi.Int64
+		}
+		paguSubkegiatanMap[kodeSubkegiatan] = pagu
+	}
+	return paguSubkegiatanMap, nil
 }

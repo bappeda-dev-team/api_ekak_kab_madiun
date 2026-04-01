@@ -142,11 +142,33 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	// find subkegiatan by rekin id
 	// [rekinId] = { namaSub: ..., kodeSub: ...}
 	// get kode subkegiatan rekins
-	// pagu anggaran didapat disini
 	rekinSubkegiatan, err := service.pkOpdRepository.FindSubkegiatanByRekinIds(ctx, tx, rekinIds)
 	if err != nil {
 		log.Printf("[ERROR] rekinSubkegiatan: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
+	}
+	paguSubKegiatan, err := service.pkOpdRepository.PaguPkByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		log.Printf("[ERROR] paguSubkegiatan: %v", err)
+		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
+	}
+	// penyesuaian kode paguSubkegiatan
+	normalizedKodePagu := make(map[string]int64)
+	for kode, pagu := range paguSubKegiatan {
+		newKode := replaceKode(kode, kodeOpd)
+		normalizedKodePagu[newKode] = pagu
+	}
+	// susun pagu subkegiatan
+	for key, sub := range rekinSubkegiatan {
+		kode := sub.KodeSubkegiatan
+
+		if pagu, ok := normalizedKodePagu[kode]; ok {
+			sub.PaguSubkegiatan = pagu
+		} else {
+			sub.PaguSubkegiatan = 0
+		}
+
+		rekinSubkegiatan[key] = sub // wajib re-assign
 	}
 
 	// data struktur untuk penyusunan
@@ -821,4 +843,28 @@ func sumTotalPagu(items []pkopd.ItemPk) int64 {
 		total += item.PaguItem
 	}
 	return total
+}
+
+func replaceKode(kode, kodeOpd string) string {
+	kParts := strings.Split(kode, ".")
+	opdParts := strings.Split(kodeOpd, ".")
+
+	if len(kParts) < 2 || len(opdParts) < 2 {
+		return kode
+	}
+	// hanya replace jika prefix = X.XX
+	if kParts[0] != opdParts[0] || kParts[1] != opdParts[1] {
+		return kode
+	}
+
+	// validasi kodeOpd (harus angka, opsional tapi bagus)
+	if opdParts[0] == "" || opdParts[1] == "" {
+		return kode
+	}
+
+	// ambil 2 segment pertama
+	newPrefix := "X" + "." + "XX"
+
+	// gabungkan dengan sisa kode lama
+	return newPrefix + "." + strings.Join(kParts[2:], ".")
 }

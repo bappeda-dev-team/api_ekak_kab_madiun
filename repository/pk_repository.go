@@ -14,4 +14,6 @@ type PkRepository interface {
 	FindPaguPkByKodeSubkegiatans(ctx context.Context, tx *sql.Tx, kodeSubkegiatans []string) (map[string]int64, error)
 	FindSasaranPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun int) ([]domain.AllSasaranPemdaPk, error)
 	FindSasaranPemdaById(ctx context.Context, tx *sql.Tx, sasaranPemdaId int) (domain.AllSasaranPemdaPk, error)
+	// GROUPED BY KODE SUB - PAGU
+	PaguPkByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string]int64, error)
 }
