@@ -18,6 +18,10 @@ import (
 	"net/http"
 )
 
+import (
+	_ "ekak_kabupaten_madiun/docs"
+)
+
 // Injectors from injector.go:
 
 func InitializeServer() *http.Server {
