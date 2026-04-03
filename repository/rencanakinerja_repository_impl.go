@@ -1554,15 +1554,15 @@ func (repository *RencanaKinerjaRepositoryImpl) IndikatorTargetSasaranByRekinIds
 
 	for rows.Next() {
 		var (
-			indId, rekinId, indikator, tahun      string
-			targetId, target, satuan, tahunTarget sql.NullString
+			indId, rekinId, indikator, tahun               string
+			targetId, target, satuan, tahunTarget, tahunNs sql.NullString
 		)
 
 		if err := rows.Scan(
 			&indId,
 			&rekinId,
 			&indikator,
-			&tahun,
+			&tahunNs,
 			&targetId,
 			&target,
 			&satuan,
@@ -1576,6 +1576,9 @@ func (repository *RencanaKinerjaRepositoryImpl) IndikatorTargetSasaranByRekinIds
 			rekinMap[rekinId] = make(map[string]*domain.Indikator)
 		}
 		if rekinMap[rekinId][indId] == nil {
+			if tahunNs.Valid {
+				tahun = tahunNs.String
+			}
 			rekinMap[rekinId][indId] = &domain.Indikator{
 				Id:               indId,
 				RencanaKinerjaId: rekinId,
