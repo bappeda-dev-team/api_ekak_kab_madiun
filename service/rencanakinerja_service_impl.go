@@ -54,9 +54,11 @@ type RencanaKinerjaServiceImpl struct {
 	programRepository        repository.ProgramRepository
 	rincianBelanjaRepository repository.RincianBelanjaRepository
 	rencanaAksiRepository    repository.RencanaAksiRepository
+	cloneRecordRepository    repository.CloneRecordRepository
 }
 
-func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository, sasaranOpdRepository repository.SasaranOpdRepository, cascadingOpdService *CascadingOpdServiceImpl, cascadingOpdRepository repository.CascadingOpdRepository, programRepository repository.ProgramRepository, rincianBelanjaRepository repository.RincianBelanjaRepository, rencanaAksiRepository repository.RencanaAksiRepository) *RencanaKinerjaServiceImpl {
+func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository, sasaranOpdRepository repository.SasaranOpdRepository, cascadingOpdService *CascadingOpdServiceImpl, cascadingOpdRepository repository.CascadingOpdRepository, programRepository repository.ProgramRepository, rincianBelanjaRepository repository.RincianBelanjaRepository, rencanaAksiRepository repository.RencanaAksiRepository, cloneRecordRepository repository.CloneRecordRepository,
+) *RencanaKinerjaServiceImpl {
 	return &RencanaKinerjaServiceImpl{
 		rencanaKinerjaRepository:         rencanaKinerjaRepository,
 		DB:                               DB,
@@ -86,6 +88,7 @@ func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKin
 		programRepository:        programRepository,
 		rincianBelanjaRepository: rincianBelanjaRepository,
 		rencanaAksiRepository:    rencanaAksiRepository,
+		cloneRecordRepository:    cloneRecordRepository,
 	}
 }
 
@@ -2388,6 +2391,82 @@ func (service *RencanaKinerjaServiceImpl) FindByFilter(ctx context.Context, filt
 	return response, nil
 }
 
+func (service *RencanaKinerjaServiceImpl) CloneRekinByKodeOpdAndTahun(
+	ctx context.Context,
+	cloneRequest rencanakinerja.RekinByOpdCloneRequest,
+) error {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Gagal memulai transaksi: %v", err)
+		return fmt.Errorf("gagal memulai transaksi: %w", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	kodeOpd := cloneRequest.KodeOpd
+	tahunTarget := cloneRequest.TahunTujuan
+
+	// 1. Check existing clone
+	existing, err := service.cloneRecordRepository.
+		GetCloneByKodeOpdTahunTujuan(ctx, tx, kodeOpd, tahunTarget)
+
+	if err != nil {
+		// bedakan error
+		if err.Error() != "clone record not found" {
+			log.Printf("error checking clone record: %v", err)
+			return fmt.Errorf("gagal cek data clone: %w", err)
+		}
+	}
+	if existing.Status == "DONE" {
+		// sudah pernah clone
+		return fmt.Errorf(
+			"rekin sudah di-clone pada %v",
+			existing.CreatedAt.Format("2006-01-02 15:04:05"),
+		)
+	}
+	if existing.Status == "PROCESS" || existing.Status == "PENDING" {
+		// sudah pernah clone
+		return fmt.Errorf("clone rekin sedang berjalan")
+	}
+
+	// 2. (Optional) insert tracking dulu → untuk lock logical
+	newRecord := domain.CloneRecord{
+		KodeClone:   helper.GenerateKodeClone(kodeOpd), // pastikan ada
+		KodeOpd:     kodeOpd,
+		TahunAsal:   cloneRequest.TahunSumber,
+		TahunTarget: tahunTarget,
+		UpdatedBy:   cloneRequest.UpdatedBy,
+	}
+
+	cloneRecord, err := service.cloneRecordRepository.Create(ctx, tx, newRecord)
+	if err != nil {
+		// handle duplicate (jika UNIQUE constraint ada)
+		log.Printf("error insert clone record: %v", err)
+		return fmt.Errorf("gagal menyimpan record clone: %w", err)
+	}
+
+	// 4. jalankan async (OUTSIDE TX)
+	go func(recordId int, req rencanakinerja.RekinByOpdCloneRequest) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("panic clone: %v", r)
+				service.updateStatusSafe(recordId, "FAILED", fmt.Sprintf("%v", r))
+			}
+		}()
+
+		err := service.doCloneBackground(context.Background(), req, recordId)
+		if err != nil {
+			log.Printf("clone background gagal: %v", err)
+			service.updateStatusSafe(recordId, "FAILED", err.Error())
+			return
+		}
+
+		service.updateStatusSafe(recordId, "DONE", "")
+	}(cloneRecord.Id, cloneRequest)
+
+	return nil
+}
+
 func toIndikatorResponses(
 	indikators []domain.Indikator,
 ) []rencanakinerja.IndikatorResponse {
@@ -2426,4 +2505,120 @@ func toTargetResponses(targets []domain.Target) []rencanakinerja.TargetResponse 
 	}
 
 	return responses
+}
+
+func (service *RencanaKinerjaServiceImpl) doCloneBackground(
+	ctx context.Context,
+	req rencanakinerja.RekinByOpdCloneRequest,
+	recordId int,
+) error {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// 1. set status PROCESS
+	service.updateStatusSafe(recordId, "PROCESS", "")
+
+	// 2. ambil data sumber
+	data, err := service.rencanaKinerjaRepository.GetByKodeOpdAndTahun(
+		ctx,
+		tx,
+		req.KodeOpd,
+		req.TahunSumber,
+	)
+	if err != nil {
+		service.updateStatusSafe(recordId, "FAILED", err.Error())
+		return err
+	}
+
+	var newRekins []domain.RencanaKinerja
+	// 3. lakukan clone
+	for _, item := range data {
+		newItem := item
+		itemIndikators := item.Indikator
+		tahunTujuan := req.TahunTujuan
+		// new item indikator
+		var newItemIndikator []domain.Indikator
+
+		newItem.Id = genereateRekinId() // reset ID
+		newItem.Tahun = tahunTujuan
+		newItem.IdPohon = 0
+		for _, ind := range itemIndikators {
+			newInd := ind
+			indTarget := ind.Target
+
+			newInd.Id = genereateIndikatorRekinId()
+
+			var newTargets []domain.Target
+			for _, tar := range indTarget {
+				newTar := tar
+				newTar.Id = generateTargetRekinId()
+				newTar.IndikatorId = newInd.Id
+				newTar.Tahun = tahunTujuan
+				newTargets = append(newTargets, newTar)
+			}
+
+			newInd.RencanaKinerjaId = newItem.Id
+			newInd.Tahun = tahunTujuan
+			newInd.Target = newTargets
+			newItemIndikator = append(newItemIndikator, newInd)
+		}
+		newItem.Indikator = newItemIndikator
+
+		newRekins = append(newRekins, newItem)
+	}
+	// clone batch
+	err = service.rencanaKinerjaRepository.CreateBatch(ctx, tx, newRekins)
+	if err != nil {
+		log.Printf("rencanaKinerjaRepository.CreateBatch error: %v", err)
+		service.updateStatusSafe(recordId, "FAILED", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func genereateRekinId() string {
+	randomDigits := uuid.NewString()
+	currentTime := time.Now().Format("20060102")
+	return fmt.Sprintf("REKIN-PEG-%s-%s", currentTime, randomDigits)
+}
+
+func genereateIndikatorRekinId() string {
+	indikatorRandomDigits := uuid.NewString()
+	currentTime := time.Now().Format("20060102")
+	return fmt.Sprintf("IND-REKIN-%s-%s", currentTime, indikatorRandomDigits)
+}
+
+func generateTargetRekinId() string {
+	targetRandomDigits := uuid.NewString()
+	currentTime := time.Now().Format("20060102")
+	return fmt.Sprintf("TRGT-IND-REKIN-%s-%s", currentTime, targetRandomDigits)
+}
+
+func (service *RencanaKinerjaServiceImpl) updateStatusSafe(
+	id int,
+	status string,
+	errMsg string,
+) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("gagal begin tx update status: %v", err)
+		return
+	}
+	defer helper.CommitOrRollback(tx)
+
+	err = service.cloneRecordRepository.UpdateStatus(
+		context.Background(),
+		tx,
+		id,
+		status,
+		errMsg,
+	)
+	if err != nil {
+		log.Printf("gagal update status: %v", err)
+	}
 }

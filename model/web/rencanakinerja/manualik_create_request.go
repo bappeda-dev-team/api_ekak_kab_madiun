@@ -23,3 +23,10 @@ type OutputDataCreateRequest struct {
 	Penduduk bool `json:"penduduk"`
 	Spatial  bool `json:"spatial"`
 }
+
+type RekinByOpdCloneRequest struct {
+	KodeOpd     string `json:"kode_opd" validate:"required"`
+	TahunSumber string `json:"tahun_sumber" validate:"required,min=4,max=4"`
+	TahunTujuan string `json:"tahun_tujuan" validate:"required,min=4,max=4"`
+	UpdatedBy   string `json:"updated_by" validate:"required"`
+}

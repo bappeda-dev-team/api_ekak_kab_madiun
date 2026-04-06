@@ -439,6 +439,11 @@ var jabatanPegawaiSet = wire.NewSet(
 	wire.Bind(new(repository.JabatanPegawaiRepository), new(*repository.JabatanPegawaiRepositoryImpl)),
 )
 
+var cloneRecordSet = wire.NewSet(
+	repository.NewCloneRecordRepositoryImpl,
+	wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -493,6 +498,7 @@ func InitializeServer() *http.Server {
 		pkOpdSet,
 		strukturOrganisasiSet,
 		jabatanPegawaiSet,
+		cloneRecordSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,
