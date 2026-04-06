@@ -2305,6 +2305,39 @@ paths:
       summary: Update Sasaran Opd Renstra
       tags:
       - Sasaran Opd Renstra
+  /tujuan_opd/detail/{tujuanOpdId}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan opd renstra berdasarkan ID.
+      parameters:
+      - description: ID Tujuan OPD
+        example: 1
+        in: path
+        name: tujuanOpdId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.TujuanOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Opd Renstra
+      tags:
+      - Tujuan Opd Renstra
   /tujuan_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
