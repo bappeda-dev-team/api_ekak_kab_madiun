@@ -4501,7 +4501,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 			k.id as keterangan_id,
 			k.kode_program_unggulan,
 			k.tahun,
-			pu.nama_tagging AS nama_program_prioritas
+			pu.nama_tagging AS nama_program_prioritas,
 			pu.keterangan_program_unggulan
 		FROM tb_tagging_pokin t
 		LEFT JOIN tb_keterangan_tagging_program_unggulan k ON t.id = k.id_tagging
