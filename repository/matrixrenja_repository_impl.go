@@ -15,7 +15,7 @@ func NewMatrixRenjaRepositoryImpl() *MatrixRenjaRepositoryImpl {
 	return &MatrixRenjaRepositoryImpl{}
 }
 
-func (repository *MatrixRenjaRepositoryImpl) GetRenja(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisIndikator, jenisPagu string) ([]domain.SubKegiatanQuery, error) {
+func (repository *MatrixRenjaRepositoryImpl) GetRenja(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPagu string) ([]domain.SubKegiatanQuery, error) {
 	// Pastikan ada subkegiatan yang dipilih
 	var count int
 	if err := tx.QueryRowContext(ctx, `
@@ -90,7 +90,7 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenja(ctx context.Context, tx *s
         AND tp.kode_opd         = ?
         AND tp.jenis            = ?
         AND tp.tahun            = h.tahun_subkegiatan
-    LEFT JOIN tb_indikator_matrix im
+      LEFT JOIN tb_indikator_matrix im
         ON (
             im.kode = h.kode_urusan        OR
             im.kode = h.kode_bidang_urusan OR
@@ -99,8 +99,8 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenja(ctx context.Context, tx *s
             im.kode = h.kode_subkegiatan
         )
             AND im.kode_opd = ?
-            AND im.jenis    = ?
-            AND im.tahun    = ?  
+            AND im.jenis    = 'renstra'
+            AND im.tahun    = ?
     LEFT JOIN tb_target t
         ON t.indikator_id = im.kode_indikator
     ORDER BY
@@ -113,7 +113,7 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenja(ctx context.Context, tx *s
 	rows, err := tx.QueryContext(ctx, query,
 		kodeOpd, tahun, // hierarchy WHERE
 		kodeOpd, jenisPagu, // tb_pagu
-		kodeOpd, jenisIndikator, tahun, // tb_indikator_matrix + filter tahun
+		kodeOpd, tahun, // tb_indikator_matrix + filter tahun
 	)
 	if err != nil {
 		return nil, err
@@ -170,11 +170,7 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenja(ctx context.Context, tx *s
 	return result, nil
 }
 
-func (repository *MatrixRenjaRepositoryImpl) GetRenjaRankhir(
-	ctx context.Context,
-	tx *sql.Tx,
-	kodeOpd, tahun, jenisIndikator string,
-) ([]domain.SubKegiatanQuery, error) {
+func (repository *MatrixRenjaRepositoryImpl) GetRenjaRankhir(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.SubKegiatanQuery, error) {
 	// Check sama seperti ranwal
 	var count int
 	if err := tx.QueryRowContext(ctx, `
@@ -221,11 +217,11 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaRankhir(
         sp.pegawai_id,
         COALESCE(pg.nama, '')          AS nama_pegawai,
         sp.total_pagu,
-        im.kode_indikator              AS indikator_id,
-        im.kode                        AS indikator_kode,
-        im.indikator,
-        COALESCE(im.tahun, '')         AS indikator_tahun,
-        im.kode_opd                    AS indikator_kode_opd,
+              COALESCE(im_rk.kode_indikator, im_rs.kode_indikator) AS indikator_id,
+        COALESCE(im_rk.kode, im_rs.kode)                   AS indikator_kode,
+        COALESCE(im_rk.indikator, im_rs.indikator)         AS indikator,
+        COALESCE(im_rk.tahun, im_rs.tahun)                 AS indikator_tahun,
+        COALESCE(im_rk.kode_opd, im_rs.kode_opd)           AS indikator_kode_opd,
         t.id                           AS target_id,
         t.target,
         t.satuan
@@ -241,19 +237,30 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaRankhir(
         ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
     LEFT JOIN tb_pegawai pg
         ON pg.nip = sp.pegawai_id
-    LEFT JOIN tb_indikator_matrix im
+LEFT JOIN tb_indikator_matrix im_rs
         ON (
-            im.kode = u.kode_urusan         OR
-            im.kode = bu.kode_bidang_urusan OR
-            im.kode = p.kode_program        OR
-            im.kode = k.kode_kegiatan       OR
-            im.kode = s.kode_subkegiatan
+            im_rs.kode = u.kode_urusan         OR
+            im_rs.kode = bu.kode_bidang_urusan OR
+            im_rs.kode = p.kode_program        OR
+            im_rs.kode = k.kode_kegiatan       OR
+            im_rs.kode = s.kode_subkegiatan
         )
-        AND im.kode_opd = ?
-        AND im.jenis    = ?
-        AND im.tahun    = ?
+        AND im_rs.kode_opd = ?
+        AND im_rs.jenis    = 'renstra'
+        AND im_rs.tahun    = ?
+    LEFT JOIN tb_indikator_matrix im_rk
+        ON (
+            im_rk.kode = u.kode_urusan         OR
+            im_rk.kode = bu.kode_bidang_urusan OR
+            im_rk.kode = p.kode_program        OR
+            im_rk.kode = k.kode_kegiatan       OR
+            im_rk.kode = s.kode_subkegiatan
+        )
+        AND im_rk.kode_opd = ?
+        AND im_rk.jenis    = 'rankhir'
+        AND im_rk.tahun    = ?
     LEFT JOIN tb_target t
-        ON t.indikator_id = im.kode_indikator
+        ON t.indikator_id = COALESCE(im_rk.kode_indikator, im_rs.kode_indikator)
     ORDER BY
         u.kode_urusan,
         bu.kode_bidang_urusan,
@@ -263,7 +270,8 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaRankhir(
     `
 	rows, err := tx.QueryContext(ctx, query,
 		kodeOpd, tahun, // subkeg_pagu WHERE
-		kodeOpd, jenisIndikator, tahun, // tb_indikator_matrix filter
+		kodeOpd, tahun, // tb_indikator_matrix filter
+		kodeOpd, tahun,
 	)
 	if err != nil {
 		return nil, err
@@ -415,16 +423,17 @@ func (r *MatrixRenjaRepositoryImpl) UpsertBatchIndikatorRenja(
 	return nil
 }
 
-func (r *MatrixRenjaRepositoryImpl) CountKodeIndikatorByPrefix(
-	ctx context.Context, tx *sql.Tx, prefix string,
-) (int, error) {
+func (r *MatrixRenjaRepositoryImpl) CountIndikatorMatrixByScope(ctx context.Context, tx *sql.Tx, kode, kodeOpd, tahun, jenis, prefix string) (int, error) {
 	var count int
-	err := tx.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM tb_indikator_matrix WHERE kode_indikator LIKE ?",
-		prefix+"%",
+	err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM tb_indikator_matrix
+		WHERE kode = ? AND kode_opd = ? AND tahun = ? AND jenis = ?
+		  AND kode_indikator LIKE ?`,
+		kode, kodeOpd, tahun, jenis, prefix+"%",
 	).Scan(&count)
 	return count, err
 }
+
 func (r *MatrixRenjaRepositoryImpl) FindIndikatorRenjaByKode(
 	ctx context.Context, tx *sql.Tx, kodeIndikator string,
 ) (domain.Indikator, error) {
@@ -552,46 +561,58 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 		return nil, fmt.Errorf("subkegiatan belum dipilih pada tahun %s", tahun)
 	}
 	hierarchyQuery := `
-    WITH hierarchy AS (
-        SELECT DISTINCT
-            u.kode_urusan, u.nama_urusan,
-            bu.kode_bidang_urusan, bu.nama_bidang_urusan,
-            p.kode_program, p.nama_program,
-            k.kode_kegiatan, k.nama_kegiatan,
-            s.kode_subkegiatan, s.nama_subkegiatan,
-            rk.tahun AS tahun_subkegiatan, rk.pegawai_id
-        FROM tb_subkegiatan_terpilih st
-        JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
-        JOIN tb_subkegiatan s ON st.kode_subkegiatan = s.kode_subkegiatan
-        JOIN tb_master_kegiatan k
-            ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
-        JOIN tb_master_program p
-            ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
-        JOIN tb_bidang_urusan bu
-            ON LEFT(p.kode_program, LENGTH(bu.kode_bidang_urusan)) = bu.kode_bidang_urusan
-        JOIN tb_urusan u
-            ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
-        WHERE rk.kode_opd = ? AND rk.tahun = ?
+       WITH subkeg_pagu AS (
+        SELECT
+            sub.kode_subkegiatan,
+            rk.pegawai_id,
+            rk.tahun AS tahun_rekin,
+            COALESCE(SUM(rb.anggaran), 0) AS total_pagu
+        FROM tb_subkegiatan_terpilih sub
+        JOIN tb_rencana_kinerja rk ON sub.rekin_id = rk.id
+        LEFT JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rk.id
+        LEFT JOIN tb_rincian_belanja rb ON rb.renaksi_id = ra.id
+        WHERE rk.kode_opd = ?
+          AND rk.tahun = ?
+        GROUP BY sub.kode_subkegiatan, rk.pegawai_id, rk.tahun
     )
     SELECT
-        h.kode_urusan, h.nama_urusan,
-        h.kode_bidang_urusan, h.nama_bidang_urusan,
-        h.kode_program, h.nama_program,
-        h.kode_kegiatan, h.nama_kegiatan,
-        h.kode_subkegiatan, h.nama_subkegiatan,
-        h.tahun_subkegiatan, h.pegawai_id,
+        u.kode_urusan,
+        u.nama_urusan,
+        bu.kode_bidang_urusan,
+        bu.nama_bidang_urusan,
+        p.kode_program,
+        p.nama_program,
+        k.kode_kegiatan,
+        k.nama_kegiatan,
+        s.kode_subkegiatan,
+        s.nama_subkegiatan,
+        sp.tahun_rekin AS tahun_subkegiatan,
+        sp.pegawai_id,
         COALESCE(pg.nama, '') AS nama_pegawai,
-        COALESCE(tp.pagu, 0)  AS pagu_subkegiatan
-    FROM hierarchy h
-    LEFT JOIN tb_pegawai pg ON pg.nip = h.pegawai_id
+        CASE WHEN tp.kode_subkegiatan IS NOT NULL THEN COALESCE(tp.pagu, 0) ELSE 0 END AS pagu_subkegiatan,
+        CASE WHEN tp.kode_subkegiatan IS NULL THEN sp.total_pagu ELSE 0 END AS total_anggaran_subkegiatan
+    FROM subkeg_pagu sp
+    JOIN tb_subkegiatan s ON sp.kode_subkegiatan = s.kode_subkegiatan
+    JOIN tb_master_kegiatan k
+        ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+    JOIN tb_master_program p
+        ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
+    JOIN tb_bidang_urusan bu
+        ON LEFT(p.kode_program, LENGTH(bu.kode_bidang_urusan)) = bu.kode_bidang_urusan
+    JOIN tb_urusan u
+        ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
+    LEFT JOIN tb_pegawai pg ON pg.nip = sp.pegawai_id
     LEFT JOIN tb_pagu tp
-        ON  tp.kode_subkegiatan = h.kode_subkegiatan
-        AND tp.kode_opd         = ?
-        AND tp.jenis            = ?
-        AND tp.tahun            = h.tahun_subkegiatan
+        ON tp.kode_subkegiatan = sp.kode_subkegiatan
+        AND tp.kode_opd = ?
+        AND tp.jenis = ?
+        AND tp.tahun = sp.tahun_rekin
     ORDER BY
-        h.kode_urusan, h.kode_bidang_urusan, h.kode_program,
-        h.kode_kegiatan, h.kode_subkegiatan, h.tahun_subkegiatan
+        u.kode_urusan,
+        bu.kode_bidang_urusan,
+        p.kode_program,
+        k.kode_kegiatan,
+        s.kode_subkegiatan
     `
 	hRows, err := tx.QueryContext(ctx, hierarchyQuery, kodeOpd, tahun, kodeOpd, jenisPagu)
 	if err != nil {
@@ -616,6 +637,7 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 			&row.PegawaiId,
 			&row.NamaPegawai,
 			&row.PaguSubKegiatan,
+			&row.TotalAnggaranSubKegiatan,
 		); err != nil {
 			return nil, err
 		}
@@ -627,7 +649,6 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 	if len(baseRows) == 0 {
 		return []domain.SubKegiatanQuery{}, nil
 	}
-
 	type indRow struct {
 		KodeIndikator string
 		Kode          string
@@ -638,8 +659,6 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 		Target        string
 		Satuan        string
 	}
-
-	// Satu round-trip: rankhir + penetapan (filter IN, index-friendly).
 	indQuery := `
 		SELECT
 			im.jenis,
@@ -654,7 +673,7 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 		FROM tb_indikator_matrix im
 		LEFT JOIN tb_target t ON t.indikator_id = im.kode_indikator
 		WHERE im.kode_opd = ?
-		  AND im.jenis IN ('rankhir', 'penetapan')
+		  AND im.jenis IN ('renstra', 'rankhir', 'penetapan')
 		  AND im.tahun    = ?
 		ORDER BY im.jenis, im.kode, im.kode_indikator
 	`
@@ -663,7 +682,7 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 		return nil, err
 	}
 	defer rows.Close()
-
+	renstraByKode := make(map[string][]indRow)
 	rankhirByKode := make(map[string][]indRow)
 	penetapanByKode := make(map[string][]indRow)
 	for rows.Next() {
@@ -679,14 +698,21 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 		switch jenis {
 		case "penetapan":
 			penetapanByKode[r.Kode] = append(penetapanByKode[r.Kode], r)
-		default:
+		case "rankhir":
 			rankhirByKode[r.Kode] = append(rankhirByKode[r.Kode], r)
+		case "renstra":
+			renstraByKode[r.Kode] = append(renstraByKode[r.Kode], r)
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-
+	effectiveRankhirLike := func(k string) []indRow {
+		if len(rankhirByKode[k]) > 0 {
+			return rankhirByKode[k]
+		}
+		return renstraByKode[k]
+	}
 	result := make([]domain.SubKegiatanQuery, 0, len(baseRows)*4)
 	for _, base := range baseRows {
 		kodes := []string{
@@ -701,9 +727,11 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 			if k == "" {
 				continue
 			}
-			list := rankhirByKode[k]
+			var list []indRow
 			if len(penetapanByKode[k]) > 0 {
 				list = penetapanByKode[k]
+			} else {
+				list = effectiveRankhirLike(k)
 			}
 			for _, ind := range list {
 				totalInd++
