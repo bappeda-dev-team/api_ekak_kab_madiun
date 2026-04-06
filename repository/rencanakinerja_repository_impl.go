@@ -1676,7 +1676,7 @@ func (repository *RencanaKinerjaRepositoryImpl) batchInsertRekin(
 	`
 
 	var placeholders []string
-	var values []interface{}
+	var values []any
 
 	for _, r := range rencanaKinerjas {
 		placeholders = append(placeholders, "(?,?,?,?,?,?,?,?,?,?,?,?,?)")
@@ -1715,7 +1715,7 @@ func (repository *RencanaKinerjaRepositoryImpl) batchInsertIndikator(
 ) error {
 
 	var placeholders []string
-	var values []interface{}
+	var values []any
 
 	for _, r := range rencanaKinerjas {
 		for _, ind := range r.Indikator {

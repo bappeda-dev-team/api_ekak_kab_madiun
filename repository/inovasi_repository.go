@@ -12,4 +12,6 @@ type InovasiRepository interface {
 	FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Inovasi, error)
 	FindById(ctx context.Context, tx *sql.Tx, id string) (domain.Inovasi, error)
 	Delete(ctx context.Context, tx *sql.Tx, id string) error
+	FindByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.Inovasi, error)
+	BatchCreate(ctx context.Context, tx *sql.Tx, inovasis []domain.Inovasi) error
 }

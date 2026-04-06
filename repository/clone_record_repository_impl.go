@@ -59,11 +59,11 @@ func (r *CloneRecordRepositoryImpl) Create(
 	return cloneRecord, nil
 }
 
-func (r *CloneRecordRepositoryImpl) GetCloneByKodeOpdTahunTujuan(
+func (r *CloneRecordRepositoryImpl) GetCloneByKodeOpdTahunSumberTahunTujuan(
 	ctx context.Context,
-	tx *sql.Tx,
-	kodeOpd string,
-	tahunTarget string,
+	tx *sql.Tx, kodeOpd string,
+	tahunSumber string,
+	tahunTujuan string,
 ) (domain.CloneRecord, error) {
 
 	query := `
@@ -79,12 +79,13 @@ func (r *CloneRecordRepositoryImpl) GetCloneByKodeOpdTahunTujuan(
 			updated_by
 		FROM clone_record
 		WHERE kode_opd = ?
+		AND tahun_asal = ?
 		AND tahun_target = ?
                 ORDER BY id DESC
 		LIMIT 1
 	`
 
-	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahunTarget)
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahunSumber, tahunTujuan)
 	if err != nil {
 		return domain.CloneRecord{}, err
 	}

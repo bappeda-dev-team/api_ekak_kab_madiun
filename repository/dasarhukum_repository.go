@@ -14,4 +14,6 @@ type DasarHukumRepository interface {
 	Delete(ctx context.Context, tx *sql.Tx, id string) error
 	GetLastUrutan(ctx context.Context, tx *sql.Tx) (int, error)
 	GetLastUrutanByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (int, error)
+	FindByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.DasarHukum, error)
+	BatchCreate(ctx context.Context, tx *sql.Tx, dasarHukums []domain.DasarHukum) error
 }

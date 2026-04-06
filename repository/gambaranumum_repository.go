@@ -13,4 +13,6 @@ type GambaranUmumRepository interface {
 	FindById(ctx context.Context, tx *sql.Tx, id string) (domain.GambaranUmum, error)
 	FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.GambaranUmum, error)
 	GetLastUrutanByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (int, error)
+	FindByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.GambaranUmum, error)
+	BatchCreate(ctx context.Context, tx *sql.Tx, gambaranUmums []domain.GambaranUmum) error
 }
