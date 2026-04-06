@@ -4501,6 +4501,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 			k.id as keterangan_id,
 			k.kode_program_unggulan,
 			k.tahun,
+			pu.nama_tagging AS nama_program_prioritas
 			pu.keterangan_program_unggulan
 		FROM tb_tagging_pokin t
 		LEFT JOIN tb_keterangan_tagging_program_unggulan k ON t.id = k.id_tagging
@@ -4521,13 +4522,14 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 
 	for rows.Next() {
 		var (
-			taggingId, idPokin  int
-			namaTagging         string
-			cloneFrom           sql.NullInt64
-			keteranganId        sql.NullInt64
-			kodeProgramUnggulan sql.NullString
-			tahun               sql.NullString
-			rencanaImplementasi sql.NullString
+			taggingId, idPokin   int
+			namaTagging          string
+			cloneFrom            sql.NullInt64
+			keteranganId         sql.NullInt64
+			kodeProgramUnggulan  sql.NullString
+			tahun                sql.NullString
+			namaProgramPrioritas sql.NullString
+			rencanaImplementasi  sql.NullString
 		)
 
 		err := rows.Scan(
@@ -4538,6 +4540,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 			&keteranganId,
 			&kodeProgramUnggulan,
 			&tahun,
+			&namaProgramPrioritas,
 			&rencanaImplementasi,
 		)
 		if err != nil {
@@ -4564,13 +4567,18 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 			if rencanaImplementasi.Valid && rencanaImplementasi.String != "" {
 				rencanaImpl = &rencanaImplementasi.String
 			}
+			var namaPrgPrio *string
+			if namaProgramPrioritas.Valid && namaProgramPrioritas.String != "" {
+				namaPrgPrio = &namaProgramPrioritas.String
+			}
 
 			keterangan := domain.KeteranganTagging{
-				Id:                  int(keteranganId.Int64),
-				IdTagging:           taggingId,
-				KodeProgramUnggulan: kodeProgramUnggulan.String,
-				RencanaImplementasi: rencanaImpl,
-				Tahun:               tahun.String,
+				Id:                   int(keteranganId.Int64),
+				IdTagging:            taggingId,
+				KodeProgramUnggulan:  kodeProgramUnggulan.String,
+				NamaProgramPrioritas: namaPrgPrio,
+				RencanaImplementasi:  rencanaImpl,
+				Tahun:                tahun.String,
 			}
 			tagging.KeteranganTaggingProgram = append(tagging.KeteranganTaggingProgram, keterangan)
 		}
