@@ -151,6 +151,17 @@ func (controller *TujuanOpdControllerImpl) Delete(writer http.ResponseWriter, re
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// FindById godoc
+// @Summary      Tujuan Opd Renstra
+// @Description  Mendapatkan data tujuan opd renstra berdasarkan ID.
+// @Tags         Tujuan Opd Renstra
+// @Accept       json
+// @Produce      json
+// @Param        tujuanOpdId  path     int  true  "ID Tujuan OPD"   example(1)
+// @Success      200  {object}  web.WebResponse{data=tujuanopd.TujuanOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/detail/{tujuanOpdId} [get]
 func (controller *TujuanOpdControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	tujuanOpdId := params.ByName("tujuanOpdId")
 	tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
