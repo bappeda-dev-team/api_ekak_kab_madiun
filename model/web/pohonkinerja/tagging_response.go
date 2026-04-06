@@ -9,9 +9,10 @@ type TaggingResponse struct {
 }
 
 type KeteranganTaggingResponse struct {
-	Id                  int     `json:"id"`
-	IdTagging           int     `json:"id_tagging"`
-	KodeProgramUnggulan string  `json:"kode_program_unggulan"`
-	RencanaImplementasi *string `json:"keterangan_tagging_program"`
-	Tahun               string  `json:"tahun,omitempty"`
+	Id                   int     `json:"id"`
+	IdTagging            int     `json:"id_tagging"`
+	KodeProgramUnggulan  string  `json:"kode_program_unggulan"`
+	NamaProgramPrioritas *string `json:"nama_program_prioritas"`
+	RencanaImplementasi  *string `json:"keterangan_tagging_program"`
+	Tahun                string  `json:"tahun,omitempty"`
 }

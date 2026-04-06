@@ -13,11 +13,12 @@ type TaggingPokin struct {
 }
 
 type KeteranganTagging struct {
-	Id                  int
-	IdTagging           int
-	KodeProgramUnggulan string
-	RencanaImplementasi *string
-	Tahun               string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	Id                   int
+	IdTagging            int
+	KodeProgramUnggulan  string
+	NamaProgramPrioritas *string
+	RencanaImplementasi  *string
+	Tahun                string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
