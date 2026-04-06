@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"fmt"
+	"strings"
 )
 
 type DasarHukumRepositoryImpl struct {
@@ -97,4 +99,91 @@ func (r *DasarHukumRepositoryImpl) GetLastUrutanByRekinId(ctx context.Context, t
 		return 0, err
 	}
 	return lastUrutan, nil
+}
+
+func (repoistory *DasarHukumRepositoryImpl) FindByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.DasarHukum, error) {
+	if len(rekinIds) == 0 {
+		return []domain.DasarHukum{}, nil
+	}
+	// Buat placeholder untuk IN clause
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+        SELECT
+           dh.id,
+           dh.rekin_id,
+           dh.kode_opd,
+           dh.urutan,
+           dh.peraturan_terkait,
+           dh.uraian
+        FROM tb_dasar_hukum dh
+        WHERE dh.rekin_id IN (%s)
+        `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return []domain.DasarHukum{}, err
+	}
+	defer rows.Close()
+
+	var dasarHukums []domain.DasarHukum
+	for rows.Next() {
+		var dasarHukum domain.DasarHukum
+		err := rows.Scan(
+			&dasarHukum.Id,
+			&dasarHukum.RekinId,
+			&dasarHukum.KodeOpd,
+			&dasarHukum.Urutan,
+			&dasarHukum.PeraturanTerkait,
+			&dasarHukum.Uraian,
+		)
+		if err != nil {
+			return []domain.DasarHukum{}, err
+		}
+		dasarHukums = append(dasarHukums, dasarHukum)
+	}
+
+	return dasarHukums, nil
+}
+
+func (repository *DasarHukumRepositoryImpl) BatchCreate(ctx context.Context, tx *sql.Tx, dasarHukums []domain.DasarHukum) error {
+	if len(dasarHukums) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO tb_dasar_hukum (
+			id, rekin_id, urutan, peraturan_terkait, uraian, kode_opd
+		) VALUES
+	`
+
+	var placeholders []string
+	var values []any
+
+	for _, item := range dasarHukums {
+		placeholders = append(placeholders, "(?,?,?,?,?,?)")
+
+		values = append(values,
+			item.Id,
+			item.RekinId,
+			item.Urutan,
+			item.PeraturanTerkait,
+			item.Uraian,
+			item.KodeOpd,
+		)
+	}
+
+	query += strings.Join(placeholders, ",")
+
+	_, err := tx.ExecContext(ctx, query, values...)
+	if err != nil {
+		return fmt.Errorf("gagal batch insert dasar hukum: %w", err)
+	}
+
+	return nil
 }

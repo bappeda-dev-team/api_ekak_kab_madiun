@@ -15,4 +15,6 @@ type RencanaAksiRepository interface {
 	IsUrutanExistsForRencanaKinerja(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string, urutan int) (bool, error)
 	IsUrutanExistsForRencanaKinerjaExcludingId(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string, urutan int, excludeId string) (bool, error)
 	GetTotalBobotForRencanaKinerja(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string) (int, error)
+	FindRenaksiByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.RencanaAksi, error)
+	BatchCreate(ctx context.Context, tx *sql.Tx, renaksis []domain.RencanaAksi) error
 }

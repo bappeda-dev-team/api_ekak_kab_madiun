@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 type InovasiRepositoryImpl struct {
@@ -85,6 +87,108 @@ func (repository *InovasiRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx,
 
 	if rowsAffected == 0 {
 		return errors.New("inovasi tidak ditemukan")
+	}
+
+	return nil
+}
+
+func (repository *InovasiRepositoryImpl) FindByRekinIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinIds []string,
+) ([]domain.Inovasi, error) {
+
+	if len(rekinIds) == 0 {
+		return []domain.Inovasi{}, nil
+	}
+
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id, rekin_id, kode_opd, judul_inovasi, jenis_inovasi,
+			gambaran_nilai_kebaruan
+		FROM tb_inovasi
+		WHERE rekin_id IN (%s)
+		ORDER BY created_at ASC
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.Inovasi
+
+	for rows.Next() {
+		var item domain.Inovasi
+
+		err := rows.Scan(
+			&item.Id,
+			&item.RekinId,
+			&item.KodeOpd,
+			&item.JudulInovasi,
+			&item.JenisInovasi,
+			&item.GambaranNilaiKebaruan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (repository *InovasiRepositoryImpl) BatchCreate(
+	ctx context.Context,
+	tx *sql.Tx,
+	items []domain.Inovasi,
+) error {
+
+	if len(items) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO tb_inovasi (
+			id, rekin_id, kode_opd, judul_inovasi, jenis_inovasi, gambaran_nilai_kebaruan
+		) VALUES
+	`
+
+	var placeholders []string
+	var values []any
+
+	for _, item := range items {
+		placeholders = append(placeholders, "(?,?,?,?,?,?)")
+
+		values = append(values,
+			item.Id,
+			item.RekinId,
+			item.KodeOpd,
+			item.JudulInovasi,
+			item.JenisInovasi,
+			item.GambaranNilaiKebaruan,
+		)
+	}
+
+	query += strings.Join(placeholders, ",")
+
+	_, err := tx.ExecContext(ctx, query, values...)
+	if err != nil {
+		return fmt.Errorf("gagal batch insert inovasi: %w", err)
 	}
 
 	return nil

@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 type RencanaAksiRepositoryImpl struct {
@@ -234,4 +236,98 @@ func (repository *RencanaAksiRepositoryImpl) GetTotalBobotForRencanaKinerja(ctx 
 	var totalBobot int
 	err := tx.QueryRowContext(ctx, script, rencanaKinerjaId).Scan(&totalBobot)
 	return totalBobot, err
+}
+
+func (repository *RencanaAksiRepositoryImpl) FindRenaksiByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.RencanaAksi, error) {
+	if len(rekinIds) == 0 {
+		return []domain.RencanaAksi{}, nil
+	}
+
+	// Buat placeholder untuk IN clause
+	placeholders := make([]string, len(rekinIds))
+	args := make([]any, len(rekinIds))
+	for i, id := range rekinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+        SELECT DISTINCT
+           ra.id,
+           ra.rencana_kinerja_id,
+           ra.kode_opd,
+           ra.urutan,
+           ra.nama_rencana_aksi
+        FROM tb_rencana_aksi ra
+        WHERE ra.rencana_kinerja_id IN (%s)
+        `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return []domain.RencanaAksi{}, err
+	}
+	defer rows.Close()
+
+	var rencanaAksis []domain.RencanaAksi
+	for rows.Next() {
+		var rencanaAksi domain.RencanaAksi
+		err := rows.Scan(
+			&rencanaAksi.Id,
+			&rencanaAksi.RencanaKinerjaId,
+			&rencanaAksi.KodeOpd,
+			&rencanaAksi.Urutan,
+			&rencanaAksi.NamaRencanaAksi,
+		)
+		if err != nil {
+			return []domain.RencanaAksi{}, err
+		}
+		rencanaAksis = append(rencanaAksis, rencanaAksi)
+	}
+
+	return rencanaAksis, nil
+}
+
+func (repository *RencanaAksiRepositoryImpl) BatchCreate(
+	ctx context.Context,
+	tx *sql.Tx,
+	renaksis []domain.RencanaAksi,
+) error {
+
+	if len(renaksis) == 0 {
+		return nil
+	}
+
+	baseQuery := `
+		INSERT INTO tb_rencana_aksi
+		(id, rencana_kinerja_id, kode_opd, urutan, nama_rencana_aksi)
+		VALUES
+	`
+
+	valueStrings := make([]string, 0, len(renaksis))
+	valueArgs := make([]any, 0, len(renaksis)*5)
+
+	for _, r := range renaksis {
+		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?)")
+
+		valueArgs = append(valueArgs,
+			r.Id,
+			r.RencanaKinerjaId,
+			r.KodeOpd,
+			r.Urutan,
+			r.NamaRencanaAksi,
+		)
+	}
+
+	query := baseQuery + strings.Join(valueStrings, ",")
+
+	_, err := tx.ExecContext(ctx, query, valueArgs...)
+	if err != nil {
+		return fmt.Errorf(
+			"%w: batch insert tb_rencana_aksi gagal: %v",
+			errors.New("internal_error"),
+			err,
+		)
+	}
+
+	return nil
 }

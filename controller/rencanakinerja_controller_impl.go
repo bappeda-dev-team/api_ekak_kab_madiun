@@ -388,3 +388,26 @@ func (controller *RencanaKinerjaControllerImpl) CloneRencanaKinerja(writer http.
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *RencanaKinerjaControllerImpl) CloneRencanaKinerjaByKodeOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	cloneRequest := rencanakinerja.RekinByOpdCloneRequest{}
+	helper.ReadFromRequestBody(request, &cloneRequest)
+
+	err := controller.rencanaKinerjaService.CloneRekinByKodeOpdAndTahun(request.Context(), cloneRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "gagal clone rencana kinerja",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success clone rencana kinerja",
+		Data:   "Berhasil clone rencana kinerja dari tahun " + cloneRequest.TahunSumber + " ke tahun " + cloneRequest.TahunTujuan + " untuk OPD " + cloneRequest.KodeOpd,
+	}
+	helper.WriteToResponseBodyWstatus(writer, webResponse)
+}

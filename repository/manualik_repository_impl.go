@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -536,6 +537,129 @@ func (repository *ManualIKRepositoryImpl) CloneManualIK(ctx context.Context, tx 
 	_, err := tx.ExecContext(ctx, script, idBaru, indikatorIdBaru, indikatorIdLama)
 	if err != nil {
 		return fmt.Errorf("gagal clone manual IK: %v", err)
+	}
+
+	return nil
+}
+
+func (repository *ManualIKRepositoryImpl) FindByIndikatorIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	indikatorIds []string,
+) ([]domain.ManualIK, error) {
+
+	if len(indikatorIds) == 0 {
+		return []domain.ManualIK{}, nil
+	}
+
+	// build IN (?, ?, ?, ...)
+	placeholders := make([]string, len(indikatorIds))
+	args := make([]any, len(indikatorIds))
+
+	for i, id := range indikatorIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := `
+		SELECT
+			id, indikator_id, perspektif, tujuan_rekin, definisi, key_activities,
+			formula, jenis_indikator, kinerja, penduduk, spasial,
+			unit_penanggung_jawab, unit_penyedia_data, sumber_data,
+			jangka_waktu_awal, jangka_waktu_akhir, periode_pelaporan
+		FROM tb_manual_ik
+		WHERE indikator_id IN (` + strings.Join(placeholders, ",") + `)
+	`
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.ManualIK
+
+	for rows.Next() {
+		var manualIK domain.ManualIK
+
+		err := rows.Scan(
+			&manualIK.Id,
+			&manualIK.IndikatorId,
+			&manualIK.Perspektif,
+			&manualIK.TujuanRekin,
+			&manualIK.Definisi,
+			&manualIK.KeyActivities,
+			&manualIK.Formula,
+			&manualIK.JenisIndikator,
+			&manualIK.Kinerja,
+			&manualIK.Penduduk,
+			&manualIK.Spatial,
+			&manualIK.UnitPenanggungJawab,
+			&manualIK.UnitPenyediaData,
+			&manualIK.SumberData,
+			&manualIK.JangkaWaktuAwal,
+			&manualIK.JangkaWaktuAkhir,
+			&manualIK.PeriodePelaporan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, manualIK)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (repository *ManualIKRepositoryImpl) CreateBatch(ctx context.Context, tx *sql.Tx, manualIks []domain.ManualIK) error {
+	if len(manualIks) == 0 {
+		return nil
+	}
+	query := `
+		INSERT INTO tb_manual_ik (
+			indikator_id, perspektif, tujuan_rekin, definisi,
+			key_activities, formula, jenis_indikator, kinerja,
+			penduduk, spasial, unit_penanggung_jawab,
+			unit_penyedia_data, sumber_data, jangka_waktu_awal,
+			jangka_waktu_akhir, periode_pelaporan
+		) VALUES
+	`
+
+	var placeholders []string
+	var values []any
+
+	for _, m := range manualIks {
+		placeholders = append(placeholders, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+
+		values = append(values,
+			m.IndikatorId,
+			m.Perspektif,
+			m.TujuanRekin,
+			m.Definisi,
+			m.KeyActivities,
+			m.Formula,
+			m.JenisIndikator,
+			m.Kinerja,
+			m.Penduduk,
+			m.Spatial,
+			m.UnitPenanggungJawab,
+			m.UnitPenyediaData,
+			m.SumberData,
+			m.JangkaWaktuAwal,
+			m.JangkaWaktuAkhir,
+			m.PeriodePelaporan,
+		)
+	}
+
+	query += strings.Join(placeholders, ",")
+
+	_, err := tx.ExecContext(ctx, query, values...)
+	if err != nil {
+		return fmt.Errorf("gagal batch insert manual IK: %w", err)
 	}
 
 	return nil

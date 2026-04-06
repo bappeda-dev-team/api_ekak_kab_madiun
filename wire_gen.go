@@ -55,7 +55,8 @@ func InitializeServer() *http.Server {
 	rencanaAksiRepositoryImpl := repository.NewRencanaAksiRepositoryImpl()
 	client := app.GetRedisClient()
 	cascadingOpdServiceImpl := service.NewCascadingOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, rencanaKinerjaRepositoryImpl, db, programRepositoryImpl, cascadingOpdRepositoryImpl, bidangUrusanRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl, client)
-	rencanaKinerjaServiceImpl := service.NewRencanaKinerjaServiceImpl(rencanaKinerjaRepositoryImpl, db, validate, opdRepositoryImpl, usulanMusrebangRepositoryImpl, usulanMandatoriRepositoryImpl, usulanPokokPikiranRepositoryImpl, usulanInisiatifRepositoryImpl, subKegiatanRepositoryImpl, dasarHukumRepositoryImpl, gambaranUmumRepositoryImpl, inovasiRepositoryImpl, pelaksanaanRencanaAksiRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, manualIKRepositoryImpl, permasalahanRekinRepositoryImpl, subKegiatanTerpilihRepositoryImpl, subKegiatanServiceImpl, periodeRepositoryImpl, sasaranOpdRepositoryImpl, cascadingOpdServiceImpl, cascadingOpdRepositoryImpl, programRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl)
+	cloneRecordRepositoryImpl := repository.NewCloneRecordRepositoryImpl()
+	rencanaKinerjaServiceImpl := service.NewRencanaKinerjaServiceImpl(rencanaKinerjaRepositoryImpl, db, validate, opdRepositoryImpl, usulanMusrebangRepositoryImpl, usulanMandatoriRepositoryImpl, usulanPokokPikiranRepositoryImpl, usulanInisiatifRepositoryImpl, subKegiatanRepositoryImpl, dasarHukumRepositoryImpl, gambaranUmumRepositoryImpl, inovasiRepositoryImpl, pelaksanaanRencanaAksiRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, manualIKRepositoryImpl, permasalahanRekinRepositoryImpl, subKegiatanTerpilihRepositoryImpl, subKegiatanServiceImpl, periodeRepositoryImpl, sasaranOpdRepositoryImpl, cascadingOpdServiceImpl, cascadingOpdRepositoryImpl, programRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl, cloneRecordRepositoryImpl)
 	rencanaKinerjaControllerImpl := controller.NewRencanaKinerjaControllerImpl(rencanaKinerjaServiceImpl)
 	rencanaAksiServiceImpl := service.NewRencanaAksiServiceImpl(rencanaAksiRepositoryImpl, db, validate, pelaksanaanRencanaAksiRepositoryImpl)
 	rencanaAksiControllerImpl := controller.NewRencanaAksiControllerImpl(rencanaAksiServiceImpl)
@@ -284,3 +285,5 @@ var pkOpdSet = wire.NewSet(repository.NewPkRepositoryImpl, wire.Bind(new(reposit
 var strukturOrganisasiSet = wire.NewSet(repository.NewStrukturOrganisasiRepositoryImpl, wire.Bind(new(repository.StrukturOrganisasiRepository), new(*repository.StrukturOrganisasiRepositoryImpl)))
 
 var jabatanPegawaiSet = wire.NewSet(repository.NewJabatanPegawaiRepositoryImpl, wire.Bind(new(repository.JabatanPegawaiRepository), new(*repository.JabatanPegawaiRepositoryImpl)))
+
+var cloneRecordSet = wire.NewSet(repository.NewCloneRecordRepositoryImpl, wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)))

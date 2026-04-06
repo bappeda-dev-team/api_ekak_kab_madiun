@@ -33,9 +33,8 @@ func NewMatrixRenjaControllerImpl(matrixRenjaService service.MatrixRenjaService)
 func (controller *MatrixRenjaControllerImpl) GetRenjaRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
-	jenisIndikator := "ranwal"
 	jenisPagu := "renstra"
-	matrixRenjaResponses, err := controller.MatrixRenjaService.GetRenja(request.Context(), kodeOpd, tahun, jenisIndikator, jenisPagu)
+	matrixRenjaResponses, err := controller.MatrixRenjaService.GetRenja(request.Context(), kodeOpd, tahun, jenisPagu)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   400,
@@ -211,7 +210,7 @@ func (controller *MatrixRenjaControllerImpl) UpsertBatchIndikatorRenjaPenetapan(
 		BatchIndikatorRenjaRequest[i].Jenis = "penetapan"
 	}
 
-	BatchIndikatorRenjaResponse, err := controller.MatrixRenjaService.UpsertBatchIndikatorRenja(request.Context(), BatchIndikatorRenjaRequest)
+	BatchIndikatorRenjaResponse, err := controller.MatrixRenjaService.UpsertBatchIndikatorRenjaPenetapan(request.Context(), BatchIndikatorRenjaRequest)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   http.StatusBadRequest,
