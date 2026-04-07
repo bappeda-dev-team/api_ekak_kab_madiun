@@ -305,12 +305,13 @@ func (service *TujuanOpdServiceImpl) FindById(ctx context.Context, tujuanOpdId i
 
 	for _, indikator := range tujuanOpd.Indikator {
 		indikatorResponse := tujuanopd.IndikatorResponse{
-			Id:               indikator.Id,
-			IdTujuanOpd:      tujuanOpd.Id,
-			NamaIndikator:    indikator.Indikator,
-			RumusPerhitungan: indikator.RumusPerhitungan.String,
-			SumberData:       indikator.SumberData.String,
-			Target:           make([]tujuanopd.TargetResponse, 0),
+			Id:                  indikator.Id,
+			IdTujuanOpd:         tujuanOpd.Id,
+			NamaIndikator:       indikator.Indikator,
+			RumusPerhitungan:    indikator.RumusPerhitungan.String,
+			DefinisiOperasional: indikator.DefinisiOperasional.String,
+			SumberData:          indikator.SumberData.String,
+			Target:              make([]tujuanopd.TargetResponse, 0),
 		}
 
 		tahunAwalInt, _ := strconv.Atoi(tujuanOpd.TahunAwal)

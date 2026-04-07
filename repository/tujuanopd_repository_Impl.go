@@ -180,6 +180,7 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
             i.kode_indikator,
             i.indikator,
             i.rumus_perhitungan, 
+            i.definisi_operasional,
             i.sumber_data,
             COALESCE(tg.id, '') as target_id,
             COALESCE(tg.target, '') as target_value,
@@ -203,22 +204,23 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 
 	for rows.Next() {
 		var (
-			id               int
-			kodeOpd          string
-			kodeBidangUrusan string
-			tujuan           string
-			tahunAwal        string
-			tahunAkhir       string
-			jenisPeriode     string
-			indikatorId      sql.NullString
-			kodeIndikator    sql.NullString
-			indikatorNama    sql.NullString
-			rumusPerhitungan sql.NullString
-			sumberData       sql.NullString
-			targetId         sql.NullString
-			targetValue      sql.NullString
-			satuan           sql.NullString
-			tahunTarget      sql.NullString
+			id                  int
+			kodeOpd             string
+			kodeBidangUrusan    string
+			tujuan              string
+			tahunAwal           string
+			tahunAkhir          string
+			jenisPeriode        string
+			indikatorId         sql.NullString
+			kodeIndikator       sql.NullString
+			indikatorNama       sql.NullString
+			rumusPerhitungan    sql.NullString
+			sumberData          sql.NullString
+			definisiOperasional sql.NullString
+			targetId            sql.NullString
+			targetValue         sql.NullString
+			satuan              sql.NullString
+			tahunTarget         sql.NullString
 		)
 
 		err := rows.Scan(
@@ -234,6 +236,7 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 			&indikatorNama,
 			&rumusPerhitungan,
 			&sumberData,
+			&definisiOperasional,
 			&targetId,
 			&targetValue,
 			&satuan,
@@ -259,12 +262,13 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 		if indikatorId.Valid {
 			if _, exists := indikatorMap[indikatorId.String]; !exists {
 				indikatorMap[indikatorId.String] = &domain.Indikator{
-					Id:               indikatorId.String,
-					KodeIndikator:    kodeIndikator.String,
-					Indikator:        indikatorNama.String,
-					RumusPerhitungan: rumusPerhitungan,
-					SumberData:       sumberData,
-					Target:           []domain.Target{},
+					Id:                  indikatorId.String,
+					KodeIndikator:       kodeIndikator.String,
+					Indikator:           indikatorNama.String,
+					RumusPerhitungan:    rumusPerhitungan,
+					SumberData:          sumberData,
+					DefinisiOperasional: definisiOperasional,
+					Target:              []domain.Target{},
 				}
 				tujuanOpd.Indikator = append(tujuanOpd.Indikator, *indikatorMap[indikatorId.String])
 			}
