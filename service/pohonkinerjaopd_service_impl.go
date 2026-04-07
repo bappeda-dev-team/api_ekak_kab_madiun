@@ -759,7 +759,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	}
 
 	// Ambil data tujuan OPD dengan batch
-	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdByTahun(ctx, tx, kodeOpd, tahun, "RPJMD")
+	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahun(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
 	if err == nil && len(tujuanOpds) > 0 {
 		var tujuanIds []int
 		for _, tujuan := range tujuanOpds {
