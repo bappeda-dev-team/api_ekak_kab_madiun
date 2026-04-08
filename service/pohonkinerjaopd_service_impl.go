@@ -759,57 +759,17 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	}
 
 	// Ambil data tujuan OPD dengan batch
-	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahun(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
-	if err == nil && len(tujuanOpds) > 0 {
-		var tujuanIds []int
-		for _, tujuan := range tujuanOpds {
-			tujuanIds = append(tujuanIds, tujuan.Id)
-		}
-
-		// Batch fetch indikator tujuan
-		indikatorTujuanMap := make(map[int][]domain.Indikator)
-		if len(tujuanIds) > 0 {
-			indikatorBatch, err := service.tujuanOpdRepository.FindIndikatorByTujuanOpdIdsBatch(ctx, tx, tujuanIds)
-			if err == nil {
-				indikatorTujuanMap = indikatorBatch
-			}
-		}
-
-		// Batch fetch target
-		var allTujuanIndikatorIds []string
-		for _, indikators := range indikatorTujuanMap {
-			for _, indikator := range indikators {
-				allTujuanIndikatorIds = append(allTujuanIndikatorIds, indikator.Id)
-			}
-		}
-
-		targetTujuanBatch := make(map[string][]domain.Target)
-		if len(allTujuanIndikatorIds) > 0 {
-			targetBatch, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allTujuanIndikatorIds)
-			if err == nil {
-				for indikatorId, targets := range targetBatch {
-					filteredTargets := make([]domain.Target, 0, len(targets))
-					for _, target := range targets {
-						if target.Tahun == tahun {
-							filteredTargets = append(filteredTargets, target)
-						}
-					}
-					if len(filteredTargets) > 0 {
-						targetTujuanBatch[indikatorId] = filteredTargets
-					}
-				}
-			}
-		}
-
-		// Build response tujuan OPD
+	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
+	if err != nil {
+		return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
+	}
+	if len(tujuanOpds) > 0 {
 		tujuanResponses := make([]pohonkinerja.TujuanOpdResponse, 0, len(tujuanOpds))
 		for _, tujuan := range tujuanOpds {
-			indikators := indikatorTujuanMap[tujuan.Id]
-			indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0, len(indikators))
-			for _, indikator := range indikators {
-				targets := targetTujuanBatch[indikator.Id]
-				targetResponses := make([]pohonkinerja.TargetTujuanResponse, 0, len(targets))
-				for _, target := range targets {
+			indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0, len(tujuan.Indikator))
+			for _, indikator := range tujuan.Indikator {
+				targetResponses := make([]pohonkinerja.TargetTujuanResponse, 0, len(indikator.Target))
+				for _, target := range indikator.Target {
 					targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
 						Tahun:  target.Tahun,
 						Target: target.Target,
