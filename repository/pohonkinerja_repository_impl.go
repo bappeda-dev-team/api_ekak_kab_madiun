@@ -3783,7 +3783,7 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Contex
 	// 3. Insert pohon kinerja baru
 	scriptInsert := `
 		INSERT INTO tb_pohon_kinerja 
-		(nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, clone_from, is_active, keterangan_tahun_clone)
+		(nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, is_active, keterangan_tahun_clone, keterangan_clone_dari)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
@@ -3796,9 +3796,9 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinPemda(ctx context.Contex
 		source.Keterangan,
 		targetTahun,
 		newStatus,
-		sourceId, // ✅ clone_from = 0 (default)
 		source.IsActive,
 		targetTahun,
+		sourceId, // ✅ clone_from = 0 (default)
 	)
 	if err != nil {
 		return 0, fmt.Errorf("gagal insert pohon kinerja: %w", err)
@@ -4501,6 +4501,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 			k.id as keterangan_id,
 			k.kode_program_unggulan,
 			k.tahun,
+			pu.nama_tagging AS nama_program_prioritas,
 			pu.keterangan_program_unggulan
 		FROM tb_tagging_pokin t
 		LEFT JOIN tb_keterangan_tagging_program_unggulan k ON t.id = k.id_tagging
@@ -4521,13 +4522,14 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 
 	for rows.Next() {
 		var (
-			taggingId, idPokin  int
-			namaTagging         string
-			cloneFrom           sql.NullInt64
-			keteranganId        sql.NullInt64
-			kodeProgramUnggulan sql.NullString
-			tahun               sql.NullString
-			rencanaImplementasi sql.NullString
+			taggingId, idPokin   int
+			namaTagging          string
+			cloneFrom            sql.NullInt64
+			keteranganId         sql.NullInt64
+			kodeProgramUnggulan  sql.NullString
+			tahun                sql.NullString
+			namaProgramPrioritas sql.NullString
+			rencanaImplementasi  sql.NullString
 		)
 
 		err := rows.Scan(
@@ -4538,6 +4540,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 			&keteranganId,
 			&kodeProgramUnggulan,
 			&tahun,
+			&namaProgramPrioritas,
 			&rencanaImplementasi,
 		)
 		if err != nil {
@@ -4564,13 +4567,18 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 			if rencanaImplementasi.Valid && rencanaImplementasi.String != "" {
 				rencanaImpl = &rencanaImplementasi.String
 			}
+			var namaPrgPrio *string
+			if namaProgramPrioritas.Valid && namaProgramPrioritas.String != "" {
+				namaPrgPrio = &namaProgramPrioritas.String
+			}
 
 			keterangan := domain.KeteranganTagging{
-				Id:                  int(keteranganId.Int64),
-				IdTagging:           taggingId,
-				KodeProgramUnggulan: kodeProgramUnggulan.String,
-				RencanaImplementasi: rencanaImpl,
-				Tahun:               tahun.String,
+				Id:                   int(keteranganId.Int64),
+				IdTagging:            taggingId,
+				KodeProgramUnggulan:  kodeProgramUnggulan.String,
+				NamaProgramPrioritas: namaPrgPrio,
+				RencanaImplementasi:  rencanaImpl,
+				Tahun:                tahun.String,
 			}
 			tagging.KeteranganTaggingProgram = append(tagging.KeteranganTaggingProgram, keterangan)
 		}
@@ -4911,7 +4919,7 @@ func (repository *PohonKinerjaRepositoryImpl) CheckIfSourceAlreadyCloned(
 	script := `
         SELECT 1
         FROM tb_pohon_kinerja pk
-        WHERE pk.clone_from = ? AND pk.keterangan_tahun_clone = ?
+        WHERE pk.keterangan_clone_dari = ? AND pk.keterangan_tahun_clone = ?
         LIMIT 1
     `
 

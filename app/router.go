@@ -506,6 +506,7 @@ func NewRouter(
 
 	//clone rekin
 	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)
+	router.POST("/rencana_kinerja/clone_by_kode_opd", rencanaKinerjaController.CloneRencanaKinerjaByKodeOpd)
 
 	//tujuan OPD NEW
 	router.GET("/tujuan_opd/renstra/:kode_opd/:tahun_awal/:tahun_akhir", tujuanOpdController.FindTujuanOpdRenstra)

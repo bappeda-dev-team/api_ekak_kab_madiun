@@ -31,4 +31,13 @@ type AllItemPk struct {
 	NamaKegiatan    string
 	KodeSubkegiatan string
 	NamaSubkegiatan string
+	PaguSubkegiatan int64
+}
+
+type AllSasaranPemdaPk struct {
+	JabatanKepalaPemda string
+	NamaKepalaPemda    string
+	NipKepalaPemda     string
+	SasaranPemdaId     int
+	SasaranPemda       string
 }

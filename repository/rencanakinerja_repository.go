@@ -42,4 +42,6 @@ type RencanaKinerjaRepository interface {
 	FindRekinByFilters(ctx context.Context, tx *sql.Tx, filter domain.FilterParams) ([]domain.RencanaKinerja, error)
 	FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error)
 	IndikatorTargetSasaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string][]domain.Indikator, error)
+	GetByKodeOpdAndTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAsal string) ([]domain.RencanaKinerja, error)
+	CreateBatch(ctx context.Context, tx *sql.Tx, rencanaKinerjas []domain.RencanaKinerja) error
 }

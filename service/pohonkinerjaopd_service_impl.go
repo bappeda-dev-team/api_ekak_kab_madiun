@@ -912,10 +912,11 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 			keteranganResponses := make([]pohonkinerja.KeteranganTaggingResponse, 0, len(tag.KeteranganTaggingProgram))
 			for _, keterangan := range tag.KeteranganTaggingProgram {
 				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
-					Id:                  keterangan.Id,
-					IdTagging:           keterangan.IdTagging,
-					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
-					RencanaImplementasi: keterangan.RencanaImplementasi, // Sudah diisi dari JOIN
+					Id:                   keterangan.Id,
+					IdTagging:            keterangan.IdTagging,
+					KodeProgramUnggulan:  keterangan.KodeProgramUnggulan,
+					NamaProgramPrioritas: keterangan.NamaProgramPrioritas, // Sudah diisi dari JOIN
+					RencanaImplementasi:  keterangan.RencanaImplementasi,  // Sudah diisi dari JOIN
 				})
 			}
 			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -1554,15 +1555,15 @@ func (repository *RencanaKinerjaRepositoryImpl) IndikatorTargetSasaranByRekinIds
 
 	for rows.Next() {
 		var (
-			indId, rekinId, indikator, tahun      string
-			targetId, target, satuan, tahunTarget sql.NullString
+			indId, rekinId, indikator, tahun               string
+			targetId, target, satuan, tahunTarget, tahunNs sql.NullString
 		)
 
 		if err := rows.Scan(
 			&indId,
 			&rekinId,
 			&indikator,
-			&tahun,
+			&tahunNs,
 			&targetId,
 			&target,
 			&satuan,
@@ -1576,6 +1577,9 @@ func (repository *RencanaKinerjaRepositoryImpl) IndikatorTargetSasaranByRekinIds
 			rekinMap[rekinId] = make(map[string]*domain.Indikator)
 		}
 		if rekinMap[rekinId][indId] == nil {
+			if tahunNs.Valid {
+				tahun = tahunNs.String
+			}
 			rekinMap[rekinId][indId] = &domain.Indikator{
 				Id:               indId,
 				RencanaKinerjaId: rekinId,
@@ -1608,4 +1612,180 @@ func (repository *RencanaKinerjaRepositoryImpl) IndikatorTargetSasaranByRekinIds
 	}
 
 	return result, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) GetByKodeOpdAndTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAsal string) ([]domain.RencanaKinerja, error) {
+	script := `
+               SELECT id, id_pohon, nama_rencana_kinerja, tahun,
+                      status_rencana_kinerja, catatan, kode_opd, pegawai_id,
+                      created_at
+               FROM tb_rencana_kinerja WHERE kode_opd = ? AND tahun = ?`
+
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahunAsal)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rencanaKinerjas []domain.RencanaKinerja
+
+	for rows.Next() {
+		var rencanaKinerja domain.RencanaKinerja
+		err := rows.Scan(&rencanaKinerja.Id, &rencanaKinerja.IdPohon, &rencanaKinerja.NamaRencanaKinerja,
+			&rencanaKinerja.Tahun, &rencanaKinerja.StatusRencanaKinerja, &rencanaKinerja.Catatan,
+			&rencanaKinerja.KodeOpd, &rencanaKinerja.PegawaiId,
+			&rencanaKinerja.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		rencanaKinerjas = append(rencanaKinerjas, rencanaKinerja)
+	}
+
+	return rencanaKinerjas, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) CreateBatch(ctx context.Context, tx *sql.Tx, rencanaKinerjas []domain.RencanaKinerja) error {
+	if len(rencanaKinerjas) == 0 {
+		return nil
+	}
+	// 1. rekin
+	if err := repository.batchInsertRekin(ctx, tx, rencanaKinerjas); err != nil {
+		return err
+	}
+
+	// 2. indikator
+	if err := repository.batchInsertIndikator(ctx, tx, rencanaKinerjas); err != nil {
+		return err
+	}
+
+	// 3. target
+	if err := repository.batchInsertTarget(ctx, tx, rencanaKinerjas); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) batchInsertRekin(
+	ctx context.Context,
+	tx *sql.Tx,
+	rencanaKinerjas []domain.RencanaKinerja,
+) error {
+
+	query := `
+		INSERT INTO tb_rencana_kinerja
+		(id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode, periode_id)
+		VALUES
+	`
+
+	var placeholders []string
+	var values []any
+
+	for _, r := range rencanaKinerjas {
+		placeholders = append(placeholders, "(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+
+		values = append(values,
+			r.Id,
+			r.IdPohon,
+			r.NamaRencanaKinerja,
+			r.Tahun,
+			r.StatusRencanaKinerja,
+			r.Catatan,
+			r.KodeOpd,
+			r.PegawaiId,
+			r.KodeSubKegiatan,
+			r.TahunAwal,
+			r.TahunAkhir,
+			r.JenisPeriode,
+			r.PeriodeId,
+		)
+	}
+
+	query += strings.Join(placeholders, ",")
+
+	_, err := tx.ExecContext(ctx, query, values...)
+	if err != nil {
+		return fmt.Errorf("batch insert rekin gagal: %w", err)
+	}
+
+	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) batchInsertIndikator(
+	ctx context.Context,
+	tx *sql.Tx,
+	rencanaKinerjas []domain.RencanaKinerja,
+) error {
+
+	var placeholders []string
+	var values []any
+
+	for _, r := range rencanaKinerjas {
+		for _, ind := range r.Indikator {
+			placeholders = append(placeholders, "(?,?,?,?)")
+
+			values = append(values,
+				ind.Id,
+				r.Id,
+				ind.Indikator,
+				ind.Tahun,
+			)
+		}
+	}
+
+	if len(placeholders) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO tb_indikator (id, rencana_kinerja_id, indikator, tahun)
+		VALUES ` + strings.Join(placeholders, ",")
+
+	_, err := tx.ExecContext(ctx, query, values...)
+	if err != nil {
+		return fmt.Errorf("batch insert indikator gagal: %w", err)
+	}
+
+	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) batchInsertTarget(
+	ctx context.Context,
+	tx *sql.Tx,
+	rencanaKinerjas []domain.RencanaKinerja,
+) error {
+
+	var placeholders []string
+	var values []any
+
+	for _, r := range rencanaKinerjas {
+		for _, ind := range r.Indikator {
+			for _, t := range ind.Target {
+				placeholders = append(placeholders, "(?,?,?,?,?)")
+
+				values = append(values,
+					t.Id,
+					ind.Id,
+					t.Target,
+					t.Satuan,
+					t.Tahun,
+				)
+			}
+		}
+	}
+
+	if len(placeholders) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO tb_target (id, indikator_id, target, satuan, tahun)
+		VALUES ` + strings.Join(placeholders, ",")
+
+	_, err := tx.ExecContext(ctx, query, values...)
+	if err != nil {
+		return fmt.Errorf("batch insert target gagal: %w", err)
+	}
+
+	return nil
 }

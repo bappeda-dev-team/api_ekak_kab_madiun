@@ -30,4 +30,5 @@ type RencanaKinerjaService interface {
 	CloneRencanaKinerja(ctx context.Context, rekinId string, tahunBaru string) (rencanakinerja.RencanaKinerjaResponse, error)
 
 	FindByFilter(ctx context.Context, filter domain.FilterParams) ([]rencanakinerja.RencanaKinerjaResponse, error)
+	CloneRekinByKodeOpdAndTahun(ctx context.Context, cloneRequest rencanakinerja.RekinByOpdCloneRequest) error
 }
