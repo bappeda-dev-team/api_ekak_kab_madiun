@@ -6,7 +6,9 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
+	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"strconv"
 )
 
@@ -420,7 +422,7 @@ func (service *MatrixRenstraServiceImpl) UpsertBatchIndikator(ctx context.Contex
 		kodeIndikator := req.KodeIndikator
 		existingTargetId := ""
 		if kodeIndikator == "" {
-			// CREATE: generate kode_indikator baru
+			// CREATE: urutan + bilangan acak agar kode_indikator jarang bentrok (ON DUPLICATE KEY)
 			prefix := fmt.Sprintf("RENS-%s-%s", req.KodeOpd, req.Tahun)
 			if _, loaded := prefixCounter[prefix]; !loaded {
 				count, err := service.MatrixRenstraRepository.CountKodeIndikatorByPrefix(ctx, tx, prefix)
@@ -430,7 +432,11 @@ func (service *MatrixRenstraServiceImpl) UpsertBatchIndikator(ctx context.Contex
 				prefixCounter[prefix] = count
 			}
 			prefixCounter[prefix]++
-			kodeIndikator = fmt.Sprintf("%s-%03d", prefix, prefixCounter[prefix])
+			rnd, err := randomUint31()
+			if err != nil {
+				return nil, err
+			}
+			kodeIndikator = fmt.Sprintf("%s-%03d-%d", prefix, prefixCounter[prefix], rnd)
 		} else {
 			// UPDATE: ambil target.id lama dari DB
 			existing, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
@@ -496,4 +502,12 @@ func (service *MatrixRenstraServiceImpl) UpsertBatchIndikator(ctx context.Contex
 		return nil, err
 	}
 	return responses, nil
+}
+
+func randomUint31() (uint32, error) {
+	var b [4]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint32(b[:]) & 0x7fffffff, nil
 }
