@@ -208,7 +208,7 @@ func (service *CascadingOpdServiceImpl) FindAll(ctx context.Context, kodeOpd, ta
 		}
 	}
 
-	rencanaKinerjaList, err := service.rencanaKinerjaRepository.FindByPokinIds(ctx, tx, pohonIDs)
+	rencanaKinerjaList, err := service.rencanaKinerjaRepository.FindByPokinIdsArray(ctx, tx, pohonIDs)
 	if err != nil {
 		log.Printf("Error rekin list: %v", err)
 		return response, nil

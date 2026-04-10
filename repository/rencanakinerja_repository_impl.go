@@ -1563,8 +1563,8 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.C
 	return results, nil
 }
 
-func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error) {
-	const op = "rencanakinerja_repository.FindByPokinIds"
+func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIdsArray(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error) {
+	const op = "rencanakinerja_repository.FindByPokinIdsArray"
 
 	if len(pokinIds) == 0 {
 		return []domain.RencanaKinerja{}, nil

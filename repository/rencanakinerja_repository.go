@@ -41,5 +41,6 @@ type RencanaKinerjaRepository interface {
 	CreateIndikatorClone(ctx context.Context, tx *sql.Tx, newIndikatorId string, rekinIdBaru string, indikator string, tahunBaru string) error
 
 	FindRekinByFilters(ctx context.Context, tx *sql.Tx, filter domain.FilterParams) ([]domain.RencanaKinerja, error)
+	FindByPokinIdsArray(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error)
 	IndikatorTargetSasaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string][]domain.Indikator, error)
 }
