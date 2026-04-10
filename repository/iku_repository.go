@@ -10,4 +10,6 @@ type IkuRepository interface {
 	FindAll(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.Indikator, error)
 	FindAllIkuOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.Indikator, error)
 	UpdateIkuActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) error
+	UpdateIkuOpdActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) error
+	FindAllIkuRenja(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string, jenisIndikator string) ([]domain.Indikator, error)
 }

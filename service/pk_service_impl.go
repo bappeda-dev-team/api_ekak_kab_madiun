@@ -14,6 +14,7 @@ import (
 	"log"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -127,6 +128,8 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				NamaJabatan: namaJabatanKepalaDaerah,
 			}
 	}
+	// DEPRECATED 1/04/2026
+	// changed to pagu penetapan from subkegiatan
 	// anggaran by rekin id
 	// [rekinId] = 9999
 	// PAGU DIAMBIL DARI RENJA SUBKEGIATAN
@@ -142,6 +145,29 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	if err != nil {
 		log.Printf("[ERROR] rekinSubkegiatan: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
+	}
+	paguSubKegiatan, err := service.pkOpdRepository.PaguPkByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		log.Printf("[ERROR] paguSubkegiatan: %v", err)
+		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
+	}
+	// penyesuaian kode paguSubkegiatan
+	normalizedKodePagu := make(map[string]int64)
+	for kode, pagu := range paguSubKegiatan {
+		newKode := replaceKode(kode, kodeOpd)
+		normalizedKodePagu[newKode] = pagu
+	}
+	// susun pagu subkegiatan
+	for key, sub := range rekinSubkegiatan {
+		kode := sub.KodeSubkegiatan
+
+		if pagu, ok := normalizedKodePagu[kode]; ok {
+			sub.PaguSubkegiatan = pagu
+		} else {
+			sub.PaguSubkegiatan = 0
+		}
+
+		rekinSubkegiatan[key] = sub // wajib re-assign
 	}
 
 	// data struktur untuk penyusunan
@@ -214,6 +240,8 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	// idRekinAtasan => [ ItemPk ]
 	itemLevel3 := make(map[string][]domain.AllItemPk)
 
+	// de duplicate kode subkegiatan ganda di rencana kinerja
+	seenSub := make(map[string]struct{})
 	for _, rekin := range rekins {
 		level := rekin.LevelPohon
 		nip := rekin.PegawaiId
@@ -357,16 +385,22 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			if level != 6 {
 				continue
 			}
+			kodeSub := item.KodeSubkegiatan
+			if _, ok := seenSub[kodeSub]; ok {
+				continue
+			}
+			seenSub[kodeSub] = struct{}{}
 			itemPk := pkopd.ItemPk{
 				RekinId:  rekin.Id,
-				KodeItem: item.KodeSubkegiatan,
+				KodeItem: kodeSub,
 				NamaItem: item.NamaSubkegiatan,
-				PaguItem: item.PaguAnggaran,
+				PaguItem: item.PaguSubkegiatan,
 			}
 			pkByLevel[level][nip].Item = append(
 				pkByLevel[level][nip].Item,
 				itemPk,
 			)
+			pkByLevel[level][nip].TotalPagu += itemPk.PaguItem
 		}
 		// total pagu untuk level 6
 		pkByLevel[level][nip].TotalPagu = sumTotalPagu(pkByLevel[level][nip].Item)
@@ -386,11 +420,12 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			if item.KodeProgram == "" {
 				continue
 			}
+			kode := item.KodeProgram
 
 			paguItem := sumPaguByProgram(rekinSubkegiatan, item.KodeProgram)
 			uniqueProgram[item.KodeProgram] = pkopd.ItemPk{
 				RekinId:  rekin.Id,
-				KodeItem: item.KodeProgram,
+				KodeItem: kode,
 				NamaItem: item.NamaProgram,
 				PaguItem: paguItem,
 			}
@@ -452,6 +487,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	for _, peg := range pkByLevel[4] {
 		for _, item := range uniqueProgram {
 			peg.Item = append(peg.Item, item)
+			peg.TotalPagu += item.PaguItem
 		}
 		// Total Pagu dari Item
 		peg.TotalPagu = sumTotalPagu(peg.Item)
@@ -513,24 +549,6 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	}
 
 	return result, nil
-}
-
-func toSasaranPemdaResponse(
-	list []domain.AllSasaranPemdaPk,
-) []pkopd.SasaranPemdaPk {
-
-	result := make([]pkopd.SasaranPemdaPk, 0, len(list))
-
-	for _, sp := range list {
-		result = append(result, pkopd.SasaranPemdaPk{
-			NamaKepalaPemda:  sp.NamaKepalaPemda,
-			NipKepalaPemda:   sp.NipKepalaPemda,
-			IdSasaranPemda:   sp.SasaranPemdaId,
-			NamaSasaranPemda: sp.SasaranPemda,
-		})
-	}
-
-	return result
 }
 
 func (service *PkServiceImpl) HubungkanRekin(
@@ -729,6 +747,24 @@ func translateJenisItem(level int) string {
 	}
 }
 
+func toSasaranPemdaResponse(
+	list []domain.AllSasaranPemdaPk,
+) []pkopd.SasaranPemdaPk {
+
+	result := make([]pkopd.SasaranPemdaPk, 0, len(list))
+
+	for _, sp := range list {
+		result = append(result, pkopd.SasaranPemdaPk{
+			NamaKepalaPemda:  sp.NamaKepalaPemda,
+			NipKepalaPemda:   sp.NipKepalaPemda,
+			IdSasaranPemda:   sp.SasaranPemdaId,
+			NamaSasaranPemda: sp.SasaranPemda,
+		})
+	}
+
+	return result
+}
+
 // Menghitung pagu anggran by kode program
 // dibutuhkan untuk level 4 dan 5
 func sumPaguByProgram(data map[string]domain.AllItemPk, kodeProgram string) int64 {
@@ -736,18 +772,86 @@ func sumPaguByProgram(data map[string]domain.AllItemPk, kodeProgram string) int6
 
 	for _, item := range data {
 		if item.KodeProgram == kodeProgram {
-			total += item.PaguAnggaran
+			total += item.PaguSubkegiatan
 		}
 	}
 
 	return total
 }
 
+func SortKodeProgram(items []pkopd.ItemPk) {
+	sort.Slice(items, func(i, j int) bool {
+		return compareKodeProgram(items[i].KodeItem, items[j].KodeItem)
+	})
+}
+
+func compareKodeProgram(a, b string) bool {
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+
+	max := len(aParts)
+	if len(bParts) > max {
+		max = len(bParts)
+	}
+
+	for i := 0; i < max; i++ {
+
+		if i >= len(aParts) {
+			return true
+		}
+		if i >= len(bParts) {
+			return false
+		}
+
+		aNum, aErr := strconv.Atoi(aParts[i])
+		bNum, bErr := strconv.Atoi(bParts[i])
+
+		// jika dua-duanya angka → compare numerik
+		if aErr == nil && bErr == nil {
+			if aNum != bNum {
+				return aNum < bNum
+			}
+			continue
+		}
+
+		// fallback string compare
+		if aParts[i] != bParts[i] {
+			return aParts[i] < bParts[i]
+		}
+	}
+
+	return a < b
+}
+
 // jumlah TotalPagu
-func sumTotalPagu(items []pkopd.ItemPk) int {
+func sumTotalPagu(items []pkopd.ItemPk) int64 {
 	var total int64
 	for _, item := range items {
 		total += item.PaguItem
 	}
-	return int(total)
+	return total
+}
+
+func replaceKode(kode, kodeOpd string) string {
+	kParts := strings.Split(kode, ".")
+	opdParts := strings.Split(kodeOpd, ".")
+
+	if len(kParts) < 2 || len(opdParts) < 2 {
+		return kode
+	}
+	// hanya replace jika prefix = X.XX
+	if kParts[0] != "X" || kParts[1] != "XX" {
+		return kode
+	}
+
+	// validasi kodeOpd (harus angka, opsional tapi bagus)
+	if opdParts[0] == "" || opdParts[1] == "" {
+		return kode
+	}
+
+	// ambil 2 segment pertama
+	newPrefix := opdParts[0] + "." + opdParts[1]
+
+	// gabungkan dengan sisa kode lama
+	return newPrefix + "." + strings.Join(kParts[2:], ".")
 }

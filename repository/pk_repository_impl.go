@@ -151,8 +151,10 @@ func (repository *PkRepositoryImpl) HubungkanRekin(
 // tambah kode opd dan tahun untuk spesifik mencari pagu dari input
 // indikator di tahun tsb via matrix-renja
 func (repository *PkRepositoryImpl) FindSubkegiatanByKodeOpdTahunRekinIds(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, rekinIds []string) (map[string]domain.AllItemPk, error) {
+	subMap := make(map[string]domain.AllItemPk)
+
 	if len(rekinIds) == 0 {
-		return make(map[string]domain.AllItemPk), nil
+		return subMap, nil
 	}
 
 	placeholders := make([]string, len(rekinIds))
@@ -190,7 +192,6 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByKodeOpdTahunRekinIds(ctx co
 	}
 	defer rows.Close()
 
-	subMap := make(map[string]domain.AllItemPk)
 	for rows.Next() {
 		var itemPk domain.AllItemPk
 		var kodeProgram, namaProgram sql.NullString
@@ -222,7 +223,7 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByKodeOpdTahunRekinIds(ctx co
 			itemPk.NamaKegiatan = namaKegiatan.String
 		}
 		if paguSubkegiatan.Valid {
-			itemPk.PaguAnggaran = paguSubkegiatan.Int64
+			itemPk.PaguSubkegiatan = paguSubkegiatan.Int64
 		}
 		subMap[itemPk.RekinId] = itemPk
 	}
@@ -276,6 +277,53 @@ func (repository *PkRepositoryImpl) FindTotalPaguAnggaranByRekinIds(ctx context.
 		totalPaguMap[rekinId] = totalAnggaran
 	}
 	return totalPaguMap, nil
+}
+
+func (repository *PkRepositoryImpl) FindPaguPkByKodeSubkegiatans(ctx context.Context, tx *sql.Tx, kodeSubkegiatans []string) (map[string]int64, error) {
+	paguSubkegiatanMap := make(map[string]int64)
+	if len(kodeSubkegiatans) == 0 {
+		return paguSubkegiatanMap, nil
+	}
+
+	placeholders := make([]string, len(kodeSubkegiatans))
+	args := make([]any, len(kodeSubkegiatans))
+	for i, kode := range kodeSubkegiatans {
+		placeholders[i] = "?"
+		args[i] = kode
+	}
+
+	script := fmt.Sprintf(`
+         SELECT pg.kode_subkegiatan, pg.pagu
+         FROM tb_pagu pg
+         WHERE pg.jenis = 'penetapan'
+         AND pg.kode_subkegiatan IN (%s)
+    `, strings.Join(placeholders, ","))
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var kodeSubkegiatanNs sql.NullString
+		var paguNi sql.NullInt64
+		var kodeSubkegiatan string
+		var pagu int64
+		err := rows.Scan(
+			&kodeSubkegiatanNs,
+			&paguNi,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if kodeSubkegiatanNs.Valid {
+			kodeSubkegiatan = kodeSubkegiatanNs.String
+		}
+		if paguNi.Valid {
+			pagu = paguNi.Int64
+		}
+		paguSubkegiatanMap[kodeSubkegiatan] = pagu
+	}
+	return paguSubkegiatanMap, nil
 }
 
 func (repository *PkRepositoryImpl) FindSasaranPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun int) ([]domain.AllSasaranPemdaPk, error) {
@@ -386,4 +434,42 @@ func (repository *PkRepositoryImpl) FindSasaranPemdaById(ctx context.Context, tx
 	}
 
 	return item, nil
+}
+
+func (repository *PkRepositoryImpl) PaguPkByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string]int64, error) {
+	paguSubkegiatanMap := make(map[string]int64)
+
+	script := `
+         SELECT pg.kode_subkegiatan, pg.pagu
+         FROM tb_pagu pg
+         WHERE pg.jenis = 'penetapan'
+         AND pg.kode_opd = ?
+         AND pg.tahun = ?
+    `
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var kodeSubkegiatanNs sql.NullString
+		var paguNi sql.NullInt64
+		var kodeSubkegiatan string
+		var pagu int64
+		err := rows.Scan(
+			&kodeSubkegiatanNs,
+			&paguNi,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if kodeSubkegiatanNs.Valid {
+			kodeSubkegiatan = kodeSubkegiatanNs.String
+		}
+		if paguNi.Valid {
+			pagu = paguNi.Int64
+		}
+		paguSubkegiatanMap[kodeSubkegiatan] = pagu
+	}
+	return paguSubkegiatanMap, nil
 }

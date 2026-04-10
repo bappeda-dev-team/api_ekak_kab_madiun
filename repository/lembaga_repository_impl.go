@@ -43,7 +43,26 @@ func (repository *LembagaRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx,
 func (repository *LembagaRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string) (domainmaster.Lembaga, error) {
 	script := "SELECT id, kode_lembaga, nama_lembaga, nama_kepala_pemda, nip_kepala_pemda, jabatan_kepala_pemda, is_active FROM tb_lembaga WHERE id = ?"
 	var lembaga domainmaster.Lembaga
-	err := tx.QueryRowContext(ctx, script, id).Scan(&lembaga.Id, &lembaga.KodeLembaga, &lembaga.NamaLembaga, &lembaga.NamaKepalaPemda, &lembaga.NipKepalaPemda, &lembaga.JabatanKepalaPemda, &lembaga.IsActive)
+	var namaKepalaPemdaNs,
+		nipKepalaPemdaNs,
+		jabatanKepalaPemdaNs sql.NullString
+	err := tx.QueryRowContext(ctx, script, id).Scan(&lembaga.Id,
+		&lembaga.KodeLembaga,
+		&lembaga.NamaLembaga,
+		&namaKepalaPemdaNs,
+		&nipKepalaPemdaNs,
+		&jabatanKepalaPemdaNs,
+		&lembaga.IsActive)
+
+	if namaKepalaPemdaNs.Valid {
+		lembaga.NamaKepalaPemda = namaKepalaPemdaNs.String
+	}
+	if nipKepalaPemdaNs.Valid {
+		lembaga.NipKepalaPemda = nipKepalaPemdaNs.String
+	}
+	if jabatanKepalaPemdaNs.Valid {
+		lembaga.JabatanKepalaPemda = jabatanKepalaPemdaNs.String
+	}
 	if err != nil {
 		return domainmaster.Lembaga{}, err
 	}

@@ -71,6 +71,7 @@ type PohonKinerjaRepository interface {
 	//clone pokin opd
 	ClonePokinOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, sourceTahun string, targetTahun string) error
 	IsExistsByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) bool
+	FindPokinByParentClonePokinOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, levelPohon *int) ([]domain.PohonKinerja, error)
 
 	//count pokin pemda in opd
 	CountPokinPemdaByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]int, error)
@@ -100,4 +101,6 @@ type PohonKinerjaRepository interface {
 	FindByIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.PohonKinerja, error)
 	FindAncestorClosure(ctx context.Context, tx *sql.Tx, seeds []int) ([]domain.PohonMap, error)
 	FindPelaksanaPokinBatchForCascading(ctx context.Context, tx *sql.Tx, pohonKinerjaIds []int) ([]domain.PelaksanaPokin, error)
+
+	CheckIfSourceAlreadyCloned(ctx context.Context, tx *sql.Tx, sourceId int, tahunTarget string) (bool, error)
 }

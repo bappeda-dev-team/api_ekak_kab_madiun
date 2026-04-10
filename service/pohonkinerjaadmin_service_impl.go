@@ -3122,6 +3122,13 @@ func (service *PohonKinerjaAdminServiceImpl) ClonePokinPemda(ctx context.Context
 	if sourcePokin.Status == "tarik pokin opd" {
 		return pohonkinerja.PohonKinerjaAdminResponseData{}, fmt.Errorf("tidak dapat clone pohon kinerja dengan status 'tarik pokin opd'")
 	}
+	alreadyCloned, err := service.pohonKinerjaRepository.CheckIfSourceAlreadyCloned(ctx, tx, request.IdPokinSource, request.TahunTarget)
+	if err != nil {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, err
+	}
+	if alreadyCloned {
+		return pohonkinerja.PohonKinerjaAdminResponseData{}, fmt.Errorf("pohon kinerja ini sudah pernah di clone di tahun %s", request.TahunTarget)
+	}
 
 	// 3. Clone secara rekursif dan dapatkan ID root
 	rootId, err := service.pohonKinerjaRepository.CloneHierarchyRecursive(ctx, tx, request.IdPokinSource, 0, request.TahunTarget)

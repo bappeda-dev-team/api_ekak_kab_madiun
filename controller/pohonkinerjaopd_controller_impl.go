@@ -345,8 +345,8 @@ func (controller *PohonKinerjaOpdControllerImpl) DeletePokinPemdaInOpd(writer ht
 }
 
 func (controller *PohonKinerjaOpdControllerImpl) UpdateParent(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	pohonKinerjaUpdateRequest := pohonkinerja.PohonKinerjaUpdateRequest{}
-	helper.ReadFromRequestBody(request, &pohonKinerjaUpdateRequest)
+	pohonKinerjaUpdateParentRequest := pohonkinerja.PohonKinerjaUpdateParentRequest{}
+	helper.ReadFromRequestBody(request, &pohonKinerjaUpdateParentRequest)
 
 	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil {
@@ -358,9 +358,9 @@ func (controller *PohonKinerjaOpdControllerImpl) UpdateParent(writer http.Respon
 		helper.WriteToResponseBody(writer, webResponse)
 		return
 	}
-	pohonKinerjaUpdateRequest.Id = id
+	pohonKinerjaUpdateParentRequest.Id = id
 
-	_, err = controller.PohonKinerjaOpdService.UpdateParent(request.Context(), pohonKinerjaUpdateRequest)
+	_, err = controller.PohonKinerjaOpdService.UpdateParent(request.Context(), pohonKinerjaUpdateParentRequest)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   400,
@@ -410,6 +410,16 @@ func (controller *PohonKinerjaOpdControllerImpl) FindidPokinWithAllTema(writer h
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// @Summary      Clone Pohon Kinerja opd
+// @Description  Melakukan cloning pohon kinerja dari tahun sumber ke tahun tujuan untuk OPD tertentu.
+// @Tags         Clone Pohon Kinerja Opd
+// @Accept       json
+// @Produce      json
+// @Param        pohon_kinerja_clone_request  body     pohonkinerja.PohonKinerjaCloneRequest  true  "Data untuk cloning pohon kinerja"
+// @Success      200  {object}  web.WebResponse{data=string}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/clone [post]
 func (controller *PohonKinerjaOpdControllerImpl) Clone(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	cloneRequest := pohonkinerja.PohonKinerjaCloneRequest{}
 	helper.ReadFromRequestBody(request, &cloneRequest)
@@ -553,6 +563,100 @@ func (controller *PohonKinerjaOpdControllerImpl) LeaderboardPokinOpd(writer http
 		Code:   200,
 		Status: "OK",
 		Data:   response,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// @Summary      Find All Pokin Parent Clone Pokin Opd
+// @Description  Mendapatkan semua pohon kinerja parent clone pohon kinerja opd berdasarkan kode OPD dan tahun.
+// @Tags         Clone Pohon Kinerja Opd
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path     string  true  "Tahun"      example("2025")
+// @Param        level_pohon  path     string  true  "Level Pohon"  example("1")
+// @Success      200  {object}  web.WebResponse{data=[]pohonkinerja.PohonKinerjaOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      404  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon} [get]
+func (controller *PohonKinerjaOpdControllerImpl) FindAllPokinParentClonePokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	levelPohon := params.ByName("level_pohon")
+
+	levelPohonInt, err := strconv.Atoi(levelPohon)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "Level Pohon harus berupa angka",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	pohonKinerjaResponse, err := controller.PohonKinerjaOpdService.FindAllPokinParentClonePokinOpd(request.Context(), kodeOpd, tahun, &levelPohonInt)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   404,
+			Status: "Not Found",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get All Pokin Parent Clone Pokin Opd",
+		Data:   pohonKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// @Summary      Update Parent Pohon Kinerja Opd Clone
+// @Description  Mengupdate parent pohon kinerja opd clone berdasarkan ID.
+// @Tags         Clone Pohon Kinerja Opd
+// @Accept       json
+// @Produce      json
+// @Param        id  path     string  true  "ID Pohon Kinerja"  example("1")
+// @Param        pohon_kinerja_update_parent_clone_request  body     pohonkinerja.PohonKinerjaUpdateParentRequest  true  "Data untuk mengupdate parent pohon kinerja"
+// @Success      200  {object}  web.WebResponse{data=string}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/update_parent_clone/{id} [put]
+func (controller *PohonKinerjaOpdControllerImpl) UpdateParentClone(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	pohonKinerjaUpdateParentCloneRequest := pohonkinerja.PohonKinerjaUpdateParentRequest{}
+	helper.ReadFromRequestBody(request, &pohonKinerjaUpdateParentCloneRequest)
+
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "ID harus berupa angka",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	pohonKinerjaUpdateParentCloneRequest.Id = id
+
+	updateCloneResponse, err := controller.PohonKinerjaOpdService.UpdateParentClone(request.Context(), pohonKinerjaUpdateParentCloneRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Update Parent",
+		Data:   updateCloneResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }

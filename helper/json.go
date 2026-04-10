@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"ekak_kabupaten_madiun/model/web"
 	"encoding/json"
 	"net/http"
 )
@@ -13,6 +14,14 @@ func ReadFromRequestBody(request *http.Request, result interface{}) {
 
 func WriteToResponseBody(writer http.ResponseWriter, response interface{}) {
 	writer.Header().Add("Content-Type", "application/json")
+	encoder := json.NewEncoder(writer)
+	err := encoder.Encode(response)
+	PanicIfError(err)
+}
+
+func WriteToResponseBodyWstatus(writer http.ResponseWriter, response web.WebResponse) {
+	writer.Header().Add("Content-Type", "application/json")
+	writer.WriteHeader(response.Code)
 	encoder := json.NewEncoder(writer)
 	err := encoder.Encode(response)
 	PanicIfError(err)

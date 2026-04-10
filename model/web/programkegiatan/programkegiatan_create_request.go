@@ -31,12 +31,13 @@ type BatchIndikatorRenstraCreateRequest struct {
 }
 
 type IndikatorRenstraCreateRequest struct {
-	Kode      string `json:"kode"`
-	KodeOpd   string `json:"kode_opd"`
-	Indikator string `json:"indikator"`
-	Tahun     string `json:"tahun"`
-	Target    string `json:"target"`
-	Satuan    string `json:"satuan"`
+	KodeIndikator string `json:"kode_indikator"`
+	Kode          string `json:"kode"`
+	KodeOpd       string `json:"kode_opd"`
+	Indikator     string `json:"indikator"`
+	Tahun         string `json:"tahun"`
+	Target        string `json:"target"`
+	Satuan        string `json:"satuan"`
 }
 
 // Fungsi khusus anggaran (upsert)
@@ -70,7 +71,18 @@ type BatchIndikatorRenjaRequest struct {
 }
 
 type IndikatorRenjaItem struct {
-	KodeIndikator string             `json:"kode_indikator"`
-	Indikator     string             `json:"indikator" validate:"required"`
-	Target        TargetRenjaRequest `json:"target"`
+	KodeIndikator string               `json:"kode_indikator"`
+	Indikator     string               `json:"indikator" validate:"required"`
+	Target        []TargetRenjaRequest `json:"target"`
+}
+
+type IndikatorRenjaCreateRequest struct {
+	KodeIndikator string `json:"kode_indikator"`
+	Kode          string `json:"kode" validate:"required"`
+	KodeOpd       string `json:"kode_opd" validate:"required"`
+	Indikator     string `json:"indikator" validate:"required"`
+	Tahun         string `json:"tahun" validate:"required"`
+	Jenis         string `json:"jenis"`
+	Target        string `json:"target" validate:"required"`
+	Satuan        string `json:"satuan" validate:"required"`
 }

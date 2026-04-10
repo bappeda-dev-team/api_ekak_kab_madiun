@@ -31,4 +31,5 @@ type TujuanOpdRepository interface {
 	UpdateRenjaIndikator(ctx context.Context, tx *sql.Tx, indikators []domain.Indikator) error
 	DeleteIndikatorTargetRenja(ctx context.Context, tx *sql.Tx, indikatorId string) error
 	FindIndikatorByKodeIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.Indikator, error)
+	FindAllByTahunForPokin(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisIndikator string) ([]domain.TujuanOpd, error)
 }

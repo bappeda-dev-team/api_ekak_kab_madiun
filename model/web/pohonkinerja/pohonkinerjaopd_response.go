@@ -22,6 +22,7 @@ type PohonKinerjaOpdResponse struct {
 	Tagging                []TaggingResponse      `json:"tagging"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 	UpdatedBy              string                 `json:"updated_by"`
+	KeteranganTahunClone   string                 `json:"keterangan_tahun_clone,omitempty"`
 }
 
 type PohonKinerjaOpdAllResponse struct {
@@ -201,4 +202,25 @@ func MapTujuanOpdToResponseCascading(
 	}
 
 	return responses
+}
+
+type PohonKinerjaUpdateParentCloneResponse struct {
+	Id                     int                       `json:"id"`
+	Parent                 string                    `json:"parent"`
+	NamaPohon              string                    `json:"nama_pohon"`
+	JenisPohon             string                    `json:"jenis_pohon"`
+	LevelPohon             int                       `json:"level_pohon"`
+	KodeOpd                string                    `json:"kode_opd,omitempty"`
+	NamaOpd                string                    `json:"nama_opd,omitempty"`
+	Keterangan             string                    `json:"keterangan,omitempty"`
+	Tahun                  string                    `json:"tahun,omitempty"`
+	CountReview            int                       `json:"jumlah_review"`
+	Status                 string                    `json:"status"`
+	Pelaksana              []PelaksanaOpdResponse    `json:"pelaksana"`
+	Indikator              []IndikatorResponse       `json:"indikator"`
+	Tagging                []TaggingResponse         `json:"tagging"`
+	KeteranganCrosscutting *string                   `json:"keterangan_crosscutting"`
+	UpdatedBy              string                    `json:"updated_by"`
+	KeteranganTahunClone   string                    `json:"keterangan_tahun_clone,omitempty"`
+	Childs                 []PohonKinerjaOpdResponse `json:"childs,omitempty"`
 }

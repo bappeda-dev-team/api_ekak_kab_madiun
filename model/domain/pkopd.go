@@ -31,7 +31,7 @@ type AllItemPk struct {
 	NamaKegiatan    string
 	KodeSubkegiatan string
 	NamaSubkegiatan string
-	PaguAnggaran    int64
+	PaguSubkegiatan int64
 }
 
 type AllSasaranPemdaPk struct {

@@ -99,17 +99,18 @@ func (service *IkuServiceImpl) FindAllIkuOpd(ctx context.Context, kodeOpd string
 		}
 
 		responses = append(responses, iku.IkuOpdResponse{
-			IndikatorId:      item.Id,
-			AsalIku:          item.AsalIku,
-			Indikator:        item.Indikator,
-			IkuActive:        item.IkuActive,
-			RumusPerhitungan: item.RumusPerhitungan.String,
-			SumberData:       item.SumberData.String,
-			CreatedAt:        item.CreatedAt,
-			TahunAwal:        item.TahunAwal,
-			TahunAkhir:       item.TahunAkhir,
-			JenisPeriode:     item.JenisPeriode,
-			Target:           targetResponses,
+			IndikatorId:         item.Id,
+			AsalIku:             item.AsalIku,
+			Indikator:           item.Indikator,
+			IkuActive:           item.IkuActive,
+			RumusPerhitungan:    item.RumusPerhitungan.String,
+			SumberData:          item.SumberData.String,
+			CreatedAt:           item.CreatedAt,
+			TahunAwal:           item.TahunAwal,
+			TahunAkhir:          item.TahunAkhir,
+			DefinisiOperasional: item.DefinisiOperasional.String,
+			JenisPeriode:        item.JenisPeriode,
+			Target:              targetResponses,
 		})
 	}
 
@@ -138,4 +139,64 @@ func (service *IkuServiceImpl) UpdateIkuActive(ctx context.Context, id string, r
 	}
 
 	return nil
+}
+
+func (service *IkuServiceImpl) UpdateIkuOpdActive(ctx context.Context, id string, request iku.IkuUpdateActiveRequest) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	err = service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *IkuServiceImpl) FindAllIkuRenja(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string, jenisIndikator string) ([]iku.IkuOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	indikators, err := service.IkuRepository.FindAllIkuRenja(ctx, tx, kodeOpd, tahun, jenisPeriode, jenisIndikator)
+	if err != nil {
+		return nil, err
+	}
+	var responses []iku.IkuOpdResponse
+	for _, item := range indikators {
+		var targetResponses []iku.TargetOpdResponse
+		for _, target := range item.Target {
+			targetResponses = append(targetResponses, iku.TargetOpdResponse{
+				Target: target.Target,
+				Satuan: target.Satuan,
+				Tahun:  target.Tahun,
+			})
+		}
+		responses = append(responses, iku.IkuOpdResponse{
+			IndikatorId:         item.Id,
+			AsalIku:             item.AsalIku,
+			Indikator:           item.Indikator,
+			IkuActive:           item.IkuActive,
+			RumusPerhitungan:    item.RumusPerhitungan.String,
+			SumberData:          item.SumberData.String,
+			CreatedAt:           item.CreatedAt,
+			TahunAwal:           item.TahunAwal,
+			TahunAkhir:          item.TahunAkhir,
+			DefinisiOperasional: item.DefinisiOperasional.String,
+			JenisPeriode:        item.JenisPeriode,
+			Jenis:               jenisIndikator,
+			Target:              targetResponses,
+		})
+	}
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].CreatedAt.Before(responses[j].CreatedAt)
+	})
+	if len(responses) == 0 {
+		responses = make([]iku.IkuOpdResponse, 0)
+	}
+	return responses, nil
 }

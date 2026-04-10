@@ -6,8 +6,10 @@ import (
 )
 
 type MatrixRenjaService interface {
-	GetRenja(ctx context.Context, kodeOpd, tahun, jenisIndikator, jenisPagu string) ([]programkegiatan.UrusanDetailResponse, error)
+	GetRenja(ctx context.Context, kodeOpd, tahun, jenisPagu string) ([]programkegiatan.UrusanDetailResponse, error)
 	GetRenjaRankhir(ctx context.Context, kodeOpd string, tahun string) ([]programkegiatan.UrusanDetailResponse, error)
-	UpsertBatchIndikatorRenja(ctx context.Context, request programkegiatan.BatchIndikatorRenjaRequest) (programkegiatan.BatchIndikatorRenjaResponse, error)
+	UpsertBatchIndikatorRenja(ctx context.Context, requests []programkegiatan.IndikatorRenjaCreateRequest) ([]programkegiatan.IndikatorUpsertResponse, error)
+	UpsertBatchIndikatorRenjaPenetapan(ctx context.Context, requests []programkegiatan.IndikatorRenjaCreateRequest) ([]programkegiatan.IndikatorUpsertResponse, error)
 	UpsertAnggaran(ctx context.Context, request programkegiatan.AnggaranRenjaRequest) (programkegiatan.AnggaranRenjaResponse, error)
+	GetRenjaPenetapan(ctx context.Context, kodeOpd, tahun, jenisPagu string) ([]programkegiatan.UrusanDetailResponse, error)
 }

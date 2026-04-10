@@ -23,4 +23,7 @@ type SasaranOpdController interface {
 	UpdateIndikatorRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateIndikatorRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeleteIndikatorTargetRenja(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindSasaranPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CreateIndikatorPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpdateIndikatorPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

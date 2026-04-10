@@ -33,7 +33,7 @@ type PkPegawai struct {
 	LevelPk        int      `json:"level_pk"`
 	JenisItem      string   `json:"jenis_item"`
 	Item           []ItemPk `json:"item_pk"`
-	TotalPagu      int      `json:"total_pagu"`
+	TotalPagu      int64    `json:"total_pagu"`
 }
 
 type ItemPk struct {

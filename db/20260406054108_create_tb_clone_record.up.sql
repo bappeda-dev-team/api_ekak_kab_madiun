@@ -1,0 +1,13 @@
+CREATE TABLE clone_record (
+   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+   kode_clone VARCHAR(255) NOT NULL,
+   kode_opd VARCHAR(255) NOT NULL,
+   tahun_asal VARCHAR(255) NOT NULL,
+   tahun_target VARCHAR(255) NOT NULL,
+   keterangan_tahun_clone VARCHAR(500) DEFAULT '',
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+   updated_by VARCHAR(255) DEFAULT '',
+   status VARCHAR(50) DEFAULT 'PENDING',
+   error_message TEXT
+);
