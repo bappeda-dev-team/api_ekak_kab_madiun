@@ -1,0 +1,1 @@
+DROP TABLE tb_program_prioritas_pusat;
