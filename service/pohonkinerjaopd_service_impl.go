@@ -966,6 +966,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				for _, tactical := range tacticalsByParent {
 					tacticalResp := buildTacticalOnly(
 						tactical,
+						tujuanOpds,
 						taggingMap,
 						pelaksanaMap,
 						indikatorMap,
@@ -1082,6 +1083,7 @@ func buildStrategicOnly(
 // Helper function untuk build tactical only
 func buildTacticalOnly(
 	tactical domain.PohonKinerja,
+	tujuanOpds []domain.TujuanOpd,
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
@@ -1105,6 +1107,31 @@ func buildTacticalOnly(
 		}
 	}
 
+	tujuanResponses := make([]pohonkinerja.TujuanOpdResponse, 0, len(tujuanOpds))
+	for _, tujuan := range tujuanOpds {
+		indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0, len(tujuan.Indikator))
+			for _, indikator := range tujuan.Indikator {
+				targetResponses := make([]pohonkinerja.TargetTujuanResponse, 0, len(indikator.Target))
+				for _, target := range indikator.Target {
+					targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
+						Tahun:  target.Tahun,
+						Target: target.Target,
+						Satuan: target.Satuan,
+					})
+				}
+				indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
+					Indikator: indikator.Indikator,
+					Target:    targetResponses,
+				})
+			}
+		tujuanResponses = append(tujuanResponses, pohonkinerja.TujuanOpdResponse{
+			Id:        tujuan.Id,
+			KodeOpd:   tujuan.KodeOpd,
+			Tujuan:    tujuan.Tujuan,
+			Indikator: indikatorResponses,
+		})
+	}
+
 	reviewPokin := reviewMap[tactical.Id]
 	countReview := len(reviewPokin)
 
@@ -1124,6 +1151,7 @@ func buildTacticalOnly(
 			KodeOpd: tactical.KodeOpd,
 			NamaOpd: tactical.NamaOpd,
 		},
+		TujuanOpd: tujuanResponses,
 		Tagging:     taggingMap[tactical.Id],
 		Pelaksana:   pelaksanaMap[tactical.Id],
 		Indikator:   indikatorMap[tactical.Id],
