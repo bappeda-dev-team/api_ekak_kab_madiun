@@ -69,6 +69,7 @@ type TacticalOpdResponse struct {
 	CountReview            int                         `json:"jumlah_review"`
 	KodeOpd                opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
 	IsActive               bool                        `json:"is_active"`
+	TujuanOpd  			   []TujuanOpdResponse    	   `json:"tujuan_opd"`
 	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
