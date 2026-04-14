@@ -22,4 +22,8 @@ type SasaranOpdRepository interface {
 	UpdateRenjaIndikator(ctx context.Context, tx *sql.Tx, indikators []domain.Indikator) error
 	DeleteIndikatorTargetRenja(ctx context.Context, tx *sql.Tx, indikatorId string) error
 	FindIndikatorByKodeIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.Indikator, error)
+	FindByIdOnly(ctx context.Context, tx *sql.Tx, id int) (*domain.SasaranOpd, error)
+	FindIndikatorTargetsBySasaranIds(ctx context.Context, tx *sql.Tx, sasaranIds []int) ([]domain.Indikator, error)
+	FindIndikatorTargetsRenstraBySasaranIds(ctx context.Context, tx *sql.Tx, sasaranIds []int) ([]domain.Indikator, error)
+	FindAllOnly(ctx context.Context, tx *sql.Tx, KodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.SasaranOpd, error)
 }

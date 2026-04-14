@@ -1213,7 +1213,7 @@ func mergeIndikator(
 
 		lama, exists := lamaMap[ind.KodeIndikator]
 
-		// 🔥 entity-level fallback
+		// entity-level fallback
 		if isEmptyIndikator(ind) && exists {
 			result = append(result, lama)
 			continue
