@@ -389,12 +389,34 @@ func (service *TujuanOpdServiceImpl) FindAll(ctx context.Context, kodeOpd string
 	}
 
 	// Ambil semua tujuan OPD
-	tujuanOpds, err := service.TujuanOpdRepository.FindAll(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	tujuanOpds, err := service.TujuanOpdRepository.FindAllOnly(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0), nil
 		}
 		return nil, err
+	}
+	tujuanOpdIds := []int{}
+	for _, tuj := range tujuanOpds {
+		tujuanOpdIds = append(tujuanOpdIds, tuj.Id)
+	}
+
+	indikatorTujuan, err := service.getIndikatorWithFallback(ctx, tx, tujuanOpdIds)
+	if err != nil {
+		log.Printf("ERROR service.getIndikatorWithFallback: %w", err)
+		return nil, err
+	}
+	indTujuanById := make(map[int][]domain.Indikator)
+	for _, ind := range indikatorTujuan {
+		indTujuanById[ind.TujuanOpdId] = append(indTujuanById[ind.TujuanOpdId], ind)
+	}
+
+	for i := range tujuanOpds {
+		id := tujuanOpds[i].Id
+
+		if inds, ok := indTujuanById[id]; ok {
+			tujuanOpds[i].Indikator = inds
+		}
 	}
 
 	// Buat map untuk mengelompokkan response berdasarkan kode_bidang_urusan

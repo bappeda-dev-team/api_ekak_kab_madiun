@@ -1908,3 +1908,89 @@ func (repository *TujuanOpdRepositoryImpl) FindByIdOnly(
 
 	return result, nil
 }
+
+func (repository *TujuanOpdRepositoryImpl) FindAllOnly(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error) {
+	scriptTujuan := `
+        SELECT
+            t.id,
+            t.kode_opd,
+            COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
+            t.tujuan,
+            t.tahun_awal,
+            t.tahun_akhir,
+            t.jenis_periode
+        FROM tb_tujuan_opd t
+        WHERE t.kode_opd = ?
+        AND t.tahun_awal = ?
+        AND t.tahun_akhir = ?
+        AND t.jenis_periode = ?
+        ORDER BY t.id ASC
+    `
+
+	rows, err := tx.QueryContext(ctx, scriptTujuan,
+		kodeOpd,
+		tahunAwal,
+		tahunAkhir,
+		jenisPeriode,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tujuanOpdMap := make(map[int]*domain.TujuanOpd)
+
+	for rows.Next() {
+		var (
+			tujuanId         int
+			kodeOpd          string
+			kodeBidangUrusan string
+			tujuan           string
+			// periodeId        int
+			tahunAwalData    string
+			tahunAkhirData   string
+			jenisPeriodeData string
+		)
+
+		err := rows.Scan(
+			&tujuanId,
+			&kodeOpd,
+			&kodeBidangUrusan,
+			&tujuan,
+			// &periodeId,
+			&tahunAwalData,
+			&tahunAkhirData,
+			&jenisPeriodeData,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Buat atau ambil TujuanOpd
+		if _, exists := tujuanOpdMap[tujuanId]; !exists {
+			tujuanOpdMap[tujuanId] = &domain.TujuanOpd{
+				Id:               tujuanId,
+				KodeOpd:          kodeOpd,
+				KodeBidangUrusan: kodeBidangUrusan,
+				Tujuan:           tujuan,
+				TahunAwal:        tahunAwalData,
+				TahunAkhir:       tahunAkhirData,
+				JenisPeriode:     jenisPeriodeData,
+				Indikator:        []domain.Indikator{},
+			}
+		}
+
+	}
+
+	// Perbaikan pada bagian generate target
+	var result []domain.TujuanOpd
+	for _, tujuanOpd := range tujuanOpdMap {
+		result = append(result, *tujuanOpd)
+	}
+
+	if len(result) == 0 {
+		return make([]domain.TujuanOpd, 0), nil
+	}
+
+	return result, nil
+}
