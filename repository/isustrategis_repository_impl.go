@@ -161,7 +161,7 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 	}
 	return result, nil
 }
-func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]strategic.IsuStrategiOpd, error) {
+func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]strategic.IsuStrategiOpd, error) {
 	query := `
 	SELECT
 		tb_csf.id,
@@ -169,13 +169,13 @@ func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql
 	FROM
 		tb_csf
 	JOIN tb_pohon_kinerja ON tb_csf.pohon_id = tb_pohon_kinerja.id
-	WHERE
-		tb_csf.tahun = ? and tb_pohon_kinerja.level_pohon = 4
+	WHERE 
+		tb_pohon_kinerja.kode_opd = ? and tb_csf.tahun = ? and tb_pohon_kinerja.level_pohon = 4
 	ORDER BY
 		tb_csf.id
 	`
 
-	rows, err := tx.QueryContext(ctx, query, tahun)
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
 	if err != nil {
 		return nil, err
 	}

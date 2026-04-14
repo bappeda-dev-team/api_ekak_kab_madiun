@@ -1023,7 +1023,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
 	}
 
-	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, tahun)
+	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
