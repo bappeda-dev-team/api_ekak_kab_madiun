@@ -279,13 +279,13 @@ func (service *TujuanOpdServiceImpl) FindById(ctx context.Context, tujuanOpdId i
 	}
 
 	tujuanOpdIds := []int{tujuanOpd.Id}
-
-	indikatorTujuans, err := service.TujuanOpdRepository.FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanOpdIds)
+	indikatorTujuan, err := service.getIndikatorWithFallback(ctx, tx, tujuanOpdIds)
 	if err != nil {
-		log.Printf("ERROR service.TujuanOpdRepository.FindIndikatorTargetsByTujuanIds: %w", err)
+		log.Printf("ERROR service.getIndikatorWithFallback: %w", err)
 		return tujuanopd.TujuanOpdResponse{}, err
 	}
-	tujuanOpd.Indikator = indikatorTujuans
+
+	tujuanOpd.Indikator = indikatorTujuan
 
 	// Ambil data OPD
 	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, tujuanOpd.KodeOpd)
@@ -1146,4 +1146,90 @@ func (service *TujuanOpdServiceImpl) FindTujuanPenetapan(
 		return nil, err
 	}
 	return service.buildTujuanOpdResponse(tujuanOpds, opd, bidangUrusanMap), nil
+}
+
+func (s *TujuanOpdServiceImpl) getIndikatorWithFallback(
+	ctx context.Context,
+	tx *sql.Tx,
+	tujuanIds []int,
+) ([]domain.Indikator, error) {
+
+	indikatorBaru, err := s.TujuanOpdRepository.
+		FindIndikatorTargetsRenstraByTujuanIds(ctx, tx, tujuanIds)
+	if err != nil {
+		return nil, err
+	}
+
+	indikatorLama, err := s.TujuanOpdRepository.
+		FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeIndikator(indikatorBaru, indikatorLama), nil
+}
+func mergeIndikator(
+	indikatorBaru []domain.Indikator,
+	indikatorLama []domain.Indikator,
+) []domain.Indikator {
+
+	// 🔹 fallback full kalau data baru kosong
+	if len(indikatorBaru) == 0 {
+		return indikatorLama
+	}
+
+	// 🔹 map lama by kode_indikator
+	lamaMap := make(map[string]domain.Indikator)
+	for _, ind := range indikatorLama {
+		lamaMap[ind.KodeIndikator] = ind
+	}
+
+	var result []domain.Indikator
+
+	for i := range indikatorBaru {
+		ind := indikatorBaru[i]
+
+		lama, exists := lamaMap[ind.KodeIndikator]
+
+		// 🔥 entity-level fallback
+		if isEmptyIndikator(ind) && exists {
+			result = append(result, lama)
+			continue
+		}
+
+		// 🔹 field-level fallback
+		if exists {
+			ind.DefinisiOperasional = fallbackNullString(
+				ind.DefinisiOperasional,
+				lama.DefinisiOperasional,
+			)
+
+			if len(ind.Target) == 0 {
+				ind.Target = lama.Target
+			}
+		}
+
+		result = append(result, ind)
+	}
+
+	// fallback global
+	if len(result) == 0 {
+		return indikatorLama
+	}
+
+	return result
+}
+
+func isEmptyIndikator(ind domain.Indikator) bool {
+	return !ind.DefinisiOperasional.Valid &&
+		len(ind.Target) == 0
+}
+
+func fallbackNullString(newVal, oldVal sql.NullString) sql.NullString {
+	if !newVal.Valid || newVal.String == "" {
+		if oldVal.Valid {
+			return oldVal
+		}
+	}
+	return newVal
 }
