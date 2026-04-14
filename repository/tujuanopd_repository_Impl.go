@@ -187,7 +187,7 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
             COALESCE(tg.satuan, '') as satuan,
             COALESCE(tg.tahun, '') as tahun_target
         FROM tb_tujuan_opd t
-        LEFT JOIN tb_indikator_matrix i ON t.id = i.tujuan_opd_id
+        LEFT JOIN tb_indikator i ON t.id = i.tujuan_opd_id
         LEFT JOIN tb_target tg ON i.kode_indikator = tg.indikator_id
         WHERE t.id = ?
         ORDER BY i.id ASC, tg.tahun ASC
