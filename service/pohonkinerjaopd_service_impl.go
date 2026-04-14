@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
+	"ekak_kabupaten_madiun/model/web/strategic"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
 	"fmt"
@@ -32,9 +33,12 @@ type PohonKinerjaOpdServiceImpl struct {
 	Validate                  *validator.Validate
 	ProgramUnggulanRepository repository.ProgramUnggulanRepository
 	RedisClient               *redis.Client
+	CSFRepository 			  repository.CSFRepository
+	sasaranOpdRepository      repository.SasaranOpdRepository
 }
 
-func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, programUnggulanRepository repository.ProgramUnggulanRepository, redisClient *redis.Client) *PohonKinerjaOpdServiceImpl {
+func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, 
+	programUnggulanRepository repository.ProgramUnggulanRepository, redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -46,6 +50,9 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		Validate:                  validate,
 		ProgramUnggulanRepository: programUnggulanRepository,
 		RedisClient:               redisClient,
+		CSFRepository: 			   csfRepository,
+		sasaranOpdRepository: sasaranOpdRepository,
+
 	}
 }
 
@@ -966,7 +973,6 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				for _, tactical := range tacticalsByParent {
 					tacticalResp := buildTacticalOnly(
 						tactical,
-						tujuanOpds,
 						taggingMap,
 						pelaksanaMap,
 						indikatorMap,
@@ -987,6 +993,99 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.Strategics))
+
+	return response, nil
+}
+func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kodeOpd, tahun string) (strategic.StrategicArahKebijakanOpdAllResponse, error) {
+	startTime := time.Now()
+	serviceName := "PohonKinerjaOpdService.FindAllArah"
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, errors.New("kode opd tidak ditemukan")
+	}
+
+
+	// Inisialisasi response dasar
+	response := strategic.StrategicArahKebijakanOpdAllResponse{
+		KodeOpd:    kodeOpd,
+		NamaOpd:    opd.NamaOpd,
+		Tahun:      tahun,
+		IsuStrategisOpd: make([]strategic.IsuStrategiOpdResponse, 0),
+		TujuanOpd:  make([]strategic.TujuanOpdResponse, 0),
+		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
+	}
+
+	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, tahun)
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	if len(csfList) > 0 {
+		Responses := make([]strategic.IsuStrategiOpdResponse, 0, len(csfList))
+		for _, tujuan := range csfList {
+			Responses = append(Responses, strategic.IsuStrategiOpdResponse{
+				NamaIsu:        tujuan.NamaIsu,
+			})
+		}
+		response.IsuStrategisOpd = Responses
+	}
+	
+
+	// Ambil data tujuan OPD dengan batch
+	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	if len(tujuanOpds) > 0 {
+		tujuanResponses := make([]strategic.TujuanOpdResponse, 0, len(tujuanOpds))
+		for _, tujuan := range tujuanOpds {
+			tujuanResponses = append(tujuanResponses, strategic.TujuanOpdResponse{
+				Id:        tujuan.Id,
+				KodeOpd:   tujuan.KodeOpd,
+				Tujuan:    tujuan.Tujuan,
+			})
+		}
+		response.TujuanOpd = tujuanResponses
+	}
+
+	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	if len(sasaranOpds) > 0 {
+	strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
+
+		for _, s := range sasaranOpds {
+
+			strategiResponses = append(strategiResponses, strategic.StrategiArahKebijakanOpdResponse{
+				TujuanOpd: s.NamaTujuanOpd, // pastikan field ini ada di domain
+				SasaranOpds: []strategic.SasaranOpdResponse{
+					{
+						SasaranOpd: s.NamaSasaranOpd,
+						StrategiOpd: s.NamaStrategi, // kalau ada
+						ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{
+							{
+								ArahKebijakanOpd: s.NamaArahKebijakan, // kalau ada
+							},
+						},
+					},
+				},
+			})
+		}
+
+		response.StrategiArahKebijakanOpds = strategiResponses
+	}
+
+
+	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.TujuanOpd))
 
 	return response, nil
 }
@@ -1083,7 +1182,6 @@ func buildStrategicOnly(
 // Helper function untuk build tactical only
 func buildTacticalOnly(
 	tactical domain.PohonKinerja,
-	tujuanOpds []domain.TujuanOpd,
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
@@ -1107,30 +1205,6 @@ func buildTacticalOnly(
 		}
 	}
 
-	tujuanResponses := make([]pohonkinerja.TujuanOpdResponse, 0, len(tujuanOpds))
-	for _, tujuan := range tujuanOpds {
-		indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0, len(tujuan.Indikator))
-			for _, indikator := range tujuan.Indikator {
-				targetResponses := make([]pohonkinerja.TargetTujuanResponse, 0, len(indikator.Target))
-				for _, target := range indikator.Target {
-					targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
-						Tahun:  target.Tahun,
-						Target: target.Target,
-						Satuan: target.Satuan,
-					})
-				}
-				indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
-					Indikator: indikator.Indikator,
-					Target:    targetResponses,
-				})
-			}
-		tujuanResponses = append(tujuanResponses, pohonkinerja.TujuanOpdResponse{
-			Id:        tujuan.Id,
-			KodeOpd:   tujuan.KodeOpd,
-			Tujuan:    tujuan.Tujuan,
-			Indikator: indikatorResponses,
-		})
-	}
 
 	reviewPokin := reviewMap[tactical.Id]
 	countReview := len(reviewPokin)
@@ -1151,7 +1225,6 @@ func buildTacticalOnly(
 			KodeOpd: tactical.KodeOpd,
 			NamaOpd: tactical.NamaOpd,
 		},
-		TujuanOpd: tujuanResponses,
 		Tagging:     taggingMap[tactical.Id],
 		Pelaksana:   pelaksanaMap[tactical.Id],
 		Indikator:   indikatorMap[tactical.Id],
