@@ -871,11 +871,9 @@ func (s *SasaranOpdServiceImpl) FindSasaranRenstra(
 		}
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
 }
+
 func (s *SasaranOpdServiceImpl) FindSasaranRanwal(
 	ctx context.Context, kodeOpd, tahun, jenisPeriode string,
 ) ([]sasaranopd.SasaranOpdResponse, error) {

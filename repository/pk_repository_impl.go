@@ -114,6 +114,8 @@ func (repository *PkRepositoryImpl) HubungkanRekin(
 		?
 	)
 	ON DUPLICATE KEY UPDATE
+                kode_opd           = VALUES(kode_opd),
+                nama_opd           = VALUES(nama_opd),
 		level_pk           = VALUES(level_pk),
 		nip_atasan         = VALUES(nip_atasan),
 		nama_atasan        = VALUES(nama_atasan),
