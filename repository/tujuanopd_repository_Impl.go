@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -372,7 +373,7 @@ func (repository *TujuanOpdRepositoryImpl) FindTargetByIndikatorId(ctx context.C
         SELECT id, target, satuan, tahun
         FROM tb_target 
         WHERE indikator_id = ?
-        AND tahun = ?  -- Ubah dari tahun <= ? menjadi tahun = ?
+        AND tahun = ?
         ORDER BY tahun ASC
     `
 
@@ -1635,5 +1636,151 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Co
 	if len(result) == 0 {
 		return make([]domain.TujuanOpd, 0), nil
 	}
+	return result, nil
+}
+
+func (repository *TujuanOpdRepositoryImpl) FindIndikatorTargetsByTujuanIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	tujuanIds []int,
+) ([]domain.Indikator, error) {
+
+	if len(tujuanIds) == 0 {
+		return []domain.Indikator{}, nil
+	}
+
+	// buat placeholder (?, ?, ?, ...)
+	placeholders := make([]string, len(tujuanIds))
+	args := make([]any, len(tujuanIds))
+
+	for i, id := range tujuanIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT ind.id, ind.indikator, ind.tujuan_opd_id,
+                     tar.id, tar.target, tar.satuan, tar.tahun, tar.jenis
+		FROM tb_indikator ind
+                LEFT JOIN tb_target tar ON tar.indikator_id = ind.id
+		WHERE ind.tujuan_opd_id IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	indikatorMap := make(map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId         string
+			indikatorName string
+			tujuanOpdId   int
+
+			tarIdNS  sql.NullString
+			targetNS sql.NullString
+			satuanNS sql.NullString
+			tahunNS  sql.NullString
+			jenisNS  sql.NullString
+		)
+
+		err := rows.Scan(
+			&indId,
+			&indikatorName,
+			&tujuanOpdId,
+			&tarIdNS,
+			&targetNS,
+			&satuanNS,
+			&tahunNS,
+			&jenisNS,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// 🔹 ambil / buat indikator
+		ind, exists := indikatorMap[indId]
+		if !exists {
+			ind = &domain.Indikator{
+				Id:          indId,
+				Indikator:   indikatorName,
+				TujuanOpdId: tujuanOpdId,
+				Target:      []domain.Target{},
+			}
+			indikatorMap[indId] = ind
+		}
+
+		// 🔹 kalau ada target, append
+		if tarIdNS.Valid {
+			target := domain.Target{
+				Id: tarIdNS.String,
+			}
+
+			if targetNS.Valid {
+				target.Target = targetNS.String
+			}
+			if satuanNS.Valid {
+				target.Satuan = satuanNS.String
+			}
+			if tahunNS.Valid {
+				target.Tahun = tahunNS.String
+			}
+			if jenisNS.Valid {
+				target.Jenis = jenisNS.String
+			}
+
+			ind.Target = append(ind.Target, target)
+		}
+	}
+
+	result := make([]domain.Indikator, 0, len(indikatorMap))
+	for _, v := range indikatorMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
+}
+
+func (repository *TujuanOpdRepositoryImpl) FindByIdOnly(
+	ctx context.Context,
+	tx *sql.Tx,
+	tujuanOpdId int,
+) (domain.TujuanOpd, error) {
+
+	script := `
+		SELECT
+			t.id,
+			t.kode_opd,
+			COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
+			t.tujuan,
+			t.tahun_awal,
+			t.tahun_akhir,
+			t.jenis_periode
+		FROM tb_tujuan_opd t
+		WHERE t.id = ?
+	`
+
+	var result domain.TujuanOpd
+
+	err := tx.QueryRowContext(ctx, script, tujuanOpdId).Scan(
+		&result.Id,
+		&result.KodeOpd,
+		&result.KodeBidangUrusan,
+		&result.Tujuan,
+		&result.TahunAwal,
+		&result.TahunAkhir,
+		&result.JenisPeriode,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.TujuanOpd{}, err
+		}
+		return domain.TujuanOpd{}, err
+	}
+
 	return result, nil
 }

@@ -273,10 +273,19 @@ func (service *TujuanOpdServiceImpl) FindById(ctx context.Context, tujuanOpdId i
 	}
 	defer helper.CommitOrRollback(tx)
 
-	tujuanOpd, err := service.TujuanOpdRepository.FindById(ctx, tx, tujuanOpdId)
+	tujuanOpd, err := service.TujuanOpdRepository.FindByIdOnly(ctx, tx, tujuanOpdId)
 	if err != nil {
 		return tujuanopd.TujuanOpdResponse{}, err
 	}
+
+	tujuanOpdIds := []int{tujuanOpd.Id}
+
+	indikatorTujuans, err := service.TujuanOpdRepository.FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanOpdIds)
+	if err != nil {
+		log.Printf("ERROR service.TujuanOpdRepository.FindIndikatorTargetsByTujuanIds: %w", err)
+		return tujuanopd.TujuanOpdResponse{}, err
+	}
+	tujuanOpd.Indikator = indikatorTujuans
 
 	// Ambil data OPD
 	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, tujuanOpd.KodeOpd)
