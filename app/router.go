@@ -200,6 +200,8 @@ func NewRouter(
 	router.GET("/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/:kode_opd/:tahun/:level_pohon", pohonKinerjaOpdController.FindAllPokinParentClonePokinOpd)
 	router.PUT("/pohon_kinerja_opd/update_parent_clone/:id", pohonKinerjaOpdController.UpdateParentClone)
 
+	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
+
 	//pohon kinerja admin
 	router.POST("/pohon_kinerja_admin/create", pohonKinerjaAdminController.Create)
 	router.PUT("/pohon_kinerja_admin/update/:pohonKinerjaId", pohonKinerjaAdminController.Update)
