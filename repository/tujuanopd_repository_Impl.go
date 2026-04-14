@@ -177,7 +177,6 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
             t.tahun_akhir,
             t.jenis_periode,
             i.id as indikator_id,
-            i.kode_indikator,
             i.indikator,
             i.rumus_perhitungan, 
             i.definisi_operasional,
@@ -188,7 +187,7 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
             COALESCE(tg.tahun, '') as tahun_target
         FROM tb_tujuan_opd t
         LEFT JOIN tb_indikator i ON t.id = i.tujuan_opd_id
-        LEFT JOIN tb_target tg ON i.kode_indikator = tg.indikator_id
+        LEFT JOIN tb_target tg ON i.id = tg.indikator_id
         WHERE t.id = ?
         ORDER BY i.id ASC, tg.tahun ASC
     `
@@ -212,7 +211,6 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 			tahunAkhir          string
 			jenisPeriode        string
 			indikatorId         sql.NullString
-			kodeIndikator       sql.NullString
 			indikatorNama       sql.NullString
 			rumusPerhitungan    sql.NullString
 			sumberData          sql.NullString
@@ -232,7 +230,6 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 			&tahunAkhir,
 			&jenisPeriode,
 			&indikatorId,
-			&kodeIndikator,
 			&indikatorNama,
 			&rumusPerhitungan,
 			&sumberData,
@@ -263,7 +260,6 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 			if _, exists := indikatorMap[indikatorId.String]; !exists {
 				indikatorMap[indikatorId.String] = &domain.Indikator{
 					Id:                  indikatorId.String,
-					KodeIndikator:       kodeIndikator.String,
 					Indikator:           indikatorNama.String,
 					RumusPerhitungan:    rumusPerhitungan,
 					SumberData:          sumberData,
@@ -282,7 +278,7 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 				if tahunTargetInt >= tahunAwalInt && tahunTargetInt <= tahunAkhirInt {
 					target := domain.Target{
 						Id:          targetId.String,
-						IndikatorId: kodeIndikator.String,
+						IndikatorId: indikatorId.String,
 						Target:      targetValue.String,
 						Satuan:      satuan.String,
 						Tahun:       tahunTarget.String,
