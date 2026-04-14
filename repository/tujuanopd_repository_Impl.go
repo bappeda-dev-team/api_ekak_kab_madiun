@@ -1777,6 +1777,7 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorTargetsByTujuanIds(
 
 	query := fmt.Sprintf(`
 		SELECT ind.id, ind.indikator, ind.tujuan_opd_id,
+                     ind.rumus_perhitungan, ind.sumber_data,
                      tar.id, tar.target, tar.satuan, tar.tahun, tar.jenis
 		FROM tb_indikator ind
                 LEFT JOIN tb_target tar ON tar.indikator_id = ind.id
@@ -1797,17 +1798,21 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorTargetsByTujuanIds(
 			indikatorName string
 			tujuanOpdId   int
 
-			tarIdNS  sql.NullString
-			targetNS sql.NullString
-			satuanNS sql.NullString
-			tahunNS  sql.NullString
-			jenisNS  sql.NullString
+			rumusPerhitunganNS sql.NullString
+			sumberDataNS       sql.NullString
+			tarIdNS            sql.NullString
+			targetNS           sql.NullString
+			satuanNS           sql.NullString
+			tahunNS            sql.NullString
+			jenisNS            sql.NullString
 		)
 
 		err := rows.Scan(
 			&indId,
 			&indikatorName,
 			&tujuanOpdId,
+			&rumusPerhitunganNS,
+			&sumberDataNS,
 			&tarIdNS,
 			&targetNS,
 			&satuanNS,
@@ -1822,10 +1827,12 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorTargetsByTujuanIds(
 		ind, exists := indikatorMap[indId]
 		if !exists {
 			ind = &domain.Indikator{
-				Id:          indId,
-				Indikator:   indikatorName,
-				TujuanOpdId: tujuanOpdId,
-				Target:      []domain.Target{},
+				Id:               indId,
+				Indikator:        indikatorName,
+				TujuanOpdId:      tujuanOpdId,
+				RumusPerhitungan: rumusPerhitunganNS,
+				SumberData:       sumberDataNS,
+				Target:           []domain.Target{},
 			}
 			indikatorMap[indId] = ind
 		}
