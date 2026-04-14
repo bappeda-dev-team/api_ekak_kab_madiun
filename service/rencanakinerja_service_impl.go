@@ -2411,7 +2411,7 @@ func (service *RencanaKinerjaServiceImpl) filterPohonHilang(ctx context.Context,
 	// 2. call repository
 	pohons, err := service.pohonKinerjaRepository.FindAncestorClosure(ctx, tx, seedIds)
 	if err != nil {
-		log.Printf("[ERROR] findancestor error: %w", err)
+		log.Printf("[ERROR] findancestor error: %v", err)
 		// production: better return error
 		return rekins
 	}

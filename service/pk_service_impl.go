@@ -840,7 +840,7 @@ func replaceKode(kode, kodeOpd string) string {
 		return kode
 	}
 	// hanya replace jika prefix = X.XX
-	if kParts[0] != "X" || kParts[1] != "XX" {
+	if kParts[0] == "X" || kParts[1] == "XX" {
 		return kode
 	}
 
