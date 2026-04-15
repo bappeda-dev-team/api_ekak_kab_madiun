@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -105,6 +106,7 @@ func (repository *ProgramPrioritasPusatRepositoryImpl) FindAll(ctx context.Conte
 		return []domain.ProgramPrioritasPusat{}, err
 	}
 	defer rows.Close()
+	log.Printf("TahunAWal: %s TAhun Akhir: %s", tahunAwal, tahunAkhir)
 
 	var programPrioritasPusatList []domain.ProgramPrioritasPusat
 	for rows.Next() {

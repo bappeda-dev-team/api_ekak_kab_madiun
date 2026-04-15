@@ -149,10 +149,47 @@ func (controller *ProgramPrioritasPusatControllerImpl) FindById(writer http.Resp
 
 }
 
-func (controller *ProgramPrioritasPusatControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// TODO: guard jika request invalid
-	// return 400 Invalid
-	programPrioritasPusatResponse, err := controller.ProgramPrioritasPusatService.FindAll(request.Context(), params.ByName("tahun_awal"), params.ByName("tahun_akhir"))
+func (controller *ProgramPrioritasPusatControllerImpl) FindAll(
+	writer http.ResponseWriter,
+	request *http.Request,
+	params httprouter.Params,
+) {
+	query := request.URL.Query()
+	tahunAwalStr := query.Get("tahun_awal")
+	tahunAkhirStr := query.Get("tahun_akhir")
+
+	// guard: tidak boleh kosong
+	if tahunAwalStr == "" || tahunAkhirStr == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "tahun_awal dan tahun_akhir wajib diisi",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// guard: harus angka
+	_, _, err := helper.ValidateTahunRange(tahunAwalStr, tahunAkhirStr)
+
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// lanjut ke service
+	programPrioritasPusatResponse, err :=
+		controller.ProgramPrioritasPusatService.FindAll(
+			request.Context(),
+			tahunAwalStr,
+			tahunAkhirStr,
+		)
+
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   500,
@@ -170,9 +207,8 @@ func (controller *ProgramPrioritasPusatControllerImpl) FindAll(writer http.Respo
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
 func (controller *ProgramPrioritasPusatControllerImpl) FindByKodeProgramPrioritasPusat(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// TODO: guard jika request invalid
-	// return 400 Invalid
 	programPrioritasPusatResponse, err := controller.ProgramPrioritasPusatService.FindByKodeProgramPrioritasPusat(request.Context(), params.ByName("kode_program_prioritas_pusat"))
 	if err != nil {
 		webResponse := web.WebResponse{
@@ -191,8 +227,6 @@ func (controller *ProgramPrioritasPusatControllerImpl) FindByKodeProgramPriorita
 	helper.WriteToResponseBody(writer, webResponse)
 }
 func (controller *ProgramPrioritasPusatControllerImpl) FindByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// TODO: guard jika request invalid
-	// return 400 Invalid
 	programPrioritasPusatResponse, err := controller.ProgramPrioritasPusatService.FindByTahun(request.Context(), params.ByName("tahun"))
 	if err != nil {
 		webResponse := web.WebResponse{
