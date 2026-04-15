@@ -76,6 +76,15 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		log.Printf("[ERROR] Find Pegawai kodeOpd: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
 	}
+	// find role pegawai
+	pegawaiIds := []string{}
+	for _, peg := range pegawais {
+		pegawaiIds = append(pegawaiIds, peg.Nip)
+	}
+	rolePegawai, err := service.pegawaiService.FindRolePegawais(ctx, pegawaiIds)
+	if err != nil {
+		log.Printf("[ERROR] pegawaiService.FindRolePegawais: %v", err)
+	}
 	// rekin in opd by tahun
 	// filter params
 	filterParams := domain.FilterParams{
@@ -285,6 +294,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				Item:           []pkopd.ItemPk{},
 				// Untuk jumlah pagu
 				TotalPagu: 0,
+				Roles:     rolePegawai[nip],
 			}
 		}
 		indikatorMap := make(map[string]*pkopd.IndikatorPk)

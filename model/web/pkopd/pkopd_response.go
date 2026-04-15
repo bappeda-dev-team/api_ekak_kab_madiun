@@ -34,6 +34,7 @@ type PkPegawai struct {
 	JenisItem      string   `json:"jenis_item"`
 	Item           []ItemPk `json:"item_pk"`
 	TotalPagu      int64    `json:"total_pagu"`
+	Roles          []string `json:"roles"`
 }
 
 type ItemPk struct {
