@@ -7,6 +7,8 @@ type LeaderboardPokinResponse struct {
 	PersentaseCascading string                   `json:"persentase_cascading"`
 }
 
+// LeaderboardTematikItem: tema → sub tema → sub-sub tema → super sub tema (lewat Anak).
 type LeaderboardTematikItem struct {
-	Nama string `json:"nama"`
+	Nama string                   `json:"nama"`
+	Anak []LeaderboardTematikItem `json:"child"`
 }
