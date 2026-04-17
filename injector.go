@@ -453,6 +453,15 @@ var cloneRecordSet = wire.NewSet(
 	wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)),
 )
 
+var programPrioritasPusatSet = wire.NewSet(
+	repository.NewProgramPrioritasPusatRepositoryImpl,
+	wire.Bind(new(repository.ProgramPrioritasPusatRepository), new(*repository.ProgramPrioritasPusatRepositoryImpl)),
+	service.NewProgramPrioritasPusatServiceImpl,
+	wire.Bind(new(service.ProgramPrioritasPusatService), new(*service.ProgramPrioritasPusatServiceImpl)),
+	controller.NewProgramPrioritasPusatControllerImpl,
+	wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -509,6 +518,7 @@ func InitializeServer() *http.Server {
 		strukturOrganisasiSet,
 		jabatanPegawaiSet,
 		cloneRecordSet,
+		programPrioritasPusatSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,
