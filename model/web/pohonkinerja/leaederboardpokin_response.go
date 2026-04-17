@@ -10,5 +10,5 @@ type LeaderboardPokinResponse struct {
 
 type LeaderboardTematikItem struct {
 	Nama string                   `json:"nama"`
-	Anak []LeaderboardTematikItem `json:"childs"`
+	Anak []LeaderboardTematikItem `json:"child"`
 }
