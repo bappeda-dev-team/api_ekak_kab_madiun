@@ -74,8 +74,22 @@ definitions:
         type: string
       kode_program_unggulan:
         type: string
+      nama_program_prioritas:
+        type: string
       tahun:
         type: string
+    type: object
+  pohonkinerja.LeaderboardHiddenUpsertRequest:
+    properties:
+      is_hidden:
+        type: boolean
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+    required:
+    - kode_opd
+    - tahun
     type: object
   pohonkinerja.PelaksanaOpdResponse:
     properties:
@@ -1197,6 +1211,39 @@ paths:
       summary: Update IKU Opd Active
       tags:
       - IKU Renja Opd
+  /leaderboard_rekin_hidden/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert leaderboard rekin hidden.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Leaderboard Rekin Hidden
+      tags:
+      - Leaderboard Rekin Hidden
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:
@@ -1648,6 +1695,41 @@ paths:
       summary: Clone Pohon Kinerja opd
       tags:
       - Clone Pohon Kinerja Opd
+  /pohon_kinerja_opd/leaderboard_pokin_opd/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Get leaderboard rekin hidden by tahun.
+      parameters:
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Leaderboard Rekin Hidden
+      tags:
+      - Leaderboard Rekin Hidden
   /pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon}:
     get:
       consumes:

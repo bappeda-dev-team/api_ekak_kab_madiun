@@ -91,6 +91,9 @@ type PohonKinerjaRepository interface {
 	clonePelaksana(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
 	ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error)
 	LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error)
+	FindLeaderboardTematikNodes(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardTematikNode, error)
+	FindLeaderboardHiddenKodeOpdsByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]string, error)
+	UpsertLeaderboardHidden(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, hidden bool) error
 
 	// Batch fetch methods untuk optimasi
 	FindPelaksanaPokinBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.PelaksanaPokin, error)
