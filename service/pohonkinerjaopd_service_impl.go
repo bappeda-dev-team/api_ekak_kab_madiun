@@ -34,12 +34,14 @@ type PohonKinerjaOpdServiceImpl struct {
 	Validate                  *validator.Validate
 	ProgramUnggulanRepository repository.ProgramUnggulanRepository
 	RedisClient               *redis.Client
-	CSFRepository 			  repository.CSFRepository
+	CSFRepository             repository.CSFRepository
 	sasaranOpdRepository      repository.SasaranOpdRepository
 }
 
 func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate,
-	programUnggulanRepository repository.ProgramUnggulanRepository, redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository) *PohonKinerjaOpdServiceImpl {
+	programUnggulanRepository repository.ProgramUnggulanRepository,
+	dataMasterRepository repository.DataMasterRepository,
+	redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -52,9 +54,8 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		Validate:                  validate,
 		ProgramUnggulanRepository: programUnggulanRepository,
 		RedisClient:               redisClient,
-		CSFRepository: 			   csfRepository,
-		sasaranOpdRepository: sasaranOpdRepository,
-
+		CSFRepository:             csfRepository,
+		sasaranOpdRepository:      sasaranOpdRepository,
 	}
 }
 
@@ -1090,14 +1091,13 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, errors.New("kode opd tidak ditemukan")
 	}
 
-
 	// Inisialisasi response dasar
 	response := strategic.StrategicArahKebijakanOpdAllResponse{
-		KodeOpd:    kodeOpd,
-		NamaOpd:    opd.NamaOpd,
-		Tahun:      tahun,
-		IsuStrategisOpd: make([]strategic.IsuStrategiOpdResponse, 0),
-		TujuanOpd:  make([]strategic.TujuanOpdResponse, 0),
+		KodeOpd:                   kodeOpd,
+		NamaOpd:                   opd.NamaOpd,
+		Tahun:                     tahun,
+		IsuStrategisOpd:           make([]strategic.IsuStrategiOpdResponse, 0),
+		TujuanOpd:                 make([]strategic.TujuanOpdResponse, 0),
 		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
 	}
 
@@ -1109,12 +1109,11 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		Responses := make([]strategic.IsuStrategiOpdResponse, 0, len(csfList))
 		for _, tujuan := range csfList {
 			Responses = append(Responses, strategic.IsuStrategiOpdResponse{
-				NamaIsu:        tujuan.NamaIsu,
+				NamaIsu: tujuan.NamaIsu,
 			})
 		}
 		response.IsuStrategisOpd = Responses
 	}
-
 
 	// Ambil data tujuan OPD dengan batch
 	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
@@ -1125,9 +1124,9 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		tujuanResponses := make([]strategic.TujuanOpdResponse, 0, len(tujuanOpds))
 		for _, tujuan := range tujuanOpds {
 			tujuanResponses = append(tujuanResponses, strategic.TujuanOpdResponse{
-				Id:        tujuan.Id,
-				KodeOpd:   tujuan.KodeOpd,
-				Tujuan:    tujuan.Tujuan,
+				Id:      tujuan.Id,
+				KodeOpd: tujuan.KodeOpd,
+				Tujuan:  tujuan.Tujuan,
 			})
 		}
 		response.TujuanOpd = tujuanResponses
@@ -1138,7 +1137,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
 	if len(sasaranOpds) > 0 {
-	strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
+		strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
 
 		for _, s := range sasaranOpds {
 
@@ -1146,7 +1145,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 				TujuanOpd: s.NamaTujuanOpd, // pastikan field ini ada di domain
 				SasaranOpds: []strategic.SasaranOpdResponse{
 					{
-						SasaranOpd: s.NamaSasaranOpd,
+						SasaranOpd:  s.NamaSasaranOpd,
 						StrategiOpd: s.NamaStrategi, // kalau ada
 						ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{
 							{
@@ -1160,7 +1159,6 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 
 		response.StrategiArahKebijakanOpds = strategiResponses
 	}
-
 
 	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.TujuanOpd))
@@ -1282,7 +1280,6 @@ func buildTacticalOnly(
 			}
 		}
 	}
-
 
 	reviewPokin := reviewMap[tactical.Id]
 	countReview := len(reviewPokin)
