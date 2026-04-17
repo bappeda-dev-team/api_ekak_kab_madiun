@@ -5,10 +5,10 @@ type LeaderboardPokinResponse struct {
 	NamaOpd             string                   `json:"nama_opd"`
 	Tematik             []LeaderboardTematikItem `json:"tematik"`
 	PersentaseCascading string                   `json:"persentase_cascading"`
+	IsHidden            bool                     `json:"is_hidden"`
 }
 
-// LeaderboardTematikItem: tema → sub tema → sub-sub tema → super sub tema (lewat Anak).
 type LeaderboardTematikItem struct {
 	Nama string                   `json:"nama"`
-	Anak []LeaderboardTematikItem `json:"child"`
+	Anak []LeaderboardTematikItem `json:"childs"`
 }

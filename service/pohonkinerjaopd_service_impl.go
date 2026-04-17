@@ -2701,6 +2701,7 @@ func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Conte
 			NamaOpd:             data.NamaOpd,
 			Tematik:             tematikTree,
 			PersentaseCascading: fmt.Sprintf("%.0f%%", data.PersentaseCascading),
+			IsHidden:            data.IsHidden,
 		})
 	}
 
@@ -2774,6 +2775,32 @@ func buildLeaderboardTematikTree(nodes []repository.LeaderboardTematikNode) []po
 		out[i] = toItem(r)
 	}
 	return out
+}
+
+func (service *PohonKinerjaOpdServiceImpl) UpsertLeaderboardHidden(ctx context.Context, req pohonkinerja.LeaderboardHiddenUpsertRequest) error {
+	if err := service.Validate.Struct(req); err != nil {
+		return err
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	if _, err := service.opdRepository.FindByKodeOpd(ctx, tx, req.KodeOpd); err != nil {
+		return errors.New("kode opd tidak ditemukan")
+	}
+	if err := service.pohonKinerjaOpdRepository.UpsertLeaderboardHidden(ctx, tx, req.KodeOpd, req.Tahun, req.IsHidden); err != nil {
+		return err
+	}
+	return nil
+}
+func (service *PohonKinerjaOpdServiceImpl) FindLeaderboardHiddenKodeOpds(ctx context.Context, tahun string) ([]string, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.pohonKinerjaOpdRepository.FindLeaderboardHiddenKodeOpdsByTahun(ctx, tx, tahun)
 }
 
 // func (service *PohonKinerjaOpdServiceImpl) ClearLeaderboardCache(tahun string) {

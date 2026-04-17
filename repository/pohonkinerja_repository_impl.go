@@ -4151,10 +4151,11 @@ type LeaderboardOpdData struct {
 	TotalPokin          int
 	TotalPokinAdaRekin  int
 	PersentaseCascading float64
-	TematikL0           []string // Tema
-	TematikL1           []string // Sub Tema
-	TematikL2           []string // Sub-Sub Tema
+	TematikL0           []string
+	TematikL1           []string
+	TematikL2           []string
 	TematikL3           []string
+	IsHidden            bool
 }
 
 type LeaderboardTematikNode struct {
@@ -4290,7 +4291,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 		GROUP BY kode_opd
 	)
 
-	SELECT 
+		SELECT 
 		opd.kode_opd,
 		opd.nama_opd,
 		COALESCE(oc.total_pokin, 0) AS total_pokin,
@@ -4304,14 +4305,19 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 		COALESCE(ta.tematik_l1, '') AS tematik_l1,
 		COALESCE(ta.tematik_l2, '') AS tematik_l2,
 		COALESCE(ta.tematik_l3, '') AS tematik_l3,
-		CASE WHEN COALESCE(ta.jumlah_tematik, 0) > 0 THEN 1 ELSE 0 END AS has_tematik
+		CASE WHEN COALESCE(ta.jumlah_tematik, 0) > 0 THEN 1 ELSE 0 END AS has_tematik,
+		COALESCE(lh.is_hidden, 0) AS is_hidden
 	FROM tb_operasional_daerah opd
 	LEFT JOIN opd_cascading oc ON opd.kode_opd = oc.kode_opd
 	LEFT JOIN tematik_agregat ta ON opd.kode_opd = ta.kode_opd
+	LEFT JOIN tb_leaderboard_hidden lh 
+		ON opd.kode_opd = lh.kode_opd 
+		AND lh.tahun = ?
+
 	ORDER BY persentase_cascading DESC, opd.nama_opd ASC
 	`
 
-	rows, err := tx.QueryContext(ctx, query, tahun, tahun)
+	rows, err := tx.QueryContext(ctx, query, tahun, tahun, tahun)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil data leaderboard: %w", err)
 	}
@@ -4331,6 +4337,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			&data.PersentaseCascading,
 			&tL0, &tL1, &tL2, &tL3,
 			&hasTematik,
+			&data.IsHidden,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("gagal scan data: %w", err)
@@ -4456,6 +4463,46 @@ func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx co
 	}
 	return out, nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) UpsertLeaderboardHidden(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, hidden bool) error {
+	// Satu pasangan (kode_opd, tahun) hanya boleh 0 atau 1 baris; DELETE membersihkan duplikat lama.
+	const del = `DELETE FROM tb_leaderboard_hidden WHERE kode_opd = ? AND tahun = ?`
+	if _, err := tx.ExecContext(ctx, del, kodeOpd, tahun); err != nil {
+		return fmt.Errorf("upsert leaderboard hidden: %w", err)
+	}
+	if !hidden {
+		return nil
+	}
+	const ins = `INSERT INTO tb_leaderboard_hidden (kode_opd, tahun, is_hidden) VALUES (?, ?, TRUE)`
+	if _, err := tx.ExecContext(ctx, ins, kodeOpd, tahun); err != nil {
+		return fmt.Errorf("upsert leaderboard hidden: %w", err)
+	}
+	return nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardHiddenKodeOpdsByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]string, error) {
+	const q = `
+SELECT kode_opd
+FROM tb_leaderboard_hidden
+WHERE tahun = ? AND is_hidden = TRUE
+ORDER BY kode_opd
+`
+	rows, err := tx.QueryContext(ctx, q, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("daftar leaderboard hidden: %w", err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			return nil, fmt.Errorf("scan kode_opd hidden: %w", err)
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
 func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokinBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.PelaksanaPokin, error) {
 	if len(pokinIds) == 0 {
 		return make(map[int][]domain.PelaksanaPokin), nil
