@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/isustrategis"
+	"ekak_kabupaten_madiun/model/web/strategic"
 	"fmt"
 	"log"
 	"sort"
@@ -205,6 +206,72 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 
 	log.Print("[LOG] Record CSF ditemukan")
 	var result []isustrategis.CSFPokin
+	var keys []int
+	for id := range csfMap {
+		keys = append(keys, id)
+	}
+	sort.Ints(keys)
+	for _, id := range keys {
+		result = append(result, *csfMap[id])
+	}
+	return result, nil
+}
+func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]strategic.IsuStrategiOpd, error) {
+	query := `
+	SELECT
+		tb_csf.id,
+		tb_pohon_kinerja.nama_pohon
+	FROM
+		tb_csf
+	JOIN tb_pohon_kinerja ON tb_csf.pohon_id = tb_pohon_kinerja.id
+	WHERE
+		tb_csf.tahun = ? and tb_pohon_kinerja.level_pohon = 4
+	ORDER BY
+		tb_csf.id
+	`
+
+	rows, err := tx.QueryContext(ctx, query, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
+
+	csfMap := make(map[int]*strategic.IsuStrategiOpd)
+
+	for rows.Next() {
+		var (
+			csfID       int
+			namaPohon   sql.NullString
+		)
+
+		if err := rows.Scan(
+			&csfID, &namaPohon, 
+		); err != nil {
+			return nil, err
+		}
+
+		csf, ok := csfMap[csfID]
+		if !ok {
+			csf = &strategic.IsuStrategiOpd{
+				ID:                         csfID,
+				NamaIsu:                   namaPohon.String,
+			}
+			csfMap[csfID] = csf
+		}
+
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	log.Print("[LOG] Record CSF ditemukan")
+	var result []strategic.IsuStrategiOpd
 	var keys []int
 	for id := range csfMap {
 		keys = append(keys, id)

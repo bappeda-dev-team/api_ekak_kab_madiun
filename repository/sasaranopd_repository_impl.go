@@ -1577,6 +1577,77 @@ func (r *SasaranOpdRepositoryImpl) scanSasaranRowsOptimized(
 	return result, nil
 }
 
+func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd, tahun, jenisPeriode string,
+) ([]domain.StrategicRow, error) {
+
+	query := `
+	SELECT
+		pk.kode_opd,
+		COALESCE(to_opd.tujuan, '')       AS tujuan,
+		COALESCE(so.nama_sasaran_opd, '') AS sasaran,
+		COALESCE(pk.nama_pohon, '')       AS strategi,
+		COALESCE(pk_child.nama_pohon, '') AS arah_kebijakan
+
+	FROM tb_sasaran_opd so
+	JOIN tb_pohon_kinerja pk 
+		ON so.pokin_id = pk.id
+
+	LEFT JOIN tb_pohon_kinerja pk_child 
+		ON pk_child.parent = pk.id 
+		AND pk_child.level_pohon = 5
+
+	LEFT JOIN tb_tujuan_opd to_opd 
+		ON so.id_tujuan_opd = to_opd.id
+
+	WHERE pk.kode_opd = ?
+	  AND pk.level_pohon = 4
+	  AND LOWER(TRIM(so.jenis_periode)) = LOWER(TRIM(?))
+	  AND CAST(so.tahun_awal AS SIGNED) <= CAST(? AS SIGNED)
+	  AND CAST(so.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
+
+	ORDER BY 
+		to_opd.tujuan,
+		so.nama_sasaran_opd,
+		pk.nama_pohon,
+		pk_child.nama_pohon
+	`
+
+	rows, err := tx.QueryContext(ctx, query,
+		kodeOpd, jenisPeriode, tahun, tahun,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.StrategicRow
+
+	for rows.Next() {
+		var row domain.StrategicRow
+
+		err := rows.Scan(
+			&row.KodeOpd,
+			&row.NamaTujuanOpd,
+			&row.NamaSasaranOpd,
+			&row.NamaStrategi,
+			&row.NamaArahKebijakan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, row)
+	}
+
+	return results, nil
+}
+
+
+
+
 func (r *SasaranOpdRepositoryImpl) CreateRenjaIndikator(
 	ctx context.Context, tx *sql.Tx,
 	sasaranOpdId int, indikators []domain.Indikator,
