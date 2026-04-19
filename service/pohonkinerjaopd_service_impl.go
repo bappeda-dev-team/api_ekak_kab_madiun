@@ -2511,6 +2511,12 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 		return pohonkinerja.ControlPokinOpdResponse{}, err
 	}
 
+	tematikNodes, err := service.pohonKinerjaOpdRepository.FindControlPokinTematikNodes(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return pohonkinerja.ControlPokinOpdResponse{}, err
+	}
+	tematikTree := buildLeaderboardTematikTree(tematikNodes)
+
 	// Cari level maksimum yang ada di data
 	maxLevel := 6 // Minimal sampai Operational (level 6)
 	for level := range dataPerLevel {
@@ -2607,6 +2613,7 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 			Persentase:               fmt.Sprintf("%.0f%%", persentaseTotalPelaksana),
 			PersentaseCascading:      fmt.Sprintf("%.0f%%", persentaseTotalCascading),
 		},
+		Tematik: tematikTree,
 	}
 
 	return response, nil

@@ -1,8 +1,9 @@
 package pohonkinerja
 
 type ControlPokinOpdResponse struct {
-	Data  []ControlPokinOpdData `json:"data"`
-	Total ControlPokinOpdTotal  `json:"total"`
+	Data    []ControlPokinOpdData    `json:"data"`
+	Total   ControlPokinOpdTotal     `json:"total"`
+	Tematik []LeaderboardTematikItem `json:"tematik"`
 }
 
 type ControlPokinOpdData struct {
