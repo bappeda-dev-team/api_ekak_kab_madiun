@@ -3108,14 +3108,21 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context,
 // count pokin pemda in opd
 func (repository *PohonKinerjaRepositoryImpl) CountPokinPemdaByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]int, error) {
 	script := `
- WITH RECURSIVE pohon_all AS (
+  WITH RECURSIVE pohon_all AS (
     SELECT 
         id,
         parent,
         level_pohon,
         status,
+        jenis_pohon,
         CASE 
-            WHEN level_pohon = 4 AND status = 'pokin dari pemda' AND parent = 0 THEN TRUE
+            WHEN level_pohon = 4 AND parent = 0 AND (
+                status = 'pokin dari pemda'
+                OR (
+                    status = 'crosscutting_disetujui_existing'
+                    AND jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                )
+            ) THEN TRUE
             ELSE FALSE
         END as is_counted
     FROM tb_pohon_kinerja
@@ -3125,8 +3132,14 @@ valid_level_4 AS (
     SELECT id 
     FROM pohon_all 
     WHERE level_pohon = 4 
-    AND status = 'pokin dari pemda' 
     AND parent = 0
+    AND (
+        status = 'pokin dari pemda'
+        OR (
+            status = 'crosscutting_disetujui_existing'
+            AND jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+        )
+    )
 ),
 pohon_hierarchy AS (
     SELECT 
@@ -3134,15 +3147,25 @@ pohon_hierarchy AS (
         p.is_counted as should_count
     FROM pohon_all p
     WHERE p.level_pohon = 4
-
     UNION ALL
-
     SELECT 
         child.*,
         CASE
-            WHEN child.level_pohon = 5 AND child.status = 'pokin dari pemda' THEN
+            WHEN child.level_pohon = 5 AND (
+                child.status = 'pokin dari pemda'
+                OR (
+                    child.status = 'crosscutting_disetujui_existing'
+                    AND child.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                )
+            ) THEN
                 CASE
-                    WHEN parent.status = 'pokin dari pemda' THEN
+                    WHEN (
+                        parent.status = 'pokin dari pemda'
+                        OR (
+                            parent.status = 'crosscutting_disetujui_existing'
+                            AND parent.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                        )
+                    ) THEN
                         CASE WHEN (SELECT p2.parent FROM pohon_all p2 WHERE p2.id = parent.id) = 0 THEN TRUE
                         ELSE FALSE END
                     WHEN parent.status = '' THEN TRUE
@@ -3152,11 +3175,33 @@ pohon_hierarchy AS (
                     ) THEN TRUE
                     ELSE FALSE
                 END
-            WHEN child.level_pohon >= 6 AND child.status = 'pokin dari pemda' THEN
+            WHEN child.level_pohon >= 6 AND (
+                child.status = 'pokin dari pemda'
+                OR (
+                    child.status = 'crosscutting_disetujui_existing'
+                    AND child.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                )
+            ) THEN
                 CASE
-                    WHEN parent.status = 'pokin dari pemda' THEN
+                    WHEN (
+                        parent.status = 'pokin dari pemda'
+                        OR (
+                            parent.status = 'crosscutting_disetujui_existing'
+                            AND parent.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                        )
+                    ) THEN
                         CASE
-                            WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = 'pokin dari pemda' THEN
+                            WHEN EXISTS (
+                                SELECT 1 FROM pohon_all p2
+                                WHERE p2.id = parent.parent
+                                AND (
+                                    p2.status = 'pokin dari pemda'
+                                    OR (
+                                        p2.status = 'crosscutting_disetujui_existing'
+                                        AND p2.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                                    )
+                                )
+                            ) THEN
                                 CASE WHEN (SELECT p3.parent FROM pohon_all p3 WHERE p3.id = parent.parent) = 0 THEN TRUE
                                 ELSE FALSE END
                             WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = '' THEN TRUE
