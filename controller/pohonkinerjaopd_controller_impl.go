@@ -569,6 +569,17 @@ func (controller *PohonKinerjaOpdControllerImpl) FindPokinAtasan(writer http.Res
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// @Summary      Get Control Pokin Opd
+// @Description  Get control pokin opd by kode opd and tahun.
+// @Tags         Control Pokin Opd
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"  example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path     string  true  "Tahun"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.ControlPokinOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/control_pokin_opd/{kode_opd}/{tahun} [get]
 func (controller *PohonKinerjaOpdControllerImpl) ControlPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
