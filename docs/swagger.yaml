@@ -47,6 +47,75 @@ definitions:
       target:
         type: string
     type: object
+  pohonkinerja.ControlPokinOpdData:
+    properties:
+      jumlah_pelaksana:
+        type: integer
+      jumlah_pokin:
+        type: integer
+      jumlah_pokin_ada_pelaksana:
+        type: integer
+      jumlah_pokin_ada_rekin:
+        description: ← BARU
+        type: integer
+      jumlah_pokin_tanpa_pelaksana:
+        type: integer
+      jumlah_pokin_tanpa_rekin:
+        description: ← BARU
+        type: integer
+      jumlah_rencana_kinerja:
+        description: ← BARU
+        type: integer
+      level_pohon:
+        type: integer
+      nama_level:
+        type: string
+      persentase:
+        description: pelaksana
+        type: string
+      persentase_cascading:
+        description: '← BARU: cascading'
+        type: string
+    type: object
+  pohonkinerja.ControlPokinOpdResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/pohonkinerja.ControlPokinOpdData'
+        type: array
+      tematik:
+        items:
+          $ref: '#/definitions/pohonkinerja.LeaderboardTematikItem'
+        type: array
+      total:
+        $ref: '#/definitions/pohonkinerja.ControlPokinOpdTotal'
+    type: object
+  pohonkinerja.ControlPokinOpdTotal:
+    properties:
+      persentase:
+        description: pelaksana
+        type: string
+      persentase_cascading:
+        description: '← BARU: cascading'
+        type: string
+      total_pelaksana:
+        type: integer
+      total_pokin:
+        type: integer
+      total_pokin_ada_pelaksana:
+        type: integer
+      total_pokin_ada_rekin:
+        description: ← BARU
+        type: integer
+      total_pokin_tanpa_pelaksana:
+        type: integer
+      total_pokin_tanpa_rekin:
+        description: ← BARU
+        type: integer
+      total_rencana_kinerja:
+        description: ← BARU
+        type: integer
+    type: object
   pohonkinerja.IndikatorResponse:
     properties:
       id_indikator:
@@ -74,7 +143,30 @@ definitions:
         type: string
       kode_program_unggulan:
         type: string
+      nama_program_prioritas:
+        type: string
       tahun:
+        type: string
+    type: object
+  pohonkinerja.LeaderboardHiddenUpsertRequest:
+    properties:
+      is_hidden:
+        type: boolean
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+    required:
+    - kode_opd
+    - tahun
+    type: object
+  pohonkinerja.LeaderboardTematikItem:
+    properties:
+      child:
+        items:
+          $ref: '#/definitions/pohonkinerja.LeaderboardTematikItem'
+        type: array
+      nama:
         type: string
     type: object
   pohonkinerja.PelaksanaOpdResponse:
@@ -1197,6 +1289,39 @@ paths:
       summary: Update IKU Opd Active
       tags:
       - IKU Renja Opd
+  /leaderboard_rekin_hidden/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert leaderboard rekin hidden.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Leaderboard Rekin Hidden
+      tags:
+      - Leaderboard Rekin Hidden
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:
@@ -1648,6 +1773,80 @@ paths:
       summary: Clone Pohon Kinerja opd
       tags:
       - Clone Pohon Kinerja Opd
+  /pohon_kinerja_opd/control_pokin_opd/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Get control pokin opd by kode opd and tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ControlPokinOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Control Pokin Opd
+      tags:
+      - Control Pokin Opd
+  /pohon_kinerja_opd/leaderboard_pokin_opd/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Get leaderboard rekin hidden by tahun.
+      parameters:
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Leaderboard Rekin Hidden
+      tags:
+      - Leaderboard Rekin Hidden
   /pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon}:
     get:
       consumes:

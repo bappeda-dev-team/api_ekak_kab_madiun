@@ -204,6 +204,54 @@ func (controller *PohonKinerjaOpdControllerImpl) FindAll(writer http.ResponseWri
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+func (controller *PohonKinerjaOpdControllerImpl) FindAllArah(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	// Jika kodeOpd atau tahun kosong, kembalikan response null
+	if kodeOpd == "" || tahun == "" {
+		webResponse := web.WebResponse{
+			Code:   200,
+			Status: "OK",
+			Data:   nil,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// Panggil service FindAll
+	pohonKinerjaResponse, err := controller.PohonKinerjaOpdService.FindAllArah(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		// Jika tidak ada data, kembalikan response sukses dengan data null
+		if err == sql.ErrNoRows {
+			webResponse := web.WebResponse{
+				Code:   200,
+				Status: "OK",
+				Data:   nil,
+			}
+			helper.WriteToResponseBody(writer, webResponse)
+			return
+		}
+
+		// Untuk error lainnya
+		webResponse := web.WebResponse{
+			Code:   404,
+			Status: "Not Found",
+			Data:   err.Error(),
+		}
+		writer.WriteHeader(http.StatusNotFound)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// Kirim response sukses
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get All Strategic Arah Kebijakan",
+		Data:   pohonKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
 
 func (controller *PohonKinerjaOpdControllerImpl) FindStrategicNoParent(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
@@ -521,6 +569,17 @@ func (controller *PohonKinerjaOpdControllerImpl) FindPokinAtasan(writer http.Res
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// @Summary      Get Control Pokin Opd
+// @Description  Get control pokin opd by kode opd and tahun.
+// @Tags         Control Pokin Opd
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"  example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path     string  true  "Tahun"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.ControlPokinOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/control_pokin_opd/{kode_opd}/{tahun} [get]
 func (controller *PohonKinerjaOpdControllerImpl) ControlPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
@@ -545,6 +604,16 @@ func (controller *PohonKinerjaOpdControllerImpl) ControlPokinOpd(writer http.Res
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// @Summary      Get Leaderboard Rekin Hidden
+// @Description  Get leaderboard rekin hidden by tahun.
+// @Tags         Leaderboard Rekin Hidden
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path     string  true  "Tahun"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]string}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/leaderboard_pokin_opd/{tahun} [get]
 func (controller *PohonKinerjaOpdControllerImpl) LeaderboardPokinOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	tahun := params.ByName("tahun")
 
@@ -657,6 +726,61 @@ func (controller *PohonKinerjaOpdControllerImpl) UpdateParentClone(writer http.R
 		Code:   200,
 		Status: "Success Update Parent",
 		Data:   updateCloneResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// @Summary      Upsert Leaderboard Rekin Hidden
+// @Description  Upsert leaderboard rekin hidden.
+// @Tags         Leaderboard Rekin Hidden
+// @Accept       json
+// @Produce      json
+// @Param        request  body   pohonkinerja.LeaderboardHiddenUpsertRequest  true  "Request Body"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.LeaderboardHiddenUpsertRequest}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /leaderboard_rekin_hidden/upsert [post]
+func (controller *PohonKinerjaOpdControllerImpl) UpsertLeaderboardHidden(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	leaderboardHiddenUpsertRequest := pohonkinerja.LeaderboardHiddenUpsertRequest{}
+	helper.ReadFromRequestBody(request, &leaderboardHiddenUpsertRequest)
+
+	err := controller.PohonKinerjaOpdService.UpsertLeaderboardHidden(request.Context(), leaderboardHiddenUpsertRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Upsert Leaderboard Hidden",
+		Data:   leaderboardHiddenUpsertRequest,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaOpdControllerImpl) FindLeaderboardHiddenKodeOpds(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+
+	response, err := controller.PohonKinerjaOpdService.FindLeaderboardHiddenKodeOpds(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Find Leaderboard Hidden Kode Opds",
+		Data:   response,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }

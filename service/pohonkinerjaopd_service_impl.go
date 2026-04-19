@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
+	"ekak_kabupaten_madiun/model/web/strategic"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
 	"fmt"
@@ -32,9 +33,12 @@ type PohonKinerjaOpdServiceImpl struct {
 	Validate                  *validator.Validate
 	ProgramUnggulanRepository repository.ProgramUnggulanRepository
 	RedisClient               *redis.Client
+	CSFRepository 			  repository.CSFRepository
+	sasaranOpdRepository      repository.SasaranOpdRepository
 }
 
-func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, programUnggulanRepository repository.ProgramUnggulanRepository, redisClient *redis.Client) *PohonKinerjaOpdServiceImpl {
+func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate, 
+	programUnggulanRepository repository.ProgramUnggulanRepository, redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -46,6 +50,9 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		Validate:                  validate,
 		ProgramUnggulanRepository: programUnggulanRepository,
 		RedisClient:               redisClient,
+		CSFRepository: 			   csfRepository,
+		sasaranOpdRepository: sasaranOpdRepository,
+
 	}
 }
 
@@ -989,6 +996,99 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 	return response, nil
 }
+func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kodeOpd, tahun string) (strategic.StrategicArahKebijakanOpdAllResponse, error) {
+	startTime := time.Now()
+	serviceName := "PohonKinerjaOpdService.FindAllArah"
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi OPD
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, errors.New("kode opd tidak ditemukan")
+	}
+
+
+	// Inisialisasi response dasar
+	response := strategic.StrategicArahKebijakanOpdAllResponse{
+		KodeOpd:    kodeOpd,
+		NamaOpd:    opd.NamaOpd,
+		Tahun:      tahun,
+		IsuStrategisOpd: make([]strategic.IsuStrategiOpdResponse, 0),
+		TujuanOpd:  make([]strategic.TujuanOpdResponse, 0),
+		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
+	}
+
+	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, tahun)
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	if len(csfList) > 0 {
+		Responses := make([]strategic.IsuStrategiOpdResponse, 0, len(csfList))
+		for _, tujuan := range csfList {
+			Responses = append(Responses, strategic.IsuStrategiOpdResponse{
+				NamaIsu:        tujuan.NamaIsu,
+			})
+		}
+		response.IsuStrategisOpd = Responses
+	}
+	
+
+	// Ambil data tujuan OPD dengan batch
+	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	if len(tujuanOpds) > 0 {
+		tujuanResponses := make([]strategic.TujuanOpdResponse, 0, len(tujuanOpds))
+		for _, tujuan := range tujuanOpds {
+			tujuanResponses = append(tujuanResponses, strategic.TujuanOpdResponse{
+				Id:        tujuan.Id,
+				KodeOpd:   tujuan.KodeOpd,
+				Tujuan:    tujuan.Tujuan,
+			})
+		}
+		response.TujuanOpd = tujuanResponses
+	}
+
+	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
+	if err != nil {
+		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
+	}
+	if len(sasaranOpds) > 0 {
+	strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
+
+		for _, s := range sasaranOpds {
+
+			strategiResponses = append(strategiResponses, strategic.StrategiArahKebijakanOpdResponse{
+				TujuanOpd: s.NamaTujuanOpd, // pastikan field ini ada di domain
+				SasaranOpds: []strategic.SasaranOpdResponse{
+					{
+						SasaranOpd: s.NamaSasaranOpd,
+						StrategiOpd: s.NamaStrategi, // kalau ada
+						ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{
+							{
+								ArahKebijakanOpd: s.NamaArahKebijakan, // kalau ada
+							},
+						},
+					},
+				},
+			})
+		}
+
+		response.StrategiArahKebijakanOpds = strategiResponses
+	}
+
+
+	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
+		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.TujuanOpd))
+
+	return response, nil
+}
 
 // Helper function untuk flatten dan sort strategic
 func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonKinerja {
@@ -1104,6 +1204,7 @@ func buildTacticalOnly(
 			}
 		}
 	}
+
 
 	reviewPokin := reviewMap[tactical.Id]
 	countReview := len(reviewPokin)
@@ -2511,6 +2612,12 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 		return pohonkinerja.ControlPokinOpdResponse{}, err
 	}
 
+	tematikNodes, err := service.pohonKinerjaOpdRepository.FindControlPokinTematikNodes(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return pohonkinerja.ControlPokinOpdResponse{}, err
+	}
+	tematikTree := buildLeaderboardTematikTree(tematikNodes)
+
 	// Cari level maksimum yang ada di data
 	maxLevel := 6 // Minimal sampai Operational (level 6)
 	for level := range dataPerLevel {
@@ -2607,6 +2714,7 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 			Persentase:               fmt.Sprintf("%.0f%%", persentaseTotalPelaksana),
 			PersentaseCascading:      fmt.Sprintf("%.0f%%", persentaseTotalCascading),
 		},
+		Tematik: tematikTree,
 	}
 
 	return response, nil
@@ -2623,20 +2731,54 @@ var (
 	cacheExpiry          = 5 * time.Minute
 )
 
+// func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
+// 	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
+// 	leaderboardCacheLock.RLock()
+// 	if cached, exists := leaderboardCache[cacheKey]; exists {
+// 		if time.Since(cached.Timestamp) < cacheExpiry {
+// 			leaderboardCacheLock.RUnlock()
+// 			return cached.Data, nil
+// 		}
+// 	}
+// 	leaderboardCacheLock.RUnlock()
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+// 	leaderboardData, err := service.pohonKinerjaOpdRepository.LeaderboardPokinOpd(ctx, tx, tahun)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	tematikNodes, err := service.pohonKinerjaOpdRepository.FindLeaderboardTematikNodes(ctx, tx, tahun)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	// Kelompokkan node tematik per kode_opd
+// 	byOpd := make(map[string][]repository.LeaderboardTematikNode)
+// 	for _, n := range tematikNodes {
+// 		byOpd[n.KodeOpd] = append(byOpd[n.KodeOpd], n)
+// 	}
+// 	var response []pohonkinerja.LeaderboardPokinResponse
+// 	for _, data := range leaderboardData {
+// 		tematikTree := buildLeaderboardTematikTree(byOpd[data.KodeOpd])
+// 		response = append(response, pohonkinerja.LeaderboardPokinResponse{
+// 			KodeOpd:             data.KodeOpd,
+// 			NamaOpd:             data.NamaOpd,
+// 			Tematik:             tematikTree,
+// 			PersentaseCascading: fmt.Sprintf("%.0f%%", data.PersentaseCascading),
+// 		})
+// 	}
+// 	leaderboardCacheLock.Lock()
+// 	leaderboardCache[cacheKey] = CachedLeaderboard{
+// 		Data:      response,
+// 		Timestamp: time.Now(),
+// 	}
+// 	leaderboardCacheLock.Unlock()
+// 	return response, nil
+// }
+
 func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
-	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
-
-	// Cek cache terlebih dahulu
-	leaderboardCacheLock.RLock()
-	if cached, exists := leaderboardCache[cacheKey]; exists {
-		if time.Since(cached.Timestamp) < cacheExpiry {
-			leaderboardCacheLock.RUnlock()
-			return cached.Data, nil
-		}
-	}
-	leaderboardCacheLock.RUnlock()
-
-	// Jika cache tidak ada atau expired, ambil dari database
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
@@ -2648,41 +2790,133 @@ func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Conte
 		return nil, err
 	}
 
+	tematikNodes, err := service.pohonKinerjaOpdRepository.FindLeaderboardTematikNodes(ctx, tx, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	// Kelompokkan node tematik per kode_opd
+	byOpd := make(map[string][]repository.LeaderboardTematikNode)
+	for _, n := range tematikNodes {
+		byOpd[n.KodeOpd] = append(byOpd[n.KodeOpd], n)
+	}
+
 	var response []pohonkinerja.LeaderboardPokinResponse
 	for _, data := range leaderboardData {
-		var tematikItems []pohonkinerja.LeaderboardTematikItem
-		for _, name := range data.TematikNames {
-			tematikItems = append(tematikItems, pohonkinerja.LeaderboardTematikItem{
-				Nama: name,
-			})
-		}
-
+		tematikTree := buildLeaderboardTematikTree(byOpd[data.KodeOpd])
 		response = append(response, pohonkinerja.LeaderboardPokinResponse{
 			KodeOpd:             data.KodeOpd,
 			NamaOpd:             data.NamaOpd,
-			Tematik:             tematikItems,
+			Tematik:             tematikTree,
 			PersentaseCascading: fmt.Sprintf("%.0f%%", data.PersentaseCascading),
+			IsHidden:            data.IsHidden,
 		})
 	}
-
-	//  Simpan ke cache
-	leaderboardCacheLock.Lock()
-	leaderboardCache[cacheKey] = CachedLeaderboard{
-		Data:      response,
-		Timestamp: time.Now(),
-	}
-	leaderboardCacheLock.Unlock()
 
 	return response, nil
 }
 
-// Tambahkan fungsi untuk clear cache (dipanggil saat ada update data)
-func (service *PohonKinerjaOpdServiceImpl) ClearLeaderboardCache(tahun string) {
-	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
-	leaderboardCacheLock.Lock()
-	delete(leaderboardCache, cacheKey)
-	leaderboardCacheLock.Unlock()
+type leaderboardTematikWrap struct {
+	id       int
+	parent   int
+	nama     string
+	children []*leaderboardTematikWrap
 }
+
+func buildLeaderboardTematikTree(nodes []repository.LeaderboardTematikNode) []pohonkinerja.LeaderboardTematikItem {
+	byID := make(map[int]*leaderboardTematikWrap, len(nodes))
+	order := make([]int, 0, len(nodes))
+	seen := make(map[int]struct{}, len(nodes))
+	for _, n := range nodes {
+		if _, ok := seen[n.Id]; ok {
+			continue
+		}
+		seen[n.Id] = struct{}{}
+		byID[n.Id] = &leaderboardTematikWrap{id: n.Id, parent: n.Parent, nama: n.NamaPohon}
+		order = append(order, n.Id)
+	}
+	var roots []*leaderboardTematikWrap
+	for _, id := range order {
+		w := byID[id]
+		if w.parent == 0 {
+			roots = append(roots, w)
+			continue
+		}
+		if p, ok := byID[w.parent]; ok {
+			p.children = append(p.children, w)
+		} else {
+			// parent-nya tidak ada di set node (di luar level 0-3), jadikan root
+			roots = append(roots, w)
+		}
+	}
+	var sortChildren func(w *leaderboardTematikWrap)
+	sortChildren = func(w *leaderboardTematikWrap) {
+		sort.Slice(w.children, func(i, j int) bool {
+			if w.children[i].nama != w.children[j].nama {
+				return w.children[i].nama < w.children[j].nama
+			}
+			return w.children[i].id < w.children[j].id
+		})
+		for _, c := range w.children {
+			sortChildren(c)
+		}
+	}
+	sort.Slice(roots, func(i, j int) bool {
+		if roots[i].nama != roots[j].nama {
+			return roots[i].nama < roots[j].nama
+		}
+		return roots[i].id < roots[j].id
+	})
+	for _, r := range roots {
+		sortChildren(r)
+	}
+	var toItem func(w *leaderboardTematikWrap) pohonkinerja.LeaderboardTematikItem
+	toItem = func(w *leaderboardTematikWrap) pohonkinerja.LeaderboardTematikItem {
+		anak := make([]pohonkinerja.LeaderboardTematikItem, len(w.children))
+		for i, c := range w.children {
+			anak[i] = toItem(c)
+		}
+		return pohonkinerja.LeaderboardTematikItem{Nama: w.nama, Anak: anak}
+	}
+	out := make([]pohonkinerja.LeaderboardTematikItem, len(roots))
+	for i, r := range roots {
+		out[i] = toItem(r)
+	}
+	return out
+}
+
+func (service *PohonKinerjaOpdServiceImpl) UpsertLeaderboardHidden(ctx context.Context, req pohonkinerja.LeaderboardHiddenUpsertRequest) error {
+	if err := service.Validate.Struct(req); err != nil {
+		return err
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	if _, err := service.opdRepository.FindByKodeOpd(ctx, tx, req.KodeOpd); err != nil {
+		return errors.New("kode opd tidak ditemukan")
+	}
+	if err := service.pohonKinerjaOpdRepository.UpsertLeaderboardHidden(ctx, tx, req.KodeOpd, req.Tahun, req.IsHidden); err != nil {
+		return err
+	}
+	return nil
+}
+func (service *PohonKinerjaOpdServiceImpl) FindLeaderboardHiddenKodeOpds(ctx context.Context, tahun string) ([]string, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.pohonKinerjaOpdRepository.FindLeaderboardHiddenKodeOpdsByTahun(ctx, tx, tahun)
+}
+
+// func (service *PohonKinerjaOpdServiceImpl) ClearLeaderboardCache(tahun string) {
+// 	cacheKey := fmt.Sprintf("leaderboard_%s", tahun)
+// 	leaderboardCacheLock.Lock()
+// 	delete(leaderboardCache, cacheKey)
+// 	leaderboardCacheLock.Unlock()
+// }
 
 func (service *PohonKinerjaOpdServiceImpl) FindAllPokinParentClonePokinOpd(ctx context.Context, kodeOpd, tahun string, levelPohon *int) ([]pohonkinerja.PohonKinerjaOpdResponse, error) {
 	tx, err := service.DB.Begin()

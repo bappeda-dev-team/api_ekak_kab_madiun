@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
+	"ekak_kabupaten_madiun/model/web/strategic"
 )
 
 type PohonKinerjaOpdService interface {
@@ -11,6 +12,7 @@ type PohonKinerjaOpdService interface {
 	Delete(ctx context.Context, id int) error
 	FindById(ctx context.Context, id int) (pohonkinerja.PohonKinerjaOpdResponse, error)
 	FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.PohonKinerjaOpdAllResponse, error)
+	FindAllArah(ctx context.Context, kodeOpd, tahun string) (strategic.StrategicArahKebijakanOpdAllResponse, error)
 	FindStrategicNoParent(ctx context.Context, kodeOpd, tahun string) ([]pohonkinerja.StrategicOpdResponse, error)
 	DeletePelaksana(ctx context.Context, pelaksanaId string) error
 	FindPokinByPelaksana(ctx context.Context, pegawaiId string, tahun string) ([]pohonkinerja.PohonKinerjaOpdResponse, error)
@@ -25,4 +27,6 @@ type PohonKinerjaOpdService interface {
 	ControlPokinOpd(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.ControlPokinOpdResponse, error)
 	LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error)
 	UpdateParentClone(ctx context.Context, req pohonkinerja.PohonKinerjaUpdateParentRequest) (pohonkinerja.PohonKinerjaUpdateParentCloneResponse, error)
+	UpsertLeaderboardHidden(ctx context.Context, req pohonkinerja.LeaderboardHiddenUpsertRequest) error
+	FindLeaderboardHiddenKodeOpds(ctx context.Context, tahun string) ([]string, error)
 }

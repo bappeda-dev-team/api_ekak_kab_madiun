@@ -18,6 +18,7 @@ type SasaranOpdRepository interface {
 	FindByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.SasaranOpd, error)
 	FindSasaranByPeriod(ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, jenisIndikator string) ([]domain.SasaranOpd, error)
 	FindSasaranByTahun(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisIndikator string) ([]domain.SasaranOpd, error)
+	FindStrategicArahKebijakan(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode string) ([]domain.StrategicRow, error)
 	CreateRenjaIndikator(ctx context.Context, tx *sql.Tx, sasaranOpdId int, indikators []domain.Indikator) error
 	UpdateRenjaIndikator(ctx context.Context, tx *sql.Tx, indikators []domain.Indikator) error
 	DeleteIndikatorTargetRenja(ctx context.Context, tx *sql.Tx, indikatorId string) error
