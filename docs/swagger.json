@@ -360,6 +360,63 @@
                 }
             }
         },
+        "/leaderboard_rekin_hidden/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert leaderboard rekin hidden.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Leaderboard Rekin Hidden"
+                ],
+                "summary": "Upsert Leaderboard Rekin Hidden",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -1094,6 +1151,129 @@
                                     "properties": {
                                         "data": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/control_pokin_opd/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get control pokin opd by kode opd and tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Control Pokin Opd"
+                ],
+                "summary": "Get Control Pokin Opd",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ControlPokinOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/leaderboard_pokin_opd/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get leaderboard rekin hidden by tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Leaderboard Rekin Hidden"
+                ],
+                "summary": "Get Leaderboard Rekin Hidden",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
                                         }
                                     }
                                 }
@@ -3212,6 +3392,106 @@
                 }
             }
         },
+        "pohonkinerja.ControlPokinOpdData": {
+            "type": "object",
+            "properties": {
+                "jumlah_pelaksana": {
+                    "type": "integer"
+                },
+                "jumlah_pokin": {
+                    "type": "integer"
+                },
+                "jumlah_pokin_ada_pelaksana": {
+                    "type": "integer"
+                },
+                "jumlah_pokin_ada_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "jumlah_pokin_tanpa_pelaksana": {
+                    "type": "integer"
+                },
+                "jumlah_pokin_tanpa_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "jumlah_rencana_kinerja": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_level": {
+                    "type": "string"
+                },
+                "persentase": {
+                    "description": "pelaksana",
+                    "type": "string"
+                },
+                "persentase_cascading": {
+                    "description": "← BARU: cascading",
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ControlPokinOpdResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ControlPokinOpdData"
+                    }
+                },
+                "tematik": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.LeaderboardTematikItem"
+                    }
+                },
+                "total": {
+                    "$ref": "#/definitions/pohonkinerja.ControlPokinOpdTotal"
+                }
+            }
+        },
+        "pohonkinerja.ControlPokinOpdTotal": {
+            "type": "object",
+            "properties": {
+                "persentase": {
+                    "description": "pelaksana",
+                    "type": "string"
+                },
+                "persentase_cascading": {
+                    "description": "← BARU: cascading",
+                    "type": "string"
+                },
+                "total_pelaksana": {
+                    "type": "integer"
+                },
+                "total_pokin": {
+                    "type": "integer"
+                },
+                "total_pokin_ada_pelaksana": {
+                    "type": "integer"
+                },
+                "total_pokin_ada_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "total_pokin_tanpa_pelaksana": {
+                    "type": "integer"
+                },
+                "total_pokin_tanpa_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "total_rencana_kinerja": {
+                    "description": "← BARU",
+                    "type": "integer"
+                }
+            }
+        },
         "pohonkinerja.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -3253,7 +3533,42 @@
                 "kode_program_unggulan": {
                     "type": "string"
                 },
+                "nama_program_prioritas": {
+                    "type": "string"
+                },
                 "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.LeaderboardHiddenUpsertRequest": {
+            "type": "object",
+            "required": [
+                "kode_opd",
+                "tahun"
+            ],
+            "properties": {
+                "is_hidden": {
+                    "type": "boolean"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.LeaderboardTematikItem": {
+            "type": "object",
+            "properties": {
+                "child": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.LeaderboardTematikItem"
+                    }
+                },
+                "nama": {
                     "type": "string"
                 }
             }

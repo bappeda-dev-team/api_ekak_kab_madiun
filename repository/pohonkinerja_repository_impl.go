@@ -3108,14 +3108,21 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context,
 // count pokin pemda in opd
 func (repository *PohonKinerjaRepositoryImpl) CountPokinPemdaByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]int, error) {
 	script := `
- WITH RECURSIVE pohon_all AS (
+  WITH RECURSIVE pohon_all AS (
     SELECT 
         id,
         parent,
         level_pohon,
         status,
+        jenis_pohon,
         CASE 
-            WHEN level_pohon = 4 AND status = 'pokin dari pemda' AND parent = 0 THEN TRUE
+            WHEN level_pohon = 4 AND parent = 0 AND (
+                status = 'pokin dari pemda'
+                OR (
+                    status = 'crosscutting_disetujui_existing'
+                    AND jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                )
+            ) THEN TRUE
             ELSE FALSE
         END as is_counted
     FROM tb_pohon_kinerja
@@ -3125,8 +3132,14 @@ valid_level_4 AS (
     SELECT id 
     FROM pohon_all 
     WHERE level_pohon = 4 
-    AND status = 'pokin dari pemda' 
     AND parent = 0
+    AND (
+        status = 'pokin dari pemda'
+        OR (
+            status = 'crosscutting_disetujui_existing'
+            AND jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+        )
+    )
 ),
 pohon_hierarchy AS (
     SELECT 
@@ -3134,15 +3147,25 @@ pohon_hierarchy AS (
         p.is_counted as should_count
     FROM pohon_all p
     WHERE p.level_pohon = 4
-
     UNION ALL
-
     SELECT 
         child.*,
         CASE
-            WHEN child.level_pohon = 5 AND child.status = 'pokin dari pemda' THEN
+            WHEN child.level_pohon = 5 AND (
+                child.status = 'pokin dari pemda'
+                OR (
+                    child.status = 'crosscutting_disetujui_existing'
+                    AND child.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                )
+            ) THEN
                 CASE
-                    WHEN parent.status = 'pokin dari pemda' THEN
+                    WHEN (
+                        parent.status = 'pokin dari pemda'
+                        OR (
+                            parent.status = 'crosscutting_disetujui_existing'
+                            AND parent.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                        )
+                    ) THEN
                         CASE WHEN (SELECT p2.parent FROM pohon_all p2 WHERE p2.id = parent.id) = 0 THEN TRUE
                         ELSE FALSE END
                     WHEN parent.status = '' THEN TRUE
@@ -3152,11 +3175,33 @@ pohon_hierarchy AS (
                     ) THEN TRUE
                     ELSE FALSE
                 END
-            WHEN child.level_pohon >= 6 AND child.status = 'pokin dari pemda' THEN
+            WHEN child.level_pohon >= 6 AND (
+                child.status = 'pokin dari pemda'
+                OR (
+                    child.status = 'crosscutting_disetujui_existing'
+                    AND child.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                )
+            ) THEN
                 CASE
-                    WHEN parent.status = 'pokin dari pemda' THEN
+                    WHEN (
+                        parent.status = 'pokin dari pemda'
+                        OR (
+                            parent.status = 'crosscutting_disetujui_existing'
+                            AND parent.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                        )
+                    ) THEN
                         CASE
-                            WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = 'pokin dari pemda' THEN
+                            WHEN EXISTS (
+                                SELECT 1 FROM pohon_all p2
+                                WHERE p2.id = parent.parent
+                                AND (
+                                    p2.status = 'pokin dari pemda'
+                                    OR (
+                                        p2.status = 'crosscutting_disetujui_existing'
+                                        AND p2.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+                                    )
+                                )
+                            ) THEN
                                 CASE WHEN (SELECT p3.parent FROM pohon_all p3 WHERE p3.id = parent.parent) = 0 THEN TRUE
                                 ELSE FALSE END
                             WHEN (SELECT p2.status FROM pohon_all p2 WHERE p2.id = parent.parent) = '' THEN TRUE
@@ -4020,30 +4065,30 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 	query := `
 		WITH RECURSIVE valid_pokin AS (
 			-- ✅ BASE CASE: Strategic (level 4) dengan parent = 0 atau parent level 0-3
-			SELECT 
+			SELECT
 				pk.id,
 				pk.level_pohon,
 				pk.parent,
 				pk.tahun
 			FROM tb_pohon_kinerja pk
-			WHERE pk.kode_opd = ? 
+			WHERE pk.kode_opd = ?
 			AND pk.tahun = ?
 			AND pk.level_pohon = 4
 			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
 			AND (
-				pk.parent = 0 
+				pk.parent = 0
 				OR EXISTS (
 					-- Parent adalah level 0-3 (tematik dari tahun berbeda)
-					SELECT 1 FROM tb_pohon_kinerja p2 
-					WHERE p2.id = pk.parent 
+					SELECT 1 FROM tb_pohon_kinerja p2
+					WHERE p2.id = pk.parent
 					AND p2.level_pohon BETWEEN 0 AND 3
 				)
 			)
-			
+
 			UNION ALL
-			
+
 			-- ✅ RECURSIVE: Level 5+ harus punya parent valid dengan tahun yang sama
-			SELECT 
+			SELECT
 				child.id,
 				child.level_pohon,
 				child.parent,
@@ -4058,7 +4103,7 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 			AND child.tahun = vp.tahun
 		),
 		pokin_pelaksana AS (
-			SELECT 
+			SELECT
 				vp.level_pohon,
 				COUNT(DISTINCT vp.id) as total_pokin,
 				COUNT(DISTINCT pp.pegawai_id) as total_pelaksana,
@@ -4068,37 +4113,37 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 			GROUP BY vp.level_pohon
 		),
 		pokin_rekin AS (
-			SELECT 
+			SELECT
 				vp.level_pohon,
 				-- Total rencana kinerja yang pegawai-nya adalah pelaksana pohon kinerja
-				COUNT(DISTINCT CASE 
-					WHEN rk.id IS NOT NULL 
+				COUNT(DISTINCT CASE
+					WHEN rk.id IS NOT NULL
 					AND EXISTS (
-						SELECT 1 
-						FROM tb_pelaksana_pokin pp2 
+						SELECT 1
+						FROM tb_pelaksana_pokin pp2
 						INNER JOIN tb_pegawai pg ON pp2.pegawai_id = pg.id
-						WHERE pp2.pohon_kinerja_id = vp.id 
+						WHERE pp2.pohon_kinerja_id = vp.id
 						AND pg.nip = rk.pegawai_id
-					) 
-					THEN rk.id 
+					)
+					THEN rk.id
 				END) as total_rencana_kinerja,
 				-- Pokin yang punya minimal 1 rencana kinerja (dari pelaksananya)
-				COUNT(DISTINCT CASE 
+				COUNT(DISTINCT CASE
 					WHEN EXISTS (
-						SELECT 1 
+						SELECT 1
 						FROM tb_rencana_kinerja rk2
 						INNER JOIN tb_pelaksana_pokin pp3 ON pp3.pohon_kinerja_id = vp.id
 						INNER JOIN tb_pegawai pg2 ON pp3.pegawai_id = pg2.id
-						WHERE rk2.id_pohon = vp.id 
+						WHERE rk2.id_pohon = vp.id
 						AND pg2.nip = rk2.pegawai_id
-					) 
-					THEN vp.id 
+					)
+					THEN vp.id
 				END) as pokin_ada_rekin_pelaksana
 			FROM valid_pokin vp
 			LEFT JOIN tb_rencana_kinerja rk ON vp.id = rk.id_pohon
 			GROUP BY vp.level_pohon
 		)
-		SELECT 
+		SELECT
 			pp.level_pohon,
 			pp.total_pokin as jumlah_pokin,
 			pp.total_pelaksana as jumlah_pelaksana,
@@ -4145,49 +4190,41 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 	return result, nil
 }
 
-type LeaderboardOpdData struct {
-	KodeOpd             string
-	NamaOpd             string
-	TotalPokin          int
-	TotalPokinAdaRekin  int
-	PersentaseCascading float64
-	TematikNames        []string
-}
-
-func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error) {
+func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]LeaderboardTematikNode, error) {
 	query := `
-		WITH RECURSIVE 
+		WITH RECURSIVE
 		valid_pokin AS (
-			SELECT 
+			SELECT
 				pk.id,
 				pk.level_pohon,
 				pk.kode_opd,
 				pk.clone_from,
 				pk.status,
 				pk.tahun,
-				pk.parent
+				pk.parent,
+				pk.jenis_pohon
 			FROM tb_pohon_kinerja pk
 			WHERE pk.tahun = ?
+			AND pk.kode_opd = ?
 			AND pk.level_pohon = 4
 			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
 			AND (
-				pk.parent = 0 
+				pk.parent = 0
 				OR pk.parent IN (
-					SELECT id FROM tb_pohon_kinerja 
+					SELECT id FROM tb_pohon_kinerja
 					WHERE level_pohon BETWEEN 0 AND 3
 				)
 			)
-			
 			UNION ALL
-			
-			SELECT 
+			SELECT
 				child.id,
 				child.level_pohon,
 				child.kode_opd,
 				child.clone_from,
 				child.status,
 				child.tahun,
-				child.parent
+				child.parent,
+				child.jenis_pohon
 			FROM tb_pohon_kinerja child
 			INNER JOIN valid_pokin vp ON child.parent = vp.id
 			WHERE child.tahun = ?
@@ -4196,50 +4233,27 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			AND child.kode_opd = vp.kode_opd
 			AND child.tahun = vp.tahun
 		),
-		-- ✅ OPTIMASI: Pre-join pelaksana dengan pegawai untuk menghindari subquery berulang
-		pokin_pelaksana_valid AS (
-			SELECT DISTINCT
-				pp.pohon_kinerja_id,
-				pg.nip
-			FROM tb_pelaksana_pokin pp
-			INNER JOIN tb_pegawai pg ON pp.pegawai_id = pg.id
-			WHERE pp.pohon_kinerja_id IN (SELECT id FROM valid_pokin)
-		),
-		opd_cascading AS (
-			SELECT 
-				vp.kode_opd,
-				COUNT(DISTINCT vp.id) as total_pokin,
-				COUNT(DISTINCT CASE 
-					WHEN EXISTS (
-						SELECT 1 
-						FROM tb_rencana_kinerja rk
-						INNER JOIN pokin_pelaksana_valid ppv ON ppv.pohon_kinerja_id = vp.id
-						WHERE rk.id_pohon = vp.id 
-						AND rk.pegawai_id = ppv.nip
-					) 
-					THEN vp.id 
-				END) as total_pokin_ada_rekin
-			FROM valid_pokin vp
-			GROUP BY vp.kode_opd
-		),
-		-- ✅ OPTIMASI: Gabungkan tematik_trace dengan filter awal untuk mengurangi data
 		tematik_trace AS (
-			SELECT 
+			SELECT
 				vp.kode_opd,
 				pk_src.id,
 				pk_src.parent,
 				pk_src.level_pohon,
 				pk_src.nama_pohon,
-				1 as depth
+				1 AS depth
 			FROM valid_pokin vp
 			INNER JOIN tb_pohon_kinerja pk_src ON vp.clone_from = pk_src.id
-			WHERE vp.status = 'pokin dari pemda'
+			WHERE (
+				vp.status = 'pokin dari pemda'
+				OR (
+					vp.status = 'crosscutting_disetujui_existing'
+					AND vp.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+				)
+			)
 			AND vp.clone_from > 0
-			AND vp.level_pohon = 4  -- ✅ OPTIMASI: Hanya level 4 yang perlu trace tematik
-			
+			AND vp.level_pohon = 4
 			UNION ALL
-			
-			SELECT 
+			SELECT
 				tt.kode_opd,
 				pk_parent.id,
 				pk_parent.parent,
@@ -4250,42 +4264,209 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			INNER JOIN tb_pohon_kinerja pk_parent ON tt.parent = pk_parent.id
 			WHERE tt.level_pohon > 0
 			AND tt.depth < 5
-		),
-		tematik_agregat AS (
-			SELECT 
-				kode_opd,
-				GROUP_CONCAT(DISTINCT nama_pohon ORDER BY nama_pohon SEPARATOR '|||') as tematik_names,
-				COUNT(DISTINCT nama_pohon) as jumlah_tematik
-			FROM tematik_trace
-			WHERE level_pohon = 0
-			AND parent = 0
-			GROUP BY kode_opd
 		)
+		SELECT DISTINCT
+			tt.kode_opd,
+			tt.id,
+			tt.parent,
+			tt.level_pohon,
+			tt.nama_pohon
+		FROM tematik_trace tt
+		WHERE tt.level_pohon BETWEEN 0 AND 3
+		ORDER BY tt.level_pohon, tt.id
+	`
+	rows, err := tx.QueryContext(ctx, query, tahun, kodeOpd, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil node tematik control pokin: %w", err)
+	}
+	defer rows.Close()
+	var out []LeaderboardTematikNode
+	for rows.Next() {
+		var n LeaderboardTematikNode
+		if err := rows.Scan(&n.KodeOpd, &n.Id, &n.Parent, &n.LevelPohon, &n.NamaPohon); err != nil {
+			return nil, fmt.Errorf("gagal scan node tematik control: %w", err)
+		}
+		out = append(out, n)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+type LeaderboardOpdData struct {
+	KodeOpd             string
+	NamaOpd             string
+	TotalPokin          int
+	TotalPokinAdaRekin  int
+	PersentaseCascading float64
+	TematikL0           []string
+	TematikL1           []string
+	TematikL2           []string
+	TematikL3           []string
+	IsHidden            bool
+}
+
+type LeaderboardTematikNode struct {
+	KodeOpd    string
+	Id         int
+	Parent     int
+	LevelPohon int
+	NamaPohon  string
+}
+
+func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error) {
+	query := `
+	WITH RECURSIVE 
+	valid_pokin AS (
 		SELECT 
-			opd.kode_opd,
-			opd.nama_opd,
-			COALESCE(oc.total_pokin, 0) as total_pokin,
-			COALESCE(oc.total_pokin_ada_rekin, 0) as total_pokin_ada_rekin,
-			CASE 
-				WHEN COALESCE(oc.total_pokin, 0) > 0 
-				THEN (COALESCE(oc.total_pokin_ada_rekin, 0) * 100.0 / oc.total_pokin)
-				ELSE 0 
-			END as persentase_cascading,
-			COALESCE(ta.tematik_names, '') as tematik_names,
-			CASE 
-				WHEN COALESCE(ta.jumlah_tematik, 0) > 0 THEN 1 
-				ELSE 0 
-			END as has_tematik
-		FROM tb_operasional_daerah opd
-		LEFT JOIN opd_cascading oc ON opd.kode_opd = oc.kode_opd
-		LEFT JOIN tematik_agregat ta ON opd.kode_opd = ta.kode_opd
-		ORDER BY 
-			has_tematik DESC,
-			persentase_cascading DESC,
-			opd.nama_opd ASC
+			pk.id,
+			pk.level_pohon,
+			pk.kode_opd,
+			pk.clone_from,
+			pk.status,
+			pk.tahun,
+			pk.parent,
+			pk.jenis_pohon
+		FROM tb_pohon_kinerja pk
+		WHERE pk.tahun = ?
+		AND pk.level_pohon = 4
+		AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+		AND (
+			pk.parent = 0 
+			OR pk.parent IN (
+				SELECT id FROM tb_pohon_kinerja 
+				WHERE level_pohon BETWEEN 0 AND 3
+			)
+		)
+
+		UNION ALL
+		
+		SELECT 
+			child.id,
+			child.level_pohon,
+			child.kode_opd,
+			child.clone_from,
+			child.status,
+			child.tahun,
+			child.parent,
+			child.jenis_pohon
+		FROM tb_pohon_kinerja child
+		INNER JOIN valid_pokin vp ON child.parent = vp.id
+		WHERE child.tahun = ?
+		AND child.level_pohon > 4
+		AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+		AND child.kode_opd = vp.kode_opd
+		AND child.tahun = vp.tahun
+	),
+
+	pokin_pelaksana_valid AS (
+		SELECT DISTINCT
+			pp.pohon_kinerja_id,
+			pg.nip
+		FROM tb_pelaksana_pokin pp
+		INNER JOIN tb_pegawai pg ON pp.pegawai_id = pg.id
+		WHERE pp.pohon_kinerja_id IN (SELECT id FROM valid_pokin)
+	),
+
+	-- ✅ OPTIMASI: ganti EXISTS jadi JOIN
+	pokin_with_rekin AS (
+		SELECT DISTINCT 
+			vp.id,
+			vp.kode_opd
+		FROM valid_pokin vp
+		JOIN pokin_pelaksana_valid ppv 
+			ON ppv.pohon_kinerja_id = vp.id
+		JOIN tb_rencana_kinerja rk 
+			ON rk.id_pohon = vp.id 
+			AND rk.pegawai_id = ppv.nip
+	),
+
+	opd_cascading AS (
+		SELECT 
+			vp.kode_opd,
+			COUNT(DISTINCT vp.id) as total_pokin,
+			COUNT(DISTINCT pr.id) as total_pokin_ada_rekin
+		FROM valid_pokin vp
+		LEFT JOIN pokin_with_rekin pr ON pr.id = vp.id
+		GROUP BY vp.kode_opd
+	),
+
+	tematik_trace AS (
+		SELECT 
+			vp.kode_opd,
+			pk_src.id,
+			pk_src.parent,
+			pk_src.level_pohon,
+			pk_src.nama_pohon,
+			1 as depth
+		FROM valid_pokin vp
+		INNER JOIN tb_pohon_kinerja pk_src ON vp.clone_from = pk_src.id
+		WHERE (
+			vp.status = 'pokin dari pemda'
+			OR (
+				vp.status = 'crosscutting_disetujui_existing' 
+				AND vp.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+			)
+		)
+		AND vp.clone_from > 0
+		AND vp.level_pohon = 4
+		
+		UNION ALL
+		
+		SELECT 
+			tt.kode_opd,
+			pk_parent.id,
+			pk_parent.parent,
+			pk_parent.level_pohon,
+			pk_parent.nama_pohon,
+			tt.depth + 1
+		FROM tematik_trace tt
+		INNER JOIN tb_pohon_kinerja pk_parent ON tt.parent = pk_parent.id
+		WHERE tt.level_pohon > 0
+		AND tt.depth < 5
+	),
+
+	tematik_agregat AS (
+		SELECT 
+			kode_opd,
+			GROUP_CONCAT(DISTINCT CASE WHEN level_pohon = 0 THEN nama_pohon END SEPARATOR '|||') AS tematik_l0,
+			GROUP_CONCAT(DISTINCT CASE WHEN level_pohon = 1 THEN nama_pohon END SEPARATOR '|||') AS tematik_l1,
+			GROUP_CONCAT(DISTINCT CASE WHEN level_pohon = 2 THEN nama_pohon END SEPARATOR '|||') AS tematik_l2,
+			GROUP_CONCAT(DISTINCT CASE WHEN level_pohon = 3 THEN nama_pohon END SEPARATOR '|||') AS tematik_l3,
+			COUNT(DISTINCT CASE WHEN level_pohon = 0 AND parent = 0 THEN nama_pohon END) AS jumlah_tematik
+		FROM tematik_trace
+		WHERE level_pohon BETWEEN 0 AND 3
+		GROUP BY kode_opd
+	)
+
+		SELECT 
+		opd.kode_opd,
+		opd.nama_opd,
+		COALESCE(oc.total_pokin, 0) AS total_pokin,
+		COALESCE(oc.total_pokin_ada_rekin, 0) AS total_pokin_ada_rekin,
+		CASE 
+			WHEN COALESCE(oc.total_pokin, 0) > 0 
+			THEN (COALESCE(oc.total_pokin_ada_rekin, 0) * 100.0 / oc.total_pokin)
+			ELSE 0 
+		END AS persentase_cascading,
+		COALESCE(ta.tematik_l0, '') AS tematik_l0,
+		COALESCE(ta.tematik_l1, '') AS tematik_l1,
+		COALESCE(ta.tematik_l2, '') AS tematik_l2,
+		COALESCE(ta.tematik_l3, '') AS tematik_l3,
+		CASE WHEN COALESCE(ta.jumlah_tematik, 0) > 0 THEN 1 ELSE 0 END AS has_tematik,
+		COALESCE(lh.is_hidden, 0) AS is_hidden
+	FROM tb_operasional_daerah opd
+	LEFT JOIN opd_cascading oc ON opd.kode_opd = oc.kode_opd
+	LEFT JOIN tematik_agregat ta ON opd.kode_opd = ta.kode_opd
+	LEFT JOIN tb_leaderboard_hidden lh 
+		ON opd.kode_opd = lh.kode_opd 
+		AND lh.tahun = ?
+
+	ORDER BY persentase_cascading DESC, opd.nama_opd ASC
 	`
 
-	rows, err := tx.QueryContext(ctx, query, tahun, tahun)
+	rows, err := tx.QueryContext(ctx, query, tahun, tahun, tahun)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil data leaderboard: %w", err)
 	}
@@ -4294,7 +4475,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 	var result []LeaderboardOpdData
 	for rows.Next() {
 		var data LeaderboardOpdData
-		var tematikNamesStr string
+		var tL0, tL1, tL2, tL3 string
 		var hasTematik int
 
 		err := rows.Scan(
@@ -4303,27 +4484,172 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 			&data.TotalPokin,
 			&data.TotalPokinAdaRekin,
 			&data.PersentaseCascading,
-			&tematikNamesStr,
+			&tL0, &tL1, &tL2, &tL3,
 			&hasTematik,
+			&data.IsHidden,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("gagal scan data: %w", err)
 		}
 
-		if tematikNamesStr != "" {
-			data.TematikNames = strings.Split(tematikNamesStr, "|||")
-		} else {
-			data.TematikNames = []string{}
+		splitNames := func(s string) []string {
+			if s == "" {
+				return []string{}
+			}
+			return strings.Split(s, "|||")
 		}
+
+		data.TematikL0 = splitNames(tL0)
+		data.TematikL1 = splitNames(tL1)
+		data.TematikL2 = splitNames(tL2)
+		data.TematikL3 = splitNames(tL3)
 
 		result = append(result, data)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", err)
-	}
-
 	return result, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardTematikNode, error) {
+	query := `
+		WITH RECURSIVE
+		valid_pokin AS (
+			SELECT
+				pk.id,
+				pk.level_pohon,
+				pk.kode_opd,
+				pk.clone_from,
+				pk.status,
+				pk.tahun,
+				pk.parent,
+				pk.jenis_pohon
+			FROM tb_pohon_kinerja pk
+			WHERE pk.tahun = ?
+			AND pk.level_pohon = 4
+			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND (
+				pk.parent = 0
+				OR pk.parent IN (
+					SELECT id FROM tb_pohon_kinerja
+					WHERE level_pohon BETWEEN 0 AND 3
+				)
+			)
+			UNION ALL
+			SELECT
+				child.id,
+				child.level_pohon,
+				child.kode_opd,
+				child.clone_from,
+				child.status,
+				child.tahun,
+				child.parent,
+				child.jenis_pohon
+			FROM tb_pohon_kinerja child
+			INNER JOIN valid_pokin vp ON child.parent = vp.id
+			WHERE child.tahun = ?
+			AND child.level_pohon > 4
+			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND child.kode_opd = vp.kode_opd
+			AND child.tahun = vp.tahun
+		),
+		tematik_trace AS (
+			SELECT
+				vp.kode_opd,
+				pk_src.id,
+				pk_src.parent,
+				pk_src.level_pohon,
+				pk_src.nama_pohon,
+				1 AS depth
+			FROM valid_pokin vp
+			INNER JOIN tb_pohon_kinerja pk_src ON vp.clone_from = pk_src.id
+			WHERE (
+				vp.status = 'pokin dari pemda'
+				OR (
+					vp.status = 'crosscutting_disetujui_existing'
+					AND vp.jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operasional Pemda')
+				)
+			)
+			AND vp.clone_from > 0
+			AND vp.level_pohon = 4
+			UNION ALL
+			SELECT
+				tt.kode_opd,
+				pk_parent.id,
+				pk_parent.parent,
+				pk_parent.level_pohon,
+				pk_parent.nama_pohon,
+				tt.depth + 1
+			FROM tematik_trace tt
+			INNER JOIN tb_pohon_kinerja pk_parent ON tt.parent = pk_parent.id
+			WHERE tt.level_pohon > 0
+			AND tt.depth < 5
+		)
+		SELECT DISTINCT
+			tt.kode_opd,
+			tt.id,
+			tt.parent,
+			tt.level_pohon,
+			tt.nama_pohon
+		FROM tematik_trace tt
+		WHERE tt.level_pohon BETWEEN 0 AND 3
+		ORDER BY tt.kode_opd, tt.level_pohon, tt.id
+	`
+	rows, err := tx.QueryContext(ctx, query, tahun, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil node tematik leaderboard: %w", err)
+	}
+	defer rows.Close()
+	var out []LeaderboardTematikNode
+	for rows.Next() {
+		var n LeaderboardTematikNode
+		if err := rows.Scan(&n.KodeOpd, &n.Id, &n.Parent, &n.LevelPohon, &n.NamaPohon); err != nil {
+			return nil, fmt.Errorf("gagal scan node tematik: %w", err)
+		}
+		out = append(out, n)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) UpsertLeaderboardHidden(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, hidden bool) error {
+	// Satu pasangan (kode_opd, tahun) hanya boleh 0 atau 1 baris; DELETE membersihkan duplikat lama.
+	const del = `DELETE FROM tb_leaderboard_hidden WHERE kode_opd = ? AND tahun = ?`
+	if _, err := tx.ExecContext(ctx, del, kodeOpd, tahun); err != nil {
+		return fmt.Errorf("upsert leaderboard hidden: %w", err)
+	}
+	if !hidden {
+		return nil
+	}
+	const ins = `INSERT INTO tb_leaderboard_hidden (kode_opd, tahun, is_hidden) VALUES (?, ?, TRUE)`
+	if _, err := tx.ExecContext(ctx, ins, kodeOpd, tahun); err != nil {
+		return fmt.Errorf("upsert leaderboard hidden: %w", err)
+	}
+	return nil
+}
+
+func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardHiddenKodeOpdsByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]string, error) {
+	const q = `
+SELECT kode_opd
+FROM tb_leaderboard_hidden
+WHERE tahun = ? AND is_hidden = TRUE
+ORDER BY kode_opd
+`
+	rows, err := tx.QueryContext(ctx, q, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("daftar leaderboard hidden: %w", err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			return nil, fmt.Errorf("scan kode_opd hidden: %w", err)
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
 }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPelaksanaPokinBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.PelaksanaPokin, error) {
