@@ -166,18 +166,18 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		newKode := replaceKode(kode, kodeOpd)
 		normalizedKodePagu[newKode] = pagu
 	}
-	// susun pagu subkegiatan
-	// for key, sub := range rekinSubkegiatan {
-	// 	kode := sub.KodeSubkegiatan
+	// // susun pagu subkegiatan
+	for key, sub := range rekinSubkegiatan {
+		kode := sub.KodeSubkegiatan
 
-	// 	if pagu, ok := normalizedKodePagu[kode]; ok {
-	// 		sub.PaguSubkegiatan = pagu
-	// 	} else {
-	// 		sub.PaguSubkegiatan = 0
-	// 	}
+		if pagu, ok := normalizedKodePagu[kode]; ok {
+			sub.PaguSubkegiatan = pagu
+		} else {
+			sub.PaguSubkegiatan = 0
+		}
 
-	// 	rekinSubkegiatan[key] = sub // wajib re-assign
-	// }
+		rekinSubkegiatan[key] = sub // wajib re-assign
+	}
 
 	// data struktur untuk penyusunan
 	// lookup pegawai by nip untuk susun nama atasan
@@ -391,10 +391,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		)
 
 		// Append item subkegiatan
-		if item, ok := rekinSubkegiatan[rekin.Id]; ok {
-			if level != 6 {
-				continue
-			}
+		if item, ok := rekinSubkegiatan[rekin.Id]; ok && level == 6 {
 			kodeSub := item.KodeSubkegiatan
 			if _, ok := seenSub[kodeSub]; ok {
 				continue
@@ -420,24 +417,21 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	uniqueProgram := make(map[string]pkopd.ItemPk)
 
 	for _, rekin := range rekins {
+		if rekin.LevelPohon == 6 {
+			if item, ok := rekinSubkegiatan[rekin.Id]; ok {
 
-		if rekin.LevelPohon != 6 {
-			continue
-		}
+				if item.KodeProgram == "" {
+					continue
+				}
+				kode := item.KodeProgram
 
-		if item, ok := rekinSubkegiatan[rekin.Id]; ok {
-
-			if item.KodeProgram == "" {
-				continue
-			}
-			kode := item.KodeProgram
-
-			paguItem := sumPaguByProgram(rekinSubkegiatan, item.KodeProgram)
-			uniqueProgram[item.KodeProgram] = pkopd.ItemPk{
-				RekinId:  rekin.Id,
-				KodeItem: kode,
-				NamaItem: item.NamaProgram,
-				PaguItem: paguItem,
+				paguItem := sumPaguByProgram(rekinSubkegiatan, item.KodeProgram)
+				uniqueProgram[item.KodeProgram] = pkopd.ItemPk{
+					RekinId:  rekin.Id,
+					KodeItem: kode,
+					NamaItem: item.NamaProgram,
+					PaguItem: paguItem,
+				}
 			}
 		}
 	}
@@ -780,8 +774,16 @@ func toSasaranPemdaResponse(
 func sumPaguByProgram(data map[string]domain.AllItemPk, kodeProgram string) int64 {
 	var total int64
 
+	seen := make(map[string]bool)
+
 	for _, item := range data {
 		if item.KodeProgram == kodeProgram {
+			// skip kalau sudah pernah dihitung
+			if seen[item.KodeSubkegiatan] {
+				continue
+			}
+
+			seen[item.KodeSubkegiatan] = true
 			total += item.PaguSubkegiatan
 		}
 	}
