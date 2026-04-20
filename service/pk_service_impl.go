@@ -167,17 +167,17 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		normalizedKodePagu[newKode] = pagu
 	}
 	// susun pagu subkegiatan
-	for key, sub := range rekinSubkegiatan {
-		kode := sub.KodeSubkegiatan
+	// for key, sub := range rekinSubkegiatan {
+	// 	kode := sub.KodeSubkegiatan
 
-		if pagu, ok := normalizedKodePagu[kode]; ok {
-			sub.PaguSubkegiatan = pagu
-		} else {
-			sub.PaguSubkegiatan = 0
-		}
+	// 	if pagu, ok := normalizedKodePagu[kode]; ok {
+	// 		sub.PaguSubkegiatan = pagu
+	// 	} else {
+	// 		sub.PaguSubkegiatan = 0
+	// 	}
 
-		rekinSubkegiatan[key] = sub // wajib re-assign
-	}
+	// 	rekinSubkegiatan[key] = sub // wajib re-assign
+	// }
 
 	// data struktur untuk penyusunan
 	// lookup pegawai by nip untuk susun nama atasan
