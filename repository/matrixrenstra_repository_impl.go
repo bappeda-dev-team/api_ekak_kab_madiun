@@ -637,3 +637,116 @@ func (r *MatrixRenstraRepositoryImpl) DeleteIndicatorsExcept(
 	_, err := tx.ExecContext(ctx, delInd, args...)
 	return err
 }
+
+func (repo *MatrixRenstraRepositoryImpl) FindIndikatorRenstra(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error) {
+	query := `
+        SELECT
+            im.kode_indikator,
+            im.kode,
+            im.kode_opd,
+            im.indikator,
+            im.tahun,
+            COALESCE(t.id, '')                    AS target_id,
+            COALESCE(t.target, '')                AS target,
+            COALESCE(t.satuan, '')                AS satuan,
+            COALESCE(t.tahun, '')                 AS target_tahun
+        FROM tb_indikator_matrix im
+        LEFT JOIN tb_target t ON t.indikator_id = im.kode_indikator
+        WHERE im.kode_indikator != ''
+          AND im.jenis = 'renstra'
+          AND im.kode_opd = ?
+	  AND im.tahun BETWEEN ? AND ?
+    `
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []domain.Indikator
+
+	for rows.Next() {
+		var r domain.Indikator
+		var (
+			targetId, targetVal, targetSatuan, targetTahun string
+		)
+		err := rows.Scan(
+			&r.KodeIndikator,
+			&r.Kode,
+			&r.KodeOpd,
+			&r.Indikator,
+			&r.Tahun,
+			&targetId, &targetVal, &targetSatuan, &targetTahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if targetId != "" {
+			r.Target = append(r.Target, domain.Target{
+				Id:          targetId,
+				IndikatorId: r.KodeIndikator,
+				Target:      targetVal,
+				Satuan:      targetSatuan,
+				Tahun:       targetTahun,
+			})
+		}
+		result = append(result, r)
+	}
+
+	return result, nil
+}
+
+func (repo *MatrixRenstraRepositoryImpl) FindIndikatorLama(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error) {
+	query := `
+        SELECT
+            im.id,
+            im.kode,
+            im.kode_opd,
+            im.indikator,
+            im.tahun,
+            COALESCE(t.id, '')                    AS target_id,
+            COALESCE(t.target, '')                AS target,
+            COALESCE(t.satuan, '')                AS satuan,
+            COALESCE(t.tahun, '')                 AS target_tahun
+        FROM tb_indikator im
+        LEFT JOIN tb_target t ON t.indikator_id = im.id
+        WHERE im.kode != ''
+          AND im.kode_opd = ?
+	  AND im.tahun BETWEEN ? AND ?
+    `
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []domain.Indikator
+
+	for rows.Next() {
+		var r domain.Indikator
+		var (
+			targetId, targetVal, targetSatuan, targetTahun string
+		)
+		err := rows.Scan(
+			&r.KodeIndikator,
+			&r.Kode,
+			&r.KodeOpd,
+			&r.Indikator,
+			&r.Tahun,
+			&targetId, &targetVal, &targetSatuan, &targetTahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if targetId != "" {
+			r.Target = append(r.Target, domain.Target{
+				Id:          targetId,
+				IndikatorId: r.KodeIndikator,
+				Target:      targetVal,
+				Satuan:      targetSatuan,
+				Tahun:       targetTahun,
+			})
+		}
+		result = append(result, r)
+	}
+
+	return result, nil
+}
