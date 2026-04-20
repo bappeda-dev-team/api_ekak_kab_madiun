@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/iku"
 	"ekak_kabupaten_madiun/repository"
 	"sort"
@@ -73,7 +74,7 @@ func (service *IkuServiceImpl) FindAllIkuOpd(ctx context.Context, kodeOpd string
 	}
 	defer helper.CommitOrRollback(tx)
 
-	indikators, err := service.IkuRepository.FindAllIkuOpd(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	indikators, err := service.getIndikatorWithFallback(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
 	if err != nil {
 		return nil, err
 	}
@@ -199,4 +200,27 @@ func (service *IkuServiceImpl) FindAllIkuRenja(ctx context.Context, kodeOpd stri
 		responses = make([]iku.IkuOpdResponse, 0)
 	}
 	return responses, nil
+}
+
+func (s *IkuServiceImpl) getIndikatorWithFallback(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	tahunAwal string,
+	tahunAkhir string,
+	jenisPeriode string,
+) ([]domain.Indikator, error) {
+
+	indikatorBaru, err := s.IkuRepository.FindAllIkuOpd(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+
+	indikatorLama, err := s.IkuRepository.
+		FindAllIkuOpdOld(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeIndikator(indikatorBaru, indikatorLama), nil
 }
