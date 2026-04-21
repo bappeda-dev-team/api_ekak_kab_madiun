@@ -1828,6 +1828,7 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorTargetsByTujuanIds(
 		if !exists {
 			ind = &domain.Indikator{
 				Id:               indId,
+				KodeIndikator:    indId,
 				Indikator:        indikatorName,
 				TujuanOpdId:      tujuanOpdId,
 				RumusPerhitungan: rumusPerhitunganNS,

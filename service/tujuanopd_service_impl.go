@@ -403,7 +403,7 @@ func (service *TujuanOpdServiceImpl) FindAll(ctx context.Context, kodeOpd string
 
 	indikatorTujuan, err := service.getIndikatorWithFallback(ctx, tx, tujuanOpdIds)
 	if err != nil {
-		log.Printf("ERROR service.getIndikatorWithFallback: %w", err)
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
 		return nil, err
 	}
 	indTujuanById := make(map[int][]domain.Indikator)
@@ -441,12 +441,13 @@ func (service *TujuanOpdServiceImpl) FindAll(ctx context.Context, kodeOpd string
 		// Proses indikator dan target seperti sebelumnya
 		for _, indikator := range tujuan.Indikator {
 			indikatorResponse := tujuanopd.IndikatorResponse{
-				Id:               indikator.Id,
-				IdTujuanOpd:      tujuan.Id,
-				NamaIndikator:    indikator.Indikator,
-				RumusPerhitungan: indikator.RumusPerhitungan.String,
-				SumberData:       indikator.SumberData.String,
-				Target:           make([]tujuanopd.TargetResponse, 0),
+				Id:                  indikator.Id,
+				IdTujuanOpd:         tujuan.Id,
+				NamaIndikator:       indikator.Indikator,
+				DefinisiOperasional: indikator.DefinisiOperasional.String,
+				RumusPerhitungan:    indikator.RumusPerhitungan.String,
+				SumberData:          indikator.SumberData.String,
+				Target:              make([]tujuanopd.TargetResponse, 0),
 			}
 
 			tahunAwalInt, _ := strconv.Atoi(tujuan.TahunAwal)
