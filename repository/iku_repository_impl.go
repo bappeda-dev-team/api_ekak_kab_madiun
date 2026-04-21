@@ -645,44 +645,36 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpdOld(ctx context.Context, tx *s
 	return result, nil
 }
 
-func (repository *IkuRepositoryImpl) UpdateIkuActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) error {
+func (repository *IkuRepositoryImpl) UpdateIkuActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) (int64, error) {
 	script := `UPDATE tb_indikator SET iku_active = ? WHERE id = ?`
 
 	result, err := tx.ExecContext(ctx, script, ikuActive, indikatorId)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	if rowsAffected == 0 {
-		return fmt.Errorf("indikator dengan id %s tidak ditemukan", indikatorId)
-	}
-
-	return nil
+	return rowsAffected, nil
 }
 
-func (repository *IkuRepositoryImpl) UpdateIkuOpdActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) error {
+func (repository *IkuRepositoryImpl) UpdateIkuOpdActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) (int64, error) {
 	script := `UPDATE tb_indikator_matrix SET iku_active = ? WHERE kode_indikator = ?`
 
 	result, err := tx.ExecContext(ctx, script, ikuActive, indikatorId)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	if rowsAffected == 0 {
-		return fmt.Errorf("indikator dengan id %s tidak ditemukan", indikatorId)
-	}
-
-	return nil
+	return rowsAffected, nil
 }
 
 func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string, jenisIndikator string) ([]domain.Indikator, error) {

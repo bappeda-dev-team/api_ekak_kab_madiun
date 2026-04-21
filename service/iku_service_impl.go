@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/iku"
 	"ekak_kabupaten_madiun/repository"
+	"errors"
 	"sort"
 	"strconv"
 )
@@ -133,13 +134,25 @@ func (service *IkuServiceImpl) UpdateIkuActive(ctx context.Context, id string, r
 		return err
 	}
 	defer helper.CommitOrRollback(tx)
+	// 1. coba update di tabel baru
 
-	err = service.IkuRepository.UpdateIkuActive(ctx, tx, id, request.IsActive)
+	rows, err := service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
 	if err != nil {
 		return err
 	}
-
-	return nil
+	if rows > 0 {
+		return nil
+	}
+	// 2. fallback ke tabel lama
+	rows, err = service.IkuRepository.UpdateIkuActive(ctx, tx, id, request.IsActive)
+	if err != nil {
+		return err
+	}
+	if rows > 0 {
+		return nil
+	}
+	// 3. benar-benar tidak ditemukan
+	return errors.New("iku not found in both indikator and indikator_matrix")
 }
 
 func (service *IkuServiceImpl) UpdateIkuOpdActive(ctx context.Context, id string, request iku.IkuUpdateActiveRequest) error {
@@ -149,12 +162,16 @@ func (service *IkuServiceImpl) UpdateIkuOpdActive(ctx context.Context, id string
 	}
 	defer helper.CommitOrRollback(tx)
 
-	err = service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
+	rows, err := service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
 	if err != nil {
 		return err
 	}
+	if rows > 0 {
+		return nil
+	}
 
-	return nil
+	// 3. benar-benar tidak ditemukan
+	return errors.New("iku not found")
 }
 
 func (service *IkuServiceImpl) FindAllIkuRenja(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string, jenisIndikator string) ([]iku.IkuOpdResponse, error) {
