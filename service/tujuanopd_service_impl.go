@@ -1198,6 +1198,7 @@ func mergeIndikator(
 
 	// 🔹 fallback full kalau data baru kosong
 	if len(indikatorBaru) == 0 {
+		log.Println("USING INDIKATOR LAMA")
 		return indikatorLama
 	}
 
@@ -1211,6 +1212,11 @@ func mergeIndikator(
 
 	for i := range indikatorBaru {
 		ind := indikatorBaru[i]
+
+		// FILTER: skip kalau indikator kosong
+		if ind.Indikator == "" {
+			continue
+		}
 
 		lama, exists := lamaMap[ind.KodeIndikator]
 
@@ -1237,6 +1243,7 @@ func mergeIndikator(
 
 	// fallback global
 	if len(result) == 0 {
+		log.Println("TUJUAN OPD USING INDIKATOR LAMA")
 		return indikatorLama
 	}
 

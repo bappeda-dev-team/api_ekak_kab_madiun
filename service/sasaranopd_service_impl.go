@@ -151,11 +151,12 @@ func (service *SasaranOpdServiceImpl) FindAll(ctx context.Context, KodeOpd strin
 			// Convert Indikator
 			for _, indikator := range sasaran.Indikator {
 				indResponse := sasaranopd.IndikatorResponse{
-					Id:               indikator.Id,
-					Indikator:        indikator.Indikator,
-					RumusPerhitungan: indikator.RumusPerhitungan.String,
-					SumberData:       indikator.SumberData.String,
-					Target:           make([]sasaranopd.TargetResponse, 0),
+					Id:                  indikator.Id,
+					Indikator:           indikator.Indikator,
+					RumusPerhitungan:    indikator.RumusPerhitungan.String,
+					DefinisiOperasional: indikator.DefinisiOperasional.String,
+					SumberData:          indikator.SumberData.String,
+					Target:              make([]sasaranopd.TargetResponse, 0),
 				}
 
 				// Convert Target
@@ -257,11 +258,12 @@ func (service *SasaranOpdServiceImpl) FindById(ctx context.Context, id int) (*sa
 		// Convert Indikator
 		for _, indikator := range sasaran.Indikator {
 			indResponse := sasaranopd.IndikatorResponse{
-				Id:               indikator.Id,
-				Indikator:        indikator.Indikator,
-				RumusPerhitungan: indikator.RumusPerhitungan.String,
-				SumberData:       indikator.SumberData.String,
-				Target:           make([]sasaranopd.TargetResponse, 0),
+				Id:                  indikator.Id,
+				Indikator:           indikator.Indikator,
+				RumusPerhitungan:    indikator.RumusPerhitungan.String,
+				DefinisiOperasional: indikator.DefinisiOperasional.String,
+				SumberData:          indikator.SumberData.String,
+				Target:              make([]sasaranopd.TargetResponse, 0),
 			}
 
 			// Convert Target
@@ -968,11 +970,12 @@ func (s *SasaranOpdServiceImpl) buildSasaranResponse(
 			for _, ind := range sas.Indikator {
 				indResp := sasaranopd.IndikatorResponse{
 					Id: ind.KodeIndikator, KodeIndikator: ind.KodeIndikator,
-					Jenis: ind.Jenis, DefinisiOperasional: ind.DefinisiOperasional.String,
-					Indikator:        ind.Indikator,
-					RumusPerhitungan: ind.RumusPerhitungan.String,
-					SumberData:       ind.SumberData.String,
-					Target:           []sasaranopd.TargetResponse{},
+					Jenis:               ind.Jenis,
+					DefinisiOperasional: ind.DefinisiOperasional.String,
+					Indikator:           ind.Indikator,
+					RumusPerhitungan:    ind.RumusPerhitungan.String,
+					SumberData:          ind.SumberData.String,
+					Target:              []sasaranopd.TargetResponse{},
 				}
 				for _, t := range ind.Target {
 					indResp.Target = append(indResp.Target, sasaranopd.TargetResponse{
