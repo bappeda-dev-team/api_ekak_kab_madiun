@@ -1453,7 +1453,7 @@ func (r *TujuanOpdRepositoryImpl) FindIndikatorByKodeIndikator(
 }
 
 func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisIndikator string) ([]domain.TujuanOpd, error) {
-	var finalArgs []interface{}
+	var finalArgs []any
 	// Args untuk subquery (dalam tanda kurung)
 	finalArgs = append(finalArgs, tahun) // tg.tahun = ?
 	jenisClause := ""
@@ -1486,7 +1486,7 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Co
         im_tg.satuan,
         im_tg.tahun_target
     FROM tb_tujuan_opd t
-    LEFT JOIN (
+    JOIN (
         SELECT
             im.id                                  AS indikator_id,
             im.kode_indikator                      AS kode_indikator,

@@ -850,6 +850,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 		return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
 	}
 	if len(tujuanOpds) > 0 {
+		log.Println("POKIN TUJUAN OPD RENSTRA - NOT FOUND")
 		tujuanResponses := make([]pohonkinerja.TujuanOpdResponse, 0, len(tujuanOpds))
 		for _, tujuan := range tujuanOpds {
 			indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0, len(tujuan.Indikator))
