@@ -434,17 +434,7 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 	var indikatorList []domain.Indikator
 	var indikatorResponses []sasaranopd.IndikatorDetail
 	for _, indikatorReq := range request.Indikator {
-		// Tentukan kode_indikator: prioritas KodeIndikator → Id → generate baru
-		var kodeIndikator string
-		switch {
-		case indikatorReq.KodeIndikator != "":
-			kodeIndikator = indikatorReq.KodeIndikator
-		case indikatorReq.Id != "":
-			kodeIndikator = indikatorReq.Id
-		default:
-			kodeIndikator = fmt.Sprintf("IND-SAS-%s", uuid.New().String()[:5])
-		}
-		// Validasi: setiap indikator wajib punya minimal 1 target
+		kodeIndikator := helper.GenerateID("IND-SAS")
 		if len(indikatorReq.Target) == 0 {
 			return nil, fmt.Errorf("indikator '%s' harus memiliki minimal 1 target", indikatorReq.Indikator)
 		}
@@ -452,13 +442,7 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 		var targetResponses []sasaranopd.TargetDetail
 		for _, targetReq := range indikatorReq.Target {
 			// Tentukan ID target
-			var targetId string
-			if targetReq.Id != "" {
-				targetId = targetReq.Id
-			} else {
-				targetId = fmt.Sprintf("TRG-SAS-%d-%s-%s",
-					request.IdSasaranOpd, kodeIndikator, targetReq.Tahun)
-			}
+			targetId := helper.GenerateID("TRG-SAS")
 			targetList = append(targetList, domain.Target{
 				Id:          targetId,
 				IndikatorId: kodeIndikator, // referensi ke kode_indikator

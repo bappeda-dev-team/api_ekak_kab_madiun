@@ -507,151 +507,43 @@ func (repository *SasaranOpdRepositoryImpl) Update(ctx context.Context, tx *sql.
 		return sasaranOpd, err
 	}
 	// 2. Ambil kode_indikator yang sudah ada di DB untuk sasaran ini
-	existingIndikatorMap := make(map[string]bool)
-	existingTargetMap := make(map[string]map[string]bool) // map[kode_indikator]map[target_id]bool
-	rowsInd, err := tx.QueryContext(ctx,
-		"SELECT kode_indikator FROM tb_indikator_matrix WHERE sasaran_opd_id = ? AND jenis = 'renstra'",
-		sasaranOpd.Id)
+	// existingIndikatorMap := make(map[string]bool)
+	// existingTargetMap := make(map[string]map[string]bool) // map[kode_indikator]map[target_id]bool
+	// DELETE INDIKATOR LAMA
+	scriptDeleteIndikator := "DELETE FROM tb_indikator_matrix WHERE sasaran_opd_id = ?"
+	_, err = tx.ExecContext(ctx, scriptDeleteIndikator, sasaranOpd.Id)
 	if err != nil {
 		return sasaranOpd, err
-	}
-	defer rowsInd.Close()
-	for rowsInd.Next() {
-		var kode string
-		if err := rowsInd.Scan(&kode); err != nil {
-			return sasaranOpd, err
-		}
-		existingIndikatorMap[kode] = true
-		existingTargetMap[kode] = make(map[string]bool)
-	}
-	rowsInd.Close()
-	// 3. Ambil target yang sudah ada untuk setiap indikator
-	for kode := range existingIndikatorMap {
-		rowsTrg, err := tx.QueryContext(ctx,
-			"SELECT id FROM tb_target WHERE indikator_id = ?", kode)
-		if err != nil {
-			return sasaranOpd, err
-		}
-		for rowsTrg.Next() {
-			var targetId string
-			if err := rowsTrg.Scan(&targetId); err != nil {
-				rowsTrg.Close()
-				return sasaranOpd, err
-			}
-			existingTargetMap[kode][targetId] = true
-		}
-		rowsTrg.Close()
 	}
 	// 4. Proses setiap indikator dari request
 	for _, indikator := range sasaranOpd.Indikator {
 		kode := indikator.KodeIndikator
-		if existingIndikatorMap[kode] {
-			// UPDATE indikator yang sudah ada
-			_, err := tx.ExecContext(ctx, `
-                UPDATE tb_indikator_matrix
-                SET indikator            = ?,
-                    rumus_perhitungan    = ?,
-                    sumber_data          = ?,
-                    definisi_operasional = ?
-                WHERE kode_indikator = ? AND sasaran_opd_id = ? AND jenis = 'renstra'`,
-				indikator.Indikator,
-				indikator.RumusPerhitungan.String,
-				indikator.SumberData.String,
-				indikator.DefinisiOperasional.String,
-				kode,
-				sasaranOpd.Id)
-			if err != nil {
-				return sasaranOpd, err
-			}
-		} else {
-			// INSERT indikator baru
-			_, err := tx.ExecContext(ctx, `
+		// INSERT indikator baru
+		_, err := tx.ExecContext(ctx, `
                 INSERT INTO tb_indikator_matrix
                     (kode_indikator, sasaran_opd_id, indikator, rumus_perhitungan,
                      sumber_data, definisi_operasional, jenis)
                 VALUES (?, ?, ?, ?, ?, ?, 'renstra')`,
-				kode,
-				sasaranOpd.Id,
-				indikator.Indikator,
-				indikator.RumusPerhitungan.String,
-				indikator.SumberData.String,
-				indikator.DefinisiOperasional.String)
-			if err != nil {
-				return sasaranOpd, err
-			}
+			kode,
+			sasaranOpd.Id,
+			indikator.Indikator,
+			indikator.RumusPerhitungan.String,
+			indikator.SumberData.String,
+			indikator.DefinisiOperasional.String)
+		if err != nil {
+			return sasaranOpd, err
 		}
 		// 5. Proses target untuk indikator ini
 		for _, target := range indikator.Target {
-			if existingTargetMap[kode][target.Id] {
-				// UPDATE target yang sudah ada
-				_, err := tx.ExecContext(ctx, `
-                    UPDATE tb_target
-                    SET target = ?, satuan = ?, tahun = ?
-                    WHERE id = ? AND indikator_id = ?`,
-					target.Target,
-					target.Satuan,
-					target.Tahun,
-					target.Id,
-					kode)
-				if err != nil {
-					return sasaranOpd, err
-				}
-			} else {
-				// INSERT target baru
-				_, err := tx.ExecContext(ctx, `
+			// INSERT target baru
+			_, err := tx.ExecContext(ctx, `
                     INSERT INTO tb_target (id, indikator_id, tahun, target, satuan)
                     VALUES (?, ?, ?, ?, ?)`,
-					target.Id,
-					kode,
-					target.Tahun,
-					target.Target,
-					target.Satuan)
-				if err != nil {
-					return sasaranOpd, err
-				}
-			}
-		}
-		// 6. Hapus target yang tidak ada di request
-		if targetMap, exists := existingTargetMap[kode]; exists {
-			for existingTargetId := range targetMap {
-				found := false
-				for _, t := range indikator.Target {
-					if t.Id == existingTargetId {
-						found = true
-						break
-					}
-				}
-				if !found {
-					_, err = tx.ExecContext(ctx,
-						"DELETE FROM tb_target WHERE id = ? AND indikator_id = ?",
-						existingTargetId, kode)
-					if err != nil {
-						return sasaranOpd, err
-					}
-				}
-			}
-		}
-	}
-	// 7. Hapus indikator yang tidak ada di request (beserta targetnya)
-	for existingKode := range existingIndikatorMap {
-		found := false
-		for _, indikator := range sasaranOpd.Indikator {
-			if indikator.KodeIndikator == existingKode {
-				found = true
-				break
-			}
-		}
-		if !found {
-			// Hapus semua target dulu
-			_, err = tx.ExecContext(ctx,
-				"DELETE FROM tb_target WHERE indikator_id = ?", existingKode)
-			if err != nil {
-				return sasaranOpd, err
-			}
-			// Hapus indikator
-			_, err = tx.ExecContext(ctx,
-				"DELETE FROM tb_indikator_matrix WHERE kode_indikator = ? AND sasaran_opd_id = ?",
-				existingKode, sasaranOpd.Id)
+				target.Id,
+				kode,
+				target.Tahun,
+				target.Target,
+				target.Satuan)
 			if err != nil {
 				return sasaranOpd, err
 			}
@@ -1644,9 +1536,6 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(
 
 	return results, nil
 }
-
-
-
 
 func (r *SasaranOpdRepositoryImpl) CreateRenjaIndikator(
 	ctx context.Context, tx *sql.Tx,
