@@ -103,7 +103,7 @@ func (repository *OpdRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, o
 }
 
 func (repository *OpdRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) (domainmaster.Opd, error) {
-	script := "SELECT id, kode_opd, nama_opd, singkatan, alamat, telepon, fax, email, website, nama_kepala_opd, nip_kepala_opd, pangkat_kepala, id_lembaga FROM tb_operasional_daerah WHERE kode_opd = ? LIMIT 40"
+	script := "SELECT id, kode_opd, nama_opd, singkatan, alamat, telepon, fax, email, website, nama_kepala_opd, nip_kepala_opd, pangkat_kepala, id_lembaga FROM tb_operasional_daerah WHERE kode_opd = ?"
 	rows, err := tx.QueryContext(ctx, script, kodeOpd)
 	if err != nil {
 		return domainmaster.Opd{}, err

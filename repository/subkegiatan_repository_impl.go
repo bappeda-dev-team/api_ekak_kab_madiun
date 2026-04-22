@@ -129,7 +129,7 @@ func (repository *SubKegiatanRepositoryImpl) Update(ctx context.Context, tx *sql
 }
 
 func (repository *SubKegiatanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) ([]domain.SubKegiatan, error) {
-	script := `SELECT id, kode_subkegiatan, nama_subkegiatan, created_at FROM tb_subkegiatan ORDER BY kode_subkegiatan ASC LIMIT 40`
+	script := `SELECT id, kode_subkegiatan, nama_subkegiatan, created_at FROM tb_subkegiatan ORDER BY kode_subkegiatan ASC`
 
 	rows, err := tx.QueryContext(ctx, script)
 	if err != nil {
