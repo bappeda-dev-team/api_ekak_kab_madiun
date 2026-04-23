@@ -107,4 +107,7 @@ type PohonKinerjaRepository interface {
 	FindPelaksanaPokinBatchForCascading(ctx context.Context, tx *sql.Tx, pohonKinerjaIds []int) ([]domain.PelaksanaPokin, error)
 
 	CheckIfSourceAlreadyCloned(ctx context.Context, tx *sql.Tx, sourceId int, tahunTarget string) (bool, error)
+	FindParentPokinByTahunGrupByKodeOpd(ctx context.Context, tx *sql.Tx, tahun string) (map[string][]int, error)
+	FindPokinOpdByParentIdsAndTahun(ctx context.Context, tx *sql.Tx, parentIds []int, tahun string) ([]domain.PohonKinerja, error)
+	FindPokinPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)
 }

@@ -4313,6 +4313,7 @@ type LeaderboardTematikNode struct {
 	Parent     int
 	LevelPohon int
 	NamaPohon  string
+	JenisPohon string
 }
 
 func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error) {
@@ -5390,4 +5391,117 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByParentClonePokinOpd(ctx
 		list = append(list, p)
 	}
 	return list, nil
+}
+
+func (repo *PohonKinerjaRepositoryImpl) FindParentPokinByTahunGrupByKodeOpd(ctx context.Context, tx *sql.Tx, tahun string) (map[string][]int, error) {
+	if tahun == "" {
+		return nil, fmt.Errorf("tahun tidak ditemukan")
+	}
+
+	query := `SELECT ph.parent, ph.kode_opd
+                  FROM tb_pohon_kinerja ph
+                  WHERE ph.tahun = ? AND ph.kode_opd != ''`
+
+	rows, err := tx.QueryContext(ctx, query, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]int)
+	for rows.Next() {
+		var parentPokin int
+		var kodeOpd string
+		err := rows.Scan(
+			&parentPokin,
+			&kodeOpd,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result[kodeOpd] = append(result[kodeOpd], parentPokin)
+	}
+
+	return result, nil
+}
+
+func (repo *PohonKinerjaRepositoryImpl) FindPokinOpdByParentIdsAndTahun(ctx context.Context, tx *sql.Tx, parentIds []int, tahun string) ([]domain.PohonKinerja, error) {
+	const op = "pohonkinerja_repository.FindPokinByParentIdsAndTahun"
+
+	if len(parentIds) == 0 {
+		return []domain.PohonKinerja{}, nil
+	}
+
+	baseQuery := `SELECT ph.id, ph.parent, ph.nama_pohon,
+                      ph.jenis_pohon, ph.level_pohon, ph.tahun, ph.kode_opd
+		      FROM tb_pohon_kinerja ph
+		      WHERE ph.parent IN (?) AND ph.tahun = ? AND ph.kode_opd != ''`
+
+	query, args := helper.BuildInQueryWithArgs(baseQuery, parentIds, tahun)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.PohonKinerja, 0)
+
+	for rows.Next() {
+		var pohon domain.PohonKinerja
+		err := rows.Scan(
+			&pohon.Id,
+			&pohon.Parent,
+			&pohon.NamaPohon,
+			&pohon.JenisPohon,
+			&pohon.LevelPohon,
+			&pohon.Tahun,
+			&pohon.KodeOpd,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, pohon)
+	}
+
+	return result, nil
+}
+
+func (repo *PohonKinerjaRepositoryImpl) FindPokinPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error) {
+	const op = "pohonkinerja_repository.FindPokinPemdaByTahun"
+
+	query := `SELECT ph.id, ph.parent, ph.nama_pohon,
+                      ph.jenis_pohon, ph.level_pohon, ph.tahun
+		      FROM tb_pohon_kinerja ph
+		      WHERE ph.level_pohon BETWEEN 0 AND 3
+                      AND ph.tahun = ?`
+
+	rows, err := tx.QueryContext(ctx, query, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.PohonKinerja, 0)
+
+	for rows.Next() {
+		var pohon domain.PohonKinerja
+		err := rows.Scan(
+			&pohon.Id,
+			&pohon.Parent,
+			&pohon.NamaPohon,
+			&pohon.JenisPohon,
+			&pohon.LevelPohon,
+			&pohon.Tahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, pohon)
+	}
+
+	return result, nil
 }
