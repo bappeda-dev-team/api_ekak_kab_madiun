@@ -2876,32 +2876,151 @@ var (
 // 	return response, nil
 // }
 
-func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(ctx context.Context, tahun string) ([]pohonkinerja.LeaderboardPokinResponse, error) {
+func (service *PohonKinerjaOpdServiceImpl) LeaderboardPokinOpd(
+	ctx context.Context,
+	tahun string,
+) ([]pohonkinerja.LeaderboardPokinResponse, error) {
+
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
 
-	leaderboardData, err := service.pohonKinerjaOpdRepository.LeaderboardPokinOpd(ctx, tx, tahun)
+	leaderboardData, err := service.pohonKinerjaOpdRepository.
+		LeaderboardPokinOpd(ctx, tx, tahun)
 	if err != nil {
 		return nil, err
 	}
 
-	tematikNodes, err := service.pohonKinerjaOpdRepository.FindLeaderboardTematikNodes(ctx, tx, tahun)
+	// all pokin pemda in tahun
+	pokinPemdas, err := service.pohonKinerjaOpdRepository.FindPokinPemdaByTahun(ctx, tx, tahun)
 	if err != nil {
 		return nil, err
 	}
+	pokinById := make(map[int]domain.PohonKinerja)
 
-	// Kelompokkan node tematik per kode_opd
+	for _, p := range pokinPemdas {
+
+		pokinById[p.Id] = p
+
+	}
+	type nodeWithRoot struct {
+		Node domain.PohonKinerja
+		Root domain.PohonKinerja // pemda asal
+	}
+	current := make([]nodeWithRoot, 0)
+
+	for _, root := range pokinPemdas {
+		current = append(current, nodeWithRoot{
+			Node: root,
+			Root: root,
+		})
+	}
+
+	resultPemda := make(map[string][]domain.PohonKinerja)
+	visited := make(map[int]bool)
+
+	for len(current) > 0 {
+
+		ids := make([]int, 0, len(current))
+		for _, c := range current {
+			ids = append(ids, c.Node.Id)
+		}
+
+		children, err := service.pohonKinerjaOpdRepository.
+			FindPokinOpdByParentIdsAndTahun(ctx, tx, ids, tahun)
+		if err != nil {
+			return nil, err
+		}
+
+		next := make([]nodeWithRoot, 0)
+
+		for _, child := range children {
+
+			if visited[child.Id] {
+				continue
+			}
+			visited[child.Id] = true
+
+			// FIX parent lookup
+			var parent nodeWithRoot
+			found := false
+
+			for _, c := range current {
+				if c.Node.Id == child.Parent {
+					parent = c
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[WARN] parent not found: child=%d parent=%d", child.Id, child.Parent)
+				continue
+			}
+
+			// mapping opd → tematik
+			if child.KodeOpd != "" {
+				resultPemda[child.KodeOpd] =
+					append(resultPemda[child.KodeOpd], parent.Root)
+			}
+
+			next = append(next, nodeWithRoot{
+				Node: child,
+				Root: parent.Root,
+			})
+		}
+
+		current = next
+	}
+
+	expanded := make(map[string][]domain.PohonKinerja)
+	for kodeOpd, pokins := range resultPemda {
+		for _, pok := range pokins {
+
+			chain := buildFullChain(pok, pokinById)
+
+			for _, c := range chain {
+
+				expanded[kodeOpd] = append(expanded[kodeOpd], c)
+
+			}
+
+		}
+	}
+	// 🔹 mapping ke tematik nodes
 	byOpd := make(map[string][]repository.LeaderboardTematikNode)
-	for _, n := range tematikNodes {
-		byOpd[n.KodeOpd] = append(byOpd[n.KodeOpd], n)
+
+	for kodeOpd, pokins := range expanded {
+
+		seen := make(map[int]bool)
+
+		for _, pok := range pokins {
+			if seen[pok.Id] {
+				continue
+			}
+			seen[pok.Id] = true
+
+			byOpd[kodeOpd] = append(byOpd[kodeOpd],
+				repository.LeaderboardTematikNode{
+					Id:         pok.Id,
+					Parent:     pok.Parent,
+					NamaPohon:  pok.NamaPohon,
+					KodeOpd:    kodeOpd,
+					JenisPohon: pok.JenisPohon,
+					LevelPohon: pok.LevelPohon,
+				})
+		}
 	}
 
+	// 🔹 build response
 	var response []pohonkinerja.LeaderboardPokinResponse
+
 	for _, data := range leaderboardData {
+
 		tematikTree := buildLeaderboardTematikTree(byOpd[data.KodeOpd])
+
 		response = append(response, pohonkinerja.LeaderboardPokinResponse{
 			KodeOpd:             data.KodeOpd,
 			NamaOpd:             data.NamaOpd,
@@ -2918,6 +3037,8 @@ type leaderboardTematikWrap struct {
 	id       int
 	parent   int
 	nama     string
+	jenis    string
+	level    int
 	children []*leaderboardTematikWrap
 }
 
@@ -2930,7 +3051,7 @@ func buildLeaderboardTematikTree(nodes []repository.LeaderboardTematikNode) []po
 			continue
 		}
 		seen[n.Id] = struct{}{}
-		byID[n.Id] = &leaderboardTematikWrap{id: n.Id, parent: n.Parent, nama: n.NamaPohon}
+		byID[n.Id] = &leaderboardTematikWrap{id: n.Id, parent: n.Parent, nama: n.NamaPohon, jenis: n.JenisPohon, level: n.LevelPohon}
 		order = append(order, n.Id)
 	}
 	var roots []*leaderboardTematikWrap
@@ -2974,7 +3095,7 @@ func buildLeaderboardTematikTree(nodes []repository.LeaderboardTematikNode) []po
 		for i, c := range w.children {
 			anak[i] = toItem(c)
 		}
-		return pohonkinerja.LeaderboardTematikItem{Nama: w.nama, Anak: anak}
+		return pohonkinerja.LeaderboardTematikItem{Nama: w.nama, Jenis: w.jenis, Level: w.level, Anak: anak}
 	}
 	out := make([]pohonkinerja.LeaderboardTematikItem, len(roots))
 	for i, r := range roots {
@@ -3331,4 +3452,30 @@ func (service *PohonKinerjaOpdServiceImpl) pohonKinerjaOpdResponsesBatchForPokin
 		})
 	}
 	return out, nil
+}
+
+func buildFullChain(
+	start domain.PohonKinerja,
+	pokinById map[int]domain.PohonKinerja,
+) []domain.PohonKinerja {
+
+	var result []domain.PohonKinerja
+	current := start
+
+	for {
+		result = append(result, current)
+
+		if current.Parent == 0 {
+			break
+		}
+
+		parent, ok := pokinById[current.Parent]
+		if !ok {
+			break
+		}
+
+		current = parent
+	}
+
+	return result
 }
