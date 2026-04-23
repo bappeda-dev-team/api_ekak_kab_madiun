@@ -1196,58 +1196,15 @@ func mergeIndikator(
 	indikatorLama []domain.Indikator,
 ) []domain.Indikator {
 
-	// 🔹 fallback full kalau data baru kosong
+	// fallback kalau data baru kosong
 	if len(indikatorBaru) == 0 {
 		log.Println("USING INDIKATOR LAMA")
 		return indikatorLama
 	}
 
-	// 🔹 map lama by kode_indikator
-	lamaMap := make(map[string]domain.Indikator)
-	for _, ind := range indikatorLama {
-		lamaMap[ind.KodeIndikator] = ind
-	}
+	log.Println("USING INDIKATOR BARU")
 
-	var result []domain.Indikator
-
-	for i := range indikatorBaru {
-		ind := indikatorBaru[i]
-
-		// FILTER: skip kalau indikator kosong
-		if ind.Indikator == "" {
-			continue
-		}
-
-		lama, exists := lamaMap[ind.KodeIndikator]
-
-		// entity-level fallback
-		if isEmptyIndikator(ind) && exists {
-			result = append(result, lama)
-			continue
-		}
-
-		// 🔹 field-level fallback
-		if exists {
-			ind.DefinisiOperasional = fallbackNullString(
-				ind.DefinisiOperasional,
-				lama.DefinisiOperasional,
-			)
-
-			if len(ind.Target) == 0 {
-				ind.Target = lama.Target
-			}
-		}
-
-		result = append(result, ind)
-	}
-
-	// fallback global
-	if len(result) == 0 {
-		log.Println("TUJUAN OPD USING INDIKATOR LAMA")
-		return indikatorLama
-	}
-
-	return result
+	return indikatorBaru
 }
 
 func isEmptyIndikator(ind domain.Indikator) bool {
