@@ -1163,6 +1163,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
             pk.id = ?`
 
 	var pokin domain.PohonKinerja
+	var cloneFromNullInt sql.NullInt64
 	err := tx.QueryRowContext(ctx, script, id).Scan(
 		&pokin.Id,
 		&pokin.Parent,
@@ -1174,13 +1175,19 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 		&pokin.Tahun,
 		&pokin.Status,
 		&pokin.IsActive,
-		&pokin.CloneFrom,
+		&cloneFromNullInt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.PohonKinerja{}, fmt.Errorf("pohon kinerja tidak ditemukan")
 		}
 		return domain.PohonKinerja{}, err
+	}
+	if cloneFromNullInt.Valid {
+		pokin.CloneFrom = int(cloneFromNullInt.Int64)
+	} else {
+
+		pokin.CloneFrom = 0
 	}
 
 	// Ambil data tagging
