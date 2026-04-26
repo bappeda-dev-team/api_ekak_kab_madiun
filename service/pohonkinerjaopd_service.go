@@ -4,6 +4,7 @@ import (
 	"context"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/model/web/strategic"
+	"ekak_kabupaten_madiun/model/web/strategicarahkebijakan"
 )
 
 type PohonKinerjaOpdService interface {
@@ -13,6 +14,7 @@ type PohonKinerjaOpdService interface {
 	FindById(ctx context.Context, id int) (pohonkinerja.PohonKinerjaOpdResponse, error)
 	FindAll(ctx context.Context, kodeOpd, tahun string) (pohonkinerja.PohonKinerjaOpdAllResponse, error)
 	FindAllArah(ctx context.Context, kodeOpd, tahun string) (strategic.StrategicArahKebijakanOpdAllResponse, error)
+	FindAllArahPemda(ctx context.Context, kodeOpd, tahun string) (strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse, error)
 	FindStrategicNoParent(ctx context.Context, kodeOpd, tahun string) ([]pohonkinerja.StrategicOpdResponse, error)
 	DeletePelaksana(ctx context.Context, pelaksanaId string) error
 	FindPokinByPelaksana(ctx context.Context, pegawaiId string, tahun string) ([]pohonkinerja.PohonKinerjaOpdResponse, error)
