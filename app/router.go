@@ -61,6 +61,7 @@ func NewRouter(
 	matrixRenjaController controller.MatrixRenjaController,
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
+	indikatorController controller.IndikatorController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -472,7 +473,7 @@ func NewRouter(
 	router.GET("/program_unggulan/findbytahun/:tahun", programUnggulanController.FindByTahun)
 	router.GET("/program_unggulan/findunusedbytahun/:tahun", programUnggulanController.FindUnusedByTahun)
 	router.POST("/program_unggulan/findbyidterkait", programUnggulanController.FindByIdTerkait)
-	
+
 	//Master Program Prioritas Pusat
 	router.GET("/program_prioritas_pusat/findall", programPrioritasPusatController.FindAll)
 	router.GET("/program_prioritas_pusat/detail/:id", programPrioritasPusatController.FindById)
@@ -571,6 +572,13 @@ func NewRouter(
 	// Leaderboard Hidden
 	router.POST("/leaderboard_rekin_hidden/upsert", pohonKinerjaOpdController.UpsertLeaderboardHidden)
 	router.GET("/leaderboard_rekin_hidden/findall/:tahun", pohonKinerjaOpdController.FindLeaderboardHiddenKodeOpds)
+
+	// IKM
+	router.GET("/ikm_pemda/findall_periode", indikatorController.FindAllPeriode)
+	router.GET("/ikm_pemda/findbyid/:id", indikatorController.FindById)
+	router.POST("/ikm_pemda", indikatorController.Create)
+	router.PUT("/ikm_pemda/:id", indikatorController.Update)
+	router.DELETE("/ikm_pemda/:id", indikatorController.Delete)
 
 	return router
 }

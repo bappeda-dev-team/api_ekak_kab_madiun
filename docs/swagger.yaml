@@ -47,6 +47,71 @@ definitions:
       target:
         type: string
     type: object
+  iku.TargetResponse:
+    properties:
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  indikator.IkmRequest:
+    properties:
+      definisi_operasional:
+        type: string
+      indikator:
+        type: string
+      is_active:
+        type: boolean
+      jenis:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/iku.TargetResponse'
+        type: array
+    type: object
+  indikator.IkmResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      indikator:
+        type: string
+      is_active:
+        type: boolean
+      jenis:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/iku.TargetResponse'
+        type: array
+    type: object
   pohonkinerja.ControlPokinOpdData:
     properties:
       jumlah_pelaksana:
@@ -166,6 +231,10 @@ definitions:
         items:
           $ref: '#/definitions/pohonkinerja.LeaderboardTematikItem'
         type: array
+      jenis:
+        type: string
+      level:
+        type: integer
       nama:
         type: string
     type: object
@@ -1074,6 +1143,158 @@ info:
   title: EKAK Kabupaten Madiun API
   version: "1.0"
 paths:
+  /ikm:
+    get:
+      consumes:
+      - application/json
+      description: Get all indikator IKM berdasarkan tahun awal dan akhir
+      parameters:
+      - description: Tahun Awal
+        in: query
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        in: query
+        name: tahun_akhir
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/indikator.IkmResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Get IKM by Periode
+      tags:
+      - Indikator IKM
+    post:
+      consumes:
+      - application/json
+      description: Membuat indikator IKM baru
+      parameters:
+      - description: Request Body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/indikator.IkmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Create IKM
+      tags:
+      - Indikator IKM
+  /ikm/{id}:
+    delete:
+      description: Hapus indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Delete IKM
+      tags:
+      - Indikator IKM
+    get:
+      description: Get indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Get IKM by ID
+      tags:
+      - Indikator IKM
+    put:
+      consumes:
+      - application/json
+      description: Update indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request Body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/indikator.IkmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Update IKM
+      tags:
+      - Indikator IKM
   /iku_renja_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
