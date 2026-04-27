@@ -1,9 +1,6 @@
 package strategicarahkebijakan
 
 type StrategicArahKebijakanPemdaAllResponse struct {
-	KodePemda                   string                               `json:"kode_pemda"`
-	NamaPemda                   string                               `json:"nama_pemda"`
-	Tahun                       string                               `json:"tahun"`
 	IsuStrategisPemda           []IsuStrategiPemdaResponse           `json:"isu_strategis_pemdas"`
 	TujuanPemda                 []TujuanPemdaResponse                `json:"tujuan_pemda"`
 	StrategiArahKebijakanPemdas []StrategiArahKebijakanPemdaResponse `json:"strategi_arah_kebijakan_pemdas"`
@@ -14,9 +11,8 @@ type IsuStrategiPemdaResponse struct {
 }
 
 type TujuanPemdaResponse struct {
-	Id        int    `json:"id"`
-	KodePemda string `json:"kode_pemda"`
-	Tujuan    string `json:"tujuan"`
+	Id     int    `json:"id"`
+	Tujuan string `json:"tujuan"`
 }
 
 type StrategiArahKebijakanPemdaResponse struct {

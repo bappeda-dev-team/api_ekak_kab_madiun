@@ -13,7 +13,7 @@ type PohonKinerjaOpdController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllArah(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
-	FindAllArahPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	// FindAllArahPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindStrategicNoParent(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeletePelaksana(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindPokinByPelaksana(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
