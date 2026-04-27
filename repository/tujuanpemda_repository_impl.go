@@ -379,7 +379,7 @@ func (repository *TujuanPemdaRepositoryImpl) FindAllBetweenTahun(ctx context.Con
         ORDER BY 
             tp.id`
 
-	rows, err := tx.QueryContext(ctx, query, tahunAwal, tahunAkhir, jenisPeriode)
+	rows, err := tx.QueryContext(ctx, query, tahunAkhir, tahunAwal, jenisPeriode)
 	if err != nil {
 		return nil, fmt.Errorf("error querying tujuan pemda: %v", err)
 	}
