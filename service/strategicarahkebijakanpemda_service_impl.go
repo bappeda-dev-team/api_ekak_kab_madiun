@@ -55,6 +55,8 @@ func (service *StrategicArahKebijakanPemdaServiceImpl) FindAll(ctx context.Conte
 			})
 		}
 		response.IsuStrategisPemda = Responses
+	} else {
+		response.IsuStrategisPemda = nil
 	}
 	
 
@@ -79,28 +81,41 @@ func (service *StrategicArahKebijakanPemdaServiceImpl) FindAll(ctx context.Conte
 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
 	}
 	if len(sasaranOpds) > 0 {
-	strategiResponses := make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0)
+		strategiResponses := make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0)
 
 		for _, s := range sasaranOpds {
 
-			strategiResponses = append(strategiResponses, strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{
-				TujuanPemda: s.NamaTujuanPemda, // pastikan field ini ada di domain
-				SasaranPemdas: []strategicarahkebijakan.SasaranPemdaResponse{
+			// arah kebijakan (bisa null)
+			var arahKebijakan []strategicarahkebijakan.ArahKebijakanPemdaResponse
+			if s.NamaArahKebijakan != "" {
+				arahKebijakan = []strategicarahkebijakan.ArahKebijakanPemdaResponse{
 					{
-						SasaranPemda: s.NamaSasaranPemda,
-						StrategiPemda: s.NamaStrategi, // kalau ada
-						ArahKebijakanPemdas: []strategicarahkebijakan.ArahKebijakanPemdaResponse{
-							{
-								ArahKebijakanPemda: s.NamaArahKebijakan, // kalau ada
-							},
-						},
+						ArahKebijakanPemda: s.NamaArahKebijakan,
 					},
-				},
+				}
+			}
+
+			// sasaran (bisa null)
+			var sasaran []strategicarahkebijakan.SasaranPemdaResponse
+			if s.NamaSasaranPemda != "" {
+				sasaran = []strategicarahkebijakan.SasaranPemdaResponse{
+					{
+						SasaranPemda:        s.NamaSasaranPemda,
+						StrategiPemda:       s.NamaStrategi,
+						ArahKebijakanPemdas: arahKebijakan,
+					},
+				}
+			}
+
+			strategiResponses = append(strategiResponses, strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{
+				TujuanPemda:   s.NamaTujuanPemda,
+				SasaranPemdas: sasaran,
 			})
 		}
 
 		response.StrategiArahKebijakanPemdas = strategiResponses
 	}
+
 
 
 	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
