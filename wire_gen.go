@@ -13,12 +13,11 @@ import (
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
+	"net/http"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/google/wire"
-	"net/http"
-)
 
-import (
 	_ "ekak_kabupaten_madiun/docs"
 )
 
@@ -163,6 +162,9 @@ func InitializeServer() *http.Server {
 	programPrioritasPusatRepositoryImpl := repository.NewProgramPrioritasPusatRepositoryImpl()
 	programPrioritasPusatServiceImpl := service.NewProgramPrioritasPusatServiceImpl(programPrioritasPusatRepositoryImpl, db, validate)
 	programPrioritasPusatControllerImpl := controller.NewProgramPrioritasPusatControllerImpl(programPrioritasPusatServiceImpl)
+	ikkRepositoryImpl := repository.NewIkkRepositoryImpl()
+	ikkServiceImpl := service.NewIkkServiceImpl(ikkRepositoryImpl, db, validate)
+	ikkControllerImpl := controller.NewIkkControllerImpl(ikkServiceImpl)
 	matrixRenjaRepositoryImpl := repository.NewMatrixRenjaRepositoryImpl()
 	matrixRenjaServiceImpl := service.NewMatrixRenjaServiceImpl(matrixRenjaRepositoryImpl, periodeRepositoryImpl, pegawaiRepositoryImpl, db)
 	matrixRenjaControllerImpl := controller.NewMatrixRenjaControllerImpl(matrixRenjaServiceImpl)
@@ -175,7 +177,7 @@ func InitializeServer() *http.Server {
 	ikmRepositoryImpl := repository.NewIkmRepositoryImpl()
 	ikmServiceImpl := service.NewIkmServiceImpl(ikmRepositoryImpl, db, validate)
 	indikatorControllerImpl := controller.NewIndikatorControllerImpl(ikmServiceImpl)
-	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, indikatorControllerImpl)
+	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, indikatorControllerImpl, ikkControllerImpl)
 	authMiddleware := middleware.NewAuthMiddleware(router)
 	server := NewServer(authMiddleware)
 	return server

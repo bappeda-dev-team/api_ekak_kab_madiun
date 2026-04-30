@@ -62,6 +62,7 @@ func NewRouter(
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
 	indikatorController controller.IndikatorController,
+	ikkController controller.IkkController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -485,6 +486,13 @@ func NewRouter(
 	router.GET("/program_prioritas_pusat/findbytahun/:tahun", programPrioritasPusatController.FindByTahun)
 	router.GET("/program_prioritas_pusat/findunusedbytahun/:tahun", programPrioritasPusatController.FindUnusedByTahun)
 	router.POST("/program_prioritas_pusat/findbyidterkait", programPrioritasPusatController.FindByIdTerkait)
+	
+	//Master IKK
+	router.GET("/ikk/findall/:level_pohon/:kode_opd", ikkController.FindByKodeOpd)
+	router.GET("/ikk/detail/:id", ikkController.FindById)
+	router.POST("/ikk/create", ikkController.Create)
+	router.PUT("/ikk/update/:id", ikkController.Update)
+	router.DELETE("/ikk/delete/:id", ikkController.Delete)
 
 	//matrix renja
 	router.GET("/matrix_renja/ranwal/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)
