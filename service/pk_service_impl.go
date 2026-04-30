@@ -137,7 +137,6 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				NamaJabatan: namaJabatanKepalaDaerah,
 			}
 	}
-	candidateKepalaOpd := buildLevel4Candidates(sasaranPemda)
 	// DEPRECATED 1/04/2026
 	// changed to pagu penetapan from subkegiatan
 	// anggaran by rekin id
@@ -345,7 +344,14 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		}
 		var candidateAtasans []pkopd.AtasanCandidate
 		if level == 4 {
-			candidateAtasans = candidateKepalaOpd
+			pegawaiPemilik := *pkByLevel[level][nip]
+			candidateAtasans = resolveLevel4Candidates(
+				rekin,
+				rekins,
+				sasaranPemda,
+				pegawaiPemilik,
+				pegawaiByNip,
+			)
 		} else {
 			candidateAtasans = listAtasanByPegawaiId[rekin.PegawaiId]
 		}
@@ -1020,4 +1026,71 @@ func buildLevel4Candidates(sasaranPemdas []domain.AllSasaranPemdaPk) []pkopd.Ata
 		})
 	}
 	return result
+}
+
+func resolveLevel4Candidates(
+	rekin rencanakinerja.RencanaKinerjaResponse,
+	rekins []rencanakinerja.RencanaKinerjaResponse,
+	sasaranPemdas []domain.AllSasaranPemdaPk,
+	pegawai pkopd.PkPegawai,
+	pegawaiByNip map[string]pegawai.PegawaiResponse,
+) []pkopd.AtasanCandidate {
+
+	jabatanPegawai := normalizeNama(pegawai.JabatanPegawai)
+
+	// hanya berlaku untuk Setda
+	if normalizeNama(rekin.KodeOpd.NamaOpd) != "SEKRETARIATDAERAH" {
+		return buildLevel4Candidates(sasaranPemdas)
+	}
+
+	if jabatanPegawai == "SEKRETARISDAERAH" {
+		return buildLevel4Candidates(sasaranPemdas)
+	}
+
+	if jabatanPegawai == "ASISTEN" {
+		seen := make(map[string]bool)
+		var result []pkopd.AtasanCandidate
+
+		for _, r := range rekins {
+			if r.LevelPohon != 4 {
+				continue
+			}
+
+			if normalizeNama(r.KodeOpd.NamaOpd) != "SEKRETARIATDAERAH" {
+				continue
+			}
+
+			pegawaiAtasan, ok := pegawaiByNip[r.PegawaiId]
+			if !ok {
+				continue
+			}
+
+			if normalizeNama(pegawaiAtasan.NamaJabatan) != "SEKRETARISDAERAH" {
+				continue
+			}
+
+			if seen[r.PegawaiId] {
+				continue
+			}
+			seen[r.PegawaiId] = true
+
+			result = append(result, pkopd.AtasanCandidate{
+				IdPegawai:    r.PegawaiId,
+				NamaPegawai:  r.NamaPegawai,
+				LevelPegawai: 4,
+				KodeOpd:      r.KodeOpd.KodeOpd,
+				NamaOpd:      r.KodeOpd.NamaOpd,
+			})
+		}
+
+		return result
+	}
+
+	return nil
+}
+
+// normaizeNama akan membuang spasi dan membuat karakter
+// jadi kapital semua
+func normalizeNama(namaJabatan string) string {
+	return strings.ToUpper(namaJabatan)
 }
