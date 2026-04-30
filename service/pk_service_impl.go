@@ -214,7 +214,8 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			},
 		)
 	}
-
+	// candidates atasan
+	listAtasanByPegawaiId := buildAtasanMap(rekins)
 	// pk yang sudah tersimpan di opd dan tahun
 	// grouping by level
 	pkOpds, err := service.pkOpdRepository.FindByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
@@ -342,6 +343,11 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			indikatorPk = append(indikatorPk, *ind)
 		}
 
+		candidateAtasans, ok := listAtasanByPegawaiId[rekin.PegawaiId]
+		if !ok {
+			continue
+		}
+
 		// default PK (BELUM ADA)
 		pkAsn := pkopd.PkAsn{
 			Id:               "",
@@ -356,6 +362,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			NamaPemilikPk:    rekin.NamaPegawai,
 			Tahun:            tahun,
 			Indikators:       indikatorPk,
+			AtasanCandidates: candidateAtasans,
 		}
 
 		// enrich dari PK jika ada
@@ -866,4 +873,35 @@ func replaceKode(kode, kodeOpd string) string {
 
 	// gabungkan dengan sisa kode lama
 	return newPrefix + "." + strings.Join(kParts[2:], ".")
+}
+
+func buildAtasanMap(rekins []rencanakinerja.RencanaKinerjaResponse) map[string][]pkopd.AtasanCandidate {
+	candidates := make(map[string][]pkopd.AtasanCandidate)
+	index := make(map[int]rencanakinerja.RencanaKinerjaResponse)
+	for _, r := range rekins {
+		index[r.IdPohon] = r
+	}
+
+	for _, rekin := range rekins {
+		parentId := rekin.IdParentPohon
+		if parentId == 0 {
+			continue
+		}
+		parent, ok := index[parentId]
+		if !ok {
+			continue
+		}
+		candidates[rekin.PegawaiId] = []pkopd.AtasanCandidate{
+
+			{
+				IdPegawai:    parent.PegawaiId,
+				NamaPegawai:  parent.NamaPegawai,
+				LevelPegawai: parent.LevelPohon,
+				KodeOpd:      parent.KodeOpd.KodeOpd,
+				NamaOpd:      parent.KodeOpd.NamaOpd,
+			},
+		}
+	}
+
+	return candidates
 }
