@@ -156,6 +156,18 @@ func (controller *PohonKinerjaOpdControllerImpl) FindById(writer http.ResponseWr
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// docs swagger pokin opd
+// @Summary      Find All Pohon Kinerja Opd
+// @Description  Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.
+// @Tags         Pohon Kinerja Opd
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd    path     string  true  "Kode OPD"
+// @Param        tahun       path     string  true  "Tahun"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.PohonKinerjaOpdAllResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/findall/{kode_opd}/{tahun} [get]
 func (controller *PohonKinerjaOpdControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
