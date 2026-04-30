@@ -343,10 +343,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			indikatorPk = append(indikatorPk, *ind)
 		}
 
-		candidateAtasans, ok := listAtasanByPegawaiId[rekin.PegawaiId]
-		if !ok {
-			continue
-		}
+		candidateAtasans := listAtasanByPegawaiId[rekin.PegawaiId]
 
 		// default PK (BELUM ADA)
 		pkAsn := pkopd.PkAsn{
@@ -877,9 +874,10 @@ func replaceKode(kode, kodeOpd string) string {
 
 func buildAtasanMap(rekins []rencanakinerja.RencanaKinerjaResponse) map[string][]pkopd.AtasanCandidate {
 	candidates := make(map[string][]pkopd.AtasanCandidate)
-	index := make(map[int]rencanakinerja.RencanaKinerjaResponse)
+	index := make(map[int][]rencanakinerja.RencanaKinerjaResponse)
+	seenAtasan := make(map[string]map[string]bool)
 	for _, r := range rekins {
-		index[r.IdPohon] = r
+		index[r.IdPohon] = append(index[r.IdPohon], r)
 	}
 
 	for _, rekin := range rekins {
@@ -887,20 +885,34 @@ func buildAtasanMap(rekins []rencanakinerja.RencanaKinerjaResponse) map[string][
 		if parentId == 0 {
 			continue
 		}
-		parent, ok := index[parentId]
+
+		parents, ok := index[parentId]
 		if !ok {
 			continue
 		}
-		candidates[rekin.PegawaiId] = []pkopd.AtasanCandidate{
+		pegawaiId := rekin.PegawaiId
 
-			{
+		if _, ok := seenAtasan[pegawaiId]; !ok {
+			seenAtasan[pegawaiId] = make(map[string]bool)
+		}
+
+		for _, parent := range parents {
+			parentPegawaiId := parent.PegawaiId
+
+			if seenAtasan[pegawaiId][parentPegawaiId] {
+				continue
+			}
+			seenAtasan[pegawaiId][parentPegawaiId] = true
+
+			candidates[pegawaiId] = append(candidates[pegawaiId], pkopd.AtasanCandidate{
 				IdPegawai:    parent.PegawaiId,
 				NamaPegawai:  parent.NamaPegawai,
 				LevelPegawai: parent.LevelPohon,
 				KodeOpd:      parent.KodeOpd.KodeOpd,
 				NamaOpd:      parent.KodeOpd.NamaOpd,
-			},
+			})
 		}
+
 	}
 
 	return candidates
