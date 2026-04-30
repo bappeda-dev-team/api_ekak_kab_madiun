@@ -62,6 +62,18 @@ type PkAsn struct {
 	Tahun            int           `json:"tahun"`
 	Keterangan       string        `json:"keterangan"`
 	Indikators       []IndikatorPk `json:"indikators"`
+	// daftar atasan untuk menghubungkan rekin pegawai
+	AtasanCandidates []AtasanCandidate `json:"atasan_candidates"`
+}
+
+type AtasanCandidate struct {
+	IdPegawai           string `json:"id_pegawai"`
+	NamaPegawai         string `json:"nama_pegawai"`
+	LevelPegawai        int    `json:"level_pegawai"`
+	KodeOpd             string `json:"kode_opd"`
+	NamaOpd             string `json:"nama_opd"`
+	IdPohonAtasan       int    `json:"id_pohon_atasan"`
+	IdParentPohonAtasan int    `json:"id_parent_pohon_atasan"`
 }
 
 type IndikatorPk struct {

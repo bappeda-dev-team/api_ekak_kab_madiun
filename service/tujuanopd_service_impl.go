@@ -281,7 +281,7 @@ func (service *TujuanOpdServiceImpl) FindById(ctx context.Context, tujuanOpdId i
 	tujuanOpdIds := []int{tujuanOpd.Id}
 	indikatorTujuan, err := service.getIndikatorWithFallback(ctx, tx, tujuanOpdIds)
 	if err != nil {
-		log.Printf("ERROR service.getIndikatorWithFallback: %w", err)
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
 		return tujuanopd.TujuanOpdResponse{}, err
 	}
 
