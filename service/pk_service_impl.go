@@ -137,6 +137,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				NamaJabatan: namaJabatanKepalaDaerah,
 			}
 	}
+	candidateKepalaOpd := buildLevel4Candidates(sasaranPemda)
 	// DEPRECATED 1/04/2026
 	// changed to pagu penetapan from subkegiatan
 	// anggaran by rekin id
@@ -342,8 +343,12 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		for _, ind := range indikatorMap {
 			indikatorPk = append(indikatorPk, *ind)
 		}
-
-		candidateAtasans := listAtasanByPegawaiId[rekin.PegawaiId]
+		var candidateAtasans []pkopd.AtasanCandidate
+		if level == 4 {
+			candidateAtasans = candidateKepalaOpd
+		} else {
+			candidateAtasans = listAtasanByPegawaiId[rekin.PegawaiId]
+		}
 
 		// default PK (BELUM ADA)
 		pkAsn := pkopd.PkAsn{
@@ -872,7 +877,13 @@ func replaceKode(kode, kodeOpd string) string {
 	return newPrefix + "." + strings.Join(kParts[2:], ".")
 }
 
+// buildAtasanMap digunakan untuk membuat map (key value) atasan by idPegawai bawahan
+// buildAtasanMap memberikan daftar possible atasan by jalur pokin
+// ini berbeda dengan atasan di struktur organisasi, disana sudah jelas siapa saja atasannya
 func buildAtasanMap(rekins []rencanakinerja.RencanaKinerjaResponse) map[string][]pkopd.AtasanCandidate {
+	if len(rekins) <= 0 {
+		return map[string][]pkopd.AtasanCandidate{}
+	}
 	candidates := make(map[string][]pkopd.AtasanCandidate)
 	index := make(map[int][]rencanakinerja.RencanaKinerjaResponse)
 	seenAtasan := make(map[string]map[string]bool)
@@ -886,17 +897,22 @@ func buildAtasanMap(rekins []rencanakinerja.RencanaKinerjaResponse) map[string][
 			continue
 		}
 
-		parents, ok := index[parentId]
-		if !ok {
-			continue
-		}
+		allParents := collectParents(index, parentId)
 		pegawaiId := rekin.PegawaiId
+		// level -> parent
+		// levelPegawai 4 -> kosong, ambil dari pokin pemda
+		// levelPegawai 5 -> pegawai level 4
+		// levelPegawai 6 -> pegawai level 4 dan 5
+		// levelPegawai 7,8,... -> pegawai level 6
 
 		if _, ok := seenAtasan[pegawaiId]; !ok {
 			seenAtasan[pegawaiId] = make(map[string]bool)
 		}
 
-		for _, parent := range parents {
+		for _, parent := range allParents {
+			if !isValidAtasan(rekin.LevelPohon, parent.LevelPohon) {
+				continue
+			}
 			parentPegawaiId := parent.PegawaiId
 
 			if seenAtasan[pegawaiId][parentPegawaiId] {
@@ -905,15 +921,103 @@ func buildAtasanMap(rekins []rencanakinerja.RencanaKinerjaResponse) map[string][
 			seenAtasan[pegawaiId][parentPegawaiId] = true
 
 			candidates[pegawaiId] = append(candidates[pegawaiId], pkopd.AtasanCandidate{
-				IdPegawai:    parent.PegawaiId,
-				NamaPegawai:  parent.NamaPegawai,
-				LevelPegawai: parent.LevelPohon,
-				KodeOpd:      parent.KodeOpd.KodeOpd,
-				NamaOpd:      parent.KodeOpd.NamaOpd,
+				IdPegawai:           parent.PegawaiId,
+				NamaPegawai:         parent.NamaPegawai,
+				LevelPegawai:        parent.LevelPohon,
+				KodeOpd:             parent.KodeOpd.KodeOpd,
+				NamaOpd:             parent.KodeOpd.NamaOpd,
+				IdPohonAtasan:       parent.IdPohon,
+				IdParentPohonAtasan: parent.IdParentPohon,
 			})
 		}
 
 	}
+	// sort
+	for pegawaiId := range candidates {
+		sort.Slice(candidates[pegawaiId], func(i, j int) bool {
+			return candidates[pegawaiId][i].LevelPegawai < candidates[pegawaiId][j].LevelPegawai
+		})
+	}
 
 	return candidates
+}
+
+// collectParents digunakan untuk collect parentPokin secara recursive
+// hingga ke ujung id parent
+func collectParents(
+	index map[int][]rencanakinerja.RencanaKinerjaResponse,
+	startParentId int,
+) []rencanakinerja.RencanaKinerjaResponse {
+
+	var result []rencanakinerja.RencanaKinerjaResponse
+	visited := make(map[int]bool)
+
+	queue := []int{startParentId}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if visited[current] {
+			continue
+		}
+		visited[current] = true
+
+		parents := index[current]
+		result = append(result, parents...)
+
+		for _, p := range parents {
+			if p.IdParentPohon != 0 {
+				queue = append(queue, p.IdParentPohon)
+			}
+		}
+	}
+
+	return result
+}
+
+// isValidAtasan adalah daftar atasan per level
+// fungsi ini untuk memudahkan kontrol allowed atasan
+// karena ada case level 6 bisa ke level 4 dan 5
+// dan level 7 keatas hanya bisa ke level 6
+func isValidAtasan(childLevel int, parentLevel int) bool {
+	switch childLevel {
+	case 4:
+		return false
+	case 5:
+		return parentLevel == 4
+	case 6:
+		return parentLevel == 4 || parentLevel == 5
+	default: // 7,8,...
+		return parentLevel == 6
+	}
+}
+
+// buildLevel4Candidates adalah fungsi untuk membuat kandidat atasan pegawai level 4
+// pada opd setda, terdapat 2 jabatan pegawai yang ber level 4
+// sekda dan asisten:
+// sekda mengarah ke kepala daerah
+// aisten mengarah ke sekda
+func buildLevel4Candidates(sasaranPemdas []domain.AllSasaranPemdaPk) []pkopd.AtasanCandidate {
+	if len(sasaranPemdas) <= 0 {
+		return []pkopd.AtasanCandidate{}
+	}
+	seen := make(map[string]bool)
+	var result []pkopd.AtasanCandidate
+
+	for _, sp := range sasaranPemdas {
+		nip := sp.NipKepalaPemda
+		if seen[nip] {
+			continue
+		}
+
+		seen[nip] = true
+
+		result = append(result, pkopd.AtasanCandidate{
+			IdPegawai:    nip,
+			NamaPegawai:  sp.NamaKepalaPemda,
+			LevelPegawai: 3,
+		})
+	}
+	return result
 }

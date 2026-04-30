@@ -1,7 +1,7 @@
 package service
 
 import (
-	"ekak_kabupaten_madiun/model/web/opdmaster"
+	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/pkopd"
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 	"testing"
@@ -70,150 +70,150 @@ func TestReplaceKode(t *testing.T) {
 		})
 	}
 }
+
 func TestBuildAtasanMap(t *testing.T) {
 	tests := []struct {
 		name     string
 		rekins   []rencanakinerja.RencanaKinerjaResponse
 		expected map[string][]pkopd.AtasanCandidate
 	}{
-		// [pegawaiIdBawahan] -> []candiateAtasans
 		{
-			name: "single parent relationship",
+			name: "level 5 -> only level 4",
 			rekins: []rencanakinerja.RencanaKinerjaResponse{
-				{
-					IdPohon:     1,
-					PegawaiId:   "atasan",
-					NamaPegawai: "Atasan A",
-					LevelPohon:  4,
-					KodeOpd: opdmaster.OpdResponseForAll{
-						KodeOpd: "OPD1",
-						NamaOpd: "Dinas A",
-					},
-				},
-				{
-					IdPohon:       2,
-					IdParentPohon: 1,
-					LevelPohon:    5,
-					PegawaiId:     "bawahan123",
-					NamaPegawai:   "Bawahan B",
-				},
+				{IdPohon: 1, PegawaiId: "kadis", NamaPegawai: "Kadis", LevelPohon: 4},
+				{IdPohon: 2, IdParentPohon: 1, PegawaiId: "kabid", NamaPegawai: "Kabid", LevelPohon: 5},
 			},
 			expected: map[string][]pkopd.AtasanCandidate{
-				"bawahan123": {
-					{
-						IdPegawai:    "atasan",
-						NamaPegawai:  "Atasan A",
-						LevelPegawai: 4,
-						KodeOpd:      "OPD1",
-						NamaOpd:      "Dinas A",
-					},
+				"kabid": {
+					{IdPegawai: "kadis", NamaPegawai: "Kadis", LevelPegawai: 4, IdPohonAtasan: 1, IdParentPohonAtasan: 0},
 				},
 			},
 		},
 		{
-			name: "no parent should be skipped",
+			name: "level 6 -> level 4 and 5",
 			rekins: []rencanakinerja.RencanaKinerjaResponse{
-				{
-					IdPohon:     1,
-					PegawaiId:   "pegawai",
-					NamaPegawai: "Tanpa Atasan",
+				{IdPohon: 1, PegawaiId: "kadis", LevelPohon: 4},
+				{IdPohon: 2, IdParentPohon: 1, PegawaiId: "kabid", LevelPohon: 5},
+				{IdPohon: 3, IdParentPohon: 2, PegawaiId: "subkor", LevelPohon: 6},
+			},
+			expected: map[string][]pkopd.AtasanCandidate{
+				"kabid": {
+					{IdPegawai: "kadis", LevelPegawai: 4, IdPohonAtasan: 1, IdParentPohonAtasan: 0},
 				},
+				"subkor": {
+					{IdPegawai: "kadis", LevelPegawai: 4, IdPohonAtasan: 1, IdParentPohonAtasan: 0},
+					{IdPegawai: "kabid", LevelPegawai: 5, IdPohonAtasan: 2, IdParentPohonAtasan: 1},
+				},
+			},
+		},
+		{
+			name: "level 7 -> only level 6 segaris",
+			rekins: []rencanakinerja.RencanaKinerjaResponse{
+				{IdPohon: 3, PegawaiId: "subkor-1", LevelPohon: 6},
+				{IdPohon: 3, PegawaiId: "subkor-2", LevelPohon: 6},
+				{IdPohon: 1, PegawaiId: "not-included", LevelPohon: 6},
+				{IdPohon: 4, IdParentPohon: 3, PegawaiId: "staff", LevelPohon: 7},
+			},
+			expected: map[string][]pkopd.AtasanCandidate{
+				"staff": {
+					{IdPegawai: "subkor-1", LevelPegawai: 6, IdPohonAtasan: 3, IdParentPohonAtasan: 0},
+					{IdPegawai: "subkor-2", LevelPegawai: 6, IdPohonAtasan: 3, IdParentPohonAtasan: 0},
+				},
+			},
+		},
+		{
+			name: "level 8 -> level 6 segaris",
+			// staff-8 -> staff -> subkor
+			rekins: []rencanakinerja.RencanaKinerjaResponse{
+				{IdPohon: 3, PegawaiId: "subkor-1", LevelPohon: 6},
+				{IdPohon: 3, PegawaiId: "subkor-1", LevelPohon: 6},
+				{IdPohon: 3, PegawaiId: "subkor-2", LevelPohon: 6},
+				{IdPohon: 8, PegawaiId: "subkor-no", LevelPohon: 6},
+				{IdPohon: 4, IdParentPohon: 3, PegawaiId: "staff", LevelPohon: 7},
+				{IdPohon: 5, IdParentPohon: 4, PegawaiId: "staff-8", LevelPohon: 8},
+			},
+			expected: map[string][]pkopd.AtasanCandidate{
+				"staff": {
+					{IdPegawai: "subkor-1", LevelPegawai: 6, IdPohonAtasan: 3, IdParentPohonAtasan: 0},
+					{IdPegawai: "subkor-2", LevelPegawai: 6, IdPohonAtasan: 3, IdParentPohonAtasan: 0},
+				},
+				"staff-8": {
+					{IdPegawai: "subkor-1", LevelPegawai: 6, IdPohonAtasan: 3, IdParentPohonAtasan: 0},
+					{IdPegawai: "subkor-2", LevelPegawai: 6, IdPohonAtasan: 3, IdParentPohonAtasan: 0},
+				},
+			},
+		},
+		{
+			name: "level 4 -> no atasan",
+			rekins: []rencanakinerja.RencanaKinerjaResponse{
+				{IdPohon: 1, PegawaiId: "kadis", LevelPohon: 4},
 			},
 			expected: map[string][]pkopd.AtasanCandidate{},
 		},
 		{
-			name: "duplicate parent should be unique",
+			name: "multiple candidates same parent (level 5 -> 4)",
 			rekins: []rencanakinerja.RencanaKinerjaResponse{
-				{
-					IdPohon:            1,
-					PegawaiId:          "atasan",
-					NamaPegawai:        "Atasan A",
-					NamaRencanaKinerja: "rekin-1",
-				},
-				{
-					IdPohon:            3,
-					PegawaiId:          "atasan",
-					NamaPegawai:        "Atasan A",
-					NamaRencanaKinerja: "rekin-2",
-				},
-				{
-					IdPohon:       2,
-					IdParentPohon: 1,
-					PegawaiId:     "bawahan1",
-				},
-				{
-					IdPohon:       4,
-					IdParentPohon: 3,
-					PegawaiId:     "bawahan2", // sama pegawai
-				},
+				{IdPohon: 1, PegawaiId: "kadis1", LevelPohon: 4},
+				{IdPohon: 1, PegawaiId: "kadis2", LevelPohon: 4},
+				{IdPohon: 2, IdParentPohon: 1, PegawaiId: "kabid", LevelPohon: 5},
 			},
 			expected: map[string][]pkopd.AtasanCandidate{
-				"bawahan1": {
-					{
-						IdPegawai:   "atasan",
-						NamaPegawai: "Atasan A",
-					},
-				},
-				"bawahan2": {
-					{
-						IdPegawai:   "atasan",
-						NamaPegawai: "Atasan A",
-					},
+				"kabid": {
+					{IdPegawai: "kadis1", LevelPegawai: 4, IdPohonAtasan: 1, IdParentPohonAtasan: 0},
+					{IdPegawai: "kadis2", LevelPegawai: 4, IdPohonAtasan: 1, IdParentPohonAtasan: 0},
 				},
 			},
 		},
 		{
-			name: "parent not found should skip",
+			name: "parent not found",
 			rekins: []rencanakinerja.RencanaKinerjaResponse{
-				{
-					IdPohon:       2,
-					IdParentPohon: 99, // tidak ada
-					PegawaiId:     "pegawai",
-				},
+				{IdPohon: 2, IdParentPohon: 99, PegawaiId: "staff", LevelPohon: 7},
 			},
 			expected: map[string][]pkopd.AtasanCandidate{},
 		},
 		{
-			name: "multiple pegawai different parents",
-			rekins: []rencanakinerja.RencanaKinerjaResponse{
-				{
-					IdPohon:     1,
-					PegawaiId:   "atasan1",
-					NamaPegawai: "Atasan 1",
-				},
-				{
-					IdPohon:     2,
-					PegawaiId:   "atasan2",
-					NamaPegawai: "Atasan 2",
-				},
-				{
-					IdPohon:     2,
-					PegawaiId:   "atasan3",
-					NamaPegawai: "Atasan 3",
-				},
-				{
-					IdPohon:     12,
-					PegawaiId:   "atasan3",
-					NamaPegawai: "Atasan 3",
-				},
-				{
-					IdPohon:       3,
-					IdParentPohon: 1,
-					PegawaiId:     "pegawai1",
-				},
-				{
-					IdPohon:       4,
-					IdParentPohon: 2,
-					PegawaiId:     "pegawai2",
+			name:     "empty rekins, no candidates",
+			rekins:   []rencanakinerja.RencanaKinerjaResponse{},
+			expected: map[string][]pkopd.AtasanCandidate{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := buildAtasanMap(tt.rekins)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestBuildLevel4Candidates(t *testing.T) {
+	tests := []struct {
+		name          string
+		sasaranPemdas []domain.AllSasaranPemdaPk
+		expected      []pkopd.AtasanCandidate
+	}{
+		{
+			name:          "sasaranPemda empty, no candidates",
+			sasaranPemdas: []domain.AllSasaranPemdaPk{},
+			expected:      []pkopd.AtasanCandidate{},
+		},
+		{
+			name: "expected flow",
+			sasaranPemdas: []domain.AllSasaranPemdaPk{
+				{JabatanKepalaPemda: "KEPALA DAERAH XX",
+					NamaKepalaPemda: "namakepaladaerah",
+					NipKepalaPemda:  "---",
+					SasaranPemdaId:  123,
+					SasaranPemda:    "sasaranpemda",
 				},
 			},
-			expected: map[string][]pkopd.AtasanCandidate{
-				"pegawai1": {
-					{IdPegawai: "atasan1", NamaPegawai: "Atasan 1"},
-				},
-				"pegawai2": {
-					{IdPegawai: "atasan2", NamaPegawai: "Atasan 2"},
-					{IdPegawai: "atasan3", NamaPegawai: "Atasan 3"},
+			expected: []pkopd.AtasanCandidate{
+				{
+					IdPegawai:           "---",
+					NamaPegawai:         "namakepaladaerah",
+					LevelPegawai:        3,
+					IdPohonAtasan:       0,
+					IdParentPohonAtasan: 0,
 				},
 			},
 		},
@@ -221,8 +221,7 @@ func TestBuildAtasanMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := buildAtasanMap(tt.rekins)
-
+			result := buildLevel4Candidates(tt.sasaranPemdas)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

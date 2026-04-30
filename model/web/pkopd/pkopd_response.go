@@ -67,11 +67,13 @@ type PkAsn struct {
 }
 
 type AtasanCandidate struct {
-	IdPegawai    string `json:"id_pegawai"`
-	NamaPegawai  string `json:"nama_pegawai"`
-	LevelPegawai int    `json:"level_pegawai"`
-	KodeOpd      string `json:"kode_opd"`
-	NamaOpd      string `json:"nama_opd"`
+	IdPegawai           string `json:"id_pegawai"`
+	NamaPegawai         string `json:"nama_pegawai"`
+	LevelPegawai        int    `json:"level_pegawai"`
+	KodeOpd             string `json:"kode_opd"`
+	NamaOpd             string `json:"nama_opd"`
+	IdPohonAtasan       int    `json:"id_pohon_atasan"`
+	IdParentPohonAtasan int    `json:"id_parent_pohon_atasan"`
 }
 
 type IndikatorPk struct {
