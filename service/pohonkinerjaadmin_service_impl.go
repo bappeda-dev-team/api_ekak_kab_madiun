@@ -1298,134 +1298,293 @@ func (service *PohonKinerjaAdminServiceImpl) FindSubTematik(ctx context.Context,
 	}, nil
 }
 
+// func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error) {
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return pohonkinerja.TematikResponse{}, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+
+// 	// Ambil data pohon kinerja
+// 	pokin, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, idPokin)
+// 	if err != nil {
+// 		return pohonkinerja.TematikResponse{}, err
+// 	}
+
+// 	// Validasi level pohon harus 0
+// 	if pokin.LevelPohon != 0 {
+// 		return pohonkinerja.TematikResponse{}, fmt.Errorf("id yang diberikan bukan merupakan level tematik (level 0)")
+// 	}
+
+// 	// Ambil semua data pohon kinerja
+// 	pokins, err := service.pohonKinerjaRepository.FindPokinAdminByIdHierarki(ctx, tx, idPokin)
+// 	if err != nil {
+// 		return pohonkinerja.TematikResponse{}, err
+// 	}
+
+// 	// Buat map untuk menyimpan data berdasarkan level dan parent
+// 	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+
+// 	// Kelompokkan data dan proses setiap node
+// 	for _, p := range pokins {
+// 		level := p.LevelPohon
+
+// 		// Inisialisasi map untuk level jika belum ada
+// 		if pohonMap[level] == nil {
+// 			pohonMap[level] = make(map[int][]domain.PohonKinerja)
+// 		}
+
+// 		// Ambil data OPD jika ada
+// 		if p.KodeOpd != "" {
+// 			opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, p.KodeOpd)
+// 			if err == nil {
+// 				p.NamaOpd = opd.NamaOpd
+// 			}
+// 		}
+
+// 		// Ambil count review
+// 		countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, p.Id)
+// 		if err == nil {
+// 			p.CountReview = countReview
+// 		}
+
+// 		// Ambil data pelaksana untuk level 4 ke atas
+// 		if p.LevelPohon >= 4 {
+// 			pelaksanas, err := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(p.Id))
+// 			if err == nil {
+// 				for i := range pelaksanas {
+// 					pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksanas[i].PegawaiId)
+// 					if err == nil {
+// 						pelaksanas[i].NamaPegawai = pegawai.NamaPegawai
+// 					}
+// 				}
+// 				p.Pelaksana = pelaksanas
+// 			}
+// 		}
+
+// 		// Ambil dan proses data tagging
+// 		taggings, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, p.Id)
+// 		if err == nil {
+// 			// Proses setiap tagging untuk mendapatkan data program unggulan
+// 			for i := range taggings {
+// 				if len(taggings[i].KeteranganTaggingProgram) > 0 {
+// 					for j := range taggings[i].KeteranganTaggingProgram {
+// 						programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(
+// 							ctx,
+// 							tx,
+// 							taggings[i].KeteranganTaggingProgram[j].KodeProgramUnggulan,
+// 						)
+// 						if err == nil && programUnggulan.KeteranganProgramUnggulan != nil {
+// 							taggings[i].KeteranganTaggingProgram[j].RencanaImplementasi = programUnggulan.KeteranganProgramUnggulan
+// 						}
+// 					}
+// 				}
+// 			}
+// 			p.TaggingPokin = taggings
+// 		}
+
+// 		pohonMap[level][p.Parent] = append(pohonMap[level][p.Parent], p)
+// 	}
+
+// 	// Bangun response hierarki
+// 	var tematikResponse pohonkinerja.TematikResponse
+// 	if tematik, exists := pohonMap[0][0]; exists && len(tematik) > 0 {
+// 		var childs []interface{}
+
+// 		// Tambahkan strategic langsung ke childs jika ada
+// 		if strategics := pohonMap[4][tematik[0].Id]; len(strategics) > 0 {
+// 			sort.Slice(strategics, func(i, j int) bool {
+// 				return strategics[i].Id < strategics[j].Id
+// 			})
+
+// 			for _, strategic := range strategics {
+// 				strategicResp := helper.BuildStrategicResponse(pohonMap, strategic)
+// 				childs = append(childs, strategicResp)
+// 			}
+// 		}
+
+// 		// Tambahkan subtematik ke childs
+// 		if subTematiks := pohonMap[1][tematik[0].Id]; len(subTematiks) > 0 {
+// 			sort.Slice(subTematiks, func(i, j int) bool {
+// 				return subTematiks[i].Id < subTematiks[j].Id
+// 			})
+
+// 			for _, subTematik := range subTematiks {
+// 				subTematikResp := helper.BuildSubTematikResponse(pohonMap, subTematik)
+// 				childs = append(childs, subTematikResp)
+// 			}
+// 		}
+
+// 		// Konversi indikator dengan pengecekan duplikasi
+// 		var uniqueIndikators []pohonkinerja.IndikatorResponse
+// 		processedIndikators := make(map[string]bool)
+// 		for _, ind := range tematik[0].Indikator {
+// 			if !processedIndikators[ind.Id] {
+// 				processedIndikators[ind.Id] = true
+// 				indResp := helper.ConvertToIndikatorResponse(ind)
+// 				uniqueIndikators = append(uniqueIndikators, indResp)
+// 			}
+// 		}
+
+// 		tematikResponse = pohonkinerja.TematikResponse{
+// 			Id:           tematik[0].Id,
+// 			Parent:       nil,
+// 			Tema:         tematik[0].NamaPohon,
+// 			JenisPohon:   tematik[0].JenisPohon,
+// 			LevelPohon:   tematik[0].LevelPohon,
+// 			Keterangan:   tematik[0].Keterangan,
+// 			IsActive:     tematik[0].IsActive,
+// 			CountReview:  tematik[0].CountReview,
+// 			Indikators:   uniqueIndikators,
+// 			Child:        childs,
+// 			TaggingPokin: helper.ConvertToTaggingResponses(tematik[0].TaggingPokin),
+// 		}
+// 	}
+
+// 	return tematikResponse, nil
+// }
+
+// optimasi pokin pemda
 func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return pohonkinerja.TematikResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
-
-	// Ambil data pohon kinerja
 	pokin, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, idPokin)
 	if err != nil {
 		return pohonkinerja.TematikResponse{}, err
 	}
-
-	// Validasi level pohon harus 0
 	if pokin.LevelPohon != 0 {
 		return pohonkinerja.TematikResponse{}, fmt.Errorf("id yang diberikan bukan merupakan level tematik (level 0)")
 	}
-
-	// Ambil semua data pohon kinerja
+	// ── 1. Ambil seluruh hierarki sekaligus (sudah termasuk indikator+target+pelaksana) ──
 	pokins, err := service.pohonKinerjaRepository.FindPokinAdminByIdHierarki(ctx, tx, idPokin)
 	if err != nil {
 		return pohonkinerja.TematikResponse{}, err
 	}
-
-	// Buat map untuk menyimpan data berdasarkan level dan parent
-	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
-
-	// Kelompokkan data dan proses setiap node
+	// ── 2. Kumpulkan semua ID yang diperlukan untuk batch query ──
+	pokinIds := make([]int, 0, len(pokins))
+	kodeOpdSet := make(map[string]struct{})
 	for _, p := range pokins {
+		pokinIds = append(pokinIds, p.Id)
+		if p.KodeOpd != "" {
+			kodeOpdSet[p.KodeOpd] = struct{}{}
+		}
+	}
+	// ── 3. Batch: review count ──
+	reviewCounts, err := service.reviewRepository.CountReviewByPokinIdsBatch(ctx, tx, pokinIds)
+	if err != nil {
+		reviewCounts = map[int]int{}
+	}
+	// ── 4. Batch: tagging (sudah ada) ──
+	taggingMap, err := service.pohonKinerjaRepository.FindTaggingByPokinIdsBatch(ctx, tx, pokinIds)
+	if err != nil {
+		taggingMap = map[int][]domain.TaggingPokin{}
+	}
+	// ── 5. Batch: pelaksana (sudah ada) ──
+	pelaksanaMap, err := service.pohonKinerjaRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
+	if err != nil {
+		pelaksanaMap = map[int][]domain.PelaksanaPokin{}
+	}
+	// ── 6. Batch: nip pegawai (nama pelaksana) — kumpulkan semua nip dulu ──
+	nipSet := make(map[string]struct{})
+	for _, pelaksanas := range pelaksanaMap {
+		for _, p := range pelaksanas {
+			if p.PegawaiId != "" {
+				nipSet[p.PegawaiId] = struct{}{}
+			}
+		}
+	}
+	pegawaiNamaMap := make(map[string]string) // nip → nama
+	for nip := range nipSet {
+		pegawai, err := service.pegawaiRepository.FindById(ctx, tx, nip)
+		if err == nil {
+			pegawaiNamaMap[nip] = pegawai.NamaPegawai
+		}
+	}
+	// (Jika pegawaiRepository sudah punya FindByIdsBatch → pakai itu, lebih baik lagi)
+	// ── 7. Batch: nama OPD ──
+	opdNamaMap := make(map[string]string)
+	for kode := range kodeOpdSet {
+		opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kode)
+		if err == nil {
+			opdNamaMap[kode] = opd.NamaOpd
+		}
+	}
+	// ── 8. Batch: program unggulan (dari kode_program_unggulan di tagging) ──
+	kodeProgSet := make(map[string]struct{})
+	for _, taggings := range taggingMap {
+		for _, t := range taggings {
+			for _, k := range t.KeteranganTaggingProgram {
+				if k.KodeProgramUnggulan != "" {
+					kodeProgSet[k.KodeProgramUnggulan] = struct{}{}
+				}
+			}
+		}
+	}
+	kodeProgramList := make([]string, 0, len(kodeProgSet))
+	for k := range kodeProgSet {
+		kodeProgramList = append(kodeProgramList, k)
+	}
+	programUnggulanMap := make(map[string]*domain.ProgramUnggulan)
+	if len(kodeProgramList) > 0 {
+		programUnggulanMap, _ = service.programUnggulanRepository.FindProgramUnggulanByKodesBatch(ctx, tx, kodeProgramList)
+	}
+	// ── 9. Gabungkan semua data ke tiap node ──
+	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+	for _, p := range pokins {
+		p.CountReview = reviewCounts[p.Id]
+		p.NamaOpd = opdNamaMap[p.KodeOpd]
+		// Pasang pelaksana + nama pegawai
+		if pl, ok := pelaksanaMap[p.Id]; ok {
+			for i := range pl {
+				pl[i].NamaPegawai = pegawaiNamaMap[pl[i].PegawaiId]
+			}
+			p.Pelaksana = pl
+		}
+		// Pasang tagging + rencana implementasi dari program unggulan
+		if tags, ok := taggingMap[p.Id]; ok {
+			for i := range tags {
+				for j := range tags[i].KeteranganTaggingProgram {
+					kode := tags[i].KeteranganTaggingProgram[j].KodeProgramUnggulan
+					if pu, ok := programUnggulanMap[kode]; ok && pu.KeteranganProgramUnggulan != nil {
+						tags[i].KeteranganTaggingProgram[j].RencanaImplementasi = pu.KeteranganProgramUnggulan
+					}
+				}
+			}
+			p.TaggingPokin = tags
+		}
 		level := p.LevelPohon
-
-		// Inisialisasi map untuk level jika belum ada
 		if pohonMap[level] == nil {
 			pohonMap[level] = make(map[int][]domain.PohonKinerja)
 		}
-
-		// Ambil data OPD jika ada
-		if p.KodeOpd != "" {
-			opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, p.KodeOpd)
-			if err == nil {
-				p.NamaOpd = opd.NamaOpd
-			}
-		}
-
-		// Ambil count review
-		countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, p.Id)
-		if err == nil {
-			p.CountReview = countReview
-		}
-
-		// Ambil data pelaksana untuk level 4 ke atas
-		if p.LevelPohon >= 4 {
-			pelaksanas, err := service.pohonKinerjaRepository.FindPelaksanaPokin(ctx, tx, fmt.Sprint(p.Id))
-			if err == nil {
-				for i := range pelaksanas {
-					pegawai, err := service.pegawaiRepository.FindById(ctx, tx, pelaksanas[i].PegawaiId)
-					if err == nil {
-						pelaksanas[i].NamaPegawai = pegawai.NamaPegawai
-					}
-				}
-				p.Pelaksana = pelaksanas
-			}
-		}
-
-		// Ambil dan proses data tagging
-		taggings, err := service.pohonKinerjaRepository.FindTaggingByPokinId(ctx, tx, p.Id)
-		if err == nil {
-			// Proses setiap tagging untuk mendapatkan data program unggulan
-			for i := range taggings {
-				if len(taggings[i].KeteranganTaggingProgram) > 0 {
-					for j := range taggings[i].KeteranganTaggingProgram {
-						programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(
-							ctx,
-							tx,
-							taggings[i].KeteranganTaggingProgram[j].KodeProgramUnggulan,
-						)
-						if err == nil && programUnggulan.KeteranganProgramUnggulan != nil {
-							taggings[i].KeteranganTaggingProgram[j].RencanaImplementasi = programUnggulan.KeteranganProgramUnggulan
-						}
-					}
-				}
-			}
-			p.TaggingPokin = taggings
-		}
-
 		pohonMap[level][p.Parent] = append(pohonMap[level][p.Parent], p)
 	}
-
-	// Bangun response hierarki
+	// ── 10. Bangun response hierarki (sama seperti sebelumnya) ──
 	var tematikResponse pohonkinerja.TematikResponse
 	if tematik, exists := pohonMap[0][0]; exists && len(tematik) > 0 {
 		var childs []interface{}
-
-		// Tambahkan strategic langsung ke childs jika ada
 		if strategics := pohonMap[4][tematik[0].Id]; len(strategics) > 0 {
-			sort.Slice(strategics, func(i, j int) bool {
-				return strategics[i].Id < strategics[j].Id
-			})
-
-			for _, strategic := range strategics {
-				strategicResp := helper.BuildStrategicResponse(pohonMap, strategic)
-				childs = append(childs, strategicResp)
+			sort.Slice(strategics, func(i, j int) bool { return strategics[i].Id < strategics[j].Id })
+			for _, s := range strategics {
+				childs = append(childs, helper.BuildStrategicResponse(pohonMap, s))
 			}
 		}
-
-		// Tambahkan subtematik ke childs
 		if subTematiks := pohonMap[1][tematik[0].Id]; len(subTematiks) > 0 {
-			sort.Slice(subTematiks, func(i, j int) bool {
-				return subTematiks[i].Id < subTematiks[j].Id
-			})
-
-			for _, subTematik := range subTematiks {
-				subTematikResp := helper.BuildSubTematikResponse(pohonMap, subTematik)
-				childs = append(childs, subTematikResp)
+			sort.Slice(subTematiks, func(i, j int) bool { return subTematiks[i].Id < subTematiks[j].Id })
+			for _, st := range subTematiks {
+				childs = append(childs, helper.BuildSubTematikResponse(pohonMap, st))
 			}
 		}
-
-		// Konversi indikator dengan pengecekan duplikasi
 		var uniqueIndikators []pohonkinerja.IndikatorResponse
-		processedIndikators := make(map[string]bool)
+		seen := make(map[string]bool)
 		for _, ind := range tematik[0].Indikator {
-			if !processedIndikators[ind.Id] {
-				processedIndikators[ind.Id] = true
-				indResp := helper.ConvertToIndikatorResponse(ind)
-				uniqueIndikators = append(uniqueIndikators, indResp)
+			if !seen[ind.Id] {
+				seen[ind.Id] = true
+				uniqueIndikators = append(uniqueIndikators, helper.ConvertToIndikatorResponse(ind))
 			}
 		}
-
 		tematikResponse = pohonkinerja.TematikResponse{
 			Id:           tematik[0].Id,
 			Parent:       nil,
@@ -1440,7 +1599,6 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			TaggingPokin: helper.ConvertToTaggingResponses(tematik[0].TaggingPokin),
 		}
 	}
-
 	return tematikResponse, nil
 }
 
