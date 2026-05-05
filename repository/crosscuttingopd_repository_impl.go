@@ -272,71 +272,160 @@ func (repository *CrosscuttingOpdRepositoryImpl) ValidateKodeOpdChange(ctx conte
 	return nil
 }
 
-func (repository *CrosscuttingOpdRepositoryImpl) DeleteCrosscutting(ctx context.Context, tx *sql.Tx, pokinId int, nipPegawai string) error {
-	// Validasi status
-	var currentStatus string
-	query := `
-        SELECT status FROM tb_pohon_kinerja 
-        WHERE id = ?
-    `
-	err := tx.QueryRowContext(ctx, query, pokinId).Scan(&currentStatus)
+func (repository *CrosscuttingOpdRepositoryImpl) DeleteCrosscutting(
+	ctx context.Context, tx *sql.Tx, crosscuttingId int, nipPegawai string,
+) error {
+	var ccFrom, ccTo int
+	var ccStatus string
+	err := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(crosscutting_from, 0), COALESCE(crosscutting_to, 0), status
+		 FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+	).Scan(&ccFrom, &ccTo, &ccStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("crosscutting tidak ditemukan")
+		}
+		return fmt.Errorf("gagal ambil data crosscutting id=%d: %w", crosscuttingId, err)
+	}
+	_ = ccFrom
+	// Status belum disetujui → hapus baris saja
+	if ccStatus == "crosscutting_menunggu" || ccStatus == "crosscutting_ditolak" {
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+		); err != nil {
+			return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	}
+	if ccStatus != "crosscutting_disetujui" && ccStatus != "crosscutting_disetujui_existing" {
+		return fmt.Errorf("crosscutting id=%d tidak dapat dihapus, status: %s", crosscuttingId, ccStatus)
+	}
+	// Tidak ada pohon tujuan → hapus baris saja
+	if ccTo == 0 {
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+		); err != nil {
+			return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	}
+	// ── Cabang A: crosscutting_disetujui_existing ─────────────────────────────
+	if ccStatus == "crosscutting_disetujui_existing" {
+		var pokinStatus string
+		errPokin := tx.QueryRowContext(ctx,
+			`SELECT COALESCE(status, '') FROM tb_pohon_kinerja WHERE id = ?`, ccTo,
+		).Scan(&pokinStatus)
+		if errPokin == sql.ErrNoRows {
+			// Pohon tidak ada → hapus baris kita
+			_, err = tx.ExecContext(ctx, `DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId)
+			return err
+		}
+		if errPokin != nil {
+			return fmt.Errorf("gagal cek status pohon id=%d: %w", ccTo, errPokin)
+		}
+		switch pokinStatus {
+		case "crosscutting_disetujui_existing":
+			// Pohon "existing" → hapus baris kita saja, STOP, jangan cascade
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+			); err != nil {
+				return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+			}
+			return nil
+		case "crosscutting_disetujui":
+			// Pohon lahir dari crosscutting → cek ref lain
+			var countOther int
+			if err := tx.QueryRowContext(ctx,
+				`SELECT COUNT(*) FROM tb_crosscutting
+				 WHERE crosscutting_to = ? AND id != ?`, ccTo, crosscuttingId,
+			).Scan(&countOther); err != nil {
+				return fmt.Errorf("gagal hitung ref lain crosscutting_to=%d: %w", ccTo, err)
+			}
+			if countOther > 0 {
+				// Masih ada ref lain → hapus baris kita saja
+				if _, err := tx.ExecContext(ctx,
+					`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+				); err != nil {
+					return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+				}
+				return nil
+			}
+			// Tidak ada ref lain → pohon orphan, hapus pohon + child
+			return repository.cleanOutgoingAndDeletePokin(ctx, tx, crosscuttingId, ccTo)
+		default:
+			// Pohon status lain → hapus baris kita saja
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+			); err != nil {
+				return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+			}
+			return nil
+		}
+	}
+	// ── Cabang B: crosscutting_disetujui ─────────────────────────────────────
+	var countRef int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM tb_crosscutting WHERE crosscutting_to = ?`, ccTo,
+	).Scan(&countRef); err != nil {
+		return fmt.Errorf("gagal hitung referensi crosscutting_to=%d: %w", ccTo, err)
+	}
+	if countRef > 1 {
+		// Pohon masih dipakai OPD lain → hapus baris kita saja
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+		); err != nil {
+			return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	}
+	// Hanya 1 ref → hapus pohon + child
+	return repository.cleanOutgoingAndDeletePokin(ctx, tx, crosscuttingId, ccTo)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// cleanOutgoingAndDeletePokin
+// Bersihkan outgoing crosscuttings dari pohon tujuan, hapus pohon+child,
+// lalu reset baris crosscutting utama.
+// ─────────────────────────────────────────────────────────────────────────────
+func (repository *CrosscuttingOpdRepositoryImpl) cleanOutgoingAndDeletePokin(
+	ctx context.Context, tx *sql.Tx, crosscuttingId int, pokinRootId int,
+) error {
+	// Hapus baris crosscutting yang keluar dari pohon tujuan (rantai outgoing)
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_crosscutting WHERE crosscutting_from = ? AND id != ?`,
+		pokinRootId, crosscuttingId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus outgoing crosscutting pohon id=%d: %w", pokinRootId, err)
+	}
+	// Kumpulkan subtree
+	nodeIds, err := repository.collectSubtreeIdsForCrosscutting(ctx, tx, pokinRootId)
 	if err != nil {
 		return err
 	}
-
-	if currentStatus != "crosscutting_disetujui" {
-		return errors.New("crosscutting hanya dapat dihapus saat status crosscutting_disetujui")
+	// Reset semua incoming crosscutting ke node subtree (selain baris utama kita)
+	for _, nodeId := range nodeIds {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE tb_crosscutting
+			SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+			WHERE crosscutting_to = ? AND id != ?
+		`, nodeId, crosscuttingId); err != nil {
+			return fmt.Errorf("gagal reset incoming crosscutting node=%d: %w", nodeId, err)
+		}
 	}
-
-	// // Buat pegawai_action
-	// currentTime := time.Now()
-	// pegawaiAction := map[string]interface{}{
-	// 	"reject_by": nipPegawai,
-	// 	"reject_at": currentTime,
-	// }
-
-	// pegawaiActionJSON, err := json.Marshal(pegawaiAction)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// scriptUpdatePokin := `
-	//     UPDATE tb_pohon_kinerja
-	//     SET parent = 0,
-	//         status = 'crosscutting_ditolak',
-	//         pegawai_action = ?
-	//     WHERE id = ?
-	// `
-
-	scriptUpdatePokin := `
-	DELETE FROM tb_pohon_kinerja 
-	WHERE id = ?
-	`
-	_, err = tx.ExecContext(ctx, scriptUpdatePokin, pokinId)
-	if err != nil {
-		return err
+	// Hapus pohon + dependensi
+	for _, nodeId := range nodeIds {
+		if err := repository.deletePokinDependenciesOnly(ctx, tx, nodeId); err != nil {
+			return err
+		}
 	}
-
-	// Update status di tb_crosscutting
-	scriptUpdateCross := `
-        UPDATE tb_crosscutting 
-        SET status = 'crosscutting_ditolak'
-        WHERE crosscutting_to = ?
-    `
-	result, err := tx.ExecContext(ctx, scriptUpdateCross, pokinId)
-	if err != nil {
-		return err
+	// Reset baris crosscutting utama
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE tb_crosscutting
+		SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+		WHERE id = ?
+	`, crosscuttingId); err != nil {
+		return fmt.Errorf("gagal reset crosscutting id=%d: %w", crosscuttingId, err)
 	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return errors.New("no rows updated in tb_crosscutting, check crosscutting_to value")
-	}
-
 	return nil
 }
 
@@ -373,7 +462,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) ApproveOrRejectCrosscutting(ctx
 				INSERT INTO tb_pohon_kinerja (
 					nama_pohon, parent, level_pohon, jenis_pohon,
 					kode_opd, tahun, status, pegawai_action, keterangan
-				) VALUES ('', ?, ?, ?, ?, ?, '', ?, '')
+				) VALUES ('', ?, ?, ?, ?, ?, 'crosscutting_disetujui', ?, '')
 			`
 			result, err := tx.ExecContext(ctx, scriptNewPokin,
 				request.ParentId, request.LevelPohon, request.JenisPohon,
@@ -420,7 +509,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) ApproveOrRejectCrosscutting(ctx
 		// 	}
 		// }
 		_, err = tx.ExecContext(ctx, `
-			UPDATE tb_crosscutting SET status = 'crosscutting_menunggu' WHERE id = ?
+			UPDATE tb_crosscutting SET status = 'crosscutting_ditolak' WHERE id = ?
 		`, crosscuttingId)
 		if err != nil {
 			return fmt.Errorf("error reverting crosscutting status: %w", err)
@@ -624,6 +713,290 @@ func (repository *CrosscuttingOpdRepositoryImpl) FixPokinStatusAfterExistingDele
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE tb_pohon_kinerja SET status = ? WHERE id = ?`, newStatus, pokinId); err != nil {
 		return fmt.Errorf("gagal update status pokin id=%d: %w", pokinId, err)
+	}
+	return nil
+}
+
+// DELETE CROSSCUTTING DITERIMA
+func (repository *CrosscuttingOpdRepositoryImpl) DeleteCrosscuttingDiterima(
+	ctx context.Context, tx *sql.Tx, crosscuttingId int,
+) error {
+	// 1. Ambil data crosscutting
+	var crosscuttingTo int
+	var ccStatus string
+	err := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(crosscutting_to, 0), status FROM tb_crosscutting WHERE id = ?`,
+		crosscuttingId,
+	).Scan(&crosscuttingTo, &ccStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("crosscutting tidak ditemukan")
+		}
+		return fmt.Errorf("gagal ambil data crosscutting id=%d: %w", crosscuttingId, err)
+	}
+	// Hanya boleh diproses jika status disetujui (salah satu dari dua jenis)
+	if ccStatus != "crosscutting_disetujui" && ccStatus != "crosscutting_disetujui_existing" {
+		return fmt.Errorf("crosscutting id=%d tidak dalam status disetujui (saat ini: %s)", crosscuttingId, ccStatus)
+	}
+	// crosscutting_to = 0 → tidak ada pohon tujuan, hapus row saja
+	if crosscuttingTo == 0 {
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+		); err != nil {
+			return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	}
+	// 2. Hitung berapa banyak baris di tb_crosscutting yang mengarah ke crosscutting_to yang sama
+	var countRef int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM tb_crosscutting WHERE crosscutting_to = ?`, crosscuttingTo,
+	).Scan(&countRef); err != nil {
+		return fmt.Errorf("gagal hitung referensi crosscutting_to=%d: %w", crosscuttingTo, err)
+	}
+	// ── Cabang: status crosscutting_disetujui ─────────────────────────────────
+	if ccStatus == "crosscutting_disetujui" {
+		if countRef > 1 {
+			// Pohon masih direferensi OPD lain → hapus row ini saja
+			if _, err := tx.ExecContext(ctx,
+				`UPDATE tb_crosscutting
+SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+WHERE id = ?`, crosscuttingId,
+			); err != nil {
+				return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+			}
+			return nil
+		}
+		// Hanya 1 referensi → hapus pohon kinerja + child
+		return repository.deleteCrosscuttingPokinAndReset(ctx, tx, crosscuttingId, crosscuttingTo)
+	}
+	// ── Cabang: status crosscutting_disetujui_existing ────────────────────────
+	if countRef > 1 {
+		// Ada referensi lain ke pohon yang sama →
+		// hanya lepas tautan baris ini (crosscutting_to=0, status=menunggu)
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE tb_crosscutting
+			SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+			WHERE id = ?
+		`, crosscuttingId); err != nil {
+			return fmt.Errorf("gagal reset crosscutting existing id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	}
+	// Hanya 1 referensi → cek status pohon kinerja
+	var pokinStatus string
+	err = tx.QueryRowContext(ctx,
+		`SELECT COALESCE(status, '') FROM tb_pohon_kinerja WHERE id = ?`, crosscuttingTo,
+	).Scan(&pokinStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Pohon sudah tidak ada, reset crosscutting saja
+			if _, err := tx.ExecContext(ctx, `
+				UPDATE tb_crosscutting
+				SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+				WHERE id = ?
+			`, crosscuttingId); err != nil {
+				return fmt.Errorf("gagal reset crosscutting id=%d: %w", crosscuttingId, err)
+			}
+			return nil
+		}
+		return fmt.Errorf("gagal cek status pohon id=%d: %w", crosscuttingTo, err)
+	}
+	switch pokinStatus {
+	case "crosscutting_disetujui":
+		// Pohon lahir dari crosscutting → hapus pohon + child
+		return repository.deleteCrosscuttingPokinAndReset(ctx, tx, crosscuttingId, crosscuttingTo)
+	case "crosscutting_disetujui_existing":
+		// Pohon existing yang di-link → jangan hapus pohon, hanya reset tautan
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE tb_crosscutting
+			SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+			WHERE id = ?
+		`, crosscuttingId); err != nil {
+			return fmt.Errorf("gagal reset crosscutting existing id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	default:
+		// Pohon sudah ada sebelumnya (status lain) → hanya lepas tautan
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE tb_crosscutting
+			SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+			WHERE id = ?
+		`, crosscuttingId); err != nil {
+			return fmt.Errorf("gagal reset crosscutting id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan B: UnlinkCrosscuttingDiterima
+//
+// Parameter: crosscuttingId = ID di tb_crosscutting.
+//
+// Alur:
+//   - Sama dengan Plan A untuk kasus > 1 referensi (hapus row crosscutting).
+//   - Jika == 1 referensi: TIDAK hapus pohon kinerja.
+//     Hanya reset tb_crosscutting: crosscutting_to = 0, status = 'crosscutting_menunggu'.
+//     Pohon kinerja tetap ada, status pohon tidak diubah.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+func (repository *CrosscuttingOpdRepositoryImpl) UnlinkCrosscuttingDiterima(
+	ctx context.Context, tx *sql.Tx, crosscuttingId int,
+) error {
+	// 1. Ambil data crosscutting
+	var crosscuttingTo int
+	var ccStatus string
+	err := tx.QueryRowContext(ctx,
+		`SELECT crosscutting_to, status FROM tb_crosscutting WHERE id = ?`,
+		crosscuttingId,
+	).Scan(&crosscuttingTo, &ccStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("crosscutting tidak ditemukan")
+		}
+		return fmt.Errorf("gagal ambil data crosscutting id=%d: %w", crosscuttingId, err)
+	}
+	if ccStatus != "crosscutting_disetujui" {
+		return fmt.Errorf("crosscutting id=%d bukan status crosscutting_disetujui (saat ini: %s)", crosscuttingId, ccStatus)
+	}
+	if crosscuttingTo == 0 {
+		// Tidak ada pohon tujuan, hapus row saja
+		_, err = tx.ExecContext(ctx, `DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId)
+		return err
+	}
+	// 2. Hitung referensi ke crosscutting_to yang sama
+	var countRef int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM tb_crosscutting WHERE crosscutting_to = ?`, crosscuttingTo,
+	).Scan(&countRef); err != nil {
+		return fmt.Errorf("gagal hitung referensi crosscutting_to=%d: %w", crosscuttingTo, err)
+	}
+	if countRef > 1 {
+		// Lebih dari 1 referensi → hapus row ini saja, pohon tetap
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM tb_crosscutting WHERE id = ?`, crosscuttingId,
+		); err != nil {
+			return fmt.Errorf("gagal hapus crosscutting id=%d: %w", crosscuttingId, err)
+		}
+		return nil
+	}
+	// count == 1: HANYA lepas tautan, pohon kinerja tidak disentuh
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE tb_crosscutting
+		SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+		WHERE id = ?
+	`, crosscuttingId); err != nil {
+		return fmt.Errorf("gagal unlink crosscutting id=%d: %w", crosscuttingId, err)
+	}
+	return nil
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private helper: kumpulkan semua ID subtree dari satu pohon (root + children)
+// Dipakai oleh DeleteCrosscuttingDiterima untuk tahu node mana saja yang
+// perlu dihapus.
+// ─────────────────────────────────────────────────────────────────────────────
+func (repository *CrosscuttingOpdRepositoryImpl) collectSubtreeIdsForCrosscutting(
+	ctx context.Context, tx *sql.Tx, rootId int,
+) ([]int, error) {
+	rows, err := tx.QueryContext(ctx, `
+		WITH RECURSIVE subtree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE id = ?
+			UNION ALL
+			SELECT p.id FROM tb_pohon_kinerja p
+			JOIN subtree s ON p.parent = s.id
+		)
+		SELECT id FROM subtree
+	`, rootId)
+	if err != nil {
+		return nil, fmt.Errorf("gagal kumpulkan subtree dari id=%d: %w", rootId, err)
+	}
+	defer rows.Close()
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("gagal scan subtree id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private helper: hapus semua dependensi + pohon kinerja untuk satu node ID
+// (tanpa menyentuh tb_crosscutting — sudah dihandle sebelumnya)
+// ─────────────────────────────────────────────────────────────────────────────
+func (repository *CrosscuttingOpdRepositoryImpl) deletePokinDependenciesOnly(
+	ctx context.Context, tx *sql.Tx, nodeId int,
+) error {
+	// 1. Hapus target
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM tb_target
+		WHERE indikator_id IN (SELECT id FROM tb_indikator WHERE pokin_id = ?)
+	`, nodeId); err != nil {
+		return fmt.Errorf("gagal hapus target node=%d: %w", nodeId, err)
+	}
+	// 2. Hapus indikator
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_indikator WHERE pokin_id = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus indikator node=%d: %w", nodeId, err)
+	}
+	// 3. Hapus pelaksana
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus pelaksana node=%d: %w", nodeId, err)
+	}
+	// 4. Hapus tagging
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_tagging_pokin WHERE id_pokin = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus tagging node=%d: %w", nodeId, err)
+	}
+	// 5. Hapus pohon kinerja
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_pohon_kinerja WHERE id = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus pohon kinerja node=%d: %w", nodeId, err)
+	}
+	return nil
+}
+
+func (repository *CrosscuttingOpdRepositoryImpl) deleteCrosscuttingPokinAndReset(
+	ctx context.Context, tx *sql.Tx, crosscuttingId int, pokinRootId int,
+) error {
+	// Kumpulkan seluruh node subtree
+	nodeIds, err := repository.collectSubtreeIdsForCrosscutting(ctx, tx, pokinRootId)
+	if err != nil {
+		return err
+	}
+	// Reset semua crosscutting yang mengarah ke node subtree
+	// (kecuali baris crosscuttingId sendiri — akan direset terpisah di akhir)
+	for _, nodeId := range nodeIds {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE tb_crosscutting
+			SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+			WHERE crosscutting_to = ? AND id != ?
+		`, nodeId, crosscuttingId); err != nil {
+			return fmt.Errorf("gagal reset crosscutting anak node=%d: %w", nodeId, err)
+		}
+	}
+	// Hapus dependensi + pohon kinerja per node (dari child ke atas)
+	for _, nodeId := range nodeIds {
+		if err := repository.deletePokinDependenciesOnly(ctx, tx, nodeId); err != nil {
+			return err
+		}
+	}
+	// Reset crosscutting utama: tautan sudah tidak valid karena pohon dihapus
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE tb_crosscutting
+		SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+		WHERE id = ?
+	`, crosscuttingId); err != nil {
+		return fmt.Errorf("gagal reset crosscutting id=%d: %w", crosscuttingId, err)
 	}
 	return nil
 }

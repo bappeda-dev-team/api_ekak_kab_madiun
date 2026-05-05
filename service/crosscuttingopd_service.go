@@ -14,4 +14,5 @@ type CrosscuttingOpdService interface {
 	DeleteUnused(ctx context.Context, crosscuttingId int) error
 	FindPokinByCrosscuttingStatus(ctx context.Context, kodeOpd string, tahun string) ([]pohonkinerja.CrosscuttingOpdResponse, error)
 	FindOPDCrosscuttingFrom(ctx context.Context, crosscuttingTo int) (pohonkinerja.CrosscuttingFromResponse, error)
+	DeleteCrosscuttingDiterima(ctx context.Context, crosscuttingId int) error
 }

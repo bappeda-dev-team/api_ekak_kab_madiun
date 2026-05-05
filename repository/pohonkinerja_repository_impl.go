@@ -444,171 +444,174 @@ func (repository *PohonKinerjaRepositoryImpl) FindStrategicNoParent(ctx context.
 	return result, nil
 }
 
+//POKIN LAMA
+// func (repository *PohonKinerjaRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id int) error {
+// 	// Temukan semua ID anak pohon secara rekursif
+// 	scriptFindChildren := `
+//         WITH RECURSIVE child_tree AS (
+//             SELECT id, parent, clone_from, level_pohon
+//             FROM tb_pohon_kinerja
+//             WHERE id = ?
+
+//             UNION ALL
+
+//             SELECT t.id, t.parent, t.clone_from, t.level_pohon
+//             FROM tb_pohon_kinerja t
+//             JOIN child_tree ct ON t.parent = ct.id
+//         )
+//         SELECT id, clone_from FROM child_tree
+//     `
+
+// 	rows, err := tx.QueryContext(ctx, scriptFindChildren, id)
+// 	if err != nil {
+// 		return fmt.Errorf("gagal mencari turunan pohon: %v", err)
+// 	}
+// 	defer rows.Close()
+
+// 	// Kumpulkan semua ID anak pohon dan clone_from
+// 	var nodeIds []string
+// 	cloneFromMap := make(map[string]int) // map[nodeId]cloneFromId
+// 	for rows.Next() {
+// 		var nodeId string
+// 		var cloneFrom sql.NullInt64
+// 		if err := rows.Scan(&nodeId, &cloneFrom); err != nil {
+// 			return fmt.Errorf("gagal membaca ID turunan pohon: %v", err)
+// 		}
+// 		nodeIds = append(nodeIds, nodeId)
+// 		if cloneFrom.Valid {
+// 			cloneFromMap[nodeId] = int(cloneFrom.Int64)
+// 		}
+// 	}
+
+// 	// Update status untuk semua node asli yang di-clone
+// 	for _, cloneFromId := range cloneFromMap {
+// 		scriptUpdateStatus := `
+//             UPDATE tb_pohon_kinerja
+//             SET status = 'menunggu_disetujui'
+//             WHERE id = ?
+//         `
+// 		if _, err := tx.ExecContext(ctx, scriptUpdateStatus, cloneFromId); err != nil {
+// 			return fmt.Errorf("gagal mengupdate status node asli ID %d: %v", cloneFromId, err)
+// 		}
+// 	}
+
+// 	// Proses penghapusan untuk setiap node
+// 	for _, nodeId := range nodeIds {
+// 		// 1. Hapus target
+// 		scriptDeleteTarget := `
+//             DELETE FROM tb_target
+//             WHERE indikator_id IN (
+//                 SELECT id FROM tb_indikator
+//                 WHERE pokin_id = ?
+//             )`
+// 		if _, err := tx.ExecContext(ctx, scriptDeleteTarget, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus target: %v", err)
+// 		}
+
+// 		// 2. Hapus indikator
+// 		scriptDeleteIndikator := "DELETE FROM tb_indikator WHERE pokin_id = ?"
+// 		if _, err := tx.ExecContext(ctx, scriptDeleteIndikator, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus indikator: %v", err)
+// 		}
+
+// 		// 3. Hapus pelaksana
+// 		scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
+// 		if _, err := tx.ExecContext(ctx, scriptDeletePelaksana, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus pelaksana: %v", err)
+// 		}
+
+// 		// 4. Tangani crosscutting
+// 		// Hapus crosscutting yang menunggu/ditolak
+// 		scriptDeletePendingCrosscutting := `
+//             DELETE FROM tb_crosscutting
+//             WHERE crosscutting_from = ?
+//             AND status IN ('menunggu_disetujui', 'ditolak')`
+// 		if _, err := tx.ExecContext(ctx, scriptDeletePendingCrosscutting, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus crosscutting pending: %v", err)
+// 		}
+
+// 		// Update status crosscutting yang disetujui
+// 		scriptUpdateCrosscuttingStatus := `
+//             UPDATE tb_crosscutting
+//             SET status = 'crosscutting_ditolak',
+//                 crosscutting_to = 0
+//             WHERE crosscutting_to = ?
+//             AND status = 'crosscutting_disetujui'`
+// 		if _, err := tx.ExecContext(ctx, scriptUpdateCrosscuttingStatus, nodeId); err != nil {
+// 			return fmt.Errorf("gagal mengupdate status crosscutting: %v", err)
+// 		}
+
+// 		// 5. Hapus pohon kinerja
+// 		scriptDeletePokin := "DELETE FROM tb_pohon_kinerja WHERE id = ?"
+// 		if _, err := tx.ExecContext(ctx, scriptDeletePokin, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus pohon kinerja: %v", err)
+// 		}
+
+// 		// Hapus tagging sebelum menghapus pohon kinerja
+// 		scriptDeleteTagging := fmt.Sprintf("DELETE FROM tb_tagging_pokin WHERE id_pokin IN (%s)", placeholders(len(nodeIds)))
+// 		_, err = tx.ExecContext(ctx, scriptDeleteTagging, convertToInterface(nodeIds)...)
+// 		if err != nil {
+// 			return fmt.Errorf("gagal menghapus tagging: %v", err)
+// 		}
+// 	}
+
+// 	return nil
+// }
+//END POKIN LAMA DELETE
+
+// DELETE POKIN TRIAL
 func (repository *PohonKinerjaRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id int) error {
-	// Temukan semua ID anak pohon secara rekursif
-	scriptFindChildren := `
-        WITH RECURSIVE child_tree AS (
-            SELECT id, parent, clone_from, level_pohon
-            FROM tb_pohon_kinerja
-            WHERE id = ?
-
-            UNION ALL
-
-            SELECT t.id, t.parent, t.clone_from, t.level_pohon
-            FROM tb_pohon_kinerja t
-            JOIN child_tree ct ON t.parent = ct.id
-        )
-        SELECT id, clone_from FROM child_tree
-    `
-
-	rows, err := tx.QueryContext(ctx, scriptFindChildren, id)
+	// 1. Kumpulkan semua ID subtree (akar + seluruh turunan via parent)
+	nodeIds, cloneFromMap, err := repository.collectSubtreeIds(ctx, tx, id)
 	if err != nil {
-		return fmt.Errorf("gagal mencari turunan pohon: %v", err)
+		return err
 	}
-	defer rows.Close()
-
-	// Kumpulkan semua ID anak pohon dan clone_from
-	var nodeIds []string
-	cloneFromMap := make(map[string]int) // map[nodeId]cloneFromId
-	for rows.Next() {
-		var nodeId string
-		var cloneFrom sql.NullInt64
-		if err := rows.Scan(&nodeId, &cloneFrom); err != nil {
-			return fmt.Errorf("gagal membaca ID turunan pohon: %v", err)
-		}
-		nodeIds = append(nodeIds, nodeId)
-		if cloneFrom.Valid {
-			cloneFromMap[nodeId] = int(cloneFrom.Int64)
-		}
-	}
-
-	// Update status untuk semua node asli yang di-clone
+	// 2. Update status node asli yang di-clone → kembali ke 'menunggu_disetujui'
 	for _, cloneFromId := range cloneFromMap {
-		scriptUpdateStatus := `
-            UPDATE tb_pohon_kinerja
-            SET status = 'menunggu_disetujui'
-            WHERE id = ?
-        `
-		if _, err := tx.ExecContext(ctx, scriptUpdateStatus, cloneFromId); err != nil {
-			return fmt.Errorf("gagal mengupdate status node asli ID %d: %v", cloneFromId, err)
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE tb_pohon_kinerja SET status = 'menunggu_disetujui' WHERE id = ?`,
+			cloneFromId,
+		); err != nil {
+			return fmt.Errorf("gagal update status clone_from id=%d: %w", cloneFromId, err)
 		}
 	}
-
-	// Proses penghapusan untuk setiap node
-	for _, nodeId := range nodeIds {
-		// 1. Hapus target
-		scriptDeleteTarget := `
-            DELETE FROM tb_target
-            WHERE indikator_id IN (
-                SELECT id FROM tb_indikator
-                WHERE pokin_id = ?
-            )`
-		if _, err := tx.ExecContext(ctx, scriptDeleteTarget, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus target: %v", err)
-		}
-
-		// 2. Hapus indikator
-		scriptDeleteIndikator := "DELETE FROM tb_indikator WHERE pokin_id = ?"
-		if _, err := tx.ExecContext(ctx, scriptDeleteIndikator, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus indikator: %v", err)
-		}
-
-		// 3. Hapus pelaksana
-		scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
-		if _, err := tx.ExecContext(ctx, scriptDeletePelaksana, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus pelaksana: %v", err)
-		}
-
-		// 4. Tangani crosscutting
-		// Hapus crosscutting yang menunggu/ditolak
-		scriptDeletePendingCrosscutting := `
-            DELETE FROM tb_crosscutting
-            WHERE crosscutting_from = ?
-            AND status IN ('menunggu_disetujui', 'ditolak')`
-		if _, err := tx.ExecContext(ctx, scriptDeletePendingCrosscutting, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus crosscutting pending: %v", err)
-		}
-
-		// Update status crosscutting yang disetujui
-		scriptUpdateCrosscuttingStatus := `
-            UPDATE tb_crosscutting
-            SET status = 'crosscutting_ditolak',
-                crosscutting_to = 0
-            WHERE crosscutting_to = ?
-            AND status = 'crosscutting_disetujui'`
-		if _, err := tx.ExecContext(ctx, scriptUpdateCrosscuttingStatus, nodeId); err != nil {
-			return fmt.Errorf("gagal mengupdate status crosscutting: %v", err)
-		}
-
-		// 5. Hapus pohon kinerja
-		scriptDeletePokin := "DELETE FROM tb_pohon_kinerja WHERE id = ?"
-		if _, err := tx.ExecContext(ctx, scriptDeletePokin, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus pohon kinerja: %v", err)
-		}
-
-		// Hapus tagging sebelum menghapus pohon kinerja
-		scriptDeleteTagging := fmt.Sprintf("DELETE FROM tb_tagging_pokin WHERE id_pokin IN (%s)", placeholders(len(nodeIds)))
-		_, err = tx.ExecContext(ctx, scriptDeleteTagging, convertToInterface(nodeIds)...)
+	// 3. Handle crosscutting per node, kumpulkan pohon yg lahir dari crosscutting_disetujui
+	//    dan hanya punya 1 referensi → perlu ikut dihapus
+	var crosscuttingDerivedIds []int
+	for _, nodeIdStr := range nodeIds {
+		nodeId, _ := strconv.Atoi(nodeIdStr)
+		derived, err := repository.processCrosscuttingForDelete(ctx, tx, nodeId)
 		if err != nil {
-			return fmt.Errorf("gagal menghapus tagging: %v", err)
+			return fmt.Errorf("gagal proses crosscutting node id=%d: %w", nodeId, err)
+		}
+		crosscuttingDerivedIds = append(crosscuttingDerivedIds, derived...)
+	}
+	// 4. Hapus semua data pendukung + pohon kinerja utama (subtree)
+	for _, nodeIdStr := range nodeIds {
+		if err := repository.deletePokinAndDependencies(ctx, tx, nodeIdStr); err != nil {
+			return err
 		}
 	}
-
+	// 5. Rekursif hapus pohon yg lahir dari crosscutting_disetujui (single ref)
+	//    Buat set nodeIds yang sudah dihapus supaya tidak double-process
+	deletedSet := make(map[int]bool, len(nodeIds))
+	for _, s := range nodeIds {
+		if idInt, err := strconv.Atoi(s); err == nil {
+			deletedSet[idInt] = true
+		}
+	}
+	for _, derivedId := range crosscuttingDerivedIds {
+		if deletedSet[derivedId] {
+			continue
+		}
+		deletedSet[derivedId] = true
+		if err := repository.Delete(ctx, tx, derivedId); err != nil {
+			return fmt.Errorf("gagal hapus pohon crosscutting derived id=%d: %w", derivedId, err)
+		}
+	}
 	return nil
 }
 
-//DELETE POKIN TRIAL
-// func (repository *PohonKinerjaRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id int) error {
-// 	// 1. Kumpulkan semua ID subtree (akar + seluruh turunan via parent)
-// 	nodeIds, cloneFromMap, err := repository.collectSubtreeIds(ctx, tx, id)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	// 2. Update status node asli yang di-clone → kembali ke 'menunggu_disetujui'
-// 	for _, cloneFromId := range cloneFromMap {
-// 		if _, err := tx.ExecContext(ctx,
-// 			`UPDATE tb_pohon_kinerja SET status = 'menunggu_disetujui' WHERE id = ?`,
-// 			cloneFromId,
-// 		); err != nil {
-// 			return fmt.Errorf("gagal update status clone_from id=%d: %w", cloneFromId, err)
-// 		}
-// 	}
-// 	// 3. Handle crosscutting per node, kumpulkan pohon yg lahir dari crosscutting_disetujui
-// 	//    dan hanya punya 1 referensi → perlu ikut dihapus
-// 	var crosscuttingDerivedIds []int
-// 	for _, nodeIdStr := range nodeIds {
-// 		nodeId, _ := strconv.Atoi(nodeIdStr)
-// 		derived, err := repository.processCrosscuttingForDelete(ctx, tx, nodeId)
-// 		if err != nil {
-// 			return fmt.Errorf("gagal proses crosscutting node id=%d: %w", nodeId, err)
-// 		}
-// 		crosscuttingDerivedIds = append(crosscuttingDerivedIds, derived...)
-// 	}
-// 	// 4. Hapus semua data pendukung + pohon kinerja utama (subtree)
-// 	for _, nodeIdStr := range nodeIds {
-// 		if err := repository.deletePokinAndDependencies(ctx, tx, nodeIdStr); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	// 5. Rekursif hapus pohon yg lahir dari crosscutting_disetujui (single ref)
-// 	//    Buat set nodeIds yang sudah dihapus supaya tidak double-process
-// 	deletedSet := make(map[int]bool, len(nodeIds))
-// 	for _, s := range nodeIds {
-// 		if idInt, err := strconv.Atoi(s); err == nil {
-// 			deletedSet[idInt] = true
-// 		}
-// 	}
-// 	for _, derivedId := range crosscuttingDerivedIds {
-// 		if deletedSet[derivedId] {
-// 			continue
-// 		}
-// 		deletedSet[derivedId] = true
-// 		if err := repository.Delete(ctx, tx, derivedId); err != nil {
-// 			return fmt.Errorf("gagal hapus pohon crosscutting derived id=%d: %w", derivedId, err)
-// 		}
-// 	}
-// 	return nil
-// }
 //ENDING
 
 // ─────────────────────────────────────────────────────────
@@ -729,10 +732,11 @@ func (repository *PohonKinerjaRepositoryImpl) processCrosscuttingForDelete(
 	// ── B. Incoming crosscutting: node ini sebagai crosscutting_to ──
 	// (OPD lain yang crosscutting KE node ini)
 	if _, err := tx.ExecContext(ctx, `
-		DELETE FROM tb_crosscutting
-		WHERE crosscutting_to = ?
+    UPDATE tb_crosscutting
+    SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+    WHERE crosscutting_to = ?
 	`, nodeId); err != nil {
-		return nil, fmt.Errorf("gagal hapus incoming crosscutting ke node=%d: %w", nodeId, err)
+		return nil, fmt.Errorf("gagal reset incoming crosscutting ke node=%d: %w", nodeId, err)
 	}
 	return toDeletePokinIds, nil
 }
