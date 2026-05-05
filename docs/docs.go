@@ -1112,6 +1112,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/pohon_kinerja/pilih_parent/{kode_opd}/{tahun}/{level_pohon}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pohon Kinerja Opd"
+                ],
+                "summary": "Pilih Parent",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Level Pohon",
+                        "name": "level_pohon",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaAdminResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pohon_kinerja_opd/clone": {
             "post": {
                 "security": [
@@ -1218,6 +1287,68 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/pohonkinerja.ControlPokinOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/findall/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pohon Kinerja Opd"
+                ],
+                "summary": "Find All Pohon Kinerja Opd",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaOpdAllResponse"
                                         }
                                     }
                                 }
@@ -3395,6 +3526,17 @@ const docTemplate = `{
                 }
             }
         },
+        "opdmaster.OpdResponseForAll": {
+            "type": "object",
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                }
+            }
+        },
         "pohonkinerja.ControlPokinOpdData": {
             "type": "object",
             "properties": {
@@ -3495,6 +3637,26 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.CrosscuttingPokinResponse": {
+            "type": "object",
+            "properties": {
+                "id_crosscutting": {
+                    "type": "integer"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "kode_opd_asal": {
+                    "type": "string"
+                },
+                "nama_opd_asal": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "pohonkinerja.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -3517,6 +3679,20 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/pohonkinerja.TargetResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.IndikatorTujuanResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TargetTujuanResponse"
                     }
                 }
             }
@@ -3576,6 +3752,158 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.OperationalNOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.OperationalNOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "description": "KeteranganCrosscutting *string                     ` + "`" + `json:\"keterangan_crosscutting\"` + "`" + `",
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.OperationalOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.OperationalNOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_tematik": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
         "pohonkinerja.PelaksanaOpdResponse": {
             "type": "object",
             "properties": {
@@ -3592,6 +3920,93 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "pohon_kinerja_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.PohonKinerjaAdminResponseData": {
+            "type": "object",
+            "properties": {
+                "alasan_sebagai_kondisi_strategis": {
+                    "type": "string"
+                },
+                "childs": {
+                    "type": "array",
+                    "items": {}
+                },
+                "data_terukur_pendukung_pernyataan": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kondisi_terukur_yang_diharapkan": {
+                    "type": "string"
+                },
+                "kondisi_yang_ingin_diwujudkan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "nama_opd_pengaju": {
+                    "type": "string"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "pernyataan_kondisi_strategis": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 }
             }
@@ -3616,6 +4031,32 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 4,
                     "minLength": 4
+                }
+            }
+        },
+        "pohonkinerja.PohonKinerjaOpdAllResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.StrategicOpdResponse"
+                    }
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tujuan_opd": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TujuanOpdResponse"
+                    }
                 }
             }
         },
@@ -3695,6 +4136,192 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.ReviewResponse": {
+            "type": "object",
+            "properties": {
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_pohon_kinerja": {
+                    "type": "integer"
+                },
+                "jenis_pokin": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.StrategicOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TacticalOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_tematik": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.TacticalOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.OperationalOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_tematik": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
         "pohonkinerja.TaggingResponse": {
             "type": "object",
             "properties": {
@@ -3734,6 +4361,41 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.TargetTujuanResponse": {
+            "type": "object",
+            "properties": {
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.TujuanOpdResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "description": "Periode   PeriodeResponse           ` + "`" + `json:\"periode,omitempty\"` + "`" + `",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorTujuanResponse"
+                    }
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tujuan": {
                     "type": "string"
                 }
             }

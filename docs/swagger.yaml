@@ -47,6 +47,13 @@ definitions:
       target:
         type: string
     type: object
+  opdmaster.OpdResponseForAll:
+    properties:
+      kode_opd:
+        type: string
+      nama_opd:
+        type: string
+    type: object
   pohonkinerja.ControlPokinOpdData:
     properties:
       jumlah_pelaksana:
@@ -116,6 +123,19 @@ definitions:
         description: ← BARU
         type: integer
     type: object
+  pohonkinerja.CrosscuttingPokinResponse:
+    properties:
+      id_crosscutting:
+        type: integer
+      keterangan_crosscutting:
+        type: string
+      kode_opd_asal:
+        type: string
+      nama_opd_asal:
+        type: string
+      status:
+        type: string
+    type: object
   pohonkinerja.IndikatorResponse:
     properties:
       id_indikator:
@@ -131,6 +151,15 @@ definitions:
       targets:
         items:
           $ref: '#/definitions/pohonkinerja.TargetResponse'
+        type: array
+    type: object
+  pohonkinerja.IndikatorTujuanResponse:
+    properties:
+      indikator:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/pohonkinerja.TargetTujuanResponse'
         type: array
     type: object
   pohonkinerja.KeteranganTaggingResponse:
@@ -169,6 +198,107 @@ definitions:
       nama:
         type: string
     type: object
+  pohonkinerja.OperationalNOpdResponse:
+    properties:
+      childs:
+        items:
+          $ref: '#/definitions/pohonkinerja.OperationalNOpdResponse'
+        type: array
+      crosscutting:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
+        type: array
+      id:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorResponse'
+        type: array
+      is_active:
+        type: boolean
+      jenis_pohon:
+        type: string
+      jumlah_review:
+        type: integer
+      keterangan:
+        type: string
+      level_pohon:
+        type: integer
+      nama_pohon:
+        type: string
+      parent:
+        type: integer
+      pelaksana:
+        items:
+          $ref: '#/definitions/pohonkinerja.PelaksanaOpdResponse'
+        type: array
+      perangkat_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      review:
+        items:
+          $ref: '#/definitions/pohonkinerja.ReviewResponse'
+        type: array
+      status:
+        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
+        type: string
+      tagging:
+        items:
+          $ref: '#/definitions/pohonkinerja.TaggingResponse'
+        type: array
+    type: object
+  pohonkinerja.OperationalOpdResponse:
+    properties:
+      childs:
+        items:
+          $ref: '#/definitions/pohonkinerja.OperationalNOpdResponse'
+        type: array
+      crosscutting:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
+        type: array
+      id:
+        type: integer
+      id_tematik:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorResponse'
+        type: array
+      is_active:
+        type: boolean
+      jenis_pohon:
+        type: string
+      jumlah_review:
+        type: integer
+      keterangan:
+        type: string
+      keterangan_crosscutting:
+        type: string
+      level_pohon:
+        type: integer
+      nama_pohon:
+        type: string
+      nama_tematik:
+        type: string
+      parent:
+        type: integer
+      pelaksana:
+        items:
+          $ref: '#/definitions/pohonkinerja.PelaksanaOpdResponse'
+        type: array
+      perangkat_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      review:
+        items:
+          $ref: '#/definitions/pohonkinerja.ReviewResponse'
+        type: array
+      status:
+        type: string
+      tagging:
+        items:
+          $ref: '#/definitions/pohonkinerja.TaggingResponse'
+        type: array
+    type: object
   pohonkinerja.PelaksanaOpdResponse:
     properties:
       id_pelaksana:
@@ -180,6 +310,64 @@ definitions:
       pegawai_id:
         type: string
       pohon_kinerja_id:
+        type: string
+    type: object
+  pohonkinerja.PohonKinerjaAdminResponseData:
+    properties:
+      alasan_sebagai_kondisi_strategis:
+        type: string
+      childs:
+        items: {}
+        type: array
+      data_terukur_pendukung_pernyataan:
+        type: string
+      id:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorResponse'
+        type: array
+      is_active:
+        type: boolean
+      jenis_pohon:
+        type: string
+      jumlah_review:
+        type: integer
+      keterangan:
+        type: string
+      kode_opd:
+        type: string
+      kondisi_terukur_yang_diharapkan:
+        type: string
+      kondisi_yang_ingin_diwujudkan:
+        type: string
+      level_pohon:
+        type: integer
+      nama_opd:
+        type: string
+      nama_opd_pengaju:
+        type: string
+      nama_pohon:
+        type: string
+      parent:
+        type: integer
+      pelaksana:
+        items:
+          $ref: '#/definitions/pohonkinerja.PelaksanaOpdResponse'
+        type: array
+      perangkat_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      pernyataan_kondisi_strategis:
+        type: string
+      status:
+        type: string
+      tagging:
+        items:
+          $ref: '#/definitions/pohonkinerja.TaggingResponse'
+        type: array
+      tahun:
+        type: string
+      updated_by:
         type: string
     type: object
   pohonkinerja.PohonKinerjaCloneRequest:
@@ -198,6 +386,23 @@ definitions:
     - kode_opd
     - tahun_sumber
     - tahun_tujuan
+    type: object
+  pohonkinerja.PohonKinerjaOpdAllResponse:
+    properties:
+      childs:
+        items:
+          $ref: '#/definitions/pohonkinerja.StrategicOpdResponse'
+        type: array
+      kode_opd:
+        type: string
+      nama_opd:
+        type: string
+      tahun:
+        type: string
+      tujuan_opd:
+        items:
+          $ref: '#/definitions/pohonkinerja.TujuanOpdResponse'
+        type: array
     type: object
   pohonkinerja.PohonKinerjaOpdResponse:
     properties:
@@ -249,6 +454,129 @@ definitions:
       parent:
         type: integer
     type: object
+  pohonkinerja.ReviewResponse:
+    properties:
+      created_by:
+        type: string
+      id:
+        type: integer
+      id_pohon_kinerja:
+        type: integer
+      jenis_pokin:
+        type: string
+      keterangan:
+        type: string
+      nama_pegawai:
+        type: string
+      review:
+        type: string
+    type: object
+  pohonkinerja.StrategicOpdResponse:
+    properties:
+      childs:
+        items:
+          $ref: '#/definitions/pohonkinerja.TacticalOpdResponse'
+        type: array
+      crosscutting:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
+        type: array
+      id:
+        type: integer
+      id_tematik:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorResponse'
+        type: array
+      is_active:
+        type: boolean
+      jenis_pohon:
+        type: string
+      jumlah_review:
+        type: integer
+      keterangan:
+        type: string
+      keterangan_crosscutting:
+        type: string
+      level_pohon:
+        type: integer
+      nama_pohon:
+        type: string
+      nama_tematik:
+        type: string
+      parent:
+        type: integer
+      pelaksana:
+        items:
+          $ref: '#/definitions/pohonkinerja.PelaksanaOpdResponse'
+        type: array
+      perangkat_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      review:
+        items:
+          $ref: '#/definitions/pohonkinerja.ReviewResponse'
+        type: array
+      status:
+        type: string
+      tagging:
+        items:
+          $ref: '#/definitions/pohonkinerja.TaggingResponse'
+        type: array
+    type: object
+  pohonkinerja.TacticalOpdResponse:
+    properties:
+      childs:
+        items:
+          $ref: '#/definitions/pohonkinerja.OperationalOpdResponse'
+        type: array
+      crosscutting:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
+        type: array
+      id:
+        type: integer
+      id_tematik:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorResponse'
+        type: array
+      is_active:
+        type: boolean
+      jenis_pohon:
+        type: string
+      jumlah_review:
+        type: integer
+      keterangan:
+        type: string
+      keterangan_crosscutting:
+        type: string
+      level_pohon:
+        type: integer
+      nama_pohon:
+        type: string
+      nama_tematik:
+        type: string
+      parent:
+        type: integer
+      pelaksana:
+        items:
+          $ref: '#/definitions/pohonkinerja.PelaksanaOpdResponse'
+        type: array
+      perangkat_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      review:
+        items:
+          $ref: '#/definitions/pohonkinerja.ReviewResponse'
+        type: array
+      status:
+        type: string
+      tagging:
+        items:
+          $ref: '#/definitions/pohonkinerja.TaggingResponse'
+        type: array
+    type: object
   pohonkinerja.TaggingResponse:
     properties:
       clone_from:
@@ -275,6 +603,29 @@ definitions:
       tahun:
         type: string
       target:
+        type: string
+    type: object
+  pohonkinerja.TargetTujuanResponse:
+    properties:
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  pohonkinerja.TujuanOpdResponse:
+    properties:
+      id:
+        type: integer
+      indikator:
+        description: Periode   PeriodeResponse           `json:"periode,omitempty"`
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorTujuanResponse'
+        type: array
+      kode_opd:
+        type: string
+      tujuan:
         type: string
     type: object
   programkegiatan.AnggaranRenjaRequest:
@@ -1739,6 +2090,48 @@ paths:
       summary: Matrix Renstra
       tags:
       - Matrix Renstra
+  /pohon_kinerja/pilih_parent/{kode_opd}/{tahun}/{level_pohon}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Level Pohon
+        in: path
+        name: level_pohon
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.PohonKinerjaAdminResponseData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Pilih Parent
+      tags:
+      - Pohon Kinerja Opd
   /pohon_kinerja_opd/clone:
     post:
       consumes:
@@ -1812,6 +2205,43 @@ paths:
       summary: Get Control Pokin Opd
       tags:
       - Control Pokin Opd
+  /pohon_kinerja_opd/findall/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.PohonKinerjaOpdAllResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All Pohon Kinerja Opd
+      tags:
+      - Pohon Kinerja Opd
   /pohon_kinerja_opd/leaderboard_pokin_opd/{tahun}:
     get:
       consumes:
