@@ -2076,7 +2076,10 @@ func (repository *PohonKinerjaRepositoryImpl) InsertClonedTarget(ctx context.Con
 }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.Context, tx *sql.Tx, jenisPohon string, levelPohon int, tahun string, kodeOpd string, status string) ([]domain.PohonKinerja, error) {
-	script := "SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active FROM tb_pohon_kinerja WHERE 1=1"
+	script := `
+SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active
+FROM tb_pohon_kinerja
+WHERE 1=1`
 	parameters := []interface{}{}
 	if jenisPohon != "" {
 		script += " AND jenis_pohon = ?"
@@ -2098,14 +2101,24 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.
 		script += " AND status = ?"
 		parameters = append(parameters, status)
 	}
-	script += " ORDER BY nama_pohon asc"
-
+	// Hierarki yang akarnya langsung bertaut ke parent -100 tidak ditampilkan
+	// (akar + seluruh turunan).
+	script += `
+	AND id NOT IN (
+		WITH RECURSIVE excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT p.id FROM tb_pohon_kinerja p
+			INNER JOIN excluded_tree et ON p.parent = et.id
+		)
+		SELECT id FROM excluded_tree
+	)`
+	script += " ORDER BY nama_pohon ASC"
 	rows, err := tx.QueryContext(ctx, script, parameters...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
 	var pokins []domain.PohonKinerja
 	for rows.Next() {
 		var pokin domain.PohonKinerja
@@ -2115,8 +2128,51 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.
 		}
 		pokins = append(pokins, pokin)
 	}
-	return pokins, nil
+	return pokins, rows.Err()
 }
+
+// func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.Context, tx *sql.Tx, jenisPohon string, levelPohon int, tahun string, kodeOpd string, status string) ([]domain.PohonKinerja, error) {
+// 	script := "SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active FROM tb_pohon_kinerja WHERE 1=1"
+// 	parameters := []interface{}{}
+// 	if jenisPohon != "" {
+// 		script += " AND jenis_pohon = ?"
+// 		parameters = append(parameters, jenisPohon)
+// 	}
+// 	if levelPohon != 0 {
+// 		script += " AND level_pohon = ?"
+// 		parameters = append(parameters, levelPohon)
+// 	}
+// 	if kodeOpd != "" {
+// 		script += " AND kode_opd = ?"
+// 		parameters = append(parameters, kodeOpd)
+// 	}
+// 	if tahun != "" {
+// 		script += " AND tahun = ?"
+// 		parameters = append(parameters, tahun)
+// 	}
+// 	if status != "" {
+// 		script += " AND status = ?"
+// 		parameters = append(parameters, status)
+// 	}
+// 	script += " ORDER BY nama_pohon asc"
+
+// 	rows, err := tx.QueryContext(ctx, script, parameters...)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var pokins []domain.PohonKinerja
+// 	for rows.Next() {
+// 		var pokin domain.PohonKinerja
+// 		err := rows.Scan(&pokin.Id, &pokin.NamaPohon, &pokin.JenisPohon, &pokin.LevelPohon, &pokin.KodeOpd, &pokin.Tahun, &pokin.Keterangan, &pokin.Status, &pokin.IsActive)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		pokins = append(pokins, pokin)
+// 	}
+// 	return pokins, nil
+// }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.PohonKinerja, error) {
 	script := `

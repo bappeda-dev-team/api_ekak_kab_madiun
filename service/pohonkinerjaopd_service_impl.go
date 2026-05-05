@@ -985,6 +985,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				IdCrosscutting:         c.Id,
 				KeteranganCrosscutting: c.Keterangan,
 				KodeOpdAsal:            c.OpdPengirim,
+				NamaPohonAsal:          c.NamaPohonAsal,
 				NamaOpdAsal:            opdAsalNamaMap[c.OpdPengirim],
 				Status:                 c.Status,
 			})

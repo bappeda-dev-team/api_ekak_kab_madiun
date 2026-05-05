@@ -637,6 +637,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPokinIdsBatch
 			c.crosscutting_to,
 			COALESCE(c.keterangan_crosscutting, '') AS keterangan_crosscutting,
 			COALESCE(pk_from.kode_opd, '') AS kode_opd_asal,
+			COALESCE(pk_from.nama_pohon, '') AS nama_pohon_asal,
 			c.status
 		FROM tb_crosscutting c
 		LEFT JOIN tb_pohon_kinerja pk_from ON c.crosscutting_from = pk_from.id
@@ -652,7 +653,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPokinIdsBatch
 	result := make(map[int][]domain.Crosscutting)
 	for rows.Next() {
 		var c domain.Crosscutting
-		if err := rows.Scan(&c.Id, &c.CrosscuttingTo, &c.Keterangan, &c.OpdPengirim, &c.Status); err != nil {
+		if err := rows.Scan(&c.Id, &c.CrosscuttingTo, &c.Keterangan, &c.OpdPengirim, &c.NamaPohonAsal, &c.Status); err != nil {
 			return nil, fmt.Errorf("scan crosscutting batch: %w", err)
 		}
 		result[c.CrosscuttingTo] = append(result[c.CrosscuttingTo], c)
