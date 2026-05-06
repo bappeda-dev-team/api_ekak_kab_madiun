@@ -2206,6 +2206,15 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.C
         WHERE 
             p.nip = ?  -- ✅ FILTER BERDASARKAN NIP
             AND pk.tahun = ?
+			AND pk.id NOT IN (
+				WITH RECURSIVE excluded_tree AS (
+					SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+					UNION ALL
+					SELECT child.id FROM tb_pohon_kinerja child
+					INNER JOIN excluded_tree et ON child.parent = et.id
+				)
+				SELECT id FROM excluded_tree
+			)
         ORDER BY 
             pk.level_pohon, pk.id, pk.created_at ASC
     `
