@@ -1648,9 +1648,10 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
             UNION ALL
             
             -- Recursive case: ambil semua child nodes
-            SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
+          SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
             FROM tb_pohon_kinerja pk
             INNER JOIN pohon_hierarki ph ON pk.parent = ph.id
+            WHERE pk.level_pohon <= 6
         )
         SELECT 
             ph.id,
@@ -4388,7 +4389,14 @@ type ControlPokinLevel struct {
 
 func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error) {
 	query := `
-		WITH RECURSIVE valid_pokin AS (
+		WITH RECURSIVE 
+		excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT child.id FROM tb_pohon_kinerja child
+			INNER JOIN excluded_tree et ON child.parent = et.id
+		),
+		valid_pokin AS (
 			-- ✅ BASE CASE: Strategic (level 4) dengan parent = 0 atau parent level 0-3
 			SELECT
 				pk.id,
@@ -4409,7 +4417,7 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 					AND p2.level_pohon BETWEEN 0 AND 3
 				)
 			)
-
+			AND pk.id NOT IN (SELECT id FROM excluded_tree)
 			UNION ALL
 
 			-- ✅ RECURSIVE: Level 5+ harus punya parent valid dengan tahun yang sama
@@ -4424,6 +4432,7 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 			AND child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND child.id NOT IN (SELECT id FROM excluded_tree)
 			-- ✅ PENTING: Parent harus tahun yang sama
 			AND child.tahun = vp.tahun
 		),
@@ -4518,6 +4527,12 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]LeaderboardTematikNode, error) {
 	query := `
 		WITH RECURSIVE
+		excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT child.id FROM tb_pohon_kinerja child
+			INNER JOIN excluded_tree et ON child.parent = et.id
+		),
 		valid_pokin AS (
 			SELECT
 				pk.id,
@@ -4540,6 +4555,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx c
 					WHERE level_pohon BETWEEN 0 AND 3
 				)
 			)
+			AND pk.id NOT IN (SELECT id FROM excluded_tree) 
 			UNION ALL
 			SELECT
 				child.id,
@@ -4555,6 +4571,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx c
 			WHERE child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND child.id NOT IN (SELECT id FROM excluded_tree)
 			AND child.kode_opd = vp.kode_opd
 			AND child.tahun = vp.tahun
 		),
@@ -4643,6 +4660,12 @@ type LeaderboardTematikNode struct {
 func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error) {
 	query := `
 	WITH RECURSIVE 
+	excluded_tree AS (
+    SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+    UNION ALL
+    SELECT child.id FROM tb_pohon_kinerja child
+    INNER JOIN excluded_tree et ON child.parent = et.id
+	),
 	valid_pokin AS (
 		SELECT 
 			pk.id,
@@ -4664,6 +4687,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				WHERE level_pohon BETWEEN 0 AND 3
 			)
 		)
+		AND pk.id NOT IN (SELECT id FROM excluded_tree)
 
 		UNION ALL
 		
@@ -4681,6 +4705,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 		WHERE child.tahun = ?
 		AND child.level_pohon > 4
 		AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+		AND child.id NOT IN (SELECT id FROM excluded_tree)
 		AND child.kode_opd = vp.kode_opd
 		AND child.tahun = vp.tahun
 	),
@@ -4838,6 +4863,12 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardTematikNode, error) {
 	query := `
 		WITH RECURSIVE
+		excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT child.id FROM tb_pohon_kinerja child
+			INNER JOIN excluded_tree et ON child.parent = et.id
+		),
 		valid_pokin AS (
 			SELECT
 				pk.id,
@@ -4852,6 +4883,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx co
 			WHERE pk.tahun = ?
 			AND pk.level_pohon = 4
 			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND pk.id NOT IN (SELECT id FROM excluded_tree)
 			AND (
 				pk.parent = 0
 				OR pk.parent IN (
@@ -4874,6 +4906,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx co
 			WHERE child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			 AND child.id NOT IN (SELECT id FROM excluded_tree)
 			AND child.kode_opd = vp.kode_opd
 			AND child.tahun = vp.tahun
 		),
@@ -5646,4 +5679,42 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByParentClonePokinOpd(ctx
 		list = append(list, p)
 	}
 	return list, nil
+}
+
+func (r *PohonKinerjaRepositoryImpl) FindChildPokinsUpToLevel(ctx context.Context, tx *sql.Tx, parentId int64, maxLevel int) ([]domain.PohonKinerja, error) {
+	SQL := `SELECT id, parent, nama_pohon, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, COALESCE(clone_from, 0), is_active
+            FROM tb_pohon_kinerja 
+            WHERE parent = ?`
+	args := []interface{}{parentId}
+	if maxLevel > 0 {
+		SQL += ` AND level_pohon <= ?`
+		args = append(args, maxLevel)
+	}
+	rows, err := tx.QueryContext(ctx, SQL, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var pokins []domain.PohonKinerja
+	for rows.Next() {
+		var pokin domain.PohonKinerja
+		err := rows.Scan(
+			&pokin.Id,
+			&pokin.Parent,
+			&pokin.NamaPohon,
+			&pokin.JenisPohon,
+			&pokin.LevelPohon,
+			&pokin.KodeOpd,
+			&pokin.Keterangan,
+			&pokin.Tahun,
+			&pokin.Status,
+			&pokin.CloneFrom,
+			&pokin.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+		pokins = append(pokins, pokin)
+	}
+	return pokins, nil
 }

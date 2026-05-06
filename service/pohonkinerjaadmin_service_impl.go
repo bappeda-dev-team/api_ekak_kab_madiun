@@ -1973,7 +1973,7 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 			currentKodeOpd := pokin.KodeOpd
 
 			// Cari child pokin
-			childPokins, err := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(pokinId))
+			childPokins, err := service.pohonKinerjaRepository.FindChildPokinsUpToLevel(ctx, tx, int64(pokinId), 6)
 			if err != nil {
 				return err
 			}
@@ -2084,7 +2084,7 @@ func (service *PohonKinerjaAdminServiceImpl) CloneStrategiFromPemda(ctx context.
 		}
 
 		// Cari dan clone child pokin
-		childPokins, err := service.pohonKinerjaRepository.FindChildPokins(ctx, tx, int64(pokinId))
+		childPokins, err := service.pohonKinerjaRepository.FindChildPokinsUpToLevel(ctx, tx, int64(pokinId), 6)
 		if err != nil {
 			return 0, err
 		}
