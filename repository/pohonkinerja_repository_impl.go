@@ -1648,9 +1648,10 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
             UNION ALL
             
             -- Recursive case: ambil semua child nodes
-            SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
+          SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
             FROM tb_pohon_kinerja pk
             INNER JOIN pohon_hierarki ph ON pk.parent = ph.id
+            WHERE pk.level_pohon <= 6
         )
         SELECT 
             ph.id,
@@ -5678,4 +5679,42 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByParentClonePokinOpd(ctx
 		list = append(list, p)
 	}
 	return list, nil
+}
+
+func (r *PohonKinerjaRepositoryImpl) FindChildPokinsUpToLevel(ctx context.Context, tx *sql.Tx, parentId int64, maxLevel int) ([]domain.PohonKinerja, error) {
+	SQL := `SELECT id, parent, nama_pohon, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, COALESCE(clone_from, 0), is_active
+            FROM tb_pohon_kinerja 
+            WHERE parent = ?`
+	args := []interface{}{parentId}
+	if maxLevel > 0 {
+		SQL += ` AND level_pohon <= ?`
+		args = append(args, maxLevel)
+	}
+	rows, err := tx.QueryContext(ctx, SQL, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var pokins []domain.PohonKinerja
+	for rows.Next() {
+		var pokin domain.PohonKinerja
+		err := rows.Scan(
+			&pokin.Id,
+			&pokin.Parent,
+			&pokin.NamaPohon,
+			&pokin.JenisPohon,
+			&pokin.LevelPohon,
+			&pokin.KodeOpd,
+			&pokin.Keterangan,
+			&pokin.Tahun,
+			&pokin.Status,
+			&pokin.CloneFrom,
+			&pokin.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+		pokins = append(pokins, pokin)
+	}
+	return pokins, nil
 }
