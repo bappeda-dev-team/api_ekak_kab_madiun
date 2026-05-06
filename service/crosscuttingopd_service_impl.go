@@ -8,6 +8,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -319,19 +320,13 @@ func (service *CrosscuttingOpdServiceImpl) ApproveOrReject(ctx context.Context, 
 	return response, nil
 }
 
-func (service *CrosscuttingOpdServiceImpl) Delete(ctx context.Context, pokinId int, nipPegawai string) error {
+func (service *CrosscuttingOpdServiceImpl) Delete(ctx context.Context, crosscuttingId int, nipPegawai string) error {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("gagal memulai transaksi: %w", err)
 	}
 	defer helper.CommitOrRollback(tx)
-
-	err = service.CrosscuttingOpdRepository.DeleteCrosscutting(ctx, tx, pokinId, nipPegawai)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return service.CrosscuttingOpdRepository.DeleteCrosscutting(ctx, tx, crosscuttingId, nipPegawai)
 }
 
 func (service *CrosscuttingOpdServiceImpl) DeleteUnused(ctx context.Context, crosscuttingId int) error {
@@ -420,4 +415,26 @@ func (service *CrosscuttingOpdServiceImpl) FindOPDCrosscuttingFrom(ctx context.C
 	}
 
 	return response, nil
+}
+
+// Plan A
+func (service *CrosscuttingOpdServiceImpl) DeleteCrosscuttingDiterima(ctx context.Context, crosscuttingId int) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return fmt.Errorf("gagal memulai transaksi: %w", err)
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.CrosscuttingOpdRepository.DeleteCrosscuttingDiterima(ctx, tx, crosscuttingId)
+}
+
+// Plan B
+func (service *CrosscuttingOpdServiceImpl) UnlinkCrosscuttingDiterima(
+	ctx context.Context, crosscuttingId int,
+) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return fmt.Errorf("gagal memulai transaksi: %w", err)
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.CrosscuttingOpdRepository.UnlinkCrosscuttingDiterima(ctx, tx, crosscuttingId)
 }

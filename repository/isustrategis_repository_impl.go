@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/isustrategis"
 	"ekak_kabupaten_madiun/model/web/strategic"
+	"ekak_kabupaten_madiun/model/web/strategicarahkebijakan"
 	"fmt"
 	"log"
 	"sort"
@@ -161,7 +162,7 @@ func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx
 	}
 	return result, nil
 }
-func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]strategic.IsuStrategiOpd, error) {
+func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]strategic.IsuStrategiOpd, error) {
 	query := `
 	SELECT
 		tb_csf.id,
@@ -169,13 +170,13 @@ func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql
 	FROM
 		tb_csf
 	JOIN tb_pohon_kinerja ON tb_csf.pohon_id = tb_pohon_kinerja.id
-	WHERE
-		tb_csf.tahun = ? and tb_pohon_kinerja.level_pohon = 4
+	WHERE 
+		tb_pohon_kinerja.kode_opd = ? and tb_csf.tahun = ? and tb_pohon_kinerja.level_pohon = 4
 	ORDER BY
 		tb_csf.id
 	`
 
-	rows, err := tx.QueryContext(ctx, query, tahun)
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +218,72 @@ func (repository *CSFRepositoryImpl) IsuFindByTahun(ctx context.Context, tx *sql
 
 	log.Print("[LOG] Record CSF ditemukan")
 	var result []strategic.IsuStrategiOpd
+	var keys []int
+	for id := range csfMap {
+		keys = append(keys, id)
+	}
+	sort.Ints(keys)
+	for _, id := range keys {
+		result = append(result, *csfMap[id])
+	}
+	return result, nil
+}
+func (repository *CSFRepositoryImpl) IsuFindBetweenTahun(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string) ([]strategicarahkebijakan.IsuStrategiPemda, error) {
+	query := `
+	SELECT
+		tb_csf.id,
+		tb_pohon_kinerja.nama_pohon
+	FROM
+		tb_csf
+	JOIN tb_pohon_kinerja ON tb_csf.pohon_id = tb_pohon_kinerja.id
+	WHERE 
+		tb_csf.tahun BETWEEN ? AND ? and tb_pohon_kinerja.level_pohon = 4
+	ORDER BY
+		tb_csf.id
+	`
+
+	rows, err := tx.QueryContext(ctx, query, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
+
+	csfMap := make(map[int]*strategicarahkebijakan.IsuStrategiPemda)
+
+	for rows.Next() {
+		var (
+			csfID       int
+			namaPohon   sql.NullString
+		)
+
+		if err := rows.Scan(
+			&csfID, &namaPohon, 
+		); err != nil {
+			return nil, err
+		}
+
+		csf, ok := csfMap[csfID]
+		if !ok {
+			csf = &strategicarahkebijakan.IsuStrategiPemda{
+				ID:                         csfID,
+				NamaIsu:                   namaPohon.String,
+			}
+			csfMap[csfID] = csf
+		}
+
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	log.Print("[LOG] Record CSF ditemukan")
+	var result []strategicarahkebijakan.IsuStrategiPemda
 	var keys []int
 	for id := range csfMap {
 		keys = append(keys, id)

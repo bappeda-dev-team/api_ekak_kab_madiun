@@ -156,6 +156,18 @@ func (controller *PohonKinerjaOpdControllerImpl) FindById(writer http.ResponseWr
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// docs swagger pokin opd
+// @Summary      Find All Pohon Kinerja Opd
+// @Description  Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.
+// @Tags         Pohon Kinerja Opd
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd    path     string  true  "Kode OPD"
+// @Param        tahun       path     string  true  "Tahun"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.PohonKinerjaOpdAllResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /pohon_kinerja_opd/findall/{kode_opd}/{tahun} [get]
 func (controller *PohonKinerjaOpdControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
@@ -252,6 +264,54 @@ func (controller *PohonKinerjaOpdControllerImpl) FindAllArah(writer http.Respons
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+// func (controller *PohonKinerjaOpdControllerImpl) FindAllArahPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+// 	kodeOpd := params.ByName("kode_opd")
+// 	tahun := params.ByName("tahun")
+
+// 	// Jika kodeOpd atau tahun kosong, kembalikan response null
+// 	if kodeOpd == "" || tahun == "" {
+// 		webResponse := web.WebResponse{
+// 			Code:   200,
+// 			Status: "OK",
+// 			Data:   nil,
+// 		}
+// 		helper.WriteToResponseBody(writer, webResponse)
+// 		return
+// 	}
+
+// 	// Panggil service FindAll
+// 	pohonKinerjaResponse, err := controller.PohonKinerjaOpdService.FindAllArahPemda(request.Context(), kodeOpd, tahun)
+// 	if err != nil {
+// 		// Jika tidak ada data, kembalikan response sukses dengan data null
+// 		if err == sql.ErrNoRows {
+// 			webResponse := web.WebResponse{
+// 				Code:   200,
+// 				Status: "OK",
+// 				Data:   nil,
+// 			}
+// 			helper.WriteToResponseBody(writer, webResponse)
+// 			return
+// 		}
+
+// 		// Untuk error lainnya
+// 		webResponse := web.WebResponse{
+// 			Code:   404,
+// 			Status: "Not Found",
+// 			Data:   err.Error(),
+// 		}
+// 		writer.WriteHeader(http.StatusNotFound)
+// 		helper.WriteToResponseBody(writer, webResponse)
+// 		return
+// 	}
+
+// 	// Kirim response sukses
+// 	webResponse := web.WebResponse{
+// 		Code:   200,
+// 		Status: "Success Get All Strategic Arah Kebijakan",
+// 		Data:   pohonKinerjaResponse,
+// 	}
+// 	helper.WriteToResponseBody(writer, webResponse)
+// }
 
 func (controller *PohonKinerjaOpdControllerImpl) FindStrategicNoParent(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")

@@ -18,5 +18,6 @@ type SasaranPemdaRepository interface {
 	IsIdExists(ctx context.Context, tx *sql.Tx, id int) bool
 	UpdatePeriode(ctx context.Context, tx *sql.Tx, sasaranPemda domain.SasaranPemda) (domain.SasaranPemda, error)
 	FindAllWithPokin(ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir, jenisPeriode string) ([]domain.PohonKinerjaWithSasaran, error)
+	FindStrategicArahKebijakanPemda(ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir, jenisPeriode string) ([]domain.StrategicPemdaRow, error)
 	IsSubtemaIdExists(ctx context.Context, tx *sql.Tx, subtemaId int) bool
 }

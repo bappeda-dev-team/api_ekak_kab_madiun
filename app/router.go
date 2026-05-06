@@ -60,6 +60,7 @@ func NewRouter(
 	programPrioritasPusatController controller.ProgramPrioritasPusatController,
 	matrixRenjaController controller.MatrixRenjaController,
 	pkController controller.PkController,
+	strategicArahKebijakanController controller.SrategicArahKebijakanPemdaController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -200,7 +201,11 @@ func NewRouter(
 	router.GET("/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/:kode_opd/:tahun/:level_pohon", pohonKinerjaOpdController.FindAllPokinParentClonePokinOpd)
 	router.PUT("/pohon_kinerja_opd/update_parent_clone/:id", pohonKinerjaOpdController.UpdateParentClone)
 
+	// strategic arah kebijakan opd
 	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
+
+	// strategic arah kebijakan pemda
+	router.GET("/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.FindAll)
 
 	//pohon kinerja admin
 	router.POST("/pohon_kinerja_admin/create", pohonKinerjaAdminController.Create)
@@ -328,7 +333,7 @@ func NewRouter(
 	//crosscutting opd
 	router.POST("/crosscutting_opd/create/:parentId", crosscuttingOpdController.Create)
 	router.PUT("/crosscutting_opd/update/:crosscuttingId", crosscuttingOpdController.Update)
-	router.DELETE("/crosscutting_opd/delete/:crosscuttingId/:nip_pegawai", crosscuttingOpdController.Delete)
+	router.DELETE("/crosscutting_opd/delete/:crosscuttingId", crosscuttingOpdController.Delete)
 	router.GET("/crosscutting_opd/findall/:parentId", crosscuttingOpdController.FindAll)
 	router.POST("/crosscutting/:crosscuttingId/permission", crosscuttingOpdController.ApproveOrReject)
 	router.DELETE("/crosscutting/:crosscuttingId/unused", crosscuttingOpdController.DeleteUnused)
@@ -560,6 +565,9 @@ func NewRouter(
 	// Leaderboard Hidden
 	router.POST("/leaderboard_rekin_hidden/upsert", pohonKinerjaOpdController.UpsertLeaderboardHidden)
 	router.GET("/leaderboard_rekin_hidden/findall/:tahun", pohonKinerjaOpdController.FindLeaderboardHiddenKodeOpds)
+
+	//delete crosscutting opd
+	router.DELETE("/crosscutting_opd/delete_crosscutting_diterima/:crosscuttingId", crosscuttingOpdController.DeleteCrosscuttingDiterima)
 
 	return router
 }
