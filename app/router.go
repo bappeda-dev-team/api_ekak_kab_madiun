@@ -61,6 +61,8 @@ func NewRouter(
 	matrixRenjaController controller.MatrixRenjaController,
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
+	indikatorController controller.IndikatorController,
+	ikkController controller.IkkController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -472,7 +474,7 @@ func NewRouter(
 	router.GET("/program_unggulan/findbytahun/:tahun", programUnggulanController.FindByTahun)
 	router.GET("/program_unggulan/findunusedbytahun/:tahun", programUnggulanController.FindUnusedByTahun)
 	router.POST("/program_unggulan/findbyidterkait", programUnggulanController.FindByIdTerkait)
-	
+
 	//Master Program Prioritas Pusat
 	router.GET("/program_prioritas_pusat/findall", programPrioritasPusatController.FindAll)
 	router.GET("/program_prioritas_pusat/detail/:id", programPrioritasPusatController.FindById)
@@ -484,6 +486,13 @@ func NewRouter(
 	router.GET("/program_prioritas_pusat/findbytahun/:tahun", programPrioritasPusatController.FindByTahun)
 	router.GET("/program_prioritas_pusat/findunusedbytahun/:tahun", programPrioritasPusatController.FindUnusedByTahun)
 	router.POST("/program_prioritas_pusat/findbyidterkait", programPrioritasPusatController.FindByIdTerkait)
+	
+	//Master IKK
+	router.GET("/ikk/findall/:level_pohon/:kode_opd", ikkController.FindByKodeOpd)
+	router.GET("/ikk/detail/:id", ikkController.FindById)
+	router.POST("/ikk/create", ikkController.Create)
+	router.PUT("/ikk/update/:id", ikkController.Update)
+	router.DELETE("/ikk/delete/:id", ikkController.Delete)
 
 	//matrix renja
 	router.GET("/matrix_renja/ranwal/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)
@@ -571,6 +580,13 @@ func NewRouter(
 	// Leaderboard Hidden
 	router.POST("/leaderboard_rekin_hidden/upsert", pohonKinerjaOpdController.UpsertLeaderboardHidden)
 	router.GET("/leaderboard_rekin_hidden/findall/:tahun", pohonKinerjaOpdController.FindLeaderboardHiddenKodeOpds)
+
+	// IKM
+	router.GET("/ikm_pemda/findall_periode", indikatorController.FindAllPeriode)
+	router.GET("/ikm_pemda/findbyid/:id", indikatorController.FindById)
+	router.POST("/ikm_pemda", indikatorController.Create)
+	router.PUT("/ikm_pemda/:id", indikatorController.Update)
+	router.DELETE("/ikm_pemda/:id", indikatorController.Delete)
 
 	return router
 }

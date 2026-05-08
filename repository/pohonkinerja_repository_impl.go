@@ -4463,6 +4463,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 	LEFT JOIN tb_leaderboard_hidden lh 
 		ON opd.kode_opd = lh.kode_opd 
 		AND lh.tahun = ?
+        WHERE opd.kode_opd != 'pemda'
 
 	ORDER BY persentase_cascading DESC, opd.nama_opd ASC
 	`

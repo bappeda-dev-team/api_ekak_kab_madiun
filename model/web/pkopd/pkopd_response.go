@@ -23,18 +23,22 @@ type PkOpdByLevel struct {
 }
 
 type PkPegawai struct {
-	NipAtasan      string   `json:"nip_atasan"`
-	NamaAtasan     string   `json:"nama_atasan"`
-	JabatanAtasan  string   `json:"jabatan_atasan"`
-	Nama           string   `json:"nama_pegawai"`
-	Nip            string   `json:"nip"`
-	JabatanPegawai string   `json:"jabatan_pegawai"`
-	Pks            []PkAsn  `json:"pks"`
-	LevelPk        int      `json:"level_pk"`
-	JenisItem      string   `json:"jenis_item"`
-	Item           []ItemPk `json:"item_pk"`
-	TotalPagu      int64    `json:"total_pagu"`
-	Roles          []string `json:"roles"`
+	NipAtasan      string `json:"nip_atasan"`
+	NamaAtasan     string `json:"nama_atasan"`
+	JabatanAtasan  string `json:"jabatan_atasan"`
+	Nama           string `json:"nama_pegawai"`
+	Nip            string `json:"nip"`
+	JabatanPegawai string `json:"jabatan_pegawai"`
+	LevelPk        int    `json:"level_pk"`
+	JenisItem      string `json:"jenis_item"`
+	// program kegiatan subkegiatan
+	Item      []ItemPk `json:"item_pk"`
+	TotalPagu int64    `json:"total_pagu"`
+	Roles     []string `json:"roles"`
+	// daftar atasan untuk menghubungkan rekin pegawai
+	AtasanCandidates []AtasanCandidate `json:"atasan_candidates"`
+	// rekin pegawai
+	Pks []PkAsn `json:"pks"`
 }
 
 type ItemPk struct {
@@ -62,6 +66,16 @@ type PkAsn struct {
 	Tahun            int           `json:"tahun"`
 	Keterangan       string        `json:"keterangan"`
 	Indikators       []IndikatorPk `json:"indikators"`
+}
+
+type AtasanCandidate struct {
+	IdPegawai           string `json:"id_pegawai"`
+	NamaPegawai         string `json:"nama_pegawai"`
+	LevelPegawai        int    `json:"level_pegawai"`
+	KodeOpd             string `json:"kode_opd"`
+	NamaOpd             string `json:"nama_opd"`
+	IdPohonAtasan       int    `json:"id_pohon_atasan"`
+	IdParentPohonAtasan int    `json:"id_parent_pohon_atasan"`
 }
 
 type IndikatorPk struct {

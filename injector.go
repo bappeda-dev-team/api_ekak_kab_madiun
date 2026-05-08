@@ -462,6 +462,15 @@ var programPrioritasPusatSet = wire.NewSet(
 	wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)),
 )
 
+var indikatorSet = wire.NewSet(
+	repository.NewIkmRepositoryImpl,
+	wire.Bind(new(repository.IkmRepository), new(*repository.IkmRepositoryImpl)),
+	service.NewIkmServiceImpl,
+	wire.Bind(new(service.IkmService), new(*service.IkmServiceImpl)),
+	controller.NewIndikatorControllerImpl,
+	wire.Bind(new(controller.IndikatorController), new(*controller.IndikatorControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -519,6 +528,7 @@ func InitializeServer() *http.Server {
 		jabatanPegawaiSet,
 		cloneRecordSet,
 		programPrioritasPusatSet,
+		indikatorSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,
