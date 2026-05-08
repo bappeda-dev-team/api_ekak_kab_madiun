@@ -178,6 +178,7 @@ func (service *IkkServiceImpl) FindByKodeOpd(ctx context.Context, levelPohon int
 		bidangUrusanResponses = append(bidangUrusanResponses, ikk.IkkFullResponse{
 			ID: bidangUrusan.ID,
 			KodeBidangUrusan: bidangUrusan.KodeBidangUrusan,
+			NamaBidangUrusan: bidangUrusan.NamaBidangUrusan,
 			NamaOpd: bidangUrusan.NamaOpd,
 			Jenis: bidangUrusan.Jenis,
 			NamaIndikator: bidangUrusan.NamaIndikator,

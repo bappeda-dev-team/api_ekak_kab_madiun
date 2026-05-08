@@ -5,6 +5,7 @@ import "time"
 type IndikatorIkk struct {
 	ID               int   
 	KodeBidangUrusan string 
+	NamaBidangUrusan string 
 	NamaOpd 		 string 
 	Jenis            string 
 	NamaIndikator    string 

@@ -114,6 +114,7 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 	// Membuat query dengan IN clause
 	query := `SELECT ikk.id, 
 			  ikk.kode_bidang_urusan, 
+			  COALESCE(bu.nama_bidang_urusan, '') as nama_bidang_urusan,
 			  COALESCE(od.nama_opd, '') as nama_opd,
 			  ikk.jenis, 
 			  ikk.nama_indikator, 
@@ -123,6 +124,8 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 			  FROM tb_ikk ikk
 			  LEFT JOIN tb_operasional_daerah od 
 			  ON od.kode_opd = ?
+			  LEFT JOIN tb_bidang_urusan bu
+    		  ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
 			  WHERE ikk.kode_bidang_urusan IN (`
 
 	// params := make([]interface{}, len(kodeBidangUrusans))
@@ -150,7 +153,7 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 	var bidangUrusans []domain.IndikatorIkk
 	for rows.Next() {
 		bidangUrusan := domain.IndikatorIkk{}
-		err := rows.Scan(&bidangUrusan.ID, &bidangUrusan.KodeBidangUrusan, &bidangUrusan.NamaOpd, &bidangUrusan.Jenis, &bidangUrusan.NamaIndikator, &bidangUrusan.Satuan, &bidangUrusan.Target, &bidangUrusan.Keterangan)
+		err := rows.Scan(&bidangUrusan.ID, &bidangUrusan.KodeBidangUrusan, &bidangUrusan.NamaBidangUrusan, &bidangUrusan.NamaOpd, &bidangUrusan.Jenis, &bidangUrusan.NamaIndikator, &bidangUrusan.Satuan, &bidangUrusan.Target, &bidangUrusan.Keterangan)
 		if err != nil {
 			return nil, err
 		}

@@ -17,6 +17,7 @@ type IkkResponse struct {
 type IkkFullResponse struct {
 	ID               int		`json:"id"`
 	KodeBidangUrusan string		`json:"kode_bidang_urusan"`
+	NamaBidangUrusan string		`json:"nama_bidang_urusan"`
 	NamaOpd 		 string		`json:"nama_opd"`
 	Jenis            string		`json:"jenis"`
 	NamaIndikator    string		`json:"nama_indikator"`
