@@ -279,6 +279,20 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		// data pegawai
 		jabatanPegawai := pegawaiByNip[nip].NamaJabatan
 
+		// atasan pegawai
+
+		var candidateAtasans []pkopd.AtasanCandidate
+		if level == 4 {
+			candidateAtasans = resolveLevel4Candidates(
+				rekin,
+				rekins,
+				sasaranPemda,
+				jabatanPegawai,
+				pegawaiByNip,
+			)
+		} else {
+			candidateAtasans = listAtasanByPegawaiId[rekin.PegawaiId]
+		}
 		// init pegawai jika belum ada
 		// input atasan sekalian kalau ada
 		if _, ok := pkByLevel[level][nip]; !ok {
@@ -294,10 +308,12 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				JenisItem:      translateJenisItem(level),
 				Item:           []pkopd.ItemPk{},
 				// Untuk jumlah pagu
-				TotalPagu: 0,
-				Roles:     rolePegawai[nip],
+				TotalPagu:        0,
+				Roles:            rolePegawai[nip],
+				AtasanCandidates: candidateAtasans,
 			}
 		}
+
 		indikatorMap := make(map[string]*pkopd.IndikatorPk)
 
 		for _, ind := range rekin.Indikator {
@@ -342,19 +358,6 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		for _, ind := range indikatorMap {
 			indikatorPk = append(indikatorPk, *ind)
 		}
-		var candidateAtasans []pkopd.AtasanCandidate
-		if level == 4 {
-			pegawaiPemilik := *pkByLevel[level][nip]
-			candidateAtasans = resolveLevel4Candidates(
-				rekin,
-				rekins,
-				sasaranPemda,
-				pegawaiPemilik,
-				pegawaiByNip,
-			)
-		} else {
-			candidateAtasans = listAtasanByPegawaiId[rekin.PegawaiId]
-		}
 
 		// default PK (BELUM ADA)
 		pkAsn := pkopd.PkAsn{
@@ -370,7 +373,6 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			NamaPemilikPk:    rekin.NamaPegawai,
 			Tahun:            tahun,
 			Indikators:       indikatorPk,
-			AtasanCandidates: candidateAtasans,
 		}
 
 		// enrich dari PK jika ada
@@ -1032,11 +1034,11 @@ func resolveLevel4Candidates(
 	rekin rencanakinerja.RencanaKinerjaResponse,
 	rekins []rencanakinerja.RencanaKinerjaResponse,
 	sasaranPemdas []domain.AllSasaranPemdaPk,
-	pegawai pkopd.PkPegawai,
+	jabatanPegawai string,
 	pegawaiByNip map[string]pegawai.PegawaiResponse,
 ) []pkopd.AtasanCandidate {
 
-	jabatanPegawai := normalizeNama(pegawai.JabatanPegawai)
+	jabatanPegawai = normalizeNama(jabatanPegawai)
 
 	// hanya berlaku untuk Setda
 	if normalizeNama(rekin.KodeOpd.NamaOpd) != "SEKRETARIATDAERAH" {
