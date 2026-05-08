@@ -153,7 +153,7 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 	var bidangUrusans []domain.IndikatorIkk
 	for rows.Next() {
 		bidangUrusan := domain.IndikatorIkk{}
-		err := rows.Scan(&bidangUrusan.ID, &bidangUrusan.KodeBidangUrusan, &bidangUrusan.NamaBidangUrusan, &bidangUrusan.NamaOpd, &bidangUrusan.Jenis, &bidangUrusan.NamaIndikator, &bidangUrusan.Satuan, &bidangUrusan.Target, &bidangUrusan.Keterangan)
+		err := rows.Scan(&bidangUrusan.ID, &bidangUrusan.KodeBidangUrusan, &bidangUrusan.NamaBidangUrusan, &bidangUrusan.NamaOpd, &bidangUrusan.Jenis, &bidangUrusan.NamaIndikator, &bidangUrusan.Target, &bidangUrusan.Satuan, &bidangUrusan.Keterangan)
 		if err != nil {
 			return nil, err
 		}
