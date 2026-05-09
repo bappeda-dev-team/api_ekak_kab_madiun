@@ -63,6 +63,7 @@ func NewRouter(
 	pkController controller.PkController,
 	indikatorController controller.IndikatorController,
 	ikkController controller.IkkController,
+	ikdController controller.IkdController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -493,6 +494,9 @@ func NewRouter(
 	router.POST("/ikk/create", ikkController.Create)
 	router.PUT("/ikk/update/:id", ikkController.Update)
 	router.DELETE("/ikk/delete/:id", ikkController.Delete)
+
+	// IKD
+	router.GET("/ikd/findall/:kode_opd/:tahun/:jenis_periode", ikdController.FindAll)
 
 	//matrix renja
 	router.GET("/matrix_renja/ranwal/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)
