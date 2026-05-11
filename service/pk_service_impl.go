@@ -532,6 +532,11 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				return peg.Pks[i].IdRekinPemilikPk <
 					peg.Pks[j].IdRekinPemilikPk
 			})
+
+			sort.Slice(peg.Item, func(i, j int) bool {
+				return peg.Item[i].KodeItem <
+					peg.Item[j].KodeItem
+			})
 		}
 	}
 
