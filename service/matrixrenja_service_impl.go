@@ -75,42 +75,66 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 	if len(data) == 0 {
 		return []programkegiatan.UrusanDetailResponse{}
 	}
-	mkAnggaran := func(pagu int64) []programkegiatan.PaguAnggaranTotalResponse {
+
+	mkAnggaran := func(pagu int64, jenisPagu string) []programkegiatan.PaguAnggaranTotalResponse {
 		return []programkegiatan.PaguAnggaranTotalResponse{
-			{Tahun: tahun, PaguAnggaran: pagu},
+			{
+				Tahun:        tahun,
+				PaguAnggaran: pagu,
+				JenisPagu:    jenisPagu,
+			},
 		}
 	}
+
+	mkMixedAnggaran := func(pagu int64) []programkegiatan.PaguAnggaranTotalResponse {
+		return []programkegiatan.PaguAnggaranTotalResponse{
+			{
+				Tahun:        tahun,
+				PaguAnggaran: pagu,
+				JenisPagu:    "mixed",
+			},
+		}
+	}
+
 	// ── Indikator collector dengan dedup target ──
 	type indEntry struct {
 		resp      programkegiatan.IndikatorMatrixResponse
 		targetSet map[string]struct{}
 	}
+
 	indikatorByKode := make(map[string]map[string]*indEntry)
+
 	collectIndikator := func(item domain.SubKegiatanQuery) {
 		if item.IndikatorId == "" {
 			return
 		}
+
 		kode := item.IndikatorKode
+
 		if indikatorByKode[kode] == nil {
 			indikatorByKode[kode] = make(map[string]*indEntry)
 		}
+
 		ent, exists := indikatorByKode[kode][item.IndikatorId]
+
 		if !exists {
 			ent = &indEntry{
 				resp: programkegiatan.IndikatorMatrixResponse{
-					Id:           item.IndikatorId, // = kode_indikator
+					Id:           item.IndikatorId,
 					Kode:         kode,
 					KodeOpd:      kodeOpd,
 					Indikator:    item.Indikator,
-					Tahun:        item.IndikatorTahun, // dari im.tahun
+					Tahun:        item.IndikatorTahun,
 					StatusTarget: false,
 					Target:       item.Target,
 					Satuan:       item.Satuan,
 				},
 				targetSet: make(map[string]struct{}),
 			}
+
 			indikatorByKode[kode][item.IndikatorId] = ent
 		}
+
 		if item.TargetId != "" {
 			if _, seen := ent.targetSet[item.TargetId]; !seen {
 				ent.targetSet[item.TargetId] = struct{}{}
@@ -120,185 +144,285 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 			}
 		}
 	}
+
 	getIndikator := func(kode string) []programkegiatan.IndikatorMatrixResponse {
 		m, ok := indikatorByKode[kode]
+
 		if !ok {
 			return []programkegiatan.IndikatorMatrixResponse{}
 		}
+
 		out := make([]programkegiatan.IndikatorMatrixResponse, 0, len(m))
+
 		for _, e := range m {
 			out = append(out, e.resp)
 		}
+
 		return out
 	}
+
 	// ── Metadata ──
-	type subkegMeta struct{ nama, kodeKeg, pegawaiId, namaPegawai string }
-	type kegMeta struct{ nama, kodePrg string }
-	type prgMeta struct{ nama, kodeBidang string }
-	type bidangMeta struct{ nama, kodeUrusan string }
+	type subkegMeta struct {
+		nama, kodeKeg, pegawaiId, namaPegawai string
+	}
+
+	type kegMeta struct {
+		nama, kodePrg string
+	}
+
+	type prgMeta struct {
+		nama, kodeBidang string
+	}
+
+	type bidangMeta struct {
+		nama, kodeUrusan string
+	}
+
 	subkegData := make(map[string]subkegMeta)
 	kegData := make(map[string]kegMeta)
 	prgData := make(map[string]prgMeta)
 	bidangData := make(map[string]bidangMeta)
 	urusanData := make(map[string]string)
-	// Pagu efektif: ranwal → PaguSubKegiatan, rankhir → TotalAnggaranSubKegiatan
-	// Hanya satu yang terisi, keduanya dijumlahkan
+
+	// pagu & jenis pagu
 	paguSubkeg := make(map[string]int64)
+	jenisPaguSubkeg := make(map[string]string)
+
 	seenSubkeg := make(map[string]struct{})
 	seenKeg := make(map[string]struct{})
 	seenPrg := make(map[string]struct{})
 	seenBidang := make(map[string]struct{})
 	seenUrusan := make(map[string]struct{})
+
 	subkegByKeg := make(map[string][]string)
 	kegByPrg := make(map[string][]string)
 	prgByBidang := make(map[string][]string)
 	bidangByUrusan := make(map[string][]string)
+
 	var urusanOrder []string
+
 	// ── PASS 1: single-pass collect ──
 	for _, item := range data {
+
 		collectIndikator(item)
+
 		if item.KodeSubKegiatan == "" {
 			continue
 		}
+
 		if _, ok := seenSubkeg[item.KodeSubKegiatan]; !ok {
+
 			seenSubkeg[item.KodeSubKegiatan] = struct{}{}
+
 			subkegData[item.KodeSubKegiatan] = subkegMeta{
 				nama:        item.NamaSubKegiatan,
 				kodeKeg:     item.KodeKegiatan,
 				pegawaiId:   item.PegawaiId,
 				namaPegawai: item.NamaPegawai,
 			}
-			// Pagu efektif: ambil yang ada nilainya
-			paguSubkeg[item.KodeSubKegiatan] = item.PaguSubKegiatan + item.TotalAnggaranSubKegiatan
-			subkegByKeg[item.KodeKegiatan] = append(subkegByKeg[item.KodeKegiatan], item.KodeSubKegiatan)
+
+			paguSubkeg[item.KodeSubKegiatan] =
+				item.PaguSubKegiatan + item.TotalAnggaranSubKegiatan
+
+			jenisPaguSubkeg[item.KodeSubKegiatan] = item.JenisPagu
+
+			subkegByKeg[item.KodeKegiatan] =
+				append(subkegByKeg[item.KodeKegiatan], item.KodeSubKegiatan)
 		}
+
 		if item.KodeKegiatan != "" {
 			if _, ok := seenKeg[item.KodeKegiatan]; !ok {
+
 				seenKeg[item.KodeKegiatan] = struct{}{}
-				kegData[item.KodeKegiatan] = kegMeta{nama: item.NamaKegiatan, kodePrg: item.KodeProgram}
-				kegByPrg[item.KodeProgram] = append(kegByPrg[item.KodeProgram], item.KodeKegiatan)
+
+				kegData[item.KodeKegiatan] = kegMeta{
+					nama:    item.NamaKegiatan,
+					kodePrg: item.KodeProgram,
+				}
+
+				kegByPrg[item.KodeProgram] =
+					append(kegByPrg[item.KodeProgram], item.KodeKegiatan)
 			}
 		}
+
 		if item.KodeProgram != "" {
 			if _, ok := seenPrg[item.KodeProgram]; !ok {
+
 				seenPrg[item.KodeProgram] = struct{}{}
-				prgData[item.KodeProgram] = prgMeta{nama: item.NamaProgram, kodeBidang: item.KodeBidangUrusan}
-				prgByBidang[item.KodeBidangUrusan] = append(prgByBidang[item.KodeBidangUrusan], item.KodeProgram)
+
+				prgData[item.KodeProgram] = prgMeta{
+					nama:       item.NamaProgram,
+					kodeBidang: item.KodeBidangUrusan,
+				}
+
+				prgByBidang[item.KodeBidangUrusan] =
+					append(prgByBidang[item.KodeBidangUrusan], item.KodeProgram)
 			}
 		}
+
 		if item.KodeBidangUrusan != "" {
 			if _, ok := seenBidang[item.KodeBidangUrusan]; !ok {
+
 				seenBidang[item.KodeBidangUrusan] = struct{}{}
-				bidangData[item.KodeBidangUrusan] = bidangMeta{nama: item.NamaBidangUrusan, kodeUrusan: item.KodeUrusan}
-				bidangByUrusan[item.KodeUrusan] = append(bidangByUrusan[item.KodeUrusan], item.KodeBidangUrusan)
+
+				bidangData[item.KodeBidangUrusan] = bidangMeta{
+					nama:       item.NamaBidangUrusan,
+					kodeUrusan: item.KodeUrusan,
+				}
+
+				bidangByUrusan[item.KodeUrusan] =
+					append(bidangByUrusan[item.KodeUrusan], item.KodeBidangUrusan)
 			}
 		}
+
 		if item.KodeUrusan != "" {
 			if _, ok := seenUrusan[item.KodeUrusan]; !ok {
+
 				seenUrusan[item.KodeUrusan] = struct{}{}
+
 				urusanData[item.KodeUrusan] = item.NamaUrusan
+
 				urusanOrder = append(urusanOrder, item.KodeUrusan)
 			}
 		}
 	}
+
 	// ── Agregasi pagu bottom-up ──
 	paguKeg := make(map[string]int64)
 	paguPrg := make(map[string]int64)
 	paguBidang := make(map[string]int64)
 	paguUrusan := make(map[string]int64)
+
 	for kodeKeg, list := range subkegByKeg {
 		for _, ks := range list {
 			paguKeg[kodeKeg] += paguSubkeg[ks]
 		}
 	}
+
 	for kodePrg, list := range kegByPrg {
 		for _, kk := range list {
 			paguPrg[kodePrg] += paguKeg[kk]
 		}
 	}
+
 	for kodeBidang, list := range prgByBidang {
 		for _, kp := range list {
 			paguBidang[kodeBidang] += paguPrg[kp]
 		}
 	}
+
 	for kodeUrusan, list := range bidangByUrusan {
 		for _, kb := range list {
 			paguUrusan[kodeUrusan] += paguBidang[kb]
 		}
 	}
+
 	var paguTotal int64
+
 	for _, p := range paguUrusan {
 		paguTotal += p
 	}
+
 	// ── PASS 2: bangun hierarki ──
 	urusanDetail := programkegiatan.UrusanDetailResponse{
 		KodeOpd: kodeOpd,
 		Tahun:   tahun,
 		PaguAnggaranTotal: []programkegiatan.PaguAnggaranTotalResponse{
-			{Tahun: tahun, PaguAnggaran: paguTotal},
+			{
+				Tahun:        tahun,
+				PaguAnggaran: paguTotal,
+				JenisPagu:    "mixed",
+			},
 		},
 		Urusan: make([]programkegiatan.UrusanResponse, 0),
 	}
+
 	for _, kodeUrusan := range urusanOrder {
+
 		urusanResp := programkegiatan.UrusanResponse{
 			Kode:         kodeUrusan,
 			Nama:         urusanData[kodeUrusan],
 			Jenis:        "urusans",
-			Anggaran:     mkAnggaran(paguUrusan[kodeUrusan]),
+			Anggaran:     mkMixedAnggaran(paguUrusan[kodeUrusan]),
 			Indikator:    getIndikator(kodeUrusan),
 			BidangUrusan: make([]programkegiatan.BidangUrusanResponse, 0),
 		}
+
 		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
+
 			bd := bidangData[kodeBidang]
+
 			bidangResp := programkegiatan.BidangUrusanResponse{
 				Kode:      kodeBidang,
 				Nama:      bd.nama,
 				Jenis:     "bidang_urusans",
-				Anggaran:  mkAnggaran(paguBidang[kodeBidang]),
+				Anggaran:  mkMixedAnggaran(paguBidang[kodeBidang]),
 				Indikator: getIndikator(kodeBidang),
 				Program:   make([]programkegiatan.ProgramResponse, 0),
 			}
+
 			for _, kodePrg := range prgByBidang[kodeBidang] {
+
 				pd := prgData[kodePrg]
+
 				prgResp := programkegiatan.ProgramResponse{
 					Kode:      kodePrg,
 					Nama:      pd.nama,
 					Jenis:     "programs",
-					Anggaran:  mkAnggaran(paguPrg[kodePrg]),
+					Anggaran:  mkMixedAnggaran(paguPrg[kodePrg]),
 					Indikator: getIndikator(kodePrg),
 					Kegiatan:  make([]programkegiatan.KegiatanResponse, 0),
 				}
+
 				for _, kodeKeg := range kegByPrg[kodePrg] {
+
 					kd := kegData[kodeKeg]
+
 					kegResp := programkegiatan.KegiatanResponse{
 						Kode:        kodeKeg,
 						Nama:        kd.nama,
 						Jenis:       "kegiatans",
-						Anggaran:    mkAnggaran(paguKeg[kodeKeg]),
+						Anggaran:    mkMixedAnggaran(paguKeg[kodeKeg]),
 						Indikator:   getIndikator(kodeKeg),
 						SubKegiatan: make([]programkegiatan.SubKegiatanResponse, 0),
 					}
+
 					for _, kodeSubkeg := range subkegByKeg[kodeKeg] {
+
 						sd := subkegData[kodeSubkeg]
-						kegResp.SubKegiatan = append(kegResp.SubKegiatan, programkegiatan.SubKegiatanResponse{
-							Kode:        kodeSubkeg,
-							Nama:        sd.nama,
-							Jenis:       "subkegiatans",
-							Tahun:       tahun,
-							PegawaiId:   sd.pegawaiId,
-							NamaPegawai: sd.namaPegawai,
-							Anggaran:    mkAnggaran(paguSubkeg[kodeSubkeg]),
-							Indikator:   getIndikator(kodeSubkeg),
-						})
+
+						kegResp.SubKegiatan = append(
+							kegResp.SubKegiatan,
+							programkegiatan.SubKegiatanResponse{
+								Kode:        kodeSubkeg,
+								Nama:        sd.nama,
+								Jenis:       "subkegiatans",
+								Tahun:       tahun,
+								PegawaiId:   sd.pegawaiId,
+								NamaPegawai: sd.namaPegawai,
+								Anggaran: mkAnggaran(
+									paguSubkeg[kodeSubkeg],
+									jenisPaguSubkeg[kodeSubkeg],
+								),
+								Indikator: getIndikator(kodeSubkeg),
+							},
+						)
 					}
+
 					prgResp.Kegiatan = append(prgResp.Kegiatan, kegResp)
 				}
+
 				bidangResp.Program = append(bidangResp.Program, prgResp)
 			}
-			urusanResp.BidangUrusan = append(urusanResp.BidangUrusan, bidangResp)
+
+			urusanResp.BidangUrusan =
+				append(urusanResp.BidangUrusan, bidangResp)
 		}
-		urusanDetail.Urusan = append(urusanDetail.Urusan, urusanResp)
+
+		urusanDetail.Urusan =
+			append(urusanDetail.Urusan, urusanResp)
 	}
+
 	return []programkegiatan.UrusanDetailResponse{urusanDetail}
 }
 

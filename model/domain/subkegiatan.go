@@ -59,6 +59,7 @@ type SubKegiatanQuery struct {
 	TargetId                 string
 	PaguAnggaran             sql.NullInt64
 	TotalAnggaranSubKegiatan int64
+	JenisPagu                string
 }
 
 type SubKegiatanKAKQuery struct {
