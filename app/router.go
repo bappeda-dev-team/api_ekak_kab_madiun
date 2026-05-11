@@ -489,7 +489,7 @@ func NewRouter(
 	router.POST("/program_prioritas_pusat/findbyidterkait", programPrioritasPusatController.FindByIdTerkait)
 	
 	//Master IKK
-	router.GET("/ikk/findPokin/:level_pohon/:kode_opd", ikkController.FindByKodeOpd)
+	router.GET("/ikk/findpokin/:level_pohon/:kode_opd", ikkController.FindByKodeOpd)
 	router.GET("/ikk/findall/:kode_opd", ikkController.FindAll)
 	router.GET("/ikk/detail/:id", ikkController.FindById)
 	router.POST("/ikk/create", ikkController.Create)
