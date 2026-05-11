@@ -1066,7 +1066,7 @@ func resolveLevel4Candidates(
 		return buildLevel4Candidates(sasaranPemdas)
 	}
 
-	if jabatanPegawai == "ASISTEN" {
+	if strings.Contains(jabatanPegawai, "ASISTEN") {
 		seen := make(map[string]bool)
 		var result []pkopd.AtasanCandidate
 
