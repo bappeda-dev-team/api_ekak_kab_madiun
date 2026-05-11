@@ -443,7 +443,8 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				kode := item.KodeProgram
 
 				paguItem := sumPaguByProgram(rekinSubkegiatan, item.KodeProgram)
-				uniqueProgram[item.KodeProgram] = pkopd.ItemPk{
+
+				uniqueProgram[kode] = pkopd.ItemPk{
 					RekinId:  rekin.Id,
 					KodeItem: kode,
 					NamaItem: item.NamaProgram,
@@ -506,9 +507,19 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	}
 
 	for _, peg := range pkByLevel[4] {
+		// existing item pegawai
+		existing := make(map[string]struct{})
+		for _, it := range peg.Item {
+			existing[it.KodeItem] = struct{}{}
+		}
 		for _, item := range uniqueProgram {
+			// skip jika sudah ada
+			if _, ok := existing[item.KodeItem]; ok {
+				continue
+			}
 			peg.Item = append(peg.Item, item)
-			peg.TotalPagu += item.PaguItem
+			// tandai sudah ada
+			existing[item.KodeItem] = struct{}{}
 		}
 		// Total Pagu dari Item
 		peg.TotalPagu = sumTotalPagu(peg.Item)
