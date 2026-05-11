@@ -1056,9 +1056,10 @@ func resolveLevel4Candidates(
 ) []pkopd.AtasanCandidate {
 
 	jabatanPegawai = normalizeNama(jabatanPegawai)
+	namaOpd := normalizeNama(rekin.KodeOpd.NamaOpd)
 
 	// hanya berlaku untuk Setda
-	if normalizeNama(rekin.KodeOpd.NamaOpd) != "SEKRETARIATDAERAH" {
+	if namaOpd != "SEKRETARIATDAERAH" {
 		return buildLevel4Candidates(sasaranPemdas)
 	}
 
@@ -1111,5 +1112,6 @@ func resolveLevel4Candidates(
 // normaizeNama akan membuang spasi dan membuat karakter
 // jadi kapital semua
 func normalizeNama(namaJabatan string) string {
-	return strings.ToUpper(namaJabatan)
+	fixedNama := strings.ReplaceAll(namaJabatan, " ", "")
+	return strings.ToUpper(fixedNama)
 }
