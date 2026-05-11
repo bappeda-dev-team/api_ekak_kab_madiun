@@ -1046,6 +1046,32 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 }
 
 // Helper function untuk flatten dan sort strategic
+func isJenisPohonOpdFromPemda(jenis string) bool {
+	switch jenis {
+	case "Strategic Pemda", "Tactical Pemda", "Operational Pemda", "Operasional Pemda":
+		return true
+	default:
+		return false
+	}
+}
+func lessPohonPemdaJenisFirst(a, b domain.PohonKinerja) bool {
+	aPemda := isJenisPohonOpdFromPemda(a.JenisPohon)
+	bPemda := isJenisPohonOpdFromPemda(b.JenisPohon)
+	if aPemda && !bPemda {
+		return true
+	}
+	if !aPemda && bPemda {
+		return false
+	}
+	if a.Status == "pokin dari pemda" && b.Status != "pokin dari pemda" {
+		return true
+	}
+	if a.Status != "pokin dari pemda" && b.Status == "pokin dari pemda" {
+		return false
+	}
+	return a.Id < b.Id
+}
+
 func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonKinerja {
 	// Hitung total capacity dulu
 	totalCount := 0
@@ -1068,13 +1094,7 @@ func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonK
 
 	// Sort dengan optimasi
 	sort.Slice(result, func(i, j int) bool {
-		if result[i].Status == "pokin dari pemda" && result[j].Status != "pokin dari pemda" {
-			return true
-		}
-		if result[i].Status != "pokin dari pemda" && result[j].Status == "pokin dari pemda" {
-			return false
-		}
-		return result[i].Id < result[j].Id
+		return lessPohonPemdaJenisFirst(result[i], result[j])
 	})
 
 	return result
