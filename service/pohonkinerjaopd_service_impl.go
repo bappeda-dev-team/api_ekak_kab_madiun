@@ -872,27 +872,24 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	}
 
 	// Batch fetch tematik - HAPUS SEMUA LOGGING DEBUG
-	tematikCloneFromSet := make(map[int]bool)
+	//
+	tematikCloneFromSet := make(map[int]struct{})
 	for _, p := range pokins {
 		if p.LevelPohon >= 4 && p.CloneFrom > 0 {
-			tematikCloneFromSet[p.CloneFrom] = true
+			tematikCloneFromSet[p.CloneFrom] = struct{}{}
 		}
 	}
-
-	var tematikCloneFromIds []int
-	maxTematikIds := 50 // Kurangi dari 100 ke 50
-	count := 0
-	for cloneFromId := range tematikCloneFromSet {
-		if count >= maxTematikIds {
-			break
-		}
-		tematikCloneFromIds = append(tematikCloneFromIds, cloneFromId)
-		count++
+	tematikCloneFromIds := make([]int, 0, len(tematikCloneFromSet))
+	for id := range tematikCloneFromSet {
+		tematikCloneFromIds = append(tematikCloneFromIds, id)
 	}
-
+	sort.Ints(tematikCloneFromIds)
 	tematikMap := make(map[int]*domain.PohonKinerja)
 	if len(tematikCloneFromIds) > 0 {
-		tematikBatch, _ := service.pohonKinerjaOpdRepository.FindTematikByCloneFromBatch(ctx, tx, tematikCloneFromIds)
+		tematikBatch, err := service.pohonKinerjaOpdRepository.FindTematikByCloneFromBatch(ctx, tx, tematikCloneFromIds)
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdAllResponse{}, fmt.Errorf("gagal batch tematik oleh clone_from: %w", err)
+		}
 		tematikMap = tematikBatch
 	}
 
@@ -1315,7 +1312,7 @@ func buildStrategicOnly(
 		LevelPohon: strategic.LevelPohon,
 		Keterangan: strategic.Keterangan,
 		// KeteranganCrosscutting: keteranganCrosscutting,
-		// Status:                 strategic.Status,
+		Status:      strategic.Status,
 		IsActive:    strategic.IsActive,
 		IdTematik:   idTematik,
 		NamaTematik: namaTematik,
