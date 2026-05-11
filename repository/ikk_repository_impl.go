@@ -162,5 +162,92 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 
 	return bidangUrusans, nil
 }
+func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.IndikatorIkk, error) {
+	// Memisahkan kode OPD untuk mendapatkan kode bidang urusan
+	kodeBidangUrusans := make([]string, 0)
+
+	// Format kode OPD: 1.01.2.22.0.00.01.0000
+	// Kode bidang urusan terdiri dari 3 bagian: 1.01 | 2.22 | 0.00
+
+	// Mengambil kode bidang urusan pertama (1.01)
+	if len(kodeOpd) >= 4 {
+		kode1 := kodeOpd[:4]
+		if kode1 != "0.00" {
+			kodeBidangUrusans = append(kodeBidangUrusans, kode1)
+		}
+	}
+
+	// Mengambil kode bidang urusan kedua (2.22)
+	if len(kodeOpd) >= 9 {
+		kode2 := kodeOpd[5:9]
+		if kode2 != "0.00" {
+			kodeBidangUrusans = append(kodeBidangUrusans, kode2)
+		}
+	}
+
+	// Mengambil kode bidang urusan ketiga (0.00)
+	if len(kodeOpd) >= 14 {
+		kode3 := kodeOpd[10:14]
+		if kode3 != "0.00" {
+			kodeBidangUrusans = append(kodeBidangUrusans, kode3)
+		}
+	}
+
+	// Jika tidak ada kode bidang urusan yang valid
+	if len(kodeBidangUrusans) == 0 {
+		return []domain.IndikatorIkk{}, nil
+	}
+
+	// Membuat query dengan IN clause
+	query := `SELECT ikk.id, 
+			  ikk.kode_bidang_urusan, 
+			  COALESCE(bu.nama_bidang_urusan, '') as nama_bidang_urusan,
+			  COALESCE(od.nama_opd, '') as nama_opd,
+			  ikk.jenis, 
+			  ikk.nama_indikator, 
+			  ikk.target, 
+			  ikk.satuan, 
+			  ikk.keterangan 
+			  FROM tb_ikk ikk
+			  LEFT JOIN tb_operasional_daerah od 
+			  ON od.kode_opd = ?
+			  LEFT JOIN tb_bidang_urusan bu
+    		  ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
+			  WHERE ikk.kode_bidang_urusan IN (`
+
+	// params := make([]interface{}, len(kodeBidangUrusans))
+	params := make([]interface{}, 0)
+	params = append(params, kodeOpd)
+	for i := range kodeBidangUrusans {
+		if i > 0 {
+			query += ","
+		}
+		query += "?"
+		// params[i] = kodeBidangUrusans[i]
+		params = append(params, kodeBidangUrusans[i])
+	}
+	query += ")"
+
+	
+	params = append(params)
+	
+	rows, err := tx.QueryContext(ctx, query, params...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bidangUrusans []domain.IndikatorIkk
+	for rows.Next() {
+		bidangUrusan := domain.IndikatorIkk{}
+		err := rows.Scan(&bidangUrusan.ID, &bidangUrusan.KodeBidangUrusan, &bidangUrusan.NamaBidangUrusan, &bidangUrusan.NamaOpd, &bidangUrusan.Jenis, &bidangUrusan.NamaIndikator, &bidangUrusan.Target, &bidangUrusan.Satuan, &bidangUrusan.Keterangan)
+		if err != nil {
+			return nil, err
+		}
+		bidangUrusans = append(bidangUrusans, bidangUrusan)
+	}
+
+	return bidangUrusans, nil
+}
 
 

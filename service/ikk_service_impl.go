@@ -190,3 +190,32 @@ func (service *IkkServiceImpl) FindByKodeOpd(ctx context.Context, levelPohon int
 
 	return bidangUrusanResponses, nil
 }
+func (service *IkkServiceImpl) FindAll(ctx context.Context, kodeOpd string) ([]ikk.IkkFullResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return []ikk.IkkFullResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	bidangUrusans, err := service.IkkRepository.FindAll(ctx, tx, kodeOpd)
+	if err != nil {
+		return []ikk.IkkFullResponse{}, err
+	}
+
+	var bidangUrusanResponses []ikk.IkkFullResponse
+	for _, bidangUrusan := range bidangUrusans {
+		bidangUrusanResponses = append(bidangUrusanResponses, ikk.IkkFullResponse{
+			ID: bidangUrusan.ID,
+			KodeBidangUrusan: bidangUrusan.KodeBidangUrusan,
+			NamaBidangUrusan: bidangUrusan.NamaBidangUrusan,
+			NamaOpd: bidangUrusan.NamaOpd,
+			Jenis: bidangUrusan.Jenis,
+			NamaIndikator: bidangUrusan.NamaIndikator,
+			Target: bidangUrusan.Target,
+			Satuan: bidangUrusan.Satuan,
+			Keterangan: bidangUrusan.Keterangan,
+		})
+	}
+
+	return bidangUrusanResponses, nil
+}
