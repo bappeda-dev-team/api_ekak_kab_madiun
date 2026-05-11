@@ -175,12 +175,12 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByKodeOpdTahunRekinIds(ctx co
           k.nama_kegiatan,
           sub.kode_subkegiatan,
           sub.nama_subkegiatan,
-          i.pagu_anggaran AS pagu_subkegiatan
-		FROM tb_subkegiatan_terpilih st
+          tp.pagu AS pagu_subkegiatan
+	FROM tb_subkegiatan_terpilih st
         JOIN tb_subkegiatan sub ON sub.id = st.subkegiatan_id
         LEFT JOIN tb_master_kegiatan k ON k.kode_kegiatan = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5)
         LEFT JOIN tb_master_program p ON p.kode_program = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 3)
-        LEFT JOIN tb_indikator i ON i.kode = st.kode_subkegiatan AND i.kode_opd = ? AND i.tahun = ?
+        LEFT JOIN tb_pagu tp ON tp.kode_subkegiatan = st.kode_subkegiatan AND tp.kode_opd = ? AND tp.tahun = ? AND tp.jenis = 'penetapan'
 		WHERE st.rekin_id IN (%s)`,
 		strings.Join(placeholders, ","))
 

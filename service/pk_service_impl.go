@@ -155,29 +155,30 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 		log.Printf("[ERROR] rekinSubkegiatan: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
 	}
-	paguSubKegiatan, err := service.pkOpdRepository.PaguPkByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
-	if err != nil {
-		log.Printf("[ERROR] paguSubkegiatan: %v", err)
-		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
-	}
-	// penyesuaian kode paguSubkegiatan
-	normalizedKodePagu := make(map[string]int64)
-	for kode, pagu := range paguSubKegiatan {
-		newKode := replaceKode(kode, kodeOpd)
-		normalizedKodePagu[newKode] = pagu
-	}
+	// disable normalize pagu, confusing
+	// paguSubKegiatan, err := service.pkOpdRepository.PaguPkByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
+	// if err != nil {
+	// 	log.Printf("[ERROR] paguSubkegiatan: %v", err)
+	// 	return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
+	// }
+	// // penyesuaian kode paguSubkegiatan
+	// normalizedKodePagu := make(map[string]int64)
+	// for kode, pagu := range paguSubKegiatan {
+	// 	newKode := replaceKode(kode, kodeOpd)
+	// 	normalizedKodePagu[newKode] = pagu
+	// }
 	// // susun pagu subkegiatan
-	for key, sub := range rekinSubkegiatan {
-		kode := sub.KodeSubkegiatan
+	// for key, sub := range rekinSubkegiatan {
+	// 	kode := sub.KodeSubkegiatan
 
-		if pagu, ok := normalizedKodePagu[kode]; ok {
-			sub.PaguSubkegiatan = pagu
-		} else {
-			sub.PaguSubkegiatan = 0
-		}
+	// 	if pagu, ok := normalizedKodePagu[kode]; ok {
+	// 		sub.PaguSubkegiatan = pagu
+	// 	} else {
+	// 		sub.PaguSubkegiatan = 0
+	// 	}
 
-		rekinSubkegiatan[key] = sub // wajib re-assign
-	}
+	// 	rekinSubkegiatan[key] = sub // wajib re-assign
+	// }
 
 	// data struktur untuk penyusunan
 	// lookup pegawai by nip untuk susun nama atasan
@@ -443,7 +444,8 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				kode := item.KodeProgram
 
 				paguItem := sumPaguByProgram(rekinSubkegiatan, item.KodeProgram)
-				uniqueProgram[item.KodeProgram] = pkopd.ItemPk{
+
+				uniqueProgram[kode] = pkopd.ItemPk{
 					RekinId:  rekin.Id,
 					KodeItem: kode,
 					NamaItem: item.NamaProgram,
@@ -506,9 +508,19 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	}
 
 	for _, peg := range pkByLevel[4] {
+		// existing item pegawai
+		existing := make(map[string]struct{})
+		for _, it := range peg.Item {
+			existing[it.KodeItem] = struct{}{}
+		}
 		for _, item := range uniqueProgram {
+			// skip jika sudah ada
+			if _, ok := existing[item.KodeItem]; ok {
+				continue
+			}
 			peg.Item = append(peg.Item, item)
-			peg.TotalPagu += item.PaguItem
+			// tandai sudah ada
+			existing[item.KodeItem] = struct{}{}
 		}
 		// Total Pagu dari Item
 		peg.TotalPagu = sumTotalPagu(peg.Item)
@@ -520,6 +532,11 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 			sort.Slice(peg.Pks, func(i, j int) bool {
 				return peg.Pks[i].IdRekinPemilikPk <
 					peg.Pks[j].IdRekinPemilikPk
+			})
+
+			sort.Slice(peg.Item, func(i, j int) bool {
+				return peg.Item[i].KodeItem <
+					peg.Item[j].KodeItem
 			})
 		}
 	}
