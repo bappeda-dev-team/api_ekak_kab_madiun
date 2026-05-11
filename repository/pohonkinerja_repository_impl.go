@@ -3240,113 +3240,119 @@ func (repository *PohonKinerjaRepositoryImpl) IsExistsByTahun(ctx context.Contex
 
 // clone pokin opd baru Insya allah fix
 func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, sourceTahun string, targetTahun string) error {
-	const pemdaJenis = `'Strategic Pemda', 'Tactical Pemda', 'Operational Pemda'`
-	// Step 1: Ambil ID pohon NON-Pemda yang akan di-clone
-	scriptValidIds := `
-        SELECT id FROM tb_pohon_kinerja
+	// Step 1: Ambil ID + parent dari pohon NON-Pemda, urut level asc agar parent selalu lebih dulu
+	type pokinRow struct {
+		id     int
+		parent int
+	}
+	validRows, err := tx.QueryContext(ctx, `
+        SELECT id, COALESCE(parent, 0)
+        FROM tb_pohon_kinerja
         WHERE kode_opd = ?
           AND tahun = ?
           AND jenis_pohon NOT IN ('Strategic Pemda', 'Tactical Pemda', 'Operational Pemda')
           AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak',
                              'crosscutting_menunggu', 'crosscutting_ditolak')
-    `
-	validRows, err := tx.QueryContext(ctx, scriptValidIds, kodeOpd, sourceTahun)
+        ORDER BY level_pohon ASC, id ASC
+    `, kodeOpd, sourceTahun)
 	if err != nil {
 		return err
 	}
-	defer validRows.Close()
-	var validIds []int
+	var valid []pokinRow
 	for validRows.Next() {
-		var id int
-		if err := validRows.Scan(&id); err != nil {
+		var r pokinRow
+		if err := validRows.Scan(&r.id, &r.parent); err != nil {
+			validRows.Close()
 			return err
 		}
-		validIds = append(validIds, id)
+		valid = append(valid, r)
 	}
 	validRows.Close()
-	// Step 2: Clone dengan menyimpan clone_from = ID asal
-	for _, validId := range validIds {
-		_, err := tx.ExecContext(ctx, `
-            INSERT INTO tb_pohon_kinerja (
-                nama_pohon, parent, jenis_pohon, level_pohon,
-                kode_opd, keterangan, keterangan_crosscutting,
-                tahun, status, is_active, keterangan_tahun_clone, clone_from
-            )
-            SELECT
-                nama_pohon, parent, jenis_pohon, level_pohon,
-                kode_opd, keterangan, keterangan_crosscutting,
-                ?, '', is_active, ?, id
-            FROM tb_pohon_kinerja
-            WHERE id = ?
-        `, targetTahun, sourceTahun, validId)
+	// Step 2: INSERT satu per satu, ambil LastInsertId langsung → idMapping akurat tanpa kolom tambahan
+	idMapping := make(map[int]int) // old_id → new_id
+
+	for _, r := range valid {
+		result, err := tx.ExecContext(ctx, `
+        INSERT INTO tb_pohon_kinerja (
+            nama_pohon,
+            parent,
+            jenis_pohon,
+            level_pohon,
+            kode_opd,
+            keterangan,
+            keterangan_crosscutting,
+            tahun,
+            status,
+            is_active,
+            keterangan_tahun_clone,
+            keterangan_clone_dari
+        )
+        SELECT
+            nama_pohon,
+            0,
+            jenis_pohon,
+            level_pohon,
+            kode_opd,
+            keterangan,
+            keterangan_crosscutting,
+            ?,
+            '',
+            is_active,
+            ?,
+            id
+        FROM tb_pohon_kinerja
+        WHERE id = ?
+    `, targetTahun, sourceTahun, r.id)
+
 		if err != nil {
 			return err
 		}
-	}
-	// Step 3: Mapping lama→baru BERDASARKAN clone_from (bukan nama)
-	rows, err := tx.QueryContext(ctx, `
-        SELECT clone_from AS old_id, id AS new_id
-        FROM tb_pohon_kinerja
-        WHERE kode_opd = ?
-          AND tahun = ?
-          AND keterangan_tahun_clone = ?
-          AND clone_from > 0
-          AND jenis_pohon NOT IN ('Strategic Pemda', 'Tactical Pemda', 'Operational Pemda')
-    `, kodeOpd, targetTahun, sourceTahun)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	idMapping := make(map[int]int)
-	for rows.Next() {
-		var oldId, newId int
-		if err := rows.Scan(&oldId, &newId); err != nil {
+
+		newId, err := result.LastInsertId()
+		if err != nil {
 			return err
 		}
-		idMapping[oldId] = newId
+
+		idMapping[r.id] = int(newId)
 	}
-	rows.Close()
-	// Step 4: Update parent
-	// - Jika parent lama ada di idMapping → pakai ID baru
-	// - Jika parent lama adalah Pemda / tidak ikut clone → set -100
-	for oldId, newId := range idMapping {
-		var oldParent int
-		err := tx.QueryRowContext(ctx, `
-            SELECT COALESCE(parent, 0) FROM tb_pohon_kinerja WHERE id = ?
-        `, oldId).Scan(&oldParent)
-		if err != nil || oldParent == 0 {
-			continue
+	// Step 3: Update parent berdasarkan idMapping
+	// - old parent ada di idMapping → pakai ID baru
+	// - old parent tidak ada di idMapping (Pemda / tidak di-clone) → -100
+	// - old parent = 0 → biarkan 0 (root strategic)
+	for _, r := range valid {
+		newId := idMapping[r.id]
+		if r.parent == 0 {
+			continue // root, parent tetap 0
 		}
-		if newParent, exists := idMapping[oldParent]; exists {
-			// Parent ikut di-clone → pakai ID baru
-			_, err = tx.ExecContext(ctx, `UPDATE tb_pohon_kinerja SET parent = ? WHERE id = ?`,
-				newParent, newId)
+		if newParent, exists := idMapping[r.parent]; exists {
+			_, err = tx.ExecContext(ctx, `UPDATE tb_pohon_kinerja SET parent = ? WHERE id = ?`, newParent, newId)
 		} else {
-			// Parent TIDAK ikut di-clone (Pemda atau lainnya) → -100
+			// parent Pemda atau tidak ikut clone → terlepas, parent = -100
 			_, err = tx.ExecContext(ctx, `UPDATE tb_pohon_kinerja SET parent = -100 WHERE id = ?`, newId)
 		}
 		if err != nil {
 			return err
 		}
 	}
-	// Step 5: Clone indikator (skip Pemda)
-	for oldId, newId := range idMapping {
-		// jenis_pohon sudah non-Pemda dari filter step 1, langsung clone
+	// Step 4: Clone indikator & target
+	for _, r := range valid {
+		newId := idMapping[r.id]
+		// Insert indikator
 		_, err := tx.ExecContext(ctx, `
             INSERT INTO tb_indikator (id, pokin_id, indikator, tahun)
             SELECT CONCAT('IND-', UUID_SHORT()), ?, indikator, ''
             FROM tb_indikator WHERE pokin_id = ?
-        `, newId, oldId)
+        `, newId, r.id)
 		if err != nil {
 			return err
 		}
-		// mapping indikator lama→baru
+		// Mapping indikator lama → baru (by teks indikator, cukup aman karena scope 1 pohon)
 		indRows, err := tx.QueryContext(ctx, `
             SELECT src.id, dst.id
             FROM tb_indikator src
             JOIN tb_indikator dst ON src.indikator = dst.indikator AND dst.pokin_id = ?
             WHERE src.pokin_id = ?
-        `, newId, oldId)
+        `, newId, r.id)
 		if err != nil {
 			return err
 		}
@@ -3360,6 +3366,7 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context,
 			indMapping[o] = n
 		}
 		indRows.Close()
+		// Insert target
 		for oldInd, newInd := range indMapping {
 			_, err := tx.ExecContext(ctx, `
                 INSERT INTO tb_target (id, indikator_id, target, satuan, tahun)
@@ -3371,13 +3378,14 @@ func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context,
 			}
 		}
 	}
-	// Step 6: Clone tagging
-	for oldId, newId := range idMapping {
+	// Step 5: Clone tagging
+	for _, r := range valid {
+		newId := idMapping[r.id]
 		_, err := tx.ExecContext(ctx, `
             INSERT INTO tb_tagging_pokin (id_pokin, nama_tagging, keterangan_tagging, clone_from)
             SELECT ?, nama_tagging, keterangan_tagging, id
             FROM tb_tagging_pokin WHERE id_pokin = ?
-        `, newId, oldId)
+        `, newId, r.id)
 		if err != nil {
 			return fmt.Errorf("gagal mengkloning tagging: %v", err)
 		}
@@ -4547,7 +4555,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx c
 				)
 			)
 			AND vp.clone_from > 0
-			AND vp.level_pohon = 4
+			AND vp.level_pohon IN (4,5,6)
 			UNION ALL
 			SELECT
 				tt.kode_opd,
