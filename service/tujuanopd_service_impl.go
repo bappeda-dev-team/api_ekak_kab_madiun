@@ -527,7 +527,7 @@ func (service *TujuanOpdServiceImpl) FindTujuanOpdOnlyName(ctx context.Context, 
 	}
 
 	// Ambil semua tujuan OPD
-	tujuanOpds, err := service.TujuanOpdRepository.FindAll(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	tujuanOpds, err := service.TujuanOpdRepository.FindAllByPeriod(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, "renstra")
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return make([]tujuanopd.TujuanOpdResponse, 0), nil
