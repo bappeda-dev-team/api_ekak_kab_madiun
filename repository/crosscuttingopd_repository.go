@@ -21,6 +21,7 @@ type CrosscuttingOpdRepository interface {
 	FindOPDCrosscuttingFrom(ctx context.Context, tx *sql.Tx, crosscuttingTo int) (string, error)
 	// DeleteCrosscuttingExisting(ctx context.Context, tx *sql.Tx, crosscuttingId int) error
 	FindCrosscuttingByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Crosscutting, error)
+	FindCrosscuttingFromByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Crosscutting, error)
 
 	//crosscutting legacy untuk delete
 	FixPokinStatusAfterExistingUnlink(ctx context.Context, tx *sql.Tx, pokinId int) error
