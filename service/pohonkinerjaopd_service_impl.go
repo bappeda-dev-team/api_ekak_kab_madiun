@@ -952,6 +952,36 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 	// Batch fetch crosscutting dari tb_crosscutting (by crosscutting_to = id pokin)
 	crosscuttingBatch, _ := service.crosscuttingOpdRepository.FindCrosscuttingByPokinIdsBatch(ctx, tx, pokinIds)
+	crosscuttingDikirimBatch, _ := service.crosscuttingOpdRepository.FindCrosscuttingFromByPokinIdsBatch(ctx, tx, pokinIds)
+	opdTujuanNamaMap := make(map[string]string)
+	for _, list := range crosscuttingDikirimBatch {
+		for _, c := range list {
+			if c.KodeOpd != "" {
+				opdTujuanNamaMap[c.KodeOpd] = ""
+			}
+		}
+	}
+	for kode := range opdTujuanNamaMap {
+		o, err := service.opdRepository.FindByKodeOpd(ctx, tx, kode)
+		if err == nil {
+			opdTujuanNamaMap[kode] = o.NamaOpd
+		}
+	}
+	crosscuttingDikirimMap := make(map[int][]pohonkinerja.CrosscuttingDikirimResponse)
+	for pokinId, list := range crosscuttingDikirimBatch {
+		items := make([]pohonkinerja.CrosscuttingDikirimResponse, 0, len(list))
+		for _, c := range list {
+			items = append(items, pohonkinerja.CrosscuttingDikirimResponse{
+				IdCrosscutting:         c.Id,
+				KeteranganCrosscutting: c.Keterangan,
+				NamaPohonTujuan:        c.NamaPohonAsal,
+				KodeOpdTujuan:          c.KodeOpd,
+				NamaOpdTujuan:          opdTujuanNamaMap[c.KodeOpd],
+				Status:                 c.Status,
+			})
+		}
+		crosscuttingDikirimMap[pokinId] = items
+	}
 	// Ambil kode OPD asal yang unik untuk fetch nama OPD sekali
 	opdAsalSet := make(map[string]struct{})
 	for _, list := range crosscuttingBatch {
@@ -1019,6 +1049,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				tematikMap,
 				crosscuttingMap,
 				crosscuttingStatusMap,
+				crosscuttingDikirimMap,
 			)
 
 			// Append tactical (level 5)
@@ -1033,10 +1064,11 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 						tematikMap,
 						crosscuttingMap,
 						crosscuttingStatusMap,
+						crosscuttingDikirimMap,
 					)
 
 					// Lanjut append operational
-					appendOperationals(&tacticalResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, tematikMap, crosscuttingMap, crosscuttingStatusMap)
+					appendOperationals(&tacticalResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, tematikMap, crosscuttingMap, crosscuttingStatusMap, crosscuttingDikirimMap)
 
 					strategicResp.Tacticals = append(strategicResp.Tacticals, tacticalResp)
 				}
@@ -1303,6 +1335,7 @@ func buildStrategicOnly(
 	tematikMap map[int]*domain.PohonKinerja,
 	crosscuttingMap map[int][]pohonkinerja.CrosscuttingPokinResponse,
 	crosscuttingStatusMap map[int]string,
+	crosscuttingDikirimMap map[int][]pohonkinerja.CrosscuttingDikirimResponse,
 ) pohonkinerja.StrategicOpdResponse {
 	// var keteranganCrosscutting *string
 	// if strategic.KeteranganCrosscutting != nil && *strategic.KeteranganCrosscutting != "" {
@@ -1340,13 +1373,14 @@ func buildStrategicOnly(
 			KodeOpd: strategic.KodeOpd,
 			NamaOpd: strategic.NamaOpd,
 		},
-		Tagging:            taggingMap[strategic.Id],
-		Pelaksana:          pelaksanaMap[strategic.Id],
-		Indikator:          indikatorMap[strategic.Id],
-		Review:             reviewPokin,
-		CountReview:        countReview,
-		Crosscutting:       crosscuttingMap[strategic.Id],
-		StatusCrosscutting: crosscuttingStatusMap[strategic.Id],
+		Tagging:             taggingMap[strategic.Id],
+		Pelaksana:           pelaksanaMap[strategic.Id],
+		Indikator:           indikatorMap[strategic.Id],
+		Review:              reviewPokin,
+		CountReview:         countReview,
+		Crosscutting:        crosscuttingMap[strategic.Id],
+		StatusCrosscutting:  crosscuttingStatusMap[strategic.Id],
+		CrosscuttingDikirim: crosscuttingDikirimMap[strategic.Id],
 	}
 	return strategicResp
 }
@@ -1361,6 +1395,7 @@ func buildTacticalOnly(
 	tematikMap map[int]*domain.PohonKinerja,
 	crosscuttingMap map[int][]pohonkinerja.CrosscuttingPokinResponse,
 	crosscuttingStatusMap map[int]string,
+	crosscuttingDikirimMap map[int][]pohonkinerja.CrosscuttingDikirimResponse,
 ) pohonkinerja.TacticalOpdResponse {
 	// var keteranganCrosscutting *string
 	// if tactical.KeteranganCrosscutting != nil && *tactical.KeteranganCrosscutting != "" {
@@ -1399,13 +1434,14 @@ func buildTacticalOnly(
 			KodeOpd: tactical.KodeOpd,
 			NamaOpd: tactical.NamaOpd,
 		},
-		Tagging:            taggingMap[tactical.Id],
-		Pelaksana:          pelaksanaMap[tactical.Id],
-		Indikator:          indikatorMap[tactical.Id],
-		Review:             reviewPokin,
-		CountReview:        countReview,
-		Crosscutting:       crosscuttingMap[tactical.Id],
-		StatusCrosscutting: crosscuttingStatusMap[tactical.Id],
+		Tagging:             taggingMap[tactical.Id],
+		Pelaksana:           pelaksanaMap[tactical.Id],
+		Indikator:           indikatorMap[tactical.Id],
+		Review:              reviewPokin,
+		CountReview:         countReview,
+		Crosscutting:        crosscuttingMap[tactical.Id],
+		StatusCrosscutting:  crosscuttingStatusMap[tactical.Id],
+		CrosscuttingDikirim: crosscuttingDikirimMap[tactical.Id],
 	}
 	return tacticalResp
 }
@@ -1420,6 +1456,7 @@ func buildOperationalOnly(
 	tematikMap map[int]*domain.PohonKinerja,
 	crosscuttingMap map[int][]pohonkinerja.CrosscuttingPokinResponse,
 	crosscuttingStatusMap map[int]string,
+	crosscuttingDikirimMap map[int][]pohonkinerja.CrosscuttingDikirimResponse,
 ) pohonkinerja.OperationalOpdResponse {
 	// var keteranganCrosscutting *string
 	// if operational.KeteranganCrosscutting != nil && *operational.KeteranganCrosscutting != "" {
@@ -1457,13 +1494,14 @@ func buildOperationalOnly(
 			KodeOpd: operational.KodeOpd,
 			NamaOpd: operational.NamaOpd,
 		},
-		Tagging:            taggingMap[operational.Id],
-		Pelaksana:          pelaksanaMap[operational.Id],
-		Indikator:          indikatorMap[operational.Id],
-		Review:             reviewPokin,
-		CountReview:        countReview,
-		Crosscutting:       crosscuttingMap[operational.Id],
-		StatusCrosscutting: crosscuttingStatusMap[operational.Id],
+		Tagging:             taggingMap[operational.Id],
+		Pelaksana:           pelaksanaMap[operational.Id],
+		Indikator:           indikatorMap[operational.Id],
+		Review:              reviewPokin,
+		CountReview:         countReview,
+		Crosscutting:        crosscuttingMap[operational.Id],
+		StatusCrosscutting:  crosscuttingStatusMap[operational.Id],
+		CrosscuttingDikirim: crosscuttingDikirimMap[operational.Id],
 	}
 	return operationalResp
 }
@@ -1477,6 +1515,7 @@ func buildOperationalNOnly(
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	crosscuttingMap map[int][]pohonkinerja.CrosscuttingPokinResponse,
 	crosscuttingStatusMap map[int]string,
+	crosscuttingDikirimMap map[int][]pohonkinerja.CrosscuttingDikirimResponse,
 ) pohonkinerja.OperationalNOpdResponse {
 	// var keteranganCrosscutting *string
 	// if operationalN.KeteranganCrosscutting != nil && *operationalN.KeteranganCrosscutting != "" {
@@ -1500,13 +1539,14 @@ func buildOperationalNOnly(
 			KodeOpd: operationalN.KodeOpd,
 			NamaOpd: operationalN.NamaOpd,
 		},
-		Tagging:            taggingMap[operationalN.Id],
-		Pelaksana:          pelaksanaMap[operationalN.Id],
-		Indikator:          indikatorMap[operationalN.Id],
-		Review:             reviewPokin,
-		CountReview:        countReview,
-		Crosscutting:       crosscuttingMap[operationalN.Id],
-		StatusCrosscutting: crosscuttingStatusMap[operationalN.Id],
+		Tagging:             taggingMap[operationalN.Id],
+		Pelaksana:           pelaksanaMap[operationalN.Id],
+		Indikator:           indikatorMap[operationalN.Id],
+		Review:              reviewPokin,
+		CountReview:         countReview,
+		Crosscutting:        crosscuttingMap[operationalN.Id],
+		StatusCrosscutting:  crosscuttingStatusMap[operationalN.Id],
+		CrosscuttingDikirim: crosscuttingDikirimMap[operationalN.Id],
 	}
 	return operationalNResp
 }
@@ -1522,6 +1562,7 @@ func appendOperationals(
 	tematikMap map[int]*domain.PohonKinerja,
 	crosscuttingMap map[int][]pohonkinerja.CrosscuttingPokinResponse,
 	crosscuttingStatusMap map[int]string,
+	crosscuttingDikirimMap map[int][]pohonkinerja.CrosscuttingDikirimResponse,
 ) {
 	operationals, ok := pohonMap[6][tacticalResp.Id]
 	if !ok {
@@ -1549,10 +1590,11 @@ func appendOperationals(
 			tematikMap,
 			crosscuttingMap,
 			crosscuttingStatusMap,
+			crosscuttingDikirimMap,
 		)
 
 		// Lanjut append operational N
-		appendOperationalN(&opResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, crosscuttingMap, crosscuttingStatusMap)
+		appendOperationalN(&opResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, crosscuttingMap, crosscuttingStatusMap, crosscuttingDikirimMap)
 
 		tacticalResp.Operationals = append(tacticalResp.Operationals, opResp)
 	}
@@ -1567,6 +1609,7 @@ func appendOperationalN(
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	crosscuttingMap map[int][]pohonkinerja.CrosscuttingPokinResponse,
 	crosscuttingStatusMap map[int]string,
+	crosscuttingDikirimMap map[int][]pohonkinerja.CrosscuttingDikirimResponse,
 ) {
 	nextLevel := operationalResp.LevelPohon + 1
 	children, ok := pohonMap[nextLevel][operationalResp.Id]
@@ -1594,10 +1637,11 @@ func appendOperationalN(
 			reviewMap,
 			crosscuttingMap,
 			crosscuttingStatusMap,
+			crosscuttingDikirimMap,
 		)
 
 		// Recursive untuk level berikutnya jika ada (gunakan function terpisah untuk OperationalNOpdResponse)
-		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, crosscuttingMap, crosscuttingStatusMap)
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, crosscuttingMap, crosscuttingStatusMap, crosscuttingDikirimMap)
 
 		operationalResp.Childs = append(operationalResp.Childs, childResp)
 	}
@@ -1613,6 +1657,7 @@ func appendOperationalNRecursive(
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	crosscuttingMap map[int][]pohonkinerja.CrosscuttingPokinResponse,
 	crosscuttingStatusMap map[int]string,
+	crosscuttingDikirimMap map[int][]pohonkinerja.CrosscuttingDikirimResponse,
 ) {
 	nextLevel := operationalNResp.LevelPohon + 1
 	children, ok := pohonMap[nextLevel][operationalNResp.Id]
@@ -1640,10 +1685,11 @@ func appendOperationalNRecursive(
 			reviewMap,
 			crosscuttingMap,
 			crosscuttingStatusMap,
+			crosscuttingDikirimMap,
 		)
 
 		// Recursive untuk level berikutnya jika ada
-		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, crosscuttingMap, crosscuttingStatusMap)
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, crosscuttingMap, crosscuttingStatusMap, crosscuttingDikirimMap)
 
 		operationalNResp.Childs = append(operationalNResp.Childs, childResp)
 	}
