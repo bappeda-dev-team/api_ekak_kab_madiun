@@ -123,6 +123,21 @@ definitions:
         description: ← BARU
         type: integer
     type: object
+  pohonkinerja.CrosscuttingDikirimResponse:
+    properties:
+      id_crosscutting:
+        type: integer
+      keterangan_crosscutting:
+        type: string
+      kode_opd_tujuan:
+        type: string
+      nama_opd_tujuan:
+        type: string
+      nama_pohon_tujuan:
+        type: string
+      status:
+        type: string
+    type: object
   pohonkinerja.CrosscuttingPokinResponse:
     properties:
       id_crosscutting:
@@ -132,6 +147,8 @@ definitions:
       kode_opd_asal:
         type: string
       nama_opd_asal:
+        type: string
+      nama_pohon_asal:
         type: string
       status:
         type: string
@@ -208,6 +225,10 @@ definitions:
         items:
           $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
         type: array
+      crosscutting_dikirim:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingDikirimResponse'
+        type: array
       id:
         type: integer
       indikator:
@@ -241,6 +262,8 @@ definitions:
       status:
         description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
         type: string
+      status_crosscutting:
+        type: string
       tagging:
         items:
           $ref: '#/definitions/pohonkinerja.TaggingResponse'
@@ -255,6 +278,10 @@ definitions:
       crosscutting:
         items:
           $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
+        type: array
+      crosscutting_dikirim:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingDikirimResponse'
         type: array
       id:
         type: integer
@@ -271,8 +298,6 @@ definitions:
       jumlah_review:
         type: integer
       keterangan:
-        type: string
-      keterangan_crosscutting:
         type: string
       level_pohon:
         type: integer
@@ -293,6 +318,9 @@ definitions:
           $ref: '#/definitions/pohonkinerja.ReviewResponse'
         type: array
       status:
+        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
+        type: string
+      status_crosscutting:
         type: string
       tagging:
         items:
@@ -481,6 +509,10 @@ definitions:
         items:
           $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
         type: array
+      crosscutting_dikirim:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingDikirimResponse'
+        type: array
       id:
         type: integer
       id_tematik:
@@ -496,8 +528,6 @@ definitions:
       jumlah_review:
         type: integer
       keterangan:
-        type: string
-      keterangan_crosscutting:
         type: string
       level_pohon:
         type: integer
@@ -518,6 +548,9 @@ definitions:
           $ref: '#/definitions/pohonkinerja.ReviewResponse'
         type: array
       status:
+        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
+        type: string
+      status_crosscutting:
         type: string
       tagging:
         items:
@@ -534,6 +567,10 @@ definitions:
         items:
           $ref: '#/definitions/pohonkinerja.CrosscuttingPokinResponse'
         type: array
+      crosscutting_dikirim:
+        items:
+          $ref: '#/definitions/pohonkinerja.CrosscuttingDikirimResponse'
+        type: array
       id:
         type: integer
       id_tematik:
@@ -549,8 +586,6 @@ definitions:
       jumlah_review:
         type: integer
       keterangan:
-        type: string
-      keterangan_crosscutting:
         type: string
       level_pohon:
         type: integer
@@ -571,6 +606,9 @@ definitions:
           $ref: '#/definitions/pohonkinerja.ReviewResponse'
         type: array
       status:
+        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
+        type: string
+      status_crosscutting:
         type: string
       tagging:
         items:

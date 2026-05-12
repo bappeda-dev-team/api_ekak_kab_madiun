@@ -386,9 +386,11 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
         AND tahun = ?
         AND level_pohon >= 4
         AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-        ORDER BY 
-            level_pohon ASC, 
-            id ASC
+      ORDER BY 
+		level_pohon ASC,
+		COALESCE(parent, 0) ASC,
+		CASE WHEN jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operational Pemda', 'Operasional Pemda') THEN 0 ELSE 1 END ASC,
+		id ASC
         LIMIT 10000`
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)

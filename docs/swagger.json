@@ -3634,6 +3634,29 @@
                 }
             }
         },
+        "pohonkinerja.CrosscuttingDikirimResponse": {
+            "type": "object",
+            "properties": {
+                "id_crosscutting": {
+                    "type": "integer"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "kode_opd_tujuan": {
+                    "type": "string"
+                },
+                "nama_opd_tujuan": {
+                    "type": "string"
+                },
+                "nama_pohon_tujuan": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "pohonkinerja.CrosscuttingPokinResponse": {
             "type": "object",
             "properties": {
@@ -3647,6 +3670,9 @@
                     "type": "string"
                 },
                 "nama_opd_asal": {
+                    "type": "string"
+                },
+                "nama_pohon_asal": {
                     "type": "string"
                 },
                 "status": {
@@ -3764,6 +3790,12 @@
                         "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
                     }
                 },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
+                    }
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -3813,6 +3845,9 @@
                     "description": "KeteranganCrosscutting *string                     `json:\"keterangan_crosscutting\"`",
                     "type": "string"
                 },
+                "status_crosscutting": {
+                    "type": "string"
+                },
                 "tagging": {
                     "type": "array",
                     "items": {
@@ -3834,6 +3869,12 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
                     }
                 },
                 "id": {
@@ -3858,9 +3899,6 @@
                     "type": "integer"
                 },
                 "keterangan": {
-                    "type": "string"
-                },
-                "keterangan_crosscutting": {
                     "type": "string"
                 },
                 "level_pohon": {
@@ -3891,6 +3929,10 @@
                     }
                 },
                 "status": {
+                    "description": "KeteranganCrosscutting *string                     `json:\"keterangan_crosscutting\"`",
+                    "type": "string"
+                },
+                "status_crosscutting": {
                     "type": "string"
                 },
                 "tagging": {
@@ -4174,6 +4216,12 @@
                         "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
                     }
                 },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
+                    }
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -4196,9 +4244,6 @@
                     "type": "integer"
                 },
                 "keterangan": {
-                    "type": "string"
-                },
-                "keterangan_crosscutting": {
                     "type": "string"
                 },
                 "level_pohon": {
@@ -4229,6 +4274,10 @@
                     }
                 },
                 "status": {
+                    "description": "KeteranganCrosscutting *string                     `json:\"keterangan_crosscutting\"`",
+                    "type": "string"
+                },
+                "status_crosscutting": {
                     "type": "string"
                 },
                 "tagging": {
@@ -4254,6 +4303,12 @@
                         "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
                     }
                 },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
+                    }
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -4276,9 +4331,6 @@
                     "type": "integer"
                 },
                 "keterangan": {
-                    "type": "string"
-                },
-                "keterangan_crosscutting": {
                     "type": "string"
                 },
                 "level_pohon": {
@@ -4309,6 +4361,10 @@
                     }
                 },
                 "status": {
+                    "description": "KeteranganCrosscutting *string                     `json:\"keterangan_crosscutting\"`",
+                    "type": "string"
+                },
+                "status_crosscutting": {
                     "type": "string"
                 },
                 "tagging": {
