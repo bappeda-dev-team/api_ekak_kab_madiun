@@ -1001,3 +1001,47 @@ func (repository *CrosscuttingOpdRepositoryImpl) deleteCrosscuttingPokinAndReset
 	}
 	return nil
 }
+
+func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingFromByPokinIdsBatch(
+	ctx context.Context, tx *sql.Tx, pokinIds []int,
+) (map[int][]domain.Crosscutting, error) {
+	if len(pokinIds) == 0 {
+		return map[int][]domain.Crosscutting{}, nil
+	}
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	query := `
+        SELECT
+            c.id,
+            c.crosscutting_from,
+            COALESCE(c.keterangan_crosscutting, '') AS keterangan_crosscutting,
+           COALESCE(NULLIF(TRIM(pk_to.kode_opd), ''), NULLIF(TRIM(c.kode_opd), ''), '') AS kode_opd_tujuan,
+            COALESCE(pk_to.nama_pohon, '') AS nama_pohon_tujuan,
+            c.status
+        FROM tb_crosscutting c
+        LEFT JOIN tb_pohon_kinerja pk_to ON c.crosscutting_to = pk_to.id
+        WHERE c.crosscutting_from IN (` + strings.Join(placeholders, ",") + `)
+        ORDER BY c.crosscutting_from, c.id
+    `
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("FindCrosscuttingFromByPokinIdsBatch: %w", err)
+	}
+	defer rows.Close()
+	result := make(map[int][]domain.Crosscutting)
+	for rows.Next() {
+		var c domain.Crosscutting
+		if err := rows.Scan(
+			&c.Id, &c.CrosscuttingFrom,
+			&c.Keterangan, &c.KodeOpd, &c.NamaPohonAsal, &c.Status,
+		); err != nil {
+			return nil, fmt.Errorf("scan crosscutting from batch: %w", err)
+		}
+		result[c.CrosscuttingFrom] = append(result[c.CrosscuttingFrom], c)
+	}
+	return result, rows.Err()
+}
