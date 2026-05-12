@@ -210,11 +210,12 @@ func (service *SasaranOpdServiceImpl) FindById(ctx context.Context, id int) (*sa
 		// Convert Indikator
 		for _, indikator := range sasaran.Indikator {
 			indResponse := sasaranopd.IndikatorResponse{
-				Id:               indikator.Id,
-				Indikator:        indikator.Indikator,
-				RumusPerhitungan: indikator.RumusPerhitungan.String,
-				SumberData:       indikator.SumberData.String,
-				Target:           make([]sasaranopd.TargetResponse, 0),
+				Id:                  indikator.Id,
+				Indikator:           indikator.Indikator,
+				DefinisiOperasional: indikator.DefinisiOperasional.String,
+				RumusPerhitungan:    indikator.RumusPerhitungan.String,
+				SumberData:          indikator.SumberData.String,
+				Target:              make([]sasaranopd.TargetResponse, 0),
 			}
 
 			// Convert Target

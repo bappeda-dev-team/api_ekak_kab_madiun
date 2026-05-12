@@ -264,6 +264,7 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
         so.id_tujuan_opd,
         i.id as indikator_id,
         i.indikator,
+	i.definisi_operasional,
         i.rumus_perhitungan,
         i.sumber_data,
         t.id as target_id,
@@ -275,8 +276,8 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
     LEFT JOIN tb_operasional_daerah od ON pk.kode_opd = od.kode_opd
     LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
     LEFT JOIN tb_pegawai p ON pp.pegawai_id = p.id
-    LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id
-    LEFT JOIN tb_target t ON i.id = t.indikator_id
+    LEFT JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id
+    LEFT JOIN tb_target t ON i.kode_indikator = t.indikator_id
     WHERE so.id = ?`
 
 	rows, err := tx.QueryContext(ctx, script, id)
@@ -291,20 +292,20 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 
 	for rows.Next() {
 		var (
-			pokinId, levelPohon                  int
-			namaPohon, kodeOpd, namaOpd          string
-			jenisPohon, tahunPohon               string
-			pelaksanaId, pegawaiId, pelaksanaNip sql.NullString
-			namaPegawai                          sql.NullString
-			sasaranId                            sql.NullInt64
-			namaSasaranOpd                       sql.NullString
-			idTujuanOpd                          sql.NullInt64
-			tahunAwalSasaran, tahunAkhirSasaran  sql.NullString
-			jenisPeriodeSasaran                  sql.NullString
-			indikatorId, indikator               sql.NullString
-			rumusPerhitungan, sumberData         sql.NullString
-			targetId, targetTahun                sql.NullString
-			targetValue, targetSatuan            sql.NullString
+			pokinId, levelPohon                         int
+			namaPohon, kodeOpd, namaOpd                 string
+			jenisPohon, tahunPohon                      string
+			pelaksanaId, pegawaiId, pelaksanaNip        sql.NullString
+			namaPegawai                                 sql.NullString
+			sasaranId                                   sql.NullInt64
+			namaSasaranOpd                              sql.NullString
+			idTujuanOpd                                 sql.NullInt64
+			tahunAwalSasaran, tahunAkhirSasaran         sql.NullString
+			jenisPeriodeSasaran                         sql.NullString
+			indikatorId, indikator, definisiOperasional sql.NullString
+			rumusPerhitungan, sumberData                sql.NullString
+			targetId, targetTahun                       sql.NullString
+			targetValue, targetSatuan                   sql.NullString
 		)
 
 		err := rows.Scan(
@@ -313,7 +314,7 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 			&sasaranId, &namaSasaranOpd,
 			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
 			&idTujuanOpd,
-			&indikatorId, &indikator,
+			&indikatorId, &indikator, &definisiOperasional,
 			&rumusPerhitungan, &sumberData,
 			&targetId, &targetTahun, &targetValue, &targetSatuan,
 		)
@@ -369,11 +370,12 @@ func (repository *SasaranOpdRepositoryImpl) FindById(ctx context.Context, tx *sq
 			ind, exists := indikatorMap[indikatorId.String]
 			if !exists {
 				ind = &domain.Indikator{
-					Id:               indikatorId.String,
-					Indikator:        indikator.String,
-					RumusPerhitungan: rumusPerhitungan,
-					SumberData:       sumberData,
-					Target:           make([]domain.Target, 0),
+					Id:                  indikatorId.String,
+					Indikator:           indikator.String,
+					DefinisiOperasional: definisiOperasional,
+					RumusPerhitungan:    rumusPerhitungan,
+					SumberData:          sumberData,
+					Target:              make([]domain.Target, 0),
 				}
 
 				// Inisialisasi target untuk semua tahun
@@ -1643,9 +1645,6 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(
 
 	return results, nil
 }
-
-
-
 
 func (r *SasaranOpdRepositoryImpl) CreateRenjaIndikator(
 	ctx context.Context, tx *sql.Tx,
