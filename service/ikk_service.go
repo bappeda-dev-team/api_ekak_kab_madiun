@@ -11,5 +11,5 @@ type IkkService interface {
 	Delete(ctx context.Context, id int) error
 	FindById(ctx context.Context, id int) (ikk.IkkResponse, error)
 	FindByKodeOpd(ctx context.Context, levelPohon int, kodeOpd string) ([]ikk.IkkFullResponse, error)
-	FindAll(ctx context.Context, kodeOpd string) ([]ikk.IkkFullResponse, error)
+	FindAll(ctx context.Context, kodeOpd string) (ikk.IkkMasterResponse, error)
 }
