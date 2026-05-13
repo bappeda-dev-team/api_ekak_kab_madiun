@@ -498,6 +498,8 @@ func NewRouter(
 
 	// IKD
 	router.GET("/ikd/findall/:kode_opd/:tahun/:jenis_periode", ikdController.FindAll)
+	router.POST("/ikd/select_program_opd/create", ikdController.Create)
+	router.DELETE("/ikd/select_program_opd/delete/:id", ikdController.Delete)
 
 	//matrix renja
 	router.GET("/matrix_renja/ranwal/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)

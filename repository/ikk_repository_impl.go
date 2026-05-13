@@ -14,11 +14,7 @@ func NewIkkRepositoryImpl() *IkkRepositoryImpl {
 	return &IkkRepositoryImpl{}
 }
 
-func (repository *IkkRepositoryImpl) Create(
-	ctx context.Context,
-	tx *sql.Tx,
-	ikk domain.Ikk,
-) (domain.Ikk, error) {
+func (repository *IkkRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, ikk domain.Ikk) (domain.Ikk, error) {
 
 	script := `
 		INSERT INTO tb_ikk 

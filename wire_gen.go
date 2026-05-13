@@ -166,7 +166,7 @@ func InitializeServer() *http.Server {
 	ikkServiceImpl := service.NewIkkServiceImpl(ikkRepositoryImpl, db, validate)
 	ikkControllerImpl := controller.NewIkkControllerImpl(ikkServiceImpl)
 	ikdRepositoryImpl := repository.NewIkdRepositoryImpl()
-	ikdServiceImpl := service.NewIkdServiceImpl(ikdRepositoryImpl, db)
+	ikdServiceImpl := service.NewIkdServiceImpl(ikdRepositoryImpl, db, validate)
 	ikdControllerImpl := controller.NewIkdControllerImpl(ikdServiceImpl)
 	matrixRenjaRepositoryImpl := repository.NewMatrixRenjaRepositoryImpl()
 	matrixRenjaServiceImpl := service.NewMatrixRenjaServiceImpl(matrixRenjaRepositoryImpl, periodeRepositoryImpl, pegawaiRepositoryImpl, db)
