@@ -65,6 +65,7 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 		COALESCE(tp.nama_pohon, '') as nama_program,
 
 		-- PROGRAM OPD TERPILIH
+		COALESCE(pot.id, 0) as pot_id,
 		CASE
 			WHEN pot.id IS NOT NULL THEN tp.id
 			ELSE 0
@@ -183,6 +184,7 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 			programParent int
 			namaProgram   string
 
+			TerpilihId     int
 			programTerpilihId     int
 			programTerpilihParent int
 			namaProgramTerpilih   string
@@ -229,6 +231,7 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 			&programParent,
 			&namaProgram,
 
+			&TerpilihId,
 			&programTerpilihId,
 			&programTerpilihParent,
 			&namaProgramTerpilih,
@@ -245,7 +248,7 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 			pohon.Pelaksana = make([]domain.PelaksanaDetail, 0)
 			pohon.SasaranOpd = make([]domain.SasaranOpdDetail, 0)
 			pohon.ProgramOpd = make([]domain.ProgramOpdDetail, 0)
-			pohon.ProgramOpdTerpilih = make([]domain.ProgramOpdDetail, 0)
+			pohon.ProgramOpdTerpilih = make([]domain.ProgramOpdTerpilihDetail, 0)
 
 			pohonMap[pohon.Id] = &pohon
 			existingPohon = &pohon
@@ -427,8 +430,9 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 
 				existingPohon.ProgramOpdTerpilih = append(
 					existingPohon.ProgramOpdTerpilih,
-					domain.ProgramOpdDetail{
-						Id:          programTerpilihId,
+					domain.ProgramOpdTerpilihDetail{
+						Id:          TerpilihId,
+						TacticalId:          programTerpilihId,
 						Parent:      programTerpilihParent,
 						NamaProgram: namaProgramTerpilih,
 					},

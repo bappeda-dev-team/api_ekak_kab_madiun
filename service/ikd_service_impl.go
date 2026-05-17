@@ -154,14 +154,15 @@ func (service *IkdServiceImpl) FindAll(
 		// =========================
 		// PROGRAM OPD TERPILIH
 		// =========================
-		programTerpilihResponses := make([]ikd.ProgramOpdResponse, 0)
+		programTerpilihResponses := make([]ikd.ProgramOpdTerpilihIkdResponse, 0)
 
 		for _, program := range data.ProgramOpdTerpilih {
 
 			programTerpilihResponses = append(
 				programTerpilihResponses,
-				ikd.ProgramOpdResponse{
+				ikd.ProgramOpdTerpilihIkdResponse{
 					Id:          program.Id,
+					TacticalId:          program.TacticalId,
 					Parent:      program.Parent,
 					NamaProgram: program.NamaProgram,
 				},
