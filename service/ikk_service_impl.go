@@ -378,3 +378,94 @@ func (service *IkkServiceImpl) FindAll(
 		Ikks:                   ikkResponses,
 	}, nil
 }
+
+func (service *IkkServiceImpl) FindAllByLevelPohon(
+	ctx context.Context,
+	levelPohon int,
+	kodeOpd string,
+) (ikk.IkkMasterResponse, error) {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return ikk.IkkMasterResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// ================= mapping levelPohon -> jenis =================
+	mapping := map[int]string{
+		5: "outcome",
+		6: "output",
+	}
+
+	jenis := mapping[levelPohon]
+	if jenis == "" {
+		return ikk.IkkMasterResponse{}, nil
+	}
+
+	// ================= selection =================
+	selections, err := service.IkkRepository.FindSelectionByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return ikk.IkkMasterResponse{}, err
+	}
+
+	// ================= IKK data (FILTER jenis + kodeOpd) =================
+	ikks, err := service.IkkRepository.FindAllByJenisAndKodeOpd(ctx, tx, kodeOpd, jenis)
+	if err != nil {
+		return ikk.IkkMasterResponse{}, err
+	}
+
+	// ================= mapping selection =================
+	selectionResponses := make([]ikk.BidangUrusanSelectionResponse, 0)
+	for _, s := range selections {
+		selectionResponses = append(selectionResponses, ikk.BidangUrusanSelectionResponse{
+			KodeBidangUrusan: s.KodeBidangUrusan,
+			NamaBidangUrusan: s.NamaBidangUrusan,
+			KodeOpd:          s.KodeOpd,
+			NamaOpd:          s.NamaOpd,
+		})
+	}
+
+	// ================= mapping IKK nested =================
+	ikkResponses := make([]ikk.IkkFullResponse, 0)
+
+	for _, ikkData := range ikks {
+
+		indikators := make([]ikk.IndikatorResponse, 0)
+
+		for _, ind := range ikkData.Indikators {
+
+			targets := make([]ikk.TargetResponse, 0)
+
+			for _, t := range ind.Targets {
+				targets = append(targets, ikk.TargetResponse{
+					ID:     t.ID,
+					Target: t.Target,
+					Satuan: t.Satuan,
+				})
+			}
+
+			indikators = append(indikators, ikk.IndikatorResponse{
+				ID:        ind.ID,
+				Indikator: ind.Indikator,
+				Targets:   targets,
+			})
+		}
+
+		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+			ID:               ikkData.ID,
+			KodeOpd:          ikkData.KodeOpd,
+			NamaOpd:          ikkData.NamaOpd,
+			KodeBidangUrusan: ikkData.KodeBidangUrusan,
+			NamaBidangUrusan: ikkData.NamaBidangUrusan,
+			Jenis:            ikkData.Jenis,
+			Tahun:            ikkData.Tahun,
+			Keterangan:       ikkData.Keterangan,
+			Indikators:       indikators,
+		})
+	}
+
+	return ikk.IkkMasterResponse{
+		BidangUrusanSelections: selectionResponses,
+		Ikks:                   ikkResponses,
+	}, nil
+}

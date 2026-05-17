@@ -166,7 +166,7 @@ func (controller *IkkControllerImpl) FindByKodeOpd(writer http.ResponseWriter, r
 
 	kodeOpd := params.ByName("kode_opd")
 
-	bidangUrusanResponses, err := controller.IkkService.FindByKodeOpd(request.Context(), levelPohon, kodeOpd)
+	bidangUrusanResponses, err := controller.IkkService.FindAllByLevelPohon(request.Context(), levelPohon, kodeOpd)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   http.StatusBadRequest,
