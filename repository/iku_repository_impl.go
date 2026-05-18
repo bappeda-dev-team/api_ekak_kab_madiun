@@ -26,6 +26,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
                 i.indikator,
                 i.rumus_perhitungan,
                 i.sumber_data,
+		COALESCE(i.definisi_operasional, '') as definisi_operasional,
                 i.created_at as indikator_created_at,
                 i.iku_active,
                 t.id as target_id,
@@ -60,6 +61,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
                 i.indikator,
                 i.rumus_perhitungan,
                 i.sumber_data,
+		COALESCE(i.definisi_operasional, '') as definisi_operasional,
                 i.created_at as indikator_created_at,
                 i.iku_active,
                 t.id as target_id,
@@ -113,24 +115,25 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 
 	for rows.Next() {
 		var (
-			indikatorId        sql.NullString
-			indikator          sql.NullString
-			rumusPerhitungan   sql.NullString
-			sumberData         sql.NullString
-			indikatorCreatedAt sql.NullTime
-			ikuActive          bool
-			targetId           sql.NullString
-			target             sql.NullString
-			satuan             sql.NullString
-			targetTahun        sql.NullString
-			sumber             string
-			parentId           sql.NullInt64
-			parentName         sql.NullString
-			tahunAwal          string
-			tahunAkhir         string
-			jenisPeriodeData   string
-			isActive           bool
-			isExists           bool
+			indikatorId         sql.NullString
+			indikator           sql.NullString
+			rumusPerhitungan    sql.NullString
+			sumberData          sql.NullString
+			definisiOperasional sql.NullString
+			indikatorCreatedAt  sql.NullTime
+			ikuActive           bool
+			targetId            sql.NullString
+			target              sql.NullString
+			satuan              sql.NullString
+			targetTahun         sql.NullString
+			sumber              string
+			parentId            sql.NullInt64
+			parentName          sql.NullString
+			tahunAwal           string
+			tahunAkhir          string
+			jenisPeriodeData    string
+			isActive            bool
+			isExists            bool
 		)
 
 		err := rows.Scan(
@@ -138,6 +141,7 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			&indikator,
 			&rumusPerhitungan,
 			&sumberData,
+			&definisiOperasional,
 			&indikatorCreatedAt,
 			&ikuActive,
 			&targetId,
@@ -179,17 +183,18 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			}
 
 			item = &domain.Indikator{
-				Id:               indikatorId.String,
-				Indikator:        indikator.String,
-				RumusPerhitungan: rumusPerhitungan,
-				SumberData:       sumberData,
-				CreatedAt:        indikatorCreatedAt.Time,
-				Sumber:           sumber,
-				ParentId:         int(parentId.Int64),
-				ParentName:       parentName.String,
-				Target:           targets,
-				IsActive:         isActive,
-				IkuActive:        ikuActive,
+				Id:                  indikatorId.String,
+				Indikator:           indikator.String,
+				RumusPerhitungan:    rumusPerhitungan,
+				SumberData:          sumberData,
+				DefinisiOperasional: definisiOperasional,
+				CreatedAt:           indikatorCreatedAt.Time,
+				Sumber:              sumber,
+				ParentId:            int(parentId.Int64),
+				ParentName:          parentName.String,
+				Target:              targets,
+				IsActive:            isActive,
+				IkuActive:           ikuActive,
 			}
 			indikatorMap[indikatorId.String] = item
 		}
@@ -579,19 +584,20 @@ func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sq
 			ikuRow, exists := ikuMap[key]
 			if !exists {
 				ikuRow = &domain.Indikator{
-					Id:               indikatorId.String,
-					AsalIku:          jenis,
-					ParentOpdId:      helper.GetNullStringValue(parentId),
-					ParentName:       helper.GetNullStringValue(namaParent),
-					Indikator:        helper.GetNullStringValue(namaIndikator),
-					RumusPerhitungan: rumusPerhitungan,
-					SumberData:       sumberData,
-					TahunAwal:        tahun,
-					TahunAkhir:       tahun,
-					JenisPeriode:     jenisPeriode,
-					Jenis:            jenisIndikator,
-					Target:           []domain.Target{tg},
-					IkuActive:        active,
+					Id:                  indikatorId.String,
+					AsalIku:             jenis,
+					ParentOpdId:         helper.GetNullStringValue(parentId),
+					ParentName:          helper.GetNullStringValue(namaParent),
+					Indikator:           helper.GetNullStringValue(namaIndikator),
+					DefinisiOperasional: definisiOperasional,
+					RumusPerhitungan:    rumusPerhitungan,
+					SumberData:          sumberData,
+					TahunAwal:           tahun,
+					TahunAkhir:          tahun,
+					JenisPeriode:        jenisPeriode,
+					Jenis:               jenisIndikator,
+					Target:              []domain.Target{tg},
+					IkuActive:           active,
 				}
 				ikuRow.DefinisiOperasional = definisiOperasional
 				ikuMap[key] = ikuRow
@@ -605,7 +611,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sq
 		}
 		return nil
 	}
-	args := []interface{}{jenisIndikator, tahun, kodeOpd, jenisPeriode, tahun, tahun}
+	args := []any{jenisIndikator, tahun, kodeOpd, jenisPeriode, tahun, tahun}
 	rowsTujuan, err := tx.QueryContext(ctx, scriptTujuan, args...)
 	if err != nil {
 		return nil, err
