@@ -204,3 +204,65 @@ func (controller *IkkControllerImpl) FindAll(writer http.ResponseWriter, request
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *IkkControllerImpl) PilihIkk(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ikkRequest := ikk.IkkTerpilihCreateRequest{}
+	helper.ReadFromRequestBody(request, &ikkRequest)
+
+	// TODO: guard jika request invalid
+	// return 400 Invalid
+
+	ikkResponse, err := controller.IkkService.PilihIkk(request.Context(), ikkRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			// TODO: CODE: AMBIL DARI http
+			Code: http.StatusInternalServerError,
+			// TODO: STATUS: TERJEMAHKAN DARI code
+			Status: http.StatusText(http.StatusInternalServerError),
+			// TODO: buat nil saja
+			Data: err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		// TODO: CODE AMBIL DARI http
+		Code:   201,
+		Status: "Success Select Ikk",
+		Data:   ikkResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *IkkControllerImpl) DeletePilihanIkk(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ikkId := params.ByName("id")
+	id, err := strconv.Atoi(ikkId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	err = controller.IkkService.DeletePilihanIkk(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Deleted Pilihan Ikk",
+		Data:   nil,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

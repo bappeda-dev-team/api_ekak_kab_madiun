@@ -495,6 +495,8 @@ func NewRouter(
 	router.POST("/ikk/create", ikkController.Create)
 	router.PUT("/ikk/update/:id", ikkController.Update)
 	router.DELETE("/ikk/delete/:id", ikkController.Delete)
+	router.POST("/ikk/select_ikk/create", ikkController.PilihIkk)
+	router.DELETE("/ikk/select_ikk/delete/:id", ikkController.DeletePilihanIkk)
 
 	// IKD
 	router.GET("/ikd/findall/:kode_opd/:tahun/:jenis_periode", ikdController.FindAll)

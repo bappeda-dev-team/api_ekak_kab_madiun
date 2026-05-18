@@ -867,4 +867,108 @@ func (repository *IkkRepositoryImpl) FindSelectionByKodeOpd(ctx context.Context,
 	return selections, nil
 }
 
+func (repository *IkkRepositoryImpl) PilihIkk(ctx context.Context, tx *sql.Tx, ikk domain.IkkTerpilih) (domain.IkkTerpilih, error) {
+
+	script := `
+		INSERT INTO tb_ikk_terpilih 
+		(pohon_kinerja_id, ikk_id) 
+		VALUES (?, ?)
+	`
+
+	result, err := tx.ExecContext(
+		ctx,
+		script,
+		ikk.PohonKinerjaId,
+		ikk.IkkId,
+	)
+	if err != nil {
+		return domain.IkkTerpilih{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return domain.IkkTerpilih{}, err
+	}
+
+	ikk.Id = int(id)
+
+	return ikk, nil
+}
+
+func (repository *IkkRepositoryImpl) DeletePilihanIkk(ctx context.Context, tx *sql.Tx, id int) error {
+	script := "DELETE FROM tb_ikk_terpilih WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repository *IkkRepositoryImpl) FindTerpilihById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilih, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			id,
+			pohon_kinerja_id,
+			ikk_id
+		FROM tb_ikk_terpilih
+		WHERE id = ?
+	`
+
+	var result domain.IkkTerpilih
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.Id,
+		&result.PohonKinerjaId,
+		&result.IkkId,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.IkkTerpilih{}, errors.New("ikk terpilih tidak ditemukan")
+		}
+		return domain.IkkTerpilih{}, err
+	}
+
+	return result, nil
+}
+func (repository *IkkRepositoryImpl) FindTerpilihPokinIkkById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilihDetail, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			tit.id,
+			tit.pohon_kinerja_id,
+			tit.ikk_id,
+			tpk.nama_pohon,
+            ti.jenis,
+            ti.keterangan
+		FROM tb_ikk_terpilih tit
+		LEFT JOIN tb_pohon_kinerja tpk
+		ON tpk.id = tit.pohon_kinerja_id
+		LEFT JOIN tb_ikk ti
+		ON ti.id = tit.ikk_id
+		WHERE tit.id = ?
+	`
+
+	var result domain.IkkTerpilihDetail
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.Id,
+		&result.PohonKinerjaId,
+		&result.IkkId,
+		&result.NamaPokin,
+		&result.JenisIkk,
+		&result.KeteranganIkk,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.IkkTerpilihDetail{}, errors.New("ikk terpilih tidak ditemukan")
+		}
+		return domain.IkkTerpilihDetail{}, err
+	}
+
+	return result, nil
+}
+
 

@@ -13,4 +13,6 @@ type IkkController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByKodeOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	PilihIkk(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	DeletePilihanIkk(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

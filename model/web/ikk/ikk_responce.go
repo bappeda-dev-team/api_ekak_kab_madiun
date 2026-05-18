@@ -51,3 +51,12 @@ type IkkMasterResponse struct {
 	BidangUrusanSelections []BidangUrusanSelectionResponse `json:"bidang_urusan_selections"`
 	Ikks                   []IkkFullResponse               `json:"ikks"`
 }
+
+type IkkTerpilihResponse struct {
+	Id              int    `json:"id"`
+	PokinId         int    `json:"pokin_id"`
+	IkkId           int    `json:"ikk_id"`
+	NamaPokin       string `json:"nama_pokin"`
+	JenisIkk        string `json:"jenis_ikk"`
+	KeteranganIkk   string `json:"keterangan_ikk"`
+}

@@ -13,4 +13,6 @@ type IkkService interface {
 	FindByKodeOpd(ctx context.Context, levelPohon int, kodeOpd string) ([]ikk.IkkFullResponse, error)
 	FindAllByLevelPohon(ctx context.Context, levelPohon int, kodeOpd string) (ikk.IkkMasterResponse, error)
 	FindAll(ctx context.Context, kodeOpd string) (ikk.IkkMasterResponse, error)
+	PilihIkk(ctx context.Context, request ikk.IkkTerpilihCreateRequest) (ikk.IkkTerpilihResponse, error)
+	DeletePilihanIkk(ctx context.Context, id int) error
 }

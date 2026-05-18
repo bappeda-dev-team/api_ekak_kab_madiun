@@ -16,4 +16,8 @@ type IkkRepository interface {
 	FindAllByJenisAndKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, jenis string) ([]domain.Ikk, error)
 	FindSelection(ctx context.Context, tx *sql.Tx) ([]domain.BidangUrusanSelection, error)
 	FindSelectionByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.BidangUrusanSelection, error)
+	PilihIkk(ctx context.Context, tx *sql.Tx, ikd domain.IkkTerpilih) (domain.IkkTerpilih, error)
+	DeletePilihanIkk(ctx context.Context, tx *sql.Tx, id int) error
+	FindTerpilihById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilih, error)
+	FindTerpilihPokinIkkById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilihDetail, error)
 }

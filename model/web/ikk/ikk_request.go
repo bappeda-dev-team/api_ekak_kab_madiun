@@ -20,3 +20,8 @@ type TargetRequest struct {
 	Target string `json:"target" validate:"required"`
 	Satuan string `json:"satuan" validate:"required"`
 }
+
+type IkkTerpilihCreateRequest struct {
+	PohonKinerjaId int `json:"pohon_kinerja_id" validate:"required"`
+	IkkId          int `json:"ikk_id" validate:"required"`
+}

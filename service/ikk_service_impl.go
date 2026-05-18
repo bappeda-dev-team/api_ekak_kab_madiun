@@ -469,3 +469,61 @@ func (service *IkkServiceImpl) FindAllByLevelPohon(
 		Ikks:                   ikkResponses,
 	}, nil
 }
+
+func (service *IkkServiceImpl) PilihIkk(ctx context.Context, request ikk.IkkTerpilihCreateRequest) (ikk.IkkTerpilihResponse, error) {
+	err := service.Validate.Struct(request)
+	if err != nil {
+		return ikk.IkkTerpilihResponse{}, err
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return ikk.IkkTerpilihResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	data := domain.IkkTerpilih{
+		PohonKinerjaId: request.PohonKinerjaId,
+		IkkId:          request.IkkId,
+	}
+
+	result, err := service.IkkRepository.PilihIkk(ctx, tx, data)
+	if err != nil {
+		return ikk.IkkTerpilihResponse{}, err
+	}
+
+	pokinikk, err := service.IkkRepository.FindTerpilihPokinIkkById(
+		ctx,
+		tx,
+		result.Id,
+	)
+
+	if err != nil {
+		return ikk.IkkTerpilihResponse{}, err
+	}
+
+	return ikk.IkkTerpilihResponse{
+		Id:              result.Id,
+		PokinId:   		 result.PohonKinerjaId,
+		IkkId:           result.IkkId,
+		NamaPokin:       pokinikk.NamaPokin,
+		JenisIkk:        pokinikk.JenisIkk,
+		KeteranganIkk:   pokinikk.KeteranganIkk,
+	}, nil
+}
+
+func (service *IkkServiceImpl) DeletePilihanIkk(ctx context.Context, id int) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi data exists
+	_, err = service.IkkRepository.FindTerpilihById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	return service.IkkRepository.DeletePilihanIkk(ctx, tx, id)
+}

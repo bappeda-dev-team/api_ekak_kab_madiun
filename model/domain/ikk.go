@@ -43,3 +43,18 @@ type BidangUrusanSelection struct {
 	KodeOpd          string `json:"kode_opd"`
 	NamaOpd          string `json:"nama_opd"`
 }
+
+type IkkTerpilih struct {
+	Id             int
+	PohonKinerjaId int
+	IkkId   	   int
+}
+
+type IkkTerpilihDetail struct {
+	Id             int
+	PohonKinerjaId int
+	IkkId   	   int
+	NamaPokin      string
+	JenisIkk       string
+	KeteranganIkk  string
+}
