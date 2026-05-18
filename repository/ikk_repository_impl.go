@@ -466,14 +466,25 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.Ikk, error) {
 
 	query := `
-		SELECT id, kode_opd, kode_bidang_urusan, jenis, tahun, keterangan
-		FROM tb_ikk
+		SELECT ikk.id, 
+			   ikk.kode_opd, 
+			   od.nama_opd,
+			   ikk.kode_bidang_urusan, 
+			   bu.nama_bidang_urusan, 
+			   ikk.jenis, 
+			   ikk.tahun, 
+			   ikk.keterangan
+		FROM tb_ikk ikk
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = ikk.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
 	`
 
 	args := make([]interface{}, 0)
 
 	if kodeOpd != "" {
-		query += " WHERE kode_opd = ?"
+		query += " WHERE ikk.kode_opd = ?"
 		args = append(args, kodeOpd)
 	}
 
@@ -492,7 +503,9 @@ func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 		err := rows.Scan(
 			&item.ID,
 			&item.KodeOpd,
+			&item.NamaOpd,
 			&item.KodeBidangUrusan,
+			&item.NamaBidangUrusan,
 			&item.Jenis,
 			&item.Tahun,
 			&item.Keterangan,
