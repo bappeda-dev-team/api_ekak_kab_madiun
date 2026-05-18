@@ -626,20 +626,32 @@ func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 func (repository *IkkRepositoryImpl) FindAllByJenisAndKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, jenis string) ([]domain.Ikk, error) {
 
 	query := `
-		SELECT id, kode_opd, kode_bidang_urusan, jenis, tahun, keterangan
-		FROM tb_ikk
+		SELECT 
+		ikk.id, 
+		ikk.kode_opd, 
+		od.nama_opd, 
+		ikk.kode_bidang_urusan, 
+		bu.nama_bidang_urusan, 
+		ikk.jenis, 
+		ikk.tahun, 
+		ikk.keterangan
+		FROM tb_ikk ikk
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = ikk.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
 		WHERE 1=1
 	`
 
 	args := make([]interface{}, 0)
 
 	if kodeOpd != "" {
-		query += " AND kode_opd = ?"
+		query += " AND ikk.kode_opd = ?"
 		args = append(args, kodeOpd)
 	}
 
 	if jenis != "" {
-		query += " AND jenis = ?"
+		query += " AND ikk.jenis = ?"
 		args = append(args, jenis)
 	}
 
@@ -658,7 +670,9 @@ func (repository *IkkRepositoryImpl) FindAllByJenisAndKodeOpd(ctx context.Contex
 		err := rows.Scan(
 			&item.ID,
 			&item.KodeOpd,
+			&item.NamaOpd,
 			&item.KodeBidangUrusan,
+			&item.NamaBidangUrusan,
 			&item.Jenis,
 			&item.Tahun,
 			&item.Keterangan,
