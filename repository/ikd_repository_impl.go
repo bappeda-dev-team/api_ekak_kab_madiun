@@ -519,3 +519,29 @@ func (repository *IkdRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, i
 
 	return result, nil
 }
+func (repository *IkdRepositoryImpl) FindPokinById(ctx context.Context, tx *sql.Tx, id int) (domain.PokinIkd, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			id,
+			nama_pohon
+		FROM tb_pohon_kinerja
+		WHERE id = ?
+	`
+
+	var result domain.PokinIkd
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.Id,
+		&result.NamaPokin,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.PokinIkd{}, errors.New("pohon kinerja tidak ditemukan")
+		}
+		return domain.PokinIkd{}, err
+	}
+
+	return result, nil
+}

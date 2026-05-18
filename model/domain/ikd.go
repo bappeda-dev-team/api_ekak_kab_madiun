@@ -44,3 +44,8 @@ type ProgramOpdTerpilih struct {
 	PohonKinerjaId int
 	ProgramOpdId   int
 }
+
+type PokinIkd struct {
+	Id        int
+	NamaPokin string
+}

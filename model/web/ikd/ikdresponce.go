@@ -70,7 +70,8 @@ type ProgramOpdTerpilihIkdResponse struct {
 }
 
 type ProgramOpdTerpilihResponse struct {
-	Id             int `json:"id"`
-	PohonKinerjaId int `json:"pohon_kinerja_id"`
-	ProgramOpdId   int `json:"program_opd_id"`
+	Id          int    `json:"id"`
+	TacticalId  int    `json:"tactical_id"`
+	Parent      int    `json:"parent"`
+	NamaProgram string `json:"nama_program"`
 }

@@ -224,10 +224,21 @@ func (service *IkdServiceImpl) Create(ctx context.Context, request ikd.ProgramOp
 		return ikd.ProgramOpdTerpilihResponse{}, err
 	}
 
+	tactical, err := service.IkdRepository.FindPokinById(
+		ctx,
+		tx,
+		result.ProgramOpdId,
+	)
+
+	if err != nil {
+		return ikd.ProgramOpdTerpilihResponse{}, err
+	}
+
 	return ikd.ProgramOpdTerpilihResponse{
 		Id:                 	 result.Id,
-		PohonKinerjaId:   		 result.PohonKinerjaId,
-		ProgramOpdId:            result.ProgramOpdId,
+		TacticalId:   		 result.PohonKinerjaId,
+		Parent:            result.ProgramOpdId,
+		NamaProgram: tactical.NamaPokin,
 	}, nil
 }
 
