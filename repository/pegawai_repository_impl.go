@@ -195,7 +195,7 @@ func (repository *PegawaiRepositoryImpl) FindPegawaiByNipsBatch(ctx context.Cont
 				SELECT jp.id_jabatan
 				FROM tb_jabatan_pegawai jp
 				WHERE jp.id_pegawai = peg.nip
-				ORDER BY jp.tahun DESC, jp.bulan DESC
+				ORDER BY jp.created_at DESC, jp.tahun DESC, jp.bulan DESC
 				LIMIT 1
 			)
 		WHERE peg.nip IN (%s)
