@@ -2847,11 +2847,126 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 		return pohonkinerja.ControlPokinOpdResponse{}, err
 	}
 
-	tematikNodes, err := service.pohonKinerjaOpdRepository.FindControlPokinTematikNodes(ctx, tx, kodeOpd, tahun)
+	// all pokin pemda in tahun
+	pokinPemdas, err := service.pohonKinerjaOpdRepository.FindPokinPemdaByTahun(ctx, tx, tahun)
 	if err != nil {
 		return pohonkinerja.ControlPokinOpdResponse{}, err
 	}
-	tematikTree := buildLeaderboardTematikTree(tematikNodes)
+	pokinById := make(map[int]domain.PohonKinerja)
+
+	for _, p := range pokinPemdas {
+
+		pokinById[p.Id] = p
+
+	}
+	type nodeWithRoot struct {
+		Node domain.PohonKinerja
+		Root domain.PohonKinerja // pemda asal
+	}
+	current := make([]nodeWithRoot, 0)
+
+	for _, root := range pokinPemdas {
+		current = append(current, nodeWithRoot{
+			Node: root,
+			Root: root,
+		})
+	}
+
+	resultPemda := make(map[string][]domain.PohonKinerja)
+	visited := make(map[int]bool)
+
+	for len(current) > 0 {
+
+		ids := make([]int, 0, len(current))
+		for _, c := range current {
+			ids = append(ids, c.Node.Id)
+		}
+
+		children, err := service.pohonKinerjaOpdRepository.
+			FindPokinOpdByParentIdsAndTahun(ctx, tx, ids, tahun)
+		if err != nil {
+			return pohonkinerja.ControlPokinOpdResponse{}, err
+		}
+
+		next := make([]nodeWithRoot, 0)
+
+		for _, child := range children {
+
+			if visited[child.Id] {
+				continue
+			}
+			visited[child.Id] = true
+
+			// FIX parent lookup
+			var parent nodeWithRoot
+			found := false
+
+			for _, c := range current {
+				if c.Node.Id == child.Parent {
+					parent = c
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[WARN] parent not found: child=%d parent=%d", child.Id, child.Parent)
+				continue
+			}
+
+			// mapping opd → tematik
+			if child.KodeOpd != "" {
+				resultPemda[child.KodeOpd] =
+					append(resultPemda[child.KodeOpd], parent.Root)
+			}
+
+			next = append(next, nodeWithRoot{
+				Node: child,
+				Root: parent.Root,
+			})
+		}
+
+		current = next
+	}
+
+	expanded := make(map[string][]domain.PohonKinerja)
+	for kodeOpd, pokins := range resultPemda {
+		for _, pok := range pokins {
+
+			chain := buildFullChain(pok, pokinById)
+
+			for _, c := range chain {
+
+				expanded[kodeOpd] = append(expanded[kodeOpd], c)
+
+			}
+
+		}
+	}
+	// 🔹 mapping ke tematik nodes
+	byOpd := make(map[string][]repository.LeaderboardTematikNode)
+
+	for kodeOpd, pokins := range expanded {
+
+		seen := make(map[int]bool)
+
+		for _, pok := range pokins {
+			if seen[pok.Id] {
+				continue
+			}
+			seen[pok.Id] = true
+
+			byOpd[kodeOpd] = append(byOpd[kodeOpd],
+				repository.LeaderboardTematikNode{
+					Id:         pok.Id,
+					Parent:     pok.Parent,
+					NamaPohon:  pok.NamaPohon,
+					KodeOpd:    kodeOpd,
+					JenisPohon: pok.JenisPohon,
+					LevelPohon: pok.LevelPohon,
+				})
+		}
+	}
 
 	// Cari level maksimum yang ada di data
 	maxLevel := 6 // Minimal sampai Operational (level 6)
@@ -2860,6 +2975,8 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 			maxLevel = level
 		}
 	}
+
+	tematikTree := buildLeaderboardTematikTree(byOpd[kodeOpd])
 
 	// Map nama level
 	levelNames := map[int]string{
