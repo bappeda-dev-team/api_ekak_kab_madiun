@@ -2,6 +2,7 @@ package pohonkinerja
 
 import (
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/ikk"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 )
 
@@ -72,6 +73,7 @@ type TacticalOpdResponse struct {
 	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse       `json:"ikk"`
 	Operationals           []OperationalOpdResponse    `json:"childs,omitempty"`
 	Crosscutting           []CrosscuttingOpdResponse   `json:"crosscutting,omitempty"`
 	Review                 []ReviewResponse            `json:"review,omitempty"`
@@ -94,6 +96,7 @@ type OperationalOpdResponse struct {
 	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse       `json:"ikk"`
 	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`
 	Crosscutting           []CrosscuttingOpdResponse   `json:"crosscutting,omitempty"`
 	Review                 []ReviewResponse            `json:"review,omitempty"`

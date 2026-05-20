@@ -149,6 +149,37 @@ func (controller *IkkControllerImpl) FindById(writer http.ResponseWriter, reques
 	helper.WriteToResponseBody(writer, webResponse)
 
 }
+func (controller *IkkControllerImpl) FindIkkPokinById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ikkId := params.ByName("pokin_id")
+	id, err := strconv.Atoi(ikkId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	ikkResponse, err := controller.IkkService.FindAllByIdPokin(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Found IKK",
+		Data:   ikkResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+
+}
 
 func (controller *IkkControllerImpl) FindByKodeOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	levelStr := params.ByName("level_pohon")

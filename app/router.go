@@ -492,6 +492,7 @@ func NewRouter(
 	router.GET("/ikk/findpokin/:level_pohon/:kode_opd", ikkController.FindByKodeOpd)
 	router.GET("/ikk/findall/:kode_opd", ikkController.FindAll)
 	router.GET("/ikk/detail/:id", ikkController.FindById)
+	router.GET("/ikk/pokin/:pokin_id", ikkController.FindIkkPokinById)
 	router.POST("/ikk/create", ikkController.Create)
 	router.PUT("/ikk/update/:id", ikkController.Update)
 	router.DELETE("/ikk/delete/:id", ikkController.Delete)

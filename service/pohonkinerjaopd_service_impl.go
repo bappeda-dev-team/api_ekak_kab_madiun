@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/ikk"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/model/web/strategic"
@@ -36,12 +37,14 @@ type PohonKinerjaOpdServiceImpl struct {
 	RedisClient               *redis.Client
 	CSFRepository             repository.CSFRepository
 	sasaranOpdRepository      repository.SasaranOpdRepository
+	ikkService                IkkService
 }
 
 func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate,
 	programUnggulanRepository repository.ProgramUnggulanRepository,
 	dataMasterRepository repository.DataMasterRepository,
-	redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository) *PohonKinerjaOpdServiceImpl {
+	redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository,
+	ikkService IkkService) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -56,6 +59,7 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		RedisClient:               redisClient,
 		CSFRepository:             csfRepository,
 		sasaranOpdRepository:      sasaranOpdRepository,
+		ikkService:      ikkService,
 	}
 }
 
@@ -894,6 +898,9 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 		}
 	}
 
+	// ikk maps
+	ikkMap := make(map[int][]ikk.IkkFullResponse)
+
 	// Batch fetch pelaksana
 	pelaksanas, _ := service.pohonKinerjaOpdRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
 	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
@@ -949,6 +956,18 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 			})
 		}
 		indikatorMap[pokinId] = indikatorResponses
+	}
+
+	// build ikk map
+	for _, p := range pokins {
+		if p.LevelPohon >= 4 {
+			ikkResponses, err := service.ikkService.FindAllByIdPokin(ctx, p.Id)
+			if err != nil {
+				return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
+			}
+
+			ikkMap[p.Id] = ikkResponses
+		}
 	}
 
 	// Batch fetch tematik - HAPUS SEMUA LOGGING DEBUG
@@ -1056,6 +1075,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 						taggingMap,
 						pelaksanaMap,
 						indikatorMap,
+						ikkMap,
 						reviewMap,
 						tematikMap,
 					)
@@ -1262,6 +1282,7 @@ func buildTacticalOnly(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	tematikMap map[int]*domain.PohonKinerja,
 ) pohonkinerja.TacticalOpdResponse {
@@ -1304,6 +1325,7 @@ func buildTacticalOnly(
 		Tagging:     taggingMap[tactical.Id],
 		Pelaksana:   pelaksanaMap[tactical.Id],
 		Indikator:   indikatorMap[tactical.Id],
+		Ikk:   ikkMap[tactical.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}

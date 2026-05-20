@@ -258,6 +258,7 @@ func (service *IkkServiceImpl) FindById(ctx context.Context, id int) (ikk.IkkRes
 	}, nil
 }
 
+
 func (service *IkkServiceImpl) FindByKodeOpd(ctx context.Context, levelPohon int, kodeOpd string) ([]ikk.IkkFullResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -297,10 +298,7 @@ func (service *IkkServiceImpl) FindByKodeOpd(ctx context.Context, levelPohon int
 
 	return bidangUrusanResponses, nil
 }
-func (service *IkkServiceImpl) FindAll(
-	ctx context.Context,
-	kodeOpd string,
-) (ikk.IkkMasterResponse, error) {
+func (service *IkkServiceImpl) FindAll(ctx context.Context, kodeOpd string) (ikk.IkkMasterResponse, error) {
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -377,6 +375,61 @@ func (service *IkkServiceImpl) FindAll(
 		BidangUrusanSelections: selectionResponses,
 		Ikks:                   ikkResponses,
 	}, nil
+}
+func (service *IkkServiceImpl) FindAllByIdPokin(ctx context.Context, pokinId int) ([]ikk.IkkFullResponse, error) {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return []ikk.IkkFullResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil data IKK
+	ikks, err := service.IkkRepository.FindAllByIdPokin(ctx, tx, pokinId)
+	if err != nil {
+		return []ikk.IkkFullResponse{}, err
+	}
+
+	// Mapping IKK
+	ikkResponses := make([]ikk.IkkFullResponse, 0)
+
+	for _, ikkData := range ikks {
+
+		indikators := make([]ikk.IndikatorResponse, 0)
+
+		for _, ind := range ikkData.Indikators {
+
+			targets := make([]ikk.TargetResponse, 0)
+
+			for _, t := range ind.Targets {
+				targets = append(targets, ikk.TargetResponse{
+					ID:     t.ID,
+					Target: t.Target,
+					Satuan: t.Satuan,
+				})
+			}
+
+			indikators = append(indikators, ikk.IndikatorResponse{
+				ID:        ind.ID,
+				Indikator: ind.Indikator,
+				Targets:   targets,
+			})
+		}
+
+		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+			ID:               ikkData.ID,
+			KodeOpd:          ikkData.KodeOpd,
+			NamaOpd:          ikkData.NamaOpd,
+			KodeBidangUrusan: ikkData.KodeBidangUrusan,
+			NamaBidangUrusan: ikkData.NamaBidangUrusan,
+			Jenis:            ikkData.Jenis,
+			Tahun:            ikkData.Tahun,
+			Keterangan:       ikkData.Keterangan,
+			Indikators:       indikators,
+		})
+	}
+
+	return ikkResponses, nil
 }
 
 func (service *IkkServiceImpl) FindAllByLevelPohon(
