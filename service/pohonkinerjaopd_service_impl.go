@@ -1081,7 +1081,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 					)
 
 					// Lanjut append operational
-					appendOperationals(&tacticalResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, tematikMap)
+					appendOperationals(&tacticalResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap, tematikMap)
 
 					strategicResp.Tacticals = append(strategicResp.Tacticals, tacticalResp)
 				}
@@ -1338,6 +1338,7 @@ func buildOperationalOnly(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	tematikMap map[int]*domain.PohonKinerja,
 ) pohonkinerja.OperationalOpdResponse {
@@ -1380,6 +1381,7 @@ func buildOperationalOnly(
 		Tagging:     taggingMap[operational.Id],
 		Pelaksana:   pelaksanaMap[operational.Id],
 		Indikator:   indikatorMap[operational.Id],
+		Ikk:   ikkMap[operational.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}
@@ -1392,6 +1394,7 @@ func buildOperationalNOnly(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 ) pohonkinerja.OperationalNOpdResponse {
 	var keteranganCrosscutting *string
@@ -1419,6 +1422,7 @@ func buildOperationalNOnly(
 		Tagging:     taggingMap[operationalN.Id],
 		Pelaksana:   pelaksanaMap[operationalN.Id],
 		Indikator:   indikatorMap[operationalN.Id],
+		Ikk:   ikkMap[operationalN.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}
@@ -1432,6 +1436,7 @@ func appendOperationals(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	tematikMap map[int]*domain.PohonKinerja,
 ) {
@@ -1457,12 +1462,13 @@ func appendOperationals(
 			taggingMap,
 			pelaksanaMap,
 			indikatorMap,
+			ikkMap,
 			reviewMap,
 			tematikMap,
 		)
 
 		// Lanjut append operational N
-		appendOperationalN(&opResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+		appendOperationalN(&opResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap)
 
 		tacticalResp.Operationals = append(tacticalResp.Operationals, opResp)
 	}
@@ -1474,6 +1480,7 @@ func appendOperationalN(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 ) {
 	nextLevel := operationalResp.LevelPohon + 1
@@ -1499,11 +1506,12 @@ func appendOperationalN(
 			taggingMap,
 			pelaksanaMap,
 			indikatorMap,
+			ikkMap,
 			reviewMap,
 		)
 
 		// Recursive untuk level berikutnya jika ada (gunakan function terpisah untuk OperationalNOpdResponse)
-		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap)
 
 		operationalResp.Childs = append(operationalResp.Childs, childResp)
 	}
@@ -1516,6 +1524,7 @@ func appendOperationalNRecursive(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 ) {
 	nextLevel := operationalNResp.LevelPohon + 1
@@ -1541,11 +1550,12 @@ func appendOperationalNRecursive(
 			taggingMap,
 			pelaksanaMap,
 			indikatorMap,
+			ikkMap,
 			reviewMap,
 		)
 
 		// Recursive untuk level berikutnya jika ada
-		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap)
 
 		operationalNResp.Childs = append(operationalNResp.Childs, childResp)
 	}

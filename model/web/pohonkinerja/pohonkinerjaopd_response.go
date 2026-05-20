@@ -117,6 +117,7 @@ type OperationalNOpdResponse struct {
 	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse       `json:"ikk"`
 	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`
 	Review                 []ReviewResponse            `json:"review,omitempty"`
 }
