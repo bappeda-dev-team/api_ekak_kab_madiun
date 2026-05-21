@@ -21,5 +21,6 @@ type IkkRepository interface {
 	PilihIkk(ctx context.Context, tx *sql.Tx, ikd domain.IkkTerpilih) (domain.IkkTerpilih, error)
 	DeletePilihanIkk(ctx context.Context, tx *sql.Tx, id int) error
 	FindTerpilihById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilih, error)
+	FindAllTerpilihByPokinId(ctx context.Context, tx *sql.Tx, id int) ([]domain.IkkTerpilih, error)
 	FindTerpilihPokinIkkById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilihDetail, error)
 }

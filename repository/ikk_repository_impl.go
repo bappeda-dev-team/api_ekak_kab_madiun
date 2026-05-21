@@ -1227,6 +1227,46 @@ func (repository *IkkRepositoryImpl) FindTerpilihById(ctx context.Context, tx *s
 
 	return result, nil
 }
+func (repository *IkkRepositoryImpl) FindAllTerpilihByPokinId(
+	ctx context.Context,
+	tx *sql.Tx,
+	id int,
+) ([]domain.IkkTerpilih, error) {
+
+	query := `
+		SELECT
+			id,
+			pohon_kinerja_id,
+			ikk_id
+		FROM tb_ikk_terpilih
+		WHERE pohon_kinerja_id = ?
+	`
+
+	rows, err := tx.QueryContext(ctx, query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.IkkTerpilih
+
+	for rows.Next() {
+		var item domain.IkkTerpilih
+
+		err := rows.Scan(
+			&item.Id,
+			&item.PohonKinerjaId,
+			&item.IkkId,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, item)
+	}
+
+	return result, nil
+}
 func (repository *IkkRepositoryImpl) FindTerpilihPokinIkkById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilihDetail, error) {
 
 	// ================= IKK =================

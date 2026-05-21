@@ -323,7 +323,7 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 
 		// append response
 		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
-			ID:                 ikkResult.Id,
+			ID:                 detailIkk.ID,
 			KodeOpd:            detailIkk.KodeOpd,
 			NamaOpd:            detailIkk.NamaOpd,
 			KodeBidangUrusan:   detailIkk.KodeBidangUrusan,
@@ -385,6 +385,18 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 	// Validasi request
 	if request.NamaPohon == "" {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, errors.New("nama program tidak boleh kosong")
+	}
+
+	// =====================================
+	// VALIDASI IKK HANYA LEVEL 5 & 6
+	// =====================================
+
+	if len(request.Ikk) > 0 {
+
+		if request.LevelPohon != 5 && request.LevelPohon != 6 {
+			return pohonkinerja.PohonKinerjaOpdResponse{},
+				errors.New("ikk hanya bisa digunakan pada level 5 dan 6")
+		}
 	}
 
 	// Validasi kode OPD
@@ -449,6 +461,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 
 	// Persiapkan response indikator di luar loop
 	var indikatorResponses []pohonkinerja.IndikatorResponse
+	var ikkResponses []ikk.IkkFullResponse
 
 	// Update untuk setiap pohon kinerja (asli dan clone)
 	var updatedPokin domain.PohonKinerja
@@ -571,6 +584,145 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		if pokin.Id == request.Id {
 			updatedPokin = result
 		}
+		
+		// =====================================
+		// UPDATE IKK HANYA UNTUK POKIN ASLI
+		// =====================================
+
+		if pokin.Id == request.Id {
+
+			// ambil IKK lama
+			existingIkk, err := service.IkkRepository.FindAllTerpilihByPokinId(
+				ctx,
+				tx,
+				pokin.Id,
+			)
+
+			if err != nil {
+				return pohonkinerja.PohonKinerjaOpdResponse{}, err
+			}
+
+			// map request IKK
+			requestIkkMap := make(map[int]bool)
+
+			for _, reqIkk := range request.Ikk {
+				requestIkkMap[reqIkk.IkkId] = true
+			}
+
+			// =====================================
+			// HAPUS IKK YANG SUDAH TIDAK ADA
+			// =====================================
+
+			for _, oldIkk := range existingIkk {
+
+				if !requestIkkMap[oldIkk.IkkId] {
+
+					err := service.IkkRepository.DeletePilihanIkk(
+						ctx,
+						tx,
+						oldIkk.Id,
+					)
+
+					if err != nil {
+						return pohonkinerja.PohonKinerjaOpdResponse{}, err
+					}
+				}
+			}
+
+			// =====================================
+			// TAMBAH IKK BARU
+			// =====================================
+
+			existingMap := make(map[int]bool)
+
+			for _, old := range existingIkk {
+				existingMap[old.IkkId] = true
+			}
+
+			for _, reqIkk := range request.Ikk {
+
+				// skip kalau sudah ada
+				if existingMap[reqIkk.IkkId] {
+					continue
+				}
+
+				dataIkk := domain.IkkTerpilih{
+					PohonKinerjaId: pokin.Id,
+					IkkId:          reqIkk.IkkId,
+				}
+
+				_, err := service.IkkRepository.PilihIkk(
+					ctx,
+					tx,
+					dataIkk,
+				)
+
+				if err != nil {
+					return pohonkinerja.PohonKinerjaOpdResponse{}, err
+				}
+			}
+
+			// =====================================
+			// AMBIL RESPONSE TERBARU
+			// =====================================
+
+			finalIkk, err := service.IkkRepository.FindAllTerpilihByPokinId(
+				ctx,
+				tx,
+				pokin.Id,
+			)
+
+			if err != nil {
+				return pohonkinerja.PohonKinerjaOpdResponse{}, err
+			}
+
+			for _, item := range finalIkk {
+
+				detailIkk, err := service.IkkRepository.FindAllById(
+					ctx,
+					tx,
+					item.IkkId,
+				)
+
+				if err != nil {
+					return pohonkinerja.PohonKinerjaOpdResponse{}, err
+				}
+
+				var indikatorIkkResponses []ikk.IndikatorResponse
+
+				for _, indikator := range detailIkk.Indikators {
+
+					var targetResponses []ikk.TargetResponse
+
+					for _, target := range indikator.Targets {
+						targetResponses = append(targetResponses, ikk.TargetResponse{
+							ID:      target.ID,
+							Target:  target.Target,
+							Satuan:  target.Satuan,
+						})
+					}
+
+					indikatorIkkResponses = append(indikatorIkkResponses, ikk.IndikatorResponse{
+						ID:        indikator.ID,
+						Indikator: indikator.Indikator,
+						Targets:   targetResponses,
+					})
+				}
+
+				ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+					ID:               detailIkk.ID,
+					KodeOpd:          detailIkk.KodeOpd,
+					NamaOpd:          detailIkk.NamaOpd,
+					KodeBidangUrusan: detailIkk.KodeBidangUrusan,
+					NamaBidangUrusan: detailIkk.NamaBidangUrusan,
+					Jenis:            detailIkk.Jenis,
+					Tahun:            detailIkk.Tahun,
+					Keterangan:       detailIkk.Keterangan,
+					Indikators:       indikatorIkkResponses,
+				})
+			}
+		}
+		
 	}
 
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
@@ -730,6 +882,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		Pelaksana:              pelaksanaResponses,
 		Indikator:              indikatorResponses,
 		Tagging:                taggingResponses,
+		Ikk: 					ikkResponses,
 		KeteranganCrosscutting: updatedPokin.KeteranganCrosscutting,
 		UpdatedBy:              updatedPokin.UpdatedBy,
 	}, nil
