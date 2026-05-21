@@ -251,7 +251,7 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	// PERSIAPAN IKK
 	// =====================================
 
-	var ikkResponses []pohonkinerja.IkkTerpilihResponse
+	var ikkResponses []ikk.IkkFullResponse
 
 	pohonKinerja := domain.PohonKinerja{
 		NamaPohon:    request.NamaPohon,
@@ -288,23 +288,50 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 			return pohonkinerja.PohonKinerjaOpdResponse{}, err
 		}
 
-		pokinikk, err := service.IkkRepository.FindTerpilihPokinIkkById(
+		// ambil detail IKK lengkap
+		detailIkk, err := service.IkkRepository.FindAllById(
 			ctx,
 			tx,
-			ikkResult.Id,
+			ikkResult.IkkId,
 		)
 
 		if err != nil {
 			return pohonkinerja.PohonKinerjaOpdResponse{}, err
 		}
 
-		ikkResponses = append(ikkResponses, pohonkinerja.IkkTerpilihResponse{
-			Id:            ikkResult.Id,
-			PokinId:       ikkResult.PohonKinerjaId,
-			IkkId:         ikkResult.IkkId,
-			NamaPokin:     pokinikk.NamaPokin,
-			JenisIkk:      pokinikk.JenisIkk,
-			KeteranganIkk: pokinikk.KeteranganIkk,
+		// mapping indikator
+		indikatorResponses := make([]ikk.IndikatorResponse, 0)
+
+		for _, indikator := range detailIkk.Indikators {
+
+		targetResponses := make([]ikk.TargetResponse, 0)
+
+		for _, target := range indikator.Targets {
+			targetResponses = append(targetResponses, ikk.TargetResponse{
+				ID:      target.ID,
+				Target:  target.Target,
+				Satuan:  target.Satuan,
+			})
+		}
+
+		indikatorResponses = append(indikatorResponses, ikk.IndikatorResponse{
+				ID:         indikator.ID,
+				Indikator:  indikator.Indikator,
+				Targets:    targetResponses,
+			})
+		}
+
+		// append response
+		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+			ID:                 ikkResult.Id,
+			KodeOpd:            detailIkk.KodeOpd,
+			NamaOpd:            detailIkk.NamaOpd,
+			KodeBidangUrusan:   detailIkk.KodeBidangUrusan,
+			NamaBidangUrusan:   detailIkk.NamaBidangUrusan,
+			Jenis:              detailIkk.Jenis,
+			Tahun:              detailIkk.Tahun,
+			Keterangan:         detailIkk.Keterangan,
+			Indikators:         indikatorResponses,
 		})
 	}
 

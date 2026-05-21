@@ -21,7 +21,7 @@ type PohonKinerjaOpdResponse struct {
 	Pelaksana              []PelaksanaOpdResponse `json:"pelaksana"`
 	Indikator              []IndikatorResponse    `json:"indikator"`
 	Tagging                []TaggingResponse      `json:"tagging"`
-	Ikk 				   []IkkTerpilihResponse `json:"ikk"`
+	Ikk 				   []ikk.IkkFullResponse  `json:"ikk"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 	UpdatedBy              string                 `json:"updated_by"`
 	KeteranganTahunClone   string                 `json:"keterangan_tahun_clone,omitempty"`

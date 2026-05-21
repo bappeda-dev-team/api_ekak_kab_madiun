@@ -14,6 +14,7 @@ type IkkRepository interface {
 	FindByKodeOpd(ctx context.Context, tx *sql.Tx, jenis string, kodeOpd string) ([]domain.Ikk, error)
 	FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.Ikk, error)
 	FindAllByIdPokin(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.Ikk, error)
+	FindAllById(ctx context.Context, tx *sql.Tx, id int) (domain.Ikk, error)
 	FindAllByJenisAndKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, jenis string) ([]domain.Ikk, error)
 	FindSelection(ctx context.Context, tx *sql.Tx) ([]domain.BidangUrusanSelection, error)
 	FindSelectionByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.BidangUrusanSelection, error)

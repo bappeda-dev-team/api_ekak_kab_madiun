@@ -784,6 +784,140 @@ func (repository *IkkRepositoryImpl) FindAllByIdPokin(ctx context.Context, tx *s
 	return result, nil
 }
 
+func (repository *IkkRepositoryImpl) FindAllById(ctx context.Context, tx *sql.Tx, id int) (domain.Ikk, error) {
+
+	query := `
+		SELECT ikk.id, 
+			   ikk.kode_opd, 
+			   od.nama_opd,
+			   ikk.kode_bidang_urusan, 
+			   bu.nama_bidang_urusan, 
+			   ikk.jenis, 
+			   ikk.tahun, 
+			   ikk.keterangan
+		FROM tb_ikk ikk
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = ikk.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
+		LEFT JOIN tb_ikk_terpilih tit
+		ON tit.ikk_id = ikk.id
+	`
+
+	args := make([]interface{}, 0)
+
+	if id != 0 {
+		query += " WHERE ikk.id = ?"
+		args = append(args, id)
+	}
+
+	row := tx.QueryRowContext(ctx, query, args...)
+
+	var item domain.Ikk
+
+	err := row.Scan(
+		&item.ID,
+		&item.KodeOpd,
+		&item.NamaOpd,
+		&item.KodeBidangUrusan,
+		&item.NamaBidangUrusan,
+		&item.Jenis,
+		&item.Tahun,
+		&item.Keterangan,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Ikk{}, nil
+		}
+		return domain.Ikk{}, err
+	}
+
+	item.Indikators = make([]domain.IndikatorIkk, 0)
+
+	// ================= INDICATOR =================
+	queryInd := `
+		SELECT id, id_ikk, indikator
+		FROM tb_indikator_ikk
+		WHERE id_ikk = ?
+	`
+
+	rowsInd, err := tx.QueryContext(ctx, queryInd, item.ID)
+	if err != nil {
+		return domain.Ikk{}, err
+	}
+	defer rowsInd.Close()
+
+	indikatorIDs := make([]int, 0)
+
+	for rowsInd.Next() {
+		var ind domain.IndikatorIkk
+		var idIkk int
+
+		err := rowsInd.Scan(
+			&ind.ID,
+			&idIkk,
+			&ind.Indikator,
+		)
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+
+		ind.Targets = make([]domain.TargetIkk, 0)
+
+		item.Indikators = append(item.Indikators, ind)
+		indikatorIDs = append(indikatorIDs, ind.ID)
+	}
+
+	// ================= TARGET =================
+	if len(indikatorIDs) > 0 {
+
+		placeholders := makePlaceholders(len(indikatorIDs))
+
+		queryTarget := `
+			SELECT id, id_indikator, target, satuan
+			FROM tb_target_ikk
+			WHERE id_indikator IN (` + placeholders + `)
+		`
+
+		argsTarget := make([]interface{}, len(indikatorIDs))
+		for i, v := range indikatorIDs {
+			argsTarget[i] = v
+		}
+
+		rowsT, err := tx.QueryContext(ctx, queryTarget, argsTarget...)
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+		defer rowsT.Close()
+
+		targetMap := make(map[int][]domain.TargetIkk)
+
+		for rowsT.Next() {
+			var t domain.TargetIkk
+			var idInd int
+
+			err := rowsT.Scan(
+				&t.ID,
+				&idInd,
+				&t.Target,
+				&t.Satuan,
+			)
+			if err != nil {
+				return domain.Ikk{}, err
+			}
+
+			targetMap[idInd] = append(targetMap[idInd], t)
+		}
+
+		// attach target ke indikator
+		for i, ind := range item.Indikators {
+			item.Indikators[i].Targets = targetMap[ind.ID]
+		}
+	}
+
+	return item, nil
+}
+
 func (repository *IkkRepositoryImpl) FindAllByJenisAndKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, jenis string) ([]domain.Ikk, error) {
 
 	query := `
