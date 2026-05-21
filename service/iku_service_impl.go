@@ -55,7 +55,6 @@ func (service *IkuServiceImpl) FindAll(ctx context.Context, tahunAwal string, ta
 			Indikator:           item.Indikator,
 			RumusPerhitungan:    item.RumusPerhitungan.String,
 			SumberData:          item.SumberData.String,
-			DefinisiOperasional: item.DefinisiOperasional.String,
 			CreatedAt:           item.CreatedAt,
 			TahunAwal:           item.TahunAwal,
 			TahunAkhir:          item.TahunAkhir,

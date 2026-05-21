@@ -114,6 +114,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 		if item.TargetId != "" {
 			if _, seen := ent.targetSet[item.TargetId]; !seen {
 				ent.targetSet[item.TargetId] = struct{}{}
+				ent.resp.TargetId = item.TargetId
 				ent.resp.Target = item.Target
 				ent.resp.Satuan = item.Satuan
 				ent.resp.StatusTarget = true

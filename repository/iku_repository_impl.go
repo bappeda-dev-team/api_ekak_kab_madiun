@@ -26,7 +26,6 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
                 i.indikator,
                 i.rumus_perhitungan,
                 i.sumber_data,
-		COALESCE(i.definisi_operasional, '') as definisi_operasional,
                 i.created_at as indikator_created_at,
                 i.iku_active,
                 t.id as target_id,
@@ -61,7 +60,6 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
                 i.indikator,
                 i.rumus_perhitungan,
                 i.sumber_data,
-		COALESCE(i.definisi_operasional, '') as definisi_operasional,
                 i.created_at as indikator_created_at,
                 i.iku_active,
                 t.id as target_id,
@@ -119,7 +117,6 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			indikator           sql.NullString
 			rumusPerhitungan    sql.NullString
 			sumberData          sql.NullString
-			definisiOperasional sql.NullString
 			indikatorCreatedAt  sql.NullTime
 			ikuActive           bool
 			targetId            sql.NullString
@@ -141,7 +138,6 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 			&indikator,
 			&rumusPerhitungan,
 			&sumberData,
-			&definisiOperasional,
 			&indikatorCreatedAt,
 			&ikuActive,
 			&targetId,
@@ -187,7 +183,6 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
 				Indikator:           indikator.String,
 				RumusPerhitungan:    rumusPerhitungan,
 				SumberData:          sumberData,
-				DefinisiOperasional: definisiOperasional,
 				CreatedAt:           indikatorCreatedAt.Time,
 				Sumber:              sumber,
 				ParentId:            int(parentId.Int64),
