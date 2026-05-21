@@ -38,13 +38,14 @@ type PohonKinerjaOpdServiceImpl struct {
 	CSFRepository             repository.CSFRepository
 	sasaranOpdRepository      repository.SasaranOpdRepository
 	ikkService                IkkService
+	IkkRepository			  repository.IkkRepository
 }
 
 func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate,
 	programUnggulanRepository repository.ProgramUnggulanRepository,
 	dataMasterRepository repository.DataMasterRepository,
 	redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository,
-	ikkService IkkService) *PohonKinerjaOpdServiceImpl {
+	ikkService IkkService, IkkRepository repository.IkkRepository) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -60,6 +61,7 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		CSFRepository:             csfRepository,
 		sasaranOpdRepository:      sasaranOpdRepository,
 		ikkService:      ikkService,
+		IkkRepository:      IkkRepository,
 	}
 }
 
@@ -73,6 +75,18 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	// Validasi request
 	if request.NamaPohon == "" {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, errors.New("nama program tidak boleh kosong")
+	}
+
+	// =====================================
+	// VALIDASI IKK HANYA UNTUK LEVEL 5 & 6
+	// =====================================
+
+	if len(request.Ikk) > 0 {
+
+		if request.LevelPohon != 5 && request.LevelPohon != 6 {
+			return pohonkinerja.PohonKinerjaOpdResponse{},
+				errors.New("ikk hanya bisa ditambahkan pada pohon level 5 dan 6")
+		}
 	}
 
 	// Validasi kode OPD
@@ -233,6 +247,12 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		})
 	}
 
+	// =====================================
+	// PERSIAPAN IKK
+	// =====================================
+
+	var ikkResponses []pohonkinerja.IkkTerpilihResponse
+
 	pohonKinerja := domain.PohonKinerja{
 		NamaPohon:    request.NamaPohon,
 		Parent:       request.Parent,
@@ -250,6 +270,42 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	result, err := service.pohonKinerjaOpdRepository.Create(ctx, tx, pohonKinerja)
 	if err != nil {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	// =====================================
+	// SIMPAN IKK TERPILIH
+	// =====================================
+
+	for _, ikkReq := range request.Ikk {
+
+		dataIkk := domain.IkkTerpilih{
+			PohonKinerjaId: result.Id,
+			IkkId:          ikkReq.IkkId,
+		}
+
+		ikkResult, err := service.IkkRepository.PilihIkk(ctx, tx, dataIkk)
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
+
+		pokinikk, err := service.IkkRepository.FindTerpilihPokinIkkById(
+			ctx,
+			tx,
+			ikkResult.Id,
+		)
+
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
+
+		ikkResponses = append(ikkResponses, pohonkinerja.IkkTerpilihResponse{
+			Id:            ikkResult.Id,
+			PokinId:       ikkResult.PohonKinerjaId,
+			IkkId:         ikkResult.IkkId,
+			NamaPokin:     pokinikk.NamaPokin,
+			JenisIkk:      pokinikk.JenisIkk,
+			KeteranganIkk: pokinikk.KeteranganIkk,
+		})
 	}
 
 	// Update tagging responses dengan ID yang sudah di-generate
@@ -286,6 +342,7 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		Pelaksana:   pelaksanaResponses,
 		Indikator:   indikatorResponses,
 		Tagging:     taggingResponses,
+		Ikk: ikkResponses,
 	}
 
 	return response, nil

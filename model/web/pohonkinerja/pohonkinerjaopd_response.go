@@ -21,6 +21,7 @@ type PohonKinerjaOpdResponse struct {
 	Pelaksana              []PelaksanaOpdResponse `json:"pelaksana"`
 	Indikator              []IndikatorResponse    `json:"indikator"`
 	Tagging                []TaggingResponse      `json:"tagging"`
+	Ikk 				   []IkkTerpilihResponse `json:"ikk"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 	UpdatedBy              string                 `json:"updated_by"`
 	KeteranganTahunClone   string                 `json:"keterangan_tahun_clone,omitempty"`
@@ -167,6 +168,15 @@ type LevelDetail struct {
 	Level       int    `json:"level"`
 	JenisPohon  string `json:"jenis_pohon"`
 	JumlahPemda int    `json:"jumlah_pemda"`
+}
+
+type IkkTerpilihResponse struct {
+	Id            int    `json:"id"`
+	PokinId       int    `json:"pohon_kinerja_id"`
+	IkkId         int    `json:"ikk_id"`
+	NamaPokin     string `json:"nama_pokin"`
+	JenisIkk      string `json:"jenis_ikk"`
+	KeteranganIkk string `json:"keterangan_ikk"`
 }
 
 func MapTujuanOpdToResponseCascading(

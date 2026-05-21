@@ -22,6 +22,6 @@ type TargetRequest struct {
 }
 
 type IkkTerpilihCreateRequest struct {
-	PohonKinerjaId int `json:"pohon_kinerja_id" validate:"required"`
-	IkkId          int `json:"ikk_id" validate:"required"`
+	PohonKinerjaId int `json:"pohon_kinerja_id"`
+	IkkId          int `json:"ikk_id"`
 }
