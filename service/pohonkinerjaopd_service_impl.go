@@ -1039,6 +1039,59 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 		}
 	}
 
+	// =====================================
+	// AMBIL IKK
+	// =====================================
+
+	var ikkResponses []ikk.IkkFullResponse
+	finalIkk, err := service.IkkRepository.FindAllTerpilihByPokinId(ctx, tx, pokin.Id)
+
+	if err != nil {
+		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	for _, item := range finalIkk {
+
+		detailIkk, err := service.IkkRepository.FindAllById(ctx, tx, item.IkkId)
+
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
+
+		var indikatorIkkResponses []ikk.IndikatorResponse
+
+		for _, indikator := range detailIkk.Indikators {
+
+			var targetResponses []ikk.TargetResponse
+
+			for _, target := range indikator.Targets {
+				targetResponses = append(targetResponses, ikk.TargetResponse{
+					ID:      target.ID,
+					Target:  target.Target,
+					Satuan:  target.Satuan,
+				})
+			}
+
+			indikatorIkkResponses = append(indikatorIkkResponses, ikk.IndikatorResponse{
+				ID:        indikator.ID,
+				Indikator: indikator.Indikator,
+				Targets:   targetResponses,
+			})
+		}
+
+		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+			ID:               detailIkk.ID,
+			KodeOpd:          detailIkk.KodeOpd,
+			NamaOpd:          detailIkk.NamaOpd,
+			KodeBidangUrusan: detailIkk.KodeBidangUrusan,
+			NamaBidangUrusan: detailIkk.NamaBidangUrusan,
+			Jenis:            detailIkk.Jenis,
+			Tahun:            detailIkk.Tahun,
+			Keterangan:       detailIkk.Keterangan,
+			Indikators:       indikatorIkkResponses,
+		})
+	}
+
 	// Susun response
 	response := pohonkinerja.PohonKinerjaOpdResponse{
 		Id:         pokin.Id,
@@ -1054,6 +1107,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 		Pelaksana:  pelaksanaResponses,
 		Indikator:  indikatorResponses,
 		Tagging:    taggingResponses,
+		Ikk:        ikkResponses,
 	}
 
 	return response, nil
