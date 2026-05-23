@@ -60,7 +60,7 @@ func (controller *IkdControllerImpl) FindAll(
 }
 
 func (controller *IkdControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	ikdRequest := ikd.ProgramOpdTerpilihCreateRequest{}
+	ikdRequest := []ikd.ProgramOpdTerpilihCreateRequest{}
 	helper.ReadFromRequestBody(request, &ikdRequest)
 
 	// TODO: guard jika request invalid

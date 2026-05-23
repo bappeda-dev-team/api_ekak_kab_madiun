@@ -202,44 +202,52 @@ func (service *IkdServiceImpl) FindAll(
 	return responses, nil
 }
 
-func (service *IkdServiceImpl) Create(ctx context.Context, request ikd.ProgramOpdTerpilihCreateRequest) (ikd.ProgramOpdTerpilihResponse, error) {
-	err := service.Validate.Struct(request)
-	if err != nil {
-		return ikd.ProgramOpdTerpilihResponse{}, err
+func (service *IkdServiceImpl) Create(ctx context.Context, requests []ikd.ProgramOpdTerpilihCreateRequest) ([]ikd.ProgramOpdTerpilihResponse, error) {
+
+	for _, request := range requests {
+		err := service.Validate.Struct(request)
+		if err != nil {
+			return []ikd.ProgramOpdTerpilihResponse{}, err
+		}
 	}
 
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return ikd.ProgramOpdTerpilihResponse{}, err
+		return []ikd.ProgramOpdTerpilihResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
 
-	data := domain.ProgramOpdTerpilih{
-		PohonKinerjaId: request.PohonKinerjaId,
-		ProgramOpdId:          request.ProgramOpdId,
+	var responses []ikd.ProgramOpdTerpilihResponse
+
+	for _, request := range requests {
+
+		data := domain.ProgramOpdTerpilih{
+			PohonKinerjaId: request.PohonKinerjaId,
+			ProgramOpdId:   request.ProgramOpdId,
+		}
+
+		result, err := service.IkdRepository.Create(ctx, tx, data)
+		if err != nil {
+			return []ikd.ProgramOpdTerpilihResponse{}, err
+		}
+
+		tactical, err := service.IkdRepository.FindPokinById(ctx, tx, result.ProgramOpdId)
+
+		if err != nil {
+			return []ikd.ProgramOpdTerpilihResponse{}, err
+		}
+
+		response := ikd.ProgramOpdTerpilihResponse{
+			Id:          result.Id,
+			TacticalId:  result.PohonKinerjaId,
+			Parent:      result.ProgramOpdId,
+			NamaProgram: tactical.NamaPokin,
+		}
+
+		responses = append(responses, response)
 	}
 
-	result, err := service.IkdRepository.Create(ctx, tx, data)
-	if err != nil {
-		return ikd.ProgramOpdTerpilihResponse{}, err
-	}
-
-	tactical, err := service.IkdRepository.FindPokinById(
-		ctx,
-		tx,
-		result.ProgramOpdId,
-	)
-
-	if err != nil {
-		return ikd.ProgramOpdTerpilihResponse{}, err
-	}
-
-	return ikd.ProgramOpdTerpilihResponse{
-		Id:                 	 result.Id,
-		TacticalId:   		 result.PohonKinerjaId,
-		Parent:            result.ProgramOpdId,
-		NamaProgram: tactical.NamaPokin,
-	}, nil
+	return responses, nil
 }
 
 func (service *IkdServiceImpl) Delete(ctx context.Context, id int) error {
