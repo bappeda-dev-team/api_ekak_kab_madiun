@@ -272,6 +272,12 @@ func (service *IkdServiceImpl) LockProgramOpdTerpilih(ctx context.Context, id in
 
 	defer helper.CommitOrRollback(tx)
 
+	// Validasi data exists
+	_, err = service.IkdRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
 	err = service.IkdRepository.LockProgramOpdTerpilih(ctx, tx, id)
 
 	if err != nil {
@@ -290,11 +296,13 @@ func (service *IkdServiceImpl) UnlockProgramOpdTerpilih(ctx context.Context, id 
 
 	defer helper.CommitOrRollback(tx)
 
-	err = service.IkdRepository.UnlockProgramOpdTerpilih(
-		ctx,
-		tx,
-		id,
-	)
+	// Validasi data exists
+	_, err = service.IkdRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	err = service.IkdRepository.UnlockProgramOpdTerpilih(ctx, tx, id)
 
 	if err != nil {
 		return err
