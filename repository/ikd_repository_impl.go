@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"errors"
 )
 
 type IkdRepositoryImpl struct {
@@ -13,13 +14,7 @@ func NewIkdRepositoryImpl() *IkdRepositoryImpl {
 	return &IkdRepositoryImpl{}
 }
 
-func (repository *IkdRepositoryImpl) FindAll(
-	ctx context.Context,
-	tx *sql.Tx,
-	kodeOpd string,
-	tahun string,
-	jenisPeriode string,
-) ([]domain.IkdDetail, error) {
+func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.IkdDetail, error) {
 
 	script := `
 	SELECT
@@ -67,7 +62,25 @@ func (repository *IkdRepositoryImpl) FindAll(
 		-- PROGRAM OPD (TACTICAL)
 		COALESCE(tp.id, 0) as program_id,
 		COALESCE(tp.parent, 0) as program_parent,
-		COALESCE(tp.nama_pohon, '') as nama_program
+		COALESCE(tp.nama_pohon, '') as nama_program,
+
+		-- PROGRAM OPD TERPILIH
+		COALESCE(pot.id, 0) as pot_id,
+		CASE
+			WHEN pot.id IS NOT NULL THEN tp.id
+			ELSE 0
+		END as program_terpilih_id,
+
+		CASE
+			WHEN pot.id IS NOT NULL THEN tp.parent
+			ELSE 0
+		END as program_terpilih_parent,
+
+		CASE
+			WHEN pot.id IS NOT NULL THEN tp.nama_pohon
+			ELSE ''
+		END as nama_program_terpilih,
+		COALESCE(pot.is_locked, 0) as is_locked
 
 	FROM tb_pohon_kinerja pk
 
@@ -99,6 +112,10 @@ func (repository *IkdRepositoryImpl) FindAll(
 	LEFT JOIN tb_pohon_kinerja tp
 		ON tp.parent = pk.id
 		AND LOWER(tp.jenis_pohon) = 'tactical'
+	
+	LEFT JOIN tb_program_opd_terpilih pot
+    	ON pot.pohon_kinerja_id = pk.id
+		AND pot.program_opd_id = tp.id
 
 	WHERE pk.kode_opd = ?
 	AND pk.tahun = ?
@@ -167,6 +184,12 @@ func (repository *IkdRepositoryImpl) FindAll(
 			programId     int
 			programParent int
 			namaProgram   string
+
+			TerpilihId     int
+			programTerpilihId     int
+			programTerpilihParent int
+			namaProgramTerpilih   string
+			isLocked              bool
 		)
 
 		err := rows.Scan(
@@ -209,6 +232,12 @@ func (repository *IkdRepositoryImpl) FindAll(
 			&programId,
 			&programParent,
 			&namaProgram,
+
+			&TerpilihId,
+			&programTerpilihId,
+			&programTerpilihParent,
+			&namaProgramTerpilih,
+			&isLocked,
 		)
 
 		if err != nil {
@@ -222,6 +251,7 @@ func (repository *IkdRepositoryImpl) FindAll(
 			pohon.Pelaksana = make([]domain.PelaksanaDetail, 0)
 			pohon.SasaranOpd = make([]domain.SasaranOpdDetail, 0)
 			pohon.ProgramOpd = make([]domain.ProgramOpdDetail, 0)
+			pohon.ProgramOpdTerpilih = make([]domain.ProgramOpdTerpilihDetail, 0)
 
 			pohonMap[pohon.Id] = &pohon
 			existingPohon = &pohon
@@ -386,6 +416,33 @@ func (repository *IkdRepositoryImpl) FindAll(
 				)
 			}
 		}
+
+		// PROGRAM OPD TERPILIH
+		if programTerpilihId != 0 {
+
+			exists := false
+
+			for _, p := range existingPohon.ProgramOpdTerpilih {
+				if p.Id == programTerpilihId {
+					exists = true
+					break
+				}
+			}
+
+			if !exists {
+
+				existingPohon.ProgramOpdTerpilih = append(
+					existingPohon.ProgramOpdTerpilih,
+					domain.ProgramOpdTerpilihDetail{
+						Id:          TerpilihId,
+						TacticalId:          programTerpilihId,
+						Parent:      programTerpilihParent,
+						NamaProgram: namaProgramTerpilih,
+						IsLocked: isLocked,
+					},
+				)
+			}
+		}
 	}
 
 	var result []domain.IkdDetail
@@ -399,4 +456,156 @@ func (repository *IkdRepositoryImpl) FindAll(
 	}
 
 	return result, nil
+}
+
+func (repository *IkdRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, ikd domain.ProgramOpdTerpilih) (domain.ProgramOpdTerpilih, error) {
+
+	script := `
+		INSERT INTO tb_program_opd_terpilih 
+		(pohon_kinerja_id, program_opd_id) 
+		VALUES (?, ?)
+	`
+
+	result, err := tx.ExecContext(
+		ctx,
+		script,
+		ikd.PohonKinerjaId,
+		ikd.ProgramOpdId,
+	)
+	if err != nil {
+		return domain.ProgramOpdTerpilih{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return domain.ProgramOpdTerpilih{}, err
+	}
+
+	ikd.Id = int(id)
+
+	return ikd, nil
+}
+
+func (repository *IkdRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id int) error {
+	script := "DELETE FROM tb_program_opd_terpilih WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repository *IkdRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.ProgramOpdTerpilih, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			id,
+			pohon_kinerja_id,
+			program_opd_id
+		FROM tb_program_opd_terpilih
+		WHERE id = ?
+	`
+
+	var result domain.ProgramOpdTerpilih
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.Id,
+		&result.PohonKinerjaId,
+		&result.ProgramOpdId,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.ProgramOpdTerpilih{}, errors.New("program opd terpilih tidak ditemukan")
+		}
+		return domain.ProgramOpdTerpilih{}, err
+	}
+
+	return result, nil
+}
+func (repository *IkdRepositoryImpl) FindPokinById(ctx context.Context, tx *sql.Tx, id int) (domain.PokinIkd, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			id,
+			nama_pohon
+		FROM tb_pohon_kinerja
+		WHERE id = ?
+	`
+
+	var result domain.PokinIkd
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.Id,
+		&result.NamaPokin,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.PokinIkd{}, errors.New("pohon kinerja tidak ditemukan")
+		}
+		return domain.PokinIkd{}, err
+	}
+
+	return result, nil
+}
+
+func (repository *IkdRepositoryImpl) LockProgramOpdTerpilih(ctx context.Context, tx *sql.Tx, id int) error {
+
+	script := `
+		UPDATE tb_program_opd_terpilih
+		SET is_locked = TRUE
+		WHERE id = ?
+	`
+
+	_, err := tx.ExecContext(
+		ctx,
+		script,
+		id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repository *IkdRepositoryImpl) UnlockProgramOpdTerpilih(ctx context.Context, tx *sql.Tx, id int) error {
+
+	script := `
+		UPDATE tb_program_opd_terpilih
+		SET is_locked = FALSE
+		WHERE id = ?
+	`
+
+	_, err := tx.ExecContext(
+		ctx,
+		script,
+		id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repository *IkdRepositoryImpl) CheckProgramOpdTerpilihLocked(ctx context.Context, tx *sql.Tx, id int) (bool, error) {
+
+	script := `
+		SELECT is_locked
+		FROM tb_program_opd_terpilih
+		WHERE id = ?
+	`
+
+	var isLocked bool
+
+	err := tx.QueryRowContext(ctx, script, id).Scan(&isLocked)
+	if err != nil {
+		return false, err
+	}
+
+	return isLocked, nil
 }

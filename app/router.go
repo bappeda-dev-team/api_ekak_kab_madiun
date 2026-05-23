@@ -489,14 +489,22 @@ func NewRouter(
 	router.POST("/program_prioritas_pusat/findbyidterkait", programPrioritasPusatController.FindByIdTerkait)
 	
 	//Master IKK
-	router.GET("/ikk/findall/:level_pohon/:kode_opd", ikkController.FindByKodeOpd)
+	router.GET("/ikk/findpokin/:level_pohon/:kode_opd", ikkController.FindByKodeOpd)
+	router.GET("/ikk/findall/:kode_opd", ikkController.FindAll)
 	router.GET("/ikk/detail/:id", ikkController.FindById)
+	router.GET("/ikk/pokin/:pokin_id", ikkController.FindIkkPokinById)
 	router.POST("/ikk/create", ikkController.Create)
 	router.PUT("/ikk/update/:id", ikkController.Update)
 	router.DELETE("/ikk/delete/:id", ikkController.Delete)
+	router.POST("/ikk/select_ikk/create", ikkController.PilihIkk)
+	router.DELETE("/ikk/select_ikk/delete/:id", ikkController.DeletePilihanIkk)
 
 	// IKD
 	router.GET("/ikd/findall/:kode_opd/:tahun/:jenis_periode", ikdController.FindAll)
+	router.POST("/ikd/select_program_opd/create", ikdController.Create)
+	router.DELETE("/ikd/select_program_opd/delete/:id", ikdController.Delete)
+	router.PUT("/ikd/select_program_opd/lock/:id", ikdController.LockProgramOpdTerpilih)
+	router.PUT("/ikd/select_program_opd/unlock/:id", ikdController.UnlockProgramOpdTerpilih)
 
 	//matrix renja
 	router.GET("/matrix_renja/ranwal/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwal)

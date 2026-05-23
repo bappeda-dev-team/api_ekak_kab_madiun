@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/ikk"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/model/web/strategic"
@@ -36,12 +37,15 @@ type PohonKinerjaOpdServiceImpl struct {
 	RedisClient               *redis.Client
 	CSFRepository             repository.CSFRepository
 	sasaranOpdRepository      repository.SasaranOpdRepository
+	ikkService                IkkService
+	IkkRepository			  repository.IkkRepository
 }
 
 func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate,
 	programUnggulanRepository repository.ProgramUnggulanRepository,
 	dataMasterRepository repository.DataMasterRepository,
-	redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository) *PohonKinerjaOpdServiceImpl {
+	redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository,
+	ikkService IkkService, IkkRepository repository.IkkRepository) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -56,6 +60,8 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		RedisClient:               redisClient,
 		CSFRepository:             csfRepository,
 		sasaranOpdRepository:      sasaranOpdRepository,
+		ikkService:      ikkService,
+		IkkRepository:      IkkRepository,
 	}
 }
 
@@ -69,6 +75,18 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	// Validasi request
 	if request.NamaPohon == "" {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, errors.New("nama program tidak boleh kosong")
+	}
+
+	// =====================================
+	// VALIDASI IKK HANYA UNTUK LEVEL 5 & 6
+	// =====================================
+
+	if len(request.Ikk) > 0 {
+
+		if request.LevelPohon != 5 && request.LevelPohon != 6 {
+			return pohonkinerja.PohonKinerjaOpdResponse{},
+				errors.New("ikk hanya bisa ditambahkan pada pohon level 5 dan 6")
+		}
 	}
 
 	// Validasi kode OPD
@@ -229,6 +247,12 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		})
 	}
 
+	// =====================================
+	// PERSIAPAN IKK
+	// =====================================
+
+	var ikkResponses []ikk.IkkFullResponse
+
 	pohonKinerja := domain.PohonKinerja{
 		NamaPohon:    request.NamaPohon,
 		Parent:       request.Parent,
@@ -246,6 +270,69 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 	result, err := service.pohonKinerjaOpdRepository.Create(ctx, tx, pohonKinerja)
 	if err != nil {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	// =====================================
+	// SIMPAN IKK TERPILIH
+	// =====================================
+
+	for _, ikkReq := range request.Ikk {
+
+		dataIkk := domain.IkkTerpilih{
+			PohonKinerjaId: result.Id,
+			IkkId:          ikkReq.IkkId,
+		}
+
+		ikkResult, err := service.IkkRepository.PilihIkk(ctx, tx, dataIkk)
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
+
+		// ambil detail IKK lengkap
+		detailIkk, err := service.IkkRepository.FindAllById(
+			ctx,
+			tx,
+			ikkResult.IkkId,
+		)
+
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
+
+		// mapping indikator
+		indikatorResponses := make([]ikk.IndikatorResponse, 0)
+
+		for _, indikator := range detailIkk.Indikators {
+
+		targetResponses := make([]ikk.TargetResponse, 0)
+
+		for _, target := range indikator.Targets {
+			targetResponses = append(targetResponses, ikk.TargetResponse{
+				ID:      target.ID,
+				Target:  target.Target,
+				Satuan:  target.Satuan,
+			})
+		}
+
+		indikatorResponses = append(indikatorResponses, ikk.IndikatorResponse{
+				ID:         indikator.ID,
+				Indikator:  indikator.Indikator,
+				Targets:    targetResponses,
+			})
+		}
+
+		// append response
+		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+			ID:                 detailIkk.ID,
+			KodeOpd:            detailIkk.KodeOpd,
+			NamaOpd:            detailIkk.NamaOpd,
+			KodeBidangUrusan:   detailIkk.KodeBidangUrusan,
+			NamaBidangUrusan:   detailIkk.NamaBidangUrusan,
+			Jenis:              detailIkk.Jenis,
+			Tahun:              detailIkk.Tahun,
+			Keterangan:         detailIkk.Keterangan,
+			Indikators:         indikatorResponses,
+		})
 	}
 
 	// Update tagging responses dengan ID yang sudah di-generate
@@ -282,6 +369,7 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		Pelaksana:   pelaksanaResponses,
 		Indikator:   indikatorResponses,
 		Tagging:     taggingResponses,
+		Ikk: ikkResponses,
 	}
 
 	return response, nil
@@ -297,6 +385,18 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 	// Validasi request
 	if request.NamaPohon == "" {
 		return pohonkinerja.PohonKinerjaOpdResponse{}, errors.New("nama program tidak boleh kosong")
+	}
+
+	// =====================================
+	// VALIDASI IKK HANYA LEVEL 5 & 6
+	// =====================================
+
+	if len(request.Ikk) > 0 {
+
+		if request.LevelPohon != 5 && request.LevelPohon != 6 {
+			return pohonkinerja.PohonKinerjaOpdResponse{},
+				errors.New("ikk hanya bisa digunakan pada level 5 dan 6")
+		}
 	}
 
 	// Validasi kode OPD
@@ -361,6 +461,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 
 	// Persiapkan response indikator di luar loop
 	var indikatorResponses []pohonkinerja.IndikatorResponse
+	var ikkResponses []ikk.IkkFullResponse
 
 	// Update untuk setiap pohon kinerja (asli dan clone)
 	var updatedPokin domain.PohonKinerja
@@ -483,6 +584,145 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		if pokin.Id == request.Id {
 			updatedPokin = result
 		}
+		
+		// =====================================
+		// UPDATE IKK HANYA UNTUK POKIN ASLI
+		// =====================================
+
+		if pokin.Id == request.Id {
+
+			// ambil IKK lama
+			existingIkk, err := service.IkkRepository.FindAllTerpilihByPokinId(
+				ctx,
+				tx,
+				pokin.Id,
+			)
+
+			if err != nil {
+				return pohonkinerja.PohonKinerjaOpdResponse{}, err
+			}
+
+			// map request IKK
+			requestIkkMap := make(map[int]bool)
+
+			for _, reqIkk := range request.Ikk {
+				requestIkkMap[reqIkk.IkkId] = true
+			}
+
+			// =====================================
+			// HAPUS IKK YANG SUDAH TIDAK ADA
+			// =====================================
+
+			for _, oldIkk := range existingIkk {
+
+				if !requestIkkMap[oldIkk.IkkId] {
+
+					err := service.IkkRepository.DeletePilihanIkk(
+						ctx,
+						tx,
+						oldIkk.Id,
+					)
+
+					if err != nil {
+						return pohonkinerja.PohonKinerjaOpdResponse{}, err
+					}
+				}
+			}
+
+			// =====================================
+			// TAMBAH IKK BARU
+			// =====================================
+
+			existingMap := make(map[int]bool)
+
+			for _, old := range existingIkk {
+				existingMap[old.IkkId] = true
+			}
+
+			for _, reqIkk := range request.Ikk {
+
+				// skip kalau sudah ada
+				if existingMap[reqIkk.IkkId] {
+					continue
+				}
+
+				dataIkk := domain.IkkTerpilih{
+					PohonKinerjaId: pokin.Id,
+					IkkId:          reqIkk.IkkId,
+				}
+
+				_, err := service.IkkRepository.PilihIkk(
+					ctx,
+					tx,
+					dataIkk,
+				)
+
+				if err != nil {
+					return pohonkinerja.PohonKinerjaOpdResponse{}, err
+				}
+			}
+
+			// =====================================
+			// AMBIL RESPONSE TERBARU
+			// =====================================
+
+			finalIkk, err := service.IkkRepository.FindAllTerpilihByPokinId(
+				ctx,
+				tx,
+				pokin.Id,
+			)
+
+			if err != nil {
+				return pohonkinerja.PohonKinerjaOpdResponse{}, err
+			}
+
+			for _, item := range finalIkk {
+
+				detailIkk, err := service.IkkRepository.FindAllById(
+					ctx,
+					tx,
+					item.IkkId,
+				)
+
+				if err != nil {
+					return pohonkinerja.PohonKinerjaOpdResponse{}, err
+				}
+
+				var indikatorIkkResponses []ikk.IndikatorResponse
+
+				for _, indikator := range detailIkk.Indikators {
+
+					var targetResponses []ikk.TargetResponse
+
+					for _, target := range indikator.Targets {
+						targetResponses = append(targetResponses, ikk.TargetResponse{
+							ID:      target.ID,
+							Target:  target.Target,
+							Satuan:  target.Satuan,
+						})
+					}
+
+					indikatorIkkResponses = append(indikatorIkkResponses, ikk.IndikatorResponse{
+						ID:        indikator.ID,
+						Indikator: indikator.Indikator,
+						Targets:   targetResponses,
+					})
+				}
+
+				ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+					ID:               detailIkk.ID,
+					KodeOpd:          detailIkk.KodeOpd,
+					NamaOpd:          detailIkk.NamaOpd,
+					KodeBidangUrusan: detailIkk.KodeBidangUrusan,
+					NamaBidangUrusan: detailIkk.NamaBidangUrusan,
+					Jenis:            detailIkk.Jenis,
+					Tahun:            detailIkk.Tahun,
+					Keterangan:       detailIkk.Keterangan,
+					Indikators:       indikatorIkkResponses,
+				})
+			}
+		}
+		
 	}
 
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
@@ -642,6 +882,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		Pelaksana:              pelaksanaResponses,
 		Indikator:              indikatorResponses,
 		Tagging:                taggingResponses,
+		Ikk: 					ikkResponses,
 		KeteranganCrosscutting: updatedPokin.KeteranganCrosscutting,
 		UpdatedBy:              updatedPokin.UpdatedBy,
 	}, nil
@@ -798,6 +1039,59 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 		}
 	}
 
+	// =====================================
+	// AMBIL IKK
+	// =====================================
+
+	var ikkResponses []ikk.IkkFullResponse
+	finalIkk, err := service.IkkRepository.FindAllTerpilihByPokinId(ctx, tx, pokin.Id)
+
+	if err != nil {
+		return pohonkinerja.PohonKinerjaOpdResponse{}, err
+	}
+
+	for _, item := range finalIkk {
+
+		detailIkk, err := service.IkkRepository.FindAllById(ctx, tx, item.IkkId)
+
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdResponse{}, err
+		}
+
+		var indikatorIkkResponses []ikk.IndikatorResponse
+
+		for _, indikator := range detailIkk.Indikators {
+
+			var targetResponses []ikk.TargetResponse
+
+			for _, target := range indikator.Targets {
+				targetResponses = append(targetResponses, ikk.TargetResponse{
+					ID:      target.ID,
+					Target:  target.Target,
+					Satuan:  target.Satuan,
+				})
+			}
+
+			indikatorIkkResponses = append(indikatorIkkResponses, ikk.IndikatorResponse{
+				ID:        indikator.ID,
+				Indikator: indikator.Indikator,
+				Targets:   targetResponses,
+			})
+		}
+
+		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
+			ID:               detailIkk.ID,
+			KodeOpd:          detailIkk.KodeOpd,
+			NamaOpd:          detailIkk.NamaOpd,
+			KodeBidangUrusan: detailIkk.KodeBidangUrusan,
+			NamaBidangUrusan: detailIkk.NamaBidangUrusan,
+			Jenis:            detailIkk.Jenis,
+			Tahun:            detailIkk.Tahun,
+			Keterangan:       detailIkk.Keterangan,
+			Indikators:       indikatorIkkResponses,
+		})
+	}
+
 	// Susun response
 	response := pohonkinerja.PohonKinerjaOpdResponse{
 		Id:         pokin.Id,
@@ -813,6 +1107,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 		Pelaksana:  pelaksanaResponses,
 		Indikator:  indikatorResponses,
 		Tagging:    taggingResponses,
+		Ikk:        ikkResponses,
 	}
 
 	return response, nil
@@ -894,6 +1189,9 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 		}
 	}
 
+	// ikk maps
+	ikkMap := make(map[int][]ikk.IkkFullResponse)
+
 	// Batch fetch pelaksana
 	pelaksanas, _ := service.pohonKinerjaOpdRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
 	pelaksanaMap := make(map[int][]pohonkinerja.PelaksanaOpdResponse)
@@ -949,6 +1247,18 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 			})
 		}
 		indikatorMap[pokinId] = indikatorResponses
+	}
+
+	// build ikk map
+	for _, p := range pokins {
+		if p.LevelPohon >= 4 {
+			ikkResponses, err := service.ikkService.FindAllByIdPokin(ctx, p.Id)
+			if err != nil {
+				return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
+			}
+
+			ikkMap[p.Id] = ikkResponses
+		}
 	}
 
 	// Batch fetch tematik - HAPUS SEMUA LOGGING DEBUG
@@ -1056,12 +1366,13 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 						taggingMap,
 						pelaksanaMap,
 						indikatorMap,
+						ikkMap,
 						reviewMap,
 						tematikMap,
 					)
 
 					// Lanjut append operational
-					appendOperationals(&tacticalResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap, tematikMap)
+					appendOperationals(&tacticalResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap, tematikMap)
 
 					strategicResp.Tacticals = append(strategicResp.Tacticals, tacticalResp)
 				}
@@ -1262,6 +1573,7 @@ func buildTacticalOnly(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	tematikMap map[int]*domain.PohonKinerja,
 ) pohonkinerja.TacticalOpdResponse {
@@ -1304,6 +1616,7 @@ func buildTacticalOnly(
 		Tagging:     taggingMap[tactical.Id],
 		Pelaksana:   pelaksanaMap[tactical.Id],
 		Indikator:   indikatorMap[tactical.Id],
+		Ikk:   ikkMap[tactical.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}
@@ -1316,6 +1629,7 @@ func buildOperationalOnly(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	tematikMap map[int]*domain.PohonKinerja,
 ) pohonkinerja.OperationalOpdResponse {
@@ -1358,6 +1672,7 @@ func buildOperationalOnly(
 		Tagging:     taggingMap[operational.Id],
 		Pelaksana:   pelaksanaMap[operational.Id],
 		Indikator:   indikatorMap[operational.Id],
+		Ikk:   ikkMap[operational.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}
@@ -1370,6 +1685,7 @@ func buildOperationalNOnly(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 ) pohonkinerja.OperationalNOpdResponse {
 	var keteranganCrosscutting *string
@@ -1397,6 +1713,7 @@ func buildOperationalNOnly(
 		Tagging:     taggingMap[operationalN.Id],
 		Pelaksana:   pelaksanaMap[operationalN.Id],
 		Indikator:   indikatorMap[operationalN.Id],
+		Ikk:   ikkMap[operationalN.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}
@@ -1410,6 +1727,7 @@ func appendOperationals(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 	tematikMap map[int]*domain.PohonKinerja,
 ) {
@@ -1435,12 +1753,13 @@ func appendOperationals(
 			taggingMap,
 			pelaksanaMap,
 			indikatorMap,
+			ikkMap,
 			reviewMap,
 			tematikMap,
 		)
 
 		// Lanjut append operational N
-		appendOperationalN(&opResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+		appendOperationalN(&opResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap)
 
 		tacticalResp.Operationals = append(tacticalResp.Operationals, opResp)
 	}
@@ -1452,6 +1771,7 @@ func appendOperationalN(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 ) {
 	nextLevel := operationalResp.LevelPohon + 1
@@ -1477,11 +1797,12 @@ func appendOperationalN(
 			taggingMap,
 			pelaksanaMap,
 			indikatorMap,
+			ikkMap,
 			reviewMap,
 		)
 
 		// Recursive untuk level berikutnya jika ada (gunakan function terpisah untuk OperationalNOpdResponse)
-		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap)
 
 		operationalResp.Childs = append(operationalResp.Childs, childResp)
 	}
@@ -1494,6 +1815,7 @@ func appendOperationalNRecursive(
 	taggingMap map[int][]pohonkinerja.TaggingResponse,
 	pelaksanaMap map[int][]pohonkinerja.PelaksanaOpdResponse,
 	indikatorMap map[int][]pohonkinerja.IndikatorResponse,
+	ikkMap map[int][]ikk.IkkFullResponse,
 	reviewMap map[int][]pohonkinerja.ReviewResponse,
 ) {
 	nextLevel := operationalNResp.LevelPohon + 1
@@ -1519,11 +1841,12 @@ func appendOperationalNRecursive(
 			taggingMap,
 			pelaksanaMap,
 			indikatorMap,
+			ikkMap,
 			reviewMap,
 		)
 
 		// Recursive untuk level berikutnya jika ada
-		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, reviewMap)
+		appendOperationalNRecursive(&childResp, pohonMap, taggingMap, pelaksanaMap, indikatorMap, ikkMap, reviewMap)
 
 		operationalNResp.Childs = append(operationalNResp.Childs, childResp)
 	}

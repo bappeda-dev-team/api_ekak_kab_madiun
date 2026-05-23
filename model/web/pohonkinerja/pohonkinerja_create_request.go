@@ -12,11 +12,16 @@ type PohonKinerjaCreateRequest struct {
 	PelaksanaId  []PelaksanaCreateRequest `json:"pelaksana"`
 	Indikator    []IndikatorCreateRequest `json:"indikator"`
 	TaggingPokin []TaggingCreateRequest   `json:"tagging"`
+	Ikk          []IkkTerpilihRequest     `json:"ikk"`
 }
 
 type PelaksanaCreateRequest struct {
 	IdPelaksana string `json:"id_pelaksana"`
 	PegawaiId   string `json:"pegawai_id"`
+}
+
+type IkkTerpilihRequest struct {
+	IkkId int `json:"ikk_id"`
 }
 
 type PohonKinerjaAdminCreateRequest struct {

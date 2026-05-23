@@ -13,9 +13,10 @@ type IkdDetail struct {
 	Status                 string `json:"status"`
 	IsActive               bool   `json:"is_active"`
 
-	Pelaksana  []PelaksanaDetail  `json:"pelaksana"`
-	SasaranOpd []SasaranOpdDetail `json:"sasaran_opd"`
-	ProgramOpd []ProgramOpdDetail `json:"program_opd"`
+	Pelaksana          []PelaksanaDetail          `json:"pelaksana"`
+	SasaranOpd         []SasaranOpdDetail         `json:"sasaran_opd"`
+	ProgramOpd         []ProgramOpdDetail         `json:"program_opd"`
+	ProgramOpdTerpilih []ProgramOpdTerpilihDetail `json:"program_opd_terpilih"`
 }
 
 type PelaksanaDetail struct {
@@ -29,4 +30,23 @@ type ProgramOpdDetail struct {
 	Id          int    `json:"id"`
 	Parent      int    `json:"parent"`
 	NamaProgram string `json:"nama_program"`
+}
+
+type ProgramOpdTerpilihDetail struct {
+	Id          int    `json:"id"`
+	TacticalId  int    `json:"tactical_id"`
+	Parent      int    `json:"parent"`
+	NamaProgram string `json:"nama_program"`
+	IsLocked    bool   `json:"is_locked"`
+}
+
+type ProgramOpdTerpilih struct {
+	Id             int
+	PohonKinerjaId int
+	ProgramOpdId   int
+}
+
+type PokinIkd struct {
+	Id        int
+	NamaPokin string
 }

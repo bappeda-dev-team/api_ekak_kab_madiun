@@ -4,28 +4,29 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/ikd"
 	"ekak_kabupaten_madiun/repository"
+	"errors"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type IkdServiceImpl struct {
 	IkdRepository repository.IkdRepository
 	DB            *sql.DB
+	Validate      *validator.Validate
 }
 
-func NewIkdServiceImpl(ikdRepository repository.IkdRepository, db *sql.DB) *IkdServiceImpl {
+func NewIkdServiceImpl(ikdRepository repository.IkdRepository, db *sql.DB, validate *validator.Validate) *IkdServiceImpl {
 	return &IkdServiceImpl{
 		IkdRepository: ikdRepository,
 		DB:            db,
+		Validate:      validate,
 	}
 }
 
-func (service *IkdServiceImpl) FindAll(
-	ctx context.Context,
-	kodeOpd string,
-	tahun string,
-	jenisPeriode string,
-) ([]ikd.IkdResponse, error) {
+func (service *IkdServiceImpl) FindAll(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]ikd.IkdResponse, error) {
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -34,13 +35,7 @@ func (service *IkdServiceImpl) FindAll(
 
 	defer helper.CommitOrRollback(tx)
 
-	ikdDetails, err := service.IkdRepository.FindAll(
-		ctx,
-		tx,
-		kodeOpd,
-		tahun,
-		jenisPeriode,
-	)
+	ikdDetails, err := service.IkdRepository.FindAll(ctx, tx, kodeOpd, tahun, jenisPeriode)
 
 	if err != nil {
 		return []ikd.IkdResponse{}, err
@@ -147,6 +142,25 @@ func (service *IkdServiceImpl) FindAll(
 		}
 
 		// =========================
+		// PROGRAM OPD TERPILIH
+		// =========================
+		programTerpilihResponses := make([]ikd.ProgramOpdTerpilihIkdResponse, 0)
+
+		for _, program := range data.ProgramOpdTerpilih {
+
+			programTerpilihResponses = append(
+				programTerpilihResponses,
+				ikd.ProgramOpdTerpilihIkdResponse{
+					Id:          program.Id,
+					TacticalId:          program.TacticalId,
+					Parent:      program.Parent,
+					NamaProgram: program.NamaProgram,
+					IsLocked: program.IsLocked,
+				},
+			)
+		}
+
+		// =========================
 		// RESPONSE
 		// =========================
 		responses = append(
@@ -167,6 +181,7 @@ func (service *IkdServiceImpl) FindAll(
 				Pelaksana:  pelaksanas,
 				SasaranOpd: sasaranResponses,
 				ProgramOpd: programResponses,
+				ProgramOpdTerpilih: programTerpilihResponses,
 			},
 		)
 	}
@@ -176,4 +191,136 @@ func (service *IkdServiceImpl) FindAll(
 	}
 
 	return responses, nil
+}
+
+func (service *IkdServiceImpl) Create(ctx context.Context, requests []ikd.ProgramOpdTerpilihCreateRequest) ([]ikd.ProgramOpdTerpilihResponse, error) {
+
+	for _, request := range requests {
+		err := service.Validate.Struct(request)
+		if err != nil {
+			return []ikd.ProgramOpdTerpilihResponse{}, err
+		}
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return []ikd.ProgramOpdTerpilihResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	var responses []ikd.ProgramOpdTerpilihResponse
+
+	for _, request := range requests {
+
+		data := domain.ProgramOpdTerpilih{
+			PohonKinerjaId: request.PohonKinerjaId,
+			ProgramOpdId:   request.ProgramOpdId,
+		}
+
+		result, err := service.IkdRepository.Create(ctx, tx, data)
+		if err != nil {
+			return []ikd.ProgramOpdTerpilihResponse{}, err
+		}
+
+		tactical, err := service.IkdRepository.FindPokinById(ctx, tx, result.ProgramOpdId)
+
+		if err != nil {
+			return []ikd.ProgramOpdTerpilihResponse{}, err
+		}
+
+		response := ikd.ProgramOpdTerpilihResponse{
+			Id:          result.Id,
+			TacticalId:  result.PohonKinerjaId,
+			Parent:      result.ProgramOpdId,
+			NamaProgram: tactical.NamaPokin,
+		}
+
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+func (service *IkdServiceImpl) Delete(ctx context.Context, id int) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi data exists
+	_, err = service.IkdRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	// Validasi data lock
+	err = service.ensureNotLocked(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	return service.IkdRepository.Delete(ctx, tx, id)
+}
+
+func (service *IkdServiceImpl) LockProgramOpdTerpilih(ctx context.Context, id int) error {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi data exists
+	_, err = service.IkdRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	err = service.IkdRepository.LockProgramOpdTerpilih(ctx, tx, id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *IkdServiceImpl) UnlockProgramOpdTerpilih(ctx context.Context, id int) error {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi data exists
+	_, err = service.IkdRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	err = service.IkdRepository.UnlockProgramOpdTerpilih(ctx, tx, id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *IkdServiceImpl) ensureNotLocked(ctx context.Context, tx *sql.Tx, id int) error {
+
+	isLocked, err := service.IkdRepository.CheckProgramOpdTerpilihLocked(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	if isLocked {
+		return errors.New("program opd terpilih sudah dikunci")
+	}
+
+	return nil
 }

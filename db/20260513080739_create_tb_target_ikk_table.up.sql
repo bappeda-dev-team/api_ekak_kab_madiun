@@ -1,0 +1,9 @@
+CREATE TABLE tb_target_ikk (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_indikator INT(50),
+    target VARCHAR(255),
+    satuan VARCHAR(255),
+    tahun INT(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

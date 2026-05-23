@@ -1,0 +1,3 @@
+ALTER TABLE tb_ikk
+DROP COLUMN kode_opd,
+DROP COLUMN tahun;

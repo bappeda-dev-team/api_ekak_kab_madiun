@@ -2,6 +2,7 @@ package pohonkinerja
 
 import (
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/ikk"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 )
 
@@ -20,6 +21,7 @@ type PohonKinerjaOpdResponse struct {
 	Pelaksana              []PelaksanaOpdResponse `json:"pelaksana"`
 	Indikator              []IndikatorResponse    `json:"indikator"`
 	Tagging                []TaggingResponse      `json:"tagging"`
+	Ikk 				   []ikk.IkkFullResponse  `json:"ikk"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 	UpdatedBy              string                 `json:"updated_by"`
 	KeteranganTahunClone   string                 `json:"keterangan_tahun_clone,omitempty"`
@@ -72,6 +74,7 @@ type TacticalOpdResponse struct {
 	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse       `json:"ikk"`
 	Operationals           []OperationalOpdResponse    `json:"childs,omitempty"`
 	Crosscutting           []CrosscuttingOpdResponse   `json:"crosscutting,omitempty"`
 	Review                 []ReviewResponse            `json:"review,omitempty"`
@@ -94,6 +97,7 @@ type OperationalOpdResponse struct {
 	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse       `json:"ikk"`
 	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`
 	Crosscutting           []CrosscuttingOpdResponse   `json:"crosscutting,omitempty"`
 	Review                 []ReviewResponse            `json:"review,omitempty"`
@@ -114,6 +118,7 @@ type OperationalNOpdResponse struct {
 	Tagging                []TaggingResponse           `json:"tagging"`
 	Pelaksana              []PelaksanaOpdResponse      `json:"pelaksana"`
 	Indikator              []IndikatorResponse         `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse       `json:"ikk"`
 	Childs                 []OperationalNOpdResponse   `json:"childs,omitempty"`
 	Review                 []ReviewResponse            `json:"review,omitempty"`
 }
@@ -163,6 +168,15 @@ type LevelDetail struct {
 	Level       int    `json:"level"`
 	JenisPohon  string `json:"jenis_pohon"`
 	JumlahPemda int    `json:"jumlah_pemda"`
+}
+
+type IkkTerpilihResponse struct {
+	Id            int    `json:"id"`
+	PokinId       int    `json:"pohon_kinerja_id"`
+	IkkId         int    `json:"ikk_id"`
+	NamaPokin     string `json:"nama_pokin"`
+	JenisIkk      string `json:"jenis_ikk"`
+	KeteranganIkk string `json:"keterangan_ikk"`
 }
 
 func MapTujuanOpdToResponseCascading(

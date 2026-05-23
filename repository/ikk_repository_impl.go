@@ -14,34 +14,210 @@ func NewIkkRepositoryImpl() *IkkRepositoryImpl {
 	return &IkkRepositoryImpl{}
 }
 
-func (repository *IkkRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, ikk domain.IndikatorIkk) (domain.IndikatorIkk, error) {
-	script := "INSERT INTO tb_ikk (kode_bidang_urusan, jenis, nama_indikator, target, satuan, keterangan) VALUES (?, ?, ?, ?, ?, ?)"
-	result, err := tx.ExecContext(ctx, script,
+func (repository *IkkRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, ikk domain.Ikk) (domain.Ikk, error) {
+
+	script := `
+		INSERT INTO tb_ikk 
+		(kode_bidang_urusan, kode_opd, jenis, tahun, keterangan) 
+		VALUES (?, ?, ?, ?, ?)
+	`
+
+	result, err := tx.ExecContext(
+		ctx,
+		script,
 		ikk.KodeBidangUrusan,
+		ikk.KodeOpd,
 		ikk.Jenis,
-		ikk.NamaIndikator,
-		ikk.Target,
-		ikk.Satuan,
-		ikk.Keterangan)
+		ikk.Tahun,
+		ikk.Keterangan,
+	)
 	if err != nil {
-		return domain.IndikatorIkk{}, err
+		return domain.Ikk{}, err
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		return domain.IndikatorIkk{}, err
+		return domain.Ikk{}, err
 	}
+
 	ikk.ID = int(id)
+
+	// insert indikator
+	for i, indikator := range ikk.Indikators {
+
+		scriptIndikator := `
+			INSERT INTO tb_indikator_ikk
+			(id_ikk, kode_opd, kode_bidang_urusan, indikator, tahun)
+			VALUES (?, ?, ?, ?, ?)
+		`
+
+		resultIndikator, err := tx.ExecContext(
+			ctx,
+			scriptIndikator,
+			ikk.ID,
+			ikk.KodeOpd,
+			ikk.KodeBidangUrusan,
+			indikator.Indikator,
+			ikk.Tahun,
+		)
+		if err != nil {
+			return ikk, err
+		}
+
+		indikatorID, err := resultIndikator.LastInsertId()
+		if err != nil {
+			return ikk, err
+		}
+
+		// set ID indikator ke struct
+		ikk.Indikators[i].ID = int(indikatorID)
+
+		// insert targets
+		for j, target := range indikator.Targets {
+
+			scriptTarget := `
+				INSERT INTO tb_target_ikk
+				(id_indikator, target, satuan, tahun)
+				VALUES (?, ?, ?, ?)
+			`
+
+			resultTarget, err := tx.ExecContext(
+				ctx,
+				scriptTarget,
+				indikatorID,
+				target.Target,
+				target.Satuan,
+				ikk.Tahun,
+			)
+			if err != nil {
+				return ikk, err
+			}
+
+			targetID, err := resultTarget.LastInsertId()
+			if err != nil {
+				return ikk, err
+			}
+
+			// set ID target ke struct
+			ikk.Indikators[i].Targets[j].ID = int(targetID)
+		}
+	}
 
 	return ikk, nil
 }
 
-func (repository *IkkRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, ikk domain.IndikatorIkk) (domain.IndikatorIkk, error) {
-	script := "UPDATE tb_ikk SET kode_bidang_urusan = ?, jenis = ?, nama_indikator = ?, target = ?, satuan = ?, keterangan = ? WHERE id = ?"
-	_, err := tx.ExecContext(ctx, script, ikk.KodeBidangUrusan, ikk.Jenis, ikk.NamaIndikator, ikk.Target, ikk.Satuan, ikk.Keterangan, ikk.ID)
+func (repository *IkkRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, ikk domain.Ikk) (domain.Ikk, error) {
+
+	// ================= UPDATE IKK =================
+	query := `
+		UPDATE tb_ikk
+		SET
+			kode_bidang_urusan = ?,
+			kode_opd = ?,
+			jenis = ?,
+			tahun = ?,
+			keterangan = ?
+		WHERE id = ?
+	`
+
+	_, err := tx.ExecContext(
+		ctx,
+		query,
+		ikk.KodeBidangUrusan,
+		ikk.KodeOpd,
+		ikk.Jenis,
+		ikk.Tahun,
+		ikk.Keterangan,
+		ikk.ID,
+	)
 	if err != nil {
-		return domain.IndikatorIkk{}, err
+		return domain.Ikk{}, err
 	}
+
+	// ================= HAPUS TARGET LAMA =================
+	deleteTarget := `
+		DELETE ti
+		FROM tb_target_ikk ti
+		INNER JOIN tb_indikator_ikk ii
+			ON ii.id = ti.id_indikator
+		WHERE ii.id_ikk = ?
+	`
+
+	_, err = tx.ExecContext(ctx, deleteTarget, ikk.ID)
+	if err != nil {
+		return domain.Ikk{}, err
+	}
+
+	// ================= HAPUS INDIKATOR LAMA =================
+	deleteIndikator := `
+		DELETE FROM tb_indikator_ikk
+		WHERE id_ikk = ?
+	`
+
+	_, err = tx.ExecContext(ctx, deleteIndikator, ikk.ID)
+	if err != nil {
+		return domain.Ikk{}, err
+	}
+
+	// ================= INSERT ULANG INDIKATOR =================
+	for i, indikator := range ikk.Indikators {
+
+		queryIndikator := `
+			INSERT INTO tb_indikator_ikk
+			(id_ikk, kode_opd, kode_bidang_urusan, indikator, tahun)
+			VALUES (?, ?, ?, ?, ?)
+		`
+
+		resultIndikator, err := tx.ExecContext(
+			ctx,
+			queryIndikator,
+			ikk.ID,
+			ikk.KodeOpd,
+			ikk.KodeBidangUrusan,
+			indikator.Indikator,
+			ikk.Tahun,
+		)
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+
+		indikatorID, err := resultIndikator.LastInsertId()
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+
+		ikk.Indikators[i].ID = int(indikatorID)
+
+		// ================= INSERT TARGET =================
+		for j, target := range indikator.Targets {
+
+			queryTarget := `
+				INSERT INTO tb_target_ikk
+				(id_indikator, target, satuan, tahun)
+				VALUES (?, ?, ?, ?)
+			`
+
+			resultTarget, err := tx.ExecContext(
+				ctx,
+				queryTarget,
+				indikatorID,
+				target.Target,
+				target.Satuan,
+				ikk.Tahun,
+			)
+			if err != nil {
+				return domain.Ikk{}, err
+			}
+
+			targetID, err := resultTarget.LastInsertId()
+			if err != nil {
+				return domain.Ikk{}, err
+			}
+
+			ikk.Indikators[i].Targets[j].ID = int(targetID)
+		}
+	}
+
 	return ikk, nil
 }
 
@@ -54,28 +230,149 @@ func (repository *IkkRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id 
 	return nil
 }
 
-func (repository *IkkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.IndikatorIkk, error) {
-	script := "SELECT id, kode_bidang_urusan, jenis, nama_indikator, target, satuan, keterangan FROM tb_ikk WHERE id = ?"
-	var ikk domain.IndikatorIkk
-	err := tx.QueryRowContext(ctx, script, id).Scan(
-		&ikk.ID,
-		&ikk.KodeBidangUrusan,
-		&ikk.Jenis,
-		&ikk.NamaIndikator,
-		&ikk.Target,
-		&ikk.Satuan,
-		&ikk.Keterangan,
+func (repository *IkkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.Ikk, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			id,
+			kode_bidang_urusan,
+			kode_opd,
+			jenis,
+			tahun,
+			keterangan
+		FROM tb_ikk
+		WHERE id = ?
+	`
+
+	var result domain.Ikk
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.ID,
+		&result.KodeBidangUrusan,
+		&result.KodeOpd,
+		&result.Jenis,
+		&result.Tahun,
+		&result.Keterangan,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.IndikatorIkk{}, errors.New("ikk tidak ditemukan")
+			return domain.Ikk{}, errors.New("ikk tidak ditemukan")
 		}
-		return domain.IndikatorIkk{}, err
+		return domain.Ikk{}, err
 	}
-	return ikk, nil
+
+	result.Indikators = make([]domain.IndikatorIkk, 0)
+
+	// ================= INDIKATOR =================
+	queryIndikator := `
+		SELECT
+			id,
+			indikator
+		FROM tb_indikator_ikk
+		WHERE id_ikk = ?
+	`
+
+	rowsIndikator, err := tx.QueryContext(
+		ctx,
+		queryIndikator,
+		result.ID,
+	)
+	if err != nil {
+		return domain.Ikk{}, err
+	}
+	defer rowsIndikator.Close()
+
+	indikatorIDs := make([]int, 0)
+
+	for rowsIndikator.Next() {
+
+		var indikator domain.IndikatorIkk
+
+		err := rowsIndikator.Scan(
+			&indikator.ID,
+			&indikator.Indikator,
+		)
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+
+		indikator.Targets = make([]domain.TargetIkk, 0)
+
+		result.Indikators = append(result.Indikators, indikator)
+		indikatorIDs = append(indikatorIDs, indikator.ID)
+	}
+
+	// ================= TARGET =================
+	if len(indikatorIDs) > 0 {
+
+		placeholders := ""
+
+		for i := 0; i < len(indikatorIDs); i++ {
+			if i > 0 {
+				placeholders += ","
+			}
+			placeholders += "?"
+		}
+
+		queryTarget := `
+			SELECT
+				id,
+				id_indikator,
+				target,
+				satuan
+			FROM tb_target_ikk
+			WHERE id_indikator IN (` + placeholders + `)
+		`
+
+		args := make([]interface{}, len(indikatorIDs))
+		for i, v := range indikatorIDs {
+			args[i] = v
+		}
+
+		rowsTarget, err := tx.QueryContext(
+			ctx,
+			queryTarget,
+			args...,
+		)
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+		defer rowsTarget.Close()
+
+		targetMap := make(map[int][]domain.TargetIkk)
+
+		for rowsTarget.Next() {
+
+			var target domain.TargetIkk
+			var idIndikator int
+
+			err := rowsTarget.Scan(
+				&target.ID,
+				&idIndikator,
+				&target.Target,
+				&target.Satuan,
+			)
+			if err != nil {
+				return domain.Ikk{}, err
+			}
+
+			targetMap[idIndikator] = append(
+				targetMap[idIndikator],
+				target,
+			)
+		}
+
+		// attach target ke indikator
+		for i, indikator := range result.Indikators {
+			result.Indikators[i].Targets = targetMap[indikator.ID]
+		}
+	}
+
+	return result, nil
 }
 
-func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.Tx, jenis string, kodeOpd string) ([]domain.IndikatorIkk, error) {
+func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.Tx, jenis string, kodeOpd string) ([]domain.Ikk, error) {
 	// Memisahkan kode OPD untuk mendapatkan kode bidang urusan
 	kodeBidangUrusans := make([]string, 0)
 
@@ -108,18 +405,20 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 
 	// Jika tidak ada kode bidang urusan yang valid
 	if len(kodeBidangUrusans) == 0 {
-		return []domain.IndikatorIkk{}, nil
+		return []domain.Ikk{}, nil
 	}
 
 	// Membuat query dengan IN clause
 	query := `SELECT ikk.id, 
 			  ikk.kode_bidang_urusan, 
 			  COALESCE(bu.nama_bidang_urusan, '') as nama_bidang_urusan,
+			  ikk.kode_opd, 
 			  COALESCE(od.nama_opd, '') as nama_opd,
 			  ikk.jenis, 
 			  ikk.nama_indikator, 
 			  ikk.target, 
 			  ikk.satuan, 
+			  ikk.tahun, 
 			  ikk.keterangan 
 			  FROM tb_ikk ikk
 			  LEFT JOIN tb_operasional_daerah od 
@@ -150,10 +449,10 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 	}
 	defer rows.Close()
 
-	var bidangUrusans []domain.IndikatorIkk
+	var bidangUrusans []domain.Ikk
 	for rows.Next() {
-		bidangUrusan := domain.IndikatorIkk{}
-		err := rows.Scan(&bidangUrusan.ID, &bidangUrusan.KodeBidangUrusan, &bidangUrusan.NamaBidangUrusan, &bidangUrusan.NamaOpd, &bidangUrusan.Jenis, &bidangUrusan.NamaIndikator, &bidangUrusan.Target, &bidangUrusan.Satuan, &bidangUrusan.Keterangan)
+		bidangUrusan := domain.Ikk{}
+		err := rows.Scan(&bidangUrusan.ID, &bidangUrusan.KodeBidangUrusan, &bidangUrusan.NamaBidangUrusan, &bidangUrusan.KodeOpd, &bidangUrusan.NamaOpd, &bidangUrusan.Jenis, &bidangUrusan.NamaIndikator, &bidangUrusan.Target, &bidangUrusan.Satuan, &bidangUrusan.Tahun, &bidangUrusan.Keterangan)
 		if err != nil {
 			return nil, err
 		}
@@ -161,6 +460,850 @@ func (repository *IkkRepositoryImpl) FindByKodeOpd(ctx context.Context, tx *sql.
 	}
 
 	return bidangUrusans, nil
+}
+
+
+func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.Ikk, error) {
+
+	query := `
+		SELECT ikk.id, 
+			   ikk.kode_opd, 
+			   od.nama_opd,
+			   ikk.kode_bidang_urusan, 
+			   bu.nama_bidang_urusan, 
+			   ikk.jenis, 
+			   ikk.tahun, 
+			   ikk.keterangan
+		FROM tb_ikk ikk
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = ikk.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
+	`
+
+	args := make([]interface{}, 0)
+
+	if kodeOpd != "" {
+		query += " WHERE ikk.kode_opd = ?"
+		args = append(args, kodeOpd)
+	}
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ikkMap := make(map[int]*domain.Ikk)
+	ikkIDs := make([]int, 0)
+
+	for rows.Next() {
+		var item domain.Ikk
+
+		err := rows.Scan(
+			&item.ID,
+			&item.KodeOpd,
+			&item.NamaOpd,
+			&item.KodeBidangUrusan,
+			&item.NamaBidangUrusan,
+			&item.Jenis,
+			&item.Tahun,
+			&item.Keterangan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Indikators = make([]domain.IndikatorIkk, 0)
+
+		copyItem := item
+		ikkMap[item.ID] = &copyItem
+		ikkIDs = append(ikkIDs, item.ID)
+	}
+
+	if len(ikkIDs) == 0 {
+		return []domain.Ikk{}, nil
+	}
+
+	// ================= INDICATOR =================
+	placeholders := makePlaceholders(len(ikkIDs))
+
+	queryInd := `
+		SELECT id, id_ikk, indikator
+		FROM tb_indikator_ikk
+		WHERE id_ikk IN (` + placeholders + `)
+	`
+
+	argsInd := make([]interface{}, len(ikkIDs))
+	for i, v := range ikkIDs {
+		argsInd[i] = v
+	}
+
+	rowsInd, err := tx.QueryContext(ctx, queryInd, argsInd...)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsInd.Close()
+
+	indikatorIDs := make([]int, 0)
+
+	for rowsInd.Next() {
+		var ind domain.IndikatorIkk
+		var idIkk int
+
+		err := rowsInd.Scan(
+			&ind.ID,
+			&idIkk,
+			&ind.Indikator,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		ind.Targets = make([]domain.TargetIkk, 0)
+
+		ikkMap[idIkk].Indikators = append(ikkMap[idIkk].Indikators, ind)
+		indikatorIDs = append(indikatorIDs, ind.ID)
+	}
+
+	// ================= TARGET =================
+	if len(indikatorIDs) > 0 {
+
+		placeholders = makePlaceholders(len(indikatorIDs))
+
+		queryTarget := `
+			SELECT id, id_indikator, target, satuan
+			FROM tb_target_ikk
+			WHERE id_indikator IN (` + placeholders + `)
+		`
+
+		argsTarget := make([]interface{}, len(indikatorIDs))
+		for i, v := range indikatorIDs {
+			argsTarget[i] = v
+		}
+
+		rowsT, err := tx.QueryContext(ctx, queryTarget, argsTarget...)
+		if err != nil {
+			return nil, err
+		}
+		defer rowsT.Close()
+
+		targetMap := make(map[int][]domain.TargetIkk)
+
+		for rowsT.Next() {
+			var t domain.TargetIkk
+			var idInd int
+
+			err := rowsT.Scan(
+				&t.ID,
+				&idInd,
+				&t.Target,
+				&t.Satuan,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			targetMap[idInd] = append(targetMap[idInd], t)
+		}
+
+		// attach target ke indikator
+		for _, ikk := range ikkMap {
+			for i, ind := range ikk.Indikators {
+				ikk.Indikators[i].Targets = targetMap[ind.ID]
+			}
+		}
+	}
+
+	result := make([]domain.Ikk, 0, len(ikkMap))
+	for _, v := range ikkMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
+}
+func (repository *IkkRepositoryImpl) FindAllByIdPokin(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.Ikk, error) {
+
+	query := `
+		SELECT ikk.id, 
+			   ikk.kode_opd, 
+			   od.nama_opd,
+			   ikk.kode_bidang_urusan, 
+			   bu.nama_bidang_urusan, 
+			   ikk.jenis, 
+			   ikk.tahun, 
+			   ikk.keterangan
+		FROM tb_ikk ikk
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = ikk.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
+		LEFT JOIN tb_ikk_terpilih tit
+		ON tit.ikk_id = ikk.id
+	`
+
+	args := make([]interface{}, 0)
+
+	if pokinId != 0 {
+		query += " WHERE tit.pohon_kinerja_id = ?"
+		args = append(args, pokinId)
+	}
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ikkMap := make(map[int]*domain.Ikk)
+	ikkIDs := make([]int, 0)
+
+	for rows.Next() {
+		var item domain.Ikk
+
+		err := rows.Scan(
+			&item.ID,
+			&item.KodeOpd,
+			&item.NamaOpd,
+			&item.KodeBidangUrusan,
+			&item.NamaBidangUrusan,
+			&item.Jenis,
+			&item.Tahun,
+			&item.Keterangan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Indikators = make([]domain.IndikatorIkk, 0)
+
+		copyItem := item
+		ikkMap[item.ID] = &copyItem
+		ikkIDs = append(ikkIDs, item.ID)
+	}
+
+	if len(ikkIDs) == 0 {
+		return []domain.Ikk{}, nil
+	}
+
+	// ================= INDICATOR =================
+	placeholders := makePlaceholders(len(ikkIDs))
+
+	queryInd := `
+		SELECT id, id_ikk, indikator
+		FROM tb_indikator_ikk
+		WHERE id_ikk IN (` + placeholders + `)
+	`
+
+	argsInd := make([]interface{}, len(ikkIDs))
+	for i, v := range ikkIDs {
+		argsInd[i] = v
+	}
+
+	rowsInd, err := tx.QueryContext(ctx, queryInd, argsInd...)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsInd.Close()
+
+	indikatorIDs := make([]int, 0)
+
+	for rowsInd.Next() {
+		var ind domain.IndikatorIkk
+		var idIkk int
+
+		err := rowsInd.Scan(
+			&ind.ID,
+			&idIkk,
+			&ind.Indikator,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		ind.Targets = make([]domain.TargetIkk, 0)
+
+		ikkMap[idIkk].Indikators = append(ikkMap[idIkk].Indikators, ind)
+		indikatorIDs = append(indikatorIDs, ind.ID)
+	}
+
+	// ================= TARGET =================
+	if len(indikatorIDs) > 0 {
+
+		placeholders = makePlaceholders(len(indikatorIDs))
+
+		queryTarget := `
+			SELECT id, id_indikator, target, satuan
+			FROM tb_target_ikk
+			WHERE id_indikator IN (` + placeholders + `)
+		`
+
+		argsTarget := make([]interface{}, len(indikatorIDs))
+		for i, v := range indikatorIDs {
+			argsTarget[i] = v
+		}
+
+		rowsT, err := tx.QueryContext(ctx, queryTarget, argsTarget...)
+		if err != nil {
+			return nil, err
+		}
+		defer rowsT.Close()
+
+		targetMap := make(map[int][]domain.TargetIkk)
+
+		for rowsT.Next() {
+			var t domain.TargetIkk
+			var idInd int
+
+			err := rowsT.Scan(
+				&t.ID,
+				&idInd,
+				&t.Target,
+				&t.Satuan,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			targetMap[idInd] = append(targetMap[idInd], t)
+		}
+
+		// attach target ke indikator
+		for _, ikk := range ikkMap {
+			for i, ind := range ikk.Indikators {
+				ikk.Indikators[i].Targets = targetMap[ind.ID]
+			}
+		}
+	}
+
+	result := make([]domain.Ikk, 0, len(ikkMap))
+	for _, v := range ikkMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
+}
+
+func (repository *IkkRepositoryImpl) FindAllById(ctx context.Context, tx *sql.Tx, id int) (domain.Ikk, error) {
+
+	query := `
+		SELECT ikk.id, 
+			   ikk.kode_opd, 
+			   od.nama_opd,
+			   ikk.kode_bidang_urusan, 
+			   bu.nama_bidang_urusan, 
+			   ikk.jenis, 
+			   ikk.tahun, 
+			   ikk.keterangan
+		FROM tb_ikk ikk
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = ikk.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
+		LEFT JOIN tb_ikk_terpilih tit
+		ON tit.ikk_id = ikk.id
+	`
+
+	args := make([]interface{}, 0)
+
+	if id != 0 {
+		query += " WHERE ikk.id = ?"
+		args = append(args, id)
+	}
+
+	row := tx.QueryRowContext(ctx, query, args...)
+
+	var item domain.Ikk
+
+	err := row.Scan(
+		&item.ID,
+		&item.KodeOpd,
+		&item.NamaOpd,
+		&item.KodeBidangUrusan,
+		&item.NamaBidangUrusan,
+		&item.Jenis,
+		&item.Tahun,
+		&item.Keterangan,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Ikk{}, nil
+		}
+		return domain.Ikk{}, err
+	}
+
+	item.Indikators = make([]domain.IndikatorIkk, 0)
+
+	// ================= INDICATOR =================
+	queryInd := `
+		SELECT id, id_ikk, indikator
+		FROM tb_indikator_ikk
+		WHERE id_ikk = ?
+	`
+
+	rowsInd, err := tx.QueryContext(ctx, queryInd, item.ID)
+	if err != nil {
+		return domain.Ikk{}, err
+	}
+	defer rowsInd.Close()
+
+	indikatorIDs := make([]int, 0)
+
+	for rowsInd.Next() {
+		var ind domain.IndikatorIkk
+		var idIkk int
+
+		err := rowsInd.Scan(
+			&ind.ID,
+			&idIkk,
+			&ind.Indikator,
+		)
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+
+		ind.Targets = make([]domain.TargetIkk, 0)
+
+		item.Indikators = append(item.Indikators, ind)
+		indikatorIDs = append(indikatorIDs, ind.ID)
+	}
+
+	// ================= TARGET =================
+	if len(indikatorIDs) > 0 {
+
+		placeholders := makePlaceholders(len(indikatorIDs))
+
+		queryTarget := `
+			SELECT id, id_indikator, target, satuan
+			FROM tb_target_ikk
+			WHERE id_indikator IN (` + placeholders + `)
+		`
+
+		argsTarget := make([]interface{}, len(indikatorIDs))
+		for i, v := range indikatorIDs {
+			argsTarget[i] = v
+		}
+
+		rowsT, err := tx.QueryContext(ctx, queryTarget, argsTarget...)
+		if err != nil {
+			return domain.Ikk{}, err
+		}
+		defer rowsT.Close()
+
+		targetMap := make(map[int][]domain.TargetIkk)
+
+		for rowsT.Next() {
+			var t domain.TargetIkk
+			var idInd int
+
+			err := rowsT.Scan(
+				&t.ID,
+				&idInd,
+				&t.Target,
+				&t.Satuan,
+			)
+			if err != nil {
+				return domain.Ikk{}, err
+			}
+
+			targetMap[idInd] = append(targetMap[idInd], t)
+		}
+
+		// attach target ke indikator
+		for i, ind := range item.Indikators {
+			item.Indikators[i].Targets = targetMap[ind.ID]
+		}
+	}
+
+	return item, nil
+}
+
+func (repository *IkkRepositoryImpl) FindAllByJenisAndKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, jenis string) ([]domain.Ikk, error) {
+
+	query := `
+		SELECT 
+		ikk.id, 
+		ikk.kode_opd, 
+		od.nama_opd, 
+		ikk.kode_bidang_urusan, 
+		bu.nama_bidang_urusan, 
+		ikk.jenis, 
+		ikk.tahun, 
+		ikk.keterangan
+		FROM tb_ikk ikk
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = ikk.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = ikk.kode_bidang_urusan
+		WHERE 1=1
+	`
+
+	args := make([]interface{}, 0)
+
+	if kodeOpd != "" {
+		query += " AND ikk.kode_opd = ?"
+		args = append(args, kodeOpd)
+	}
+
+	if jenis != "" {
+		query += " AND ikk.jenis = ?"
+		args = append(args, jenis)
+	}
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ikkMap := make(map[int]*domain.Ikk)
+	ikkIDs := make([]int, 0)
+
+	for rows.Next() {
+		var item domain.Ikk
+
+		err := rows.Scan(
+			&item.ID,
+			&item.KodeOpd,
+			&item.NamaOpd,
+			&item.KodeBidangUrusan,
+			&item.NamaBidangUrusan,
+			&item.Jenis,
+			&item.Tahun,
+			&item.Keterangan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Indikators = make([]domain.IndikatorIkk, 0)
+
+		copyItem := item
+		ikkMap[item.ID] = &copyItem
+		ikkIDs = append(ikkIDs, item.ID)
+	}
+
+	if len(ikkIDs) == 0 {
+		return []domain.Ikk{}, nil
+	}
+
+	// ================= INDICATOR =================
+	placeholders := makePlaceholders(len(ikkIDs))
+
+	queryInd := `
+		SELECT id, id_ikk, indikator
+		FROM tb_indikator_ikk
+		WHERE id_ikk IN (` + placeholders + `)
+	`
+
+	argsInd := make([]interface{}, len(ikkIDs))
+	for i, v := range ikkIDs {
+		argsInd[i] = v
+	}
+
+	rowsInd, err := tx.QueryContext(ctx, queryInd, argsInd...)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsInd.Close()
+
+	indikatorIDs := make([]int, 0)
+
+	for rowsInd.Next() {
+		var ind domain.IndikatorIkk
+		var idIkk int
+
+		err := rowsInd.Scan(
+			&ind.ID,
+			&idIkk,
+			&ind.Indikator,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		ind.Targets = make([]domain.TargetIkk, 0)
+
+		ikkMap[idIkk].Indikators = append(ikkMap[idIkk].Indikators, ind)
+		indikatorIDs = append(indikatorIDs, ind.ID)
+	}
+
+	// ================= TARGET =================
+	if len(indikatorIDs) > 0 {
+
+		placeholders = makePlaceholders(len(indikatorIDs))
+
+		queryTarget := `
+			SELECT id, id_indikator, target, satuan
+			FROM tb_target_ikk
+			WHERE id_indikator IN (` + placeholders + `)
+		`
+
+		argsTarget := make([]interface{}, len(indikatorIDs))
+		for i, v := range indikatorIDs {
+			argsTarget[i] = v
+		}
+
+		rowsT, err := tx.QueryContext(ctx, queryTarget, argsTarget...)
+		if err != nil {
+			return nil, err
+		}
+		defer rowsT.Close()
+
+		targetMap := make(map[int][]domain.TargetIkk)
+
+		for rowsT.Next() {
+			var t domain.TargetIkk
+			var idInd int
+
+			err := rowsT.Scan(
+				&t.ID,
+				&idInd,
+				&t.Target,
+				&t.Satuan,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			targetMap[idInd] = append(targetMap[idInd], t)
+		}
+
+		for _, ikk := range ikkMap {
+			for i, ind := range ikk.Indikators {
+				ikk.Indikators[i].Targets = targetMap[ind.ID]
+			}
+		}
+	}
+
+	result := make([]domain.Ikk, 0, len(ikkMap))
+	for _, v := range ikkMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
+}
+
+func (repository *IkkRepositoryImpl) FindSelection(ctx context.Context, tx *sql.Tx) ([]domain.BidangUrusanSelection, error) {
+
+	query := `SELECT
+				bu.kode_bidang_urusan,
+				COALESCE(bu.nama_bidang_urusan, '') AS nama_bidang_urusan,
+				od.kode_opd,
+				COALESCE(od.nama_opd, '') AS nama_opd
+			FROM tb_bidang_urusan bu
+			CROSS JOIN tb_operasional_daerah od
+			ORDER BY bu.kode_bidang_urusan ASC, od.kode_opd ASC`
+
+	rows, err := tx.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	selections := make([]domain.BidangUrusanSelection, 0)
+
+	for rows.Next() {
+		var selection domain.BidangUrusanSelection
+
+		err := rows.Scan(
+			&selection.KodeBidangUrusan,
+			&selection.NamaBidangUrusan,
+			&selection.KodeOpd,
+			&selection.NamaOpd,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		selections = append(selections, selection)
+	}
+
+	return selections, nil
+}
+
+func (repository *IkkRepositoryImpl) FindSelectionByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.BidangUrusanSelection, error) {
+
+	query := `SELECT
+				bu.kode_bidang_urusan,
+				COALESCE(bu.nama_bidang_urusan, '') AS nama_bidang_urusan,
+				od.kode_opd,
+				COALESCE(od.nama_opd, '') AS nama_opd
+			FROM tb_bidang_urusan bu
+			CROSS JOIN tb_operasional_daerah od
+			WHERE od.kode_opd = ?`
+
+	rows, err := tx.QueryContext(ctx, query, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	selections := make([]domain.BidangUrusanSelection, 0)
+
+	for rows.Next() {
+		var selection domain.BidangUrusanSelection
+
+		err := rows.Scan(
+			&selection.KodeBidangUrusan,
+			&selection.NamaBidangUrusan,
+			&selection.KodeOpd,
+			&selection.NamaOpd,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		selections = append(selections, selection)
+	}
+
+	return selections, nil
+}
+
+func (repository *IkkRepositoryImpl) PilihIkk(ctx context.Context, tx *sql.Tx, ikk domain.IkkTerpilih) (domain.IkkTerpilih, error) {
+
+	script := `
+		INSERT INTO tb_ikk_terpilih 
+		(pohon_kinerja_id, ikk_id) 
+		VALUES (?, ?)
+	`
+
+	result, err := tx.ExecContext(
+		ctx,
+		script,
+		ikk.PohonKinerjaId,
+		ikk.IkkId,
+	)
+	if err != nil {
+		return domain.IkkTerpilih{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return domain.IkkTerpilih{}, err
+	}
+
+	ikk.Id = int(id)
+
+	return ikk, nil
+}
+
+func (repository *IkkRepositoryImpl) DeletePilihanIkk(ctx context.Context, tx *sql.Tx, id int) error {
+	script := "DELETE FROM tb_ikk_terpilih WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repository *IkkRepositoryImpl) FindTerpilihById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilih, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			id,
+			pohon_kinerja_id,
+			ikk_id
+		FROM tb_ikk_terpilih
+		WHERE id = ?
+	`
+
+	var result domain.IkkTerpilih
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.Id,
+		&result.PohonKinerjaId,
+		&result.IkkId,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.IkkTerpilih{}, errors.New("ikk terpilih tidak ditemukan")
+		}
+		return domain.IkkTerpilih{}, err
+	}
+
+	return result, nil
+}
+func (repository *IkkRepositoryImpl) FindAllTerpilihByPokinId(
+	ctx context.Context,
+	tx *sql.Tx,
+	id int,
+) ([]domain.IkkTerpilih, error) {
+
+	query := `
+		SELECT
+			id,
+			pohon_kinerja_id,
+			ikk_id
+		FROM tb_ikk_terpilih
+		WHERE pohon_kinerja_id = ?
+	`
+
+	rows, err := tx.QueryContext(ctx, query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.IkkTerpilih
+
+	for rows.Next() {
+		var item domain.IkkTerpilih
+
+		err := rows.Scan(
+			&item.Id,
+			&item.PohonKinerjaId,
+			&item.IkkId,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, item)
+	}
+
+	return result, nil
+}
+func (repository *IkkRepositoryImpl) FindTerpilihPokinIkkById(ctx context.Context, tx *sql.Tx, id int) (domain.IkkTerpilihDetail, error) {
+
+	// ================= IKK =================
+	query := `
+		SELECT
+			tit.id,
+			tit.pohon_kinerja_id,
+			tit.ikk_id,
+			tpk.nama_pohon,
+            ti.jenis,
+            ti.keterangan
+		FROM tb_ikk_terpilih tit
+		LEFT JOIN tb_pohon_kinerja tpk
+		ON tpk.id = tit.pohon_kinerja_id
+		LEFT JOIN tb_ikk ti
+		ON ti.id = tit.ikk_id
+		WHERE tit.id = ?
+	`
+
+	var result domain.IkkTerpilihDetail
+
+	err := tx.QueryRowContext(ctx, query, id).Scan(
+		&result.Id,
+		&result.PohonKinerjaId,
+		&result.IkkId,
+		&result.NamaPokin,
+		&result.JenisIkk,
+		&result.KeteranganIkk,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.IkkTerpilihDetail{}, errors.New("ikk terpilih tidak ditemukan")
+		}
+		return domain.IkkTerpilihDetail{}, err
+	}
+
+	return result, nil
 }
 
 

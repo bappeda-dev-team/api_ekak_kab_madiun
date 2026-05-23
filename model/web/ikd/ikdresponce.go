@@ -13,9 +13,10 @@ type IkdResponse struct {
 	Status                 string `json:"status"`
 	IsActive               bool   `json:"is_active"`
 
-	Pelaksana  []PelaksanaResponse  `json:"pelaksana"`
-	SasaranOpd []SasaranOpdResponse `json:"sasaran_opd"`
-	ProgramOpd []ProgramOpdResponse `json:"program_opd"`
+	Pelaksana          []PelaksanaResponse             `json:"pelaksana"`
+	SasaranOpd         []SasaranOpdResponse            `json:"sasaran_opd"`
+	ProgramOpd         []ProgramOpdResponse            `json:"program_opd"`
+	ProgramOpdTerpilih []ProgramOpdTerpilihIkdResponse `json:"program_opd_terpilih"`
 }
 
 type PelaksanaResponse struct {
@@ -57,6 +58,21 @@ type TargetResponse struct {
 
 type ProgramOpdResponse struct {
 	Id          int    `json:"id"`
+	Parent      int    `json:"parent"`
+	NamaProgram string `json:"nama_program"`
+}
+
+type ProgramOpdTerpilihIkdResponse struct {
+	Id          int    `json:"id"`
+	TacticalId  int    `json:"tactical_id"`
+	Parent      int    `json:"parent"`
+	NamaProgram string `json:"nama_program"`
+	IsLocked    bool   `json:"is_locked"`
+}
+
+type ProgramOpdTerpilihResponse struct {
+	Id          int    `json:"id"`
+	TacticalId  int    `json:"tactical_id"`
 	Parent      int    `json:"parent"`
 	NamaProgram string `json:"nama_program"`
 }
