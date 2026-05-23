@@ -12,4 +12,7 @@ type IkdRepository interface {
 	FindPokinById(ctx context.Context, tx *sql.Tx, id int) (domain.PokinIkd, error)
 	Create(ctx context.Context, tx *sql.Tx, ikd domain.ProgramOpdTerpilih) (domain.ProgramOpdTerpilih, error)
 	Delete(ctx context.Context, tx *sql.Tx, id int) error
+	LockProgramOpdTerpilih(ctx context.Context, tx *sql.Tx, id int) error
+	UnlockProgramOpdTerpilih(ctx context.Context, tx *sql.Tx, id int) error
+	CheckProgramOpdTerpilihLocked(ctx context.Context, tx *sql.Tx, id int) (bool, error)
 }

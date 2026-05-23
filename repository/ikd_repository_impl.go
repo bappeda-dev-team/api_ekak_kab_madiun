@@ -79,7 +79,8 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 		CASE
 			WHEN pot.id IS NOT NULL THEN tp.nama_pohon
 			ELSE ''
-		END as nama_program_terpilih
+		END as nama_program_terpilih,
+		COALESCE(pot.is_locked, 0) as is_locked
 
 	FROM tb_pohon_kinerja pk
 
@@ -188,6 +189,7 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 			programTerpilihId     int
 			programTerpilihParent int
 			namaProgramTerpilih   string
+			isLocked              bool
 		)
 
 		err := rows.Scan(
@@ -235,6 +237,7 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 			&programTerpilihId,
 			&programTerpilihParent,
 			&namaProgramTerpilih,
+			&isLocked,
 		)
 
 		if err != nil {
@@ -435,6 +438,7 @@ func (repository *IkdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 						TacticalId:          programTerpilihId,
 						Parent:      programTerpilihParent,
 						NamaProgram: namaProgramTerpilih,
+						IsLocked: isLocked,
 					},
 				)
 			}
@@ -544,4 +548,64 @@ func (repository *IkdRepositoryImpl) FindPokinById(ctx context.Context, tx *sql.
 	}
 
 	return result, nil
+}
+
+func (repository *IkdRepositoryImpl) LockProgramOpdTerpilih(ctx context.Context, tx *sql.Tx, id int) error {
+
+	script := `
+		UPDATE tb_program_opd_terpilih
+		SET is_locked = TRUE
+		WHERE id = ?
+	`
+
+	_, err := tx.ExecContext(
+		ctx,
+		script,
+		id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repository *IkdRepositoryImpl) UnlockProgramOpdTerpilih(ctx context.Context, tx *sql.Tx, id int) error {
+
+	script := `
+		UPDATE tb_program_opd_terpilih
+		SET is_locked = FALSE
+		WHERE id = ?
+	`
+
+	_, err := tx.ExecContext(
+		ctx,
+		script,
+		id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repository *IkdRepositoryImpl) CheckProgramOpdTerpilihLocked(ctx context.Context, tx *sql.Tx, id int) (bool, error) {
+
+	script := `
+		SELECT is_locked
+		FROM tb_program_opd_terpilih
+		WHERE id = ?
+	`
+
+	var isLocked bool
+
+	err := tx.QueryRowContext(ctx, script, id).Scan(&isLocked)
+	if err != nil {
+		return false, err
+	}
+
+	return isLocked, nil
 }

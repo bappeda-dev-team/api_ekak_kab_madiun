@@ -37,6 +37,7 @@ type ProgramOpdTerpilihDetail struct {
 	TacticalId  int    `json:"tactical_id"`
 	Parent      int    `json:"parent"`
 	NamaProgram string `json:"nama_program"`
+	IsLocked    bool   `json:"is_locked"`
 }
 
 type ProgramOpdTerpilih struct {

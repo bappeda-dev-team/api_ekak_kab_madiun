@@ -115,7 +115,69 @@ func (controller *IkdControllerImpl) Delete(writer http.ResponseWriter, request 
 
 	webResponse := web.WebResponse{
 		Code:   200,
-		Status: "Success Deleted Program Opd",
+		Status: "Success Deleted Program Opd Terpilih",
+		Data:   nil,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+func (controller *IkdControllerImpl) LockProgramOpdTerpilih(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ikdId := params.ByName("id")
+	id, err := strconv.Atoi(ikdId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	err = controller.IkdService.LockProgramOpdTerpilih(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Lock Program Opd Terpilih",
+		Data:   nil,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+func (controller *IkdControllerImpl) UnlockProgramOpdTerpilih(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ikdId := params.ByName("id")
+	id, err := strconv.Atoi(ikdId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	err = controller.IkdService.UnlockProgramOpdTerpilih(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Unlock Program Opd Terpilih",
 		Data:   nil,
 	}
 	helper.WriteToResponseBody(writer, webResponse)

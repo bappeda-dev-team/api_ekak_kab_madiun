@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/ikd"
 	"ekak_kabupaten_madiun/repository"
+	"errors"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -25,12 +26,7 @@ func NewIkdServiceImpl(ikdRepository repository.IkdRepository, db *sql.DB, valid
 	}
 }
 
-func (service *IkdServiceImpl) FindAll(
-	ctx context.Context,
-	kodeOpd string,
-	tahun string,
-	jenisPeriode string,
-) ([]ikd.IkdResponse, error) {
+func (service *IkdServiceImpl) FindAll(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]ikd.IkdResponse, error) {
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -39,13 +35,7 @@ func (service *IkdServiceImpl) FindAll(
 
 	defer helper.CommitOrRollback(tx)
 
-	ikdDetails, err := service.IkdRepository.FindAll(
-		ctx,
-		tx,
-		kodeOpd,
-		tahun,
-		jenisPeriode,
-	)
+	ikdDetails, err := service.IkdRepository.FindAll(ctx, tx, kodeOpd, tahun, jenisPeriode)
 
 	if err != nil {
 		return []ikd.IkdResponse{}, err
@@ -165,6 +155,7 @@ func (service *IkdServiceImpl) FindAll(
 					TacticalId:          program.TacticalId,
 					Parent:      program.Parent,
 					NamaProgram: program.NamaProgram,
+					IsLocked: program.IsLocked,
 				},
 			)
 		}
@@ -263,5 +254,65 @@ func (service *IkdServiceImpl) Delete(ctx context.Context, id int) error {
 		return err
 	}
 
+	// Validasi data lock
+	err = service.ensureNotLocked(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
 	return service.IkdRepository.Delete(ctx, tx, id)
+}
+
+func (service *IkdServiceImpl) LockProgramOpdTerpilih(ctx context.Context, id int) error {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer helper.CommitOrRollback(tx)
+
+	err = service.IkdRepository.LockProgramOpdTerpilih(ctx, tx, id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *IkdServiceImpl) UnlockProgramOpdTerpilih(ctx context.Context, id int) error {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer helper.CommitOrRollback(tx)
+
+	err = service.IkdRepository.UnlockProgramOpdTerpilih(
+		ctx,
+		tx,
+		id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *IkdServiceImpl) ensureNotLocked(ctx context.Context, tx *sql.Tx, id int) error {
+
+	isLocked, err := service.IkdRepository.CheckProgramOpdTerpilihLocked(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+
+	if isLocked {
+		return errors.New("program opd terpilih sudah dikunci")
+	}
+
+	return nil
 }
