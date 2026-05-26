@@ -538,7 +538,7 @@ func NewRouter(
 	router.PUT("/tujuan_opd/renja/rankhir/indikator/update/:kodeIndikator", tujuanOpdController.UpdateTujuanRenjaRankhirIndikator)
 	router.GET("/tujuan_opd/ranwal/:kode_opd/:tahun", tujuanOpdController.FindTujuanOpdRanwal)
 	router.GET("/tujuan_opd/rankhir/:kode_opd/:tahun", tujuanOpdController.FindTujuanOpdRankhir)
-	router.GET("/tujuan_opd/penetapan/:kode_opd/:tahun", tujuanOpdController.FindTujuanOpdPenetapan)
+	// router.GET("/tujuan_opd/penetapan/:kode_opd/:tahun", tujuanOpdController.FindTujuanOpdPenetapan)
 	router.POST("/tujuan_opd/renja/penetapan/indikator/create/:tujuanOpdId", tujuanOpdController.CreateTujuanRenjaPenetapanIndikator)
 	router.PUT("/tujuan_opd/renja/penetapan/indikator/update/:kodeIndikator", tujuanOpdController.UpdateTujuanRenjaPenetapanIndikator)
 
@@ -568,6 +568,9 @@ func NewRouter(
 
 	//delete crosscutting opd
 	router.DELETE("/crosscutting_opd/delete_crosscutting_diterima/:crosscuttingId", crosscuttingOpdController.DeleteCrosscuttingDiterima)
+
+	//tujuan opd penetapan
+	router.GET("/tujuan_opd/penetapan/:kode_opd/:tahun", tujuanOpdController.TujuanOpdPenetapan)
 
 	return router
 }

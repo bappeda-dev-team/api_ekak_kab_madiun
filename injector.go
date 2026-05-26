@@ -444,6 +444,11 @@ var cloneRecordSet = wire.NewSet(
 	wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)),
 )
 
+var lockDataRepository = wire.NewSet(
+	repository.NewLockDataRepositoryImpl,
+	wire.Bind(new(repository.LockDataRepository), new(*repository.LockDataRepositoryImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -499,6 +504,7 @@ func InitializeServer() *http.Server {
 		strukturOrganisasiSet,
 		jabatanPegawaiSet,
 		cloneRecordSet,
+		lockDataRepository,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

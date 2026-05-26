@@ -8,10 +8,14 @@ import (
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"ekak_kabupaten_madiun/model/web/tujuanopd"
 	"ekak_kabupaten_madiun/repository"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -21,15 +25,17 @@ type TujuanOpdServiceImpl struct {
 	OpdRepository          repository.OpdRepository
 	PeriodeRepository      repository.PeriodeRepository
 	BidangUrusanRepository repository.BidangUrusanRepository
+	LockDataRepository     repository.LockDataRepository
 	DB                     *sql.DB
 }
 
-func NewTujuanOpdServiceImpl(tujuanOpdRepository repository.TujuanOpdRepository, opdRepository repository.OpdRepository, periodeRepository repository.PeriodeRepository, bidangUrusanRepository repository.BidangUrusanRepository, DB *sql.DB) *TujuanOpdServiceImpl {
+func NewTujuanOpdServiceImpl(tujuanOpdRepository repository.TujuanOpdRepository, opdRepository repository.OpdRepository, periodeRepository repository.PeriodeRepository, bidangUrusanRepository repository.BidangUrusanRepository, lockDataRepository repository.LockDataRepository, DB *sql.DB) *TujuanOpdServiceImpl {
 	return &TujuanOpdServiceImpl{
 		TujuanOpdRepository:    tujuanOpdRepository,
 		OpdRepository:          opdRepository,
 		PeriodeRepository:      periodeRepository,
 		BidangUrusanRepository: bidangUrusanRepository,
+		LockDataRepository:     lockDataRepository,
 		DB:                     DB,
 	}
 }
@@ -750,9 +756,15 @@ func (service *TujuanOpdServiceImpl) fetchBidangUrusanMap(
 // HELPER: bangun response TujuanOpdwithBidangUrusanResponse
 //
 //	dari domain, opd, dan bidangUrusanMap (sudah di-batch)
-//
-// ─────────────────────────────────────────────────────────────────
 func (service *TujuanOpdServiceImpl) buildTujuanOpdResponse(
+	tujuanOpds []domain.TujuanOpd,
+	opd domainmaster.Opd,
+	bidangUrusanMap map[string]domainmaster.BidangUrusan,
+) []tujuanopd.TujuanOpdwithBidangUrusanResponse {
+	return BuildTujuanOpdBidangResponse(tujuanOpds, opd, bidangUrusanMap, nil)
+}
+
+func (service *TujuanOpdServiceImpl) buildTujuanOpdResponseRankhir(
 	tujuanOpds []domain.TujuanOpd,
 	opd domainmaster.Opd,
 	bidangUrusanMap map[string]domainmaster.BidangUrusan,
@@ -776,7 +788,8 @@ func (service *TujuanOpdServiceImpl) buildTujuanOpdResponse(
 				RumusPerhitungan:    indikator.RumusPerhitungan.String,
 				SumberData:          indikator.SumberData.String,
 				DefinisiOperasional: indikator.DefinisiOperasional.String,
-				Jenis:               indikator.Jenis,
+				Jenis:               "rankhir",                          // ← selalu rankhir di endpoint ini
+				SumberJenis:         strings.TrimSpace(indikator.Jenis), // ← nilai asli dari DB
 				Target:              make([]tujuanopd.TargetResponse, 0),
 			}
 			for _, target := range indikator.Target {
@@ -790,7 +803,6 @@ func (service *TujuanOpdServiceImpl) buildTujuanOpdResponse(
 			}
 			tujuanResponse.Indikator = append(tujuanResponse.Indikator, indikatorResponse)
 		}
-		// Gunakan bidangUrusanMap hasil batch — tidak ada query loop
 		mapKey := tujuan.KodeBidangUrusan
 		if mapKey == "" {
 			mapKey = "000"
@@ -826,6 +838,78 @@ func (service *TujuanOpdServiceImpl) buildTujuanOpdResponse(
 	}
 	return responses
 }
+
+// ─────────────────────────────────────────────────────────────────
+// func (service *TujuanOpdServiceImpl) buildTujuanOpdResponse(tujuanOpds []domain.TujuanOpd, opd domainmaster.Opd, bidangUrusanMap map[string]domainmaster.BidangUrusan) []tujuanopd.TujuanOpdwithBidangUrusanResponse {
+// 	responseMap := make(map[string]*tujuanopd.TujuanOpdwithBidangUrusanResponse)
+// 	for _, tujuan := range tujuanOpds {
+// 		tujuanResponse := tujuanopd.TujuanOpdResponse{
+// 			Id:           tujuan.Id,
+// 			Tujuan:       tujuan.Tujuan,
+// 			TahunAwal:    tujuan.TahunAwal,
+// 			TahunAkhir:   tujuan.TahunAkhir,
+// 			JenisPeriode: tujuan.JenisPeriode,
+// 			Indikator:    make([]tujuanopd.IndikatorResponse, 0),
+// 		}
+// 		for _, indikator := range tujuan.Indikator {
+// 			indikatorResponse := tujuanopd.IndikatorResponse{
+// 				Id:                  indikator.Id,
+// 				KodeIndikator:       indikator.KodeIndikator,
+// 				IdTujuanOpd:         tujuan.Id,
+// 				NamaIndikator:       indikator.Indikator,
+// 				RumusPerhitungan:    indikator.RumusPerhitungan.String,
+// 				SumberData:          indikator.SumberData.String,
+// 				DefinisiOperasional: indikator.DefinisiOperasional.String,
+// 				Jenis:               indikator.Jenis,
+// 				Target:              make([]tujuanopd.TargetResponse, 0),
+// 			}
+// 			for _, target := range indikator.Target {
+// 				indikatorResponse.Target = append(indikatorResponse.Target, tujuanopd.TargetResponse{
+// 					Id:              target.Id,
+// 					IndikatorId:     indikator.KodeIndikator,
+// 					Tahun:           target.Tahun,
+// 					TargetIndikator: target.Target,
+// 					SatuanIndikator: target.Satuan,
+// 				})
+// 			}
+// 			tujuanResponse.Indikator = append(tujuanResponse.Indikator, indikatorResponse)
+// 		}
+// 		// Gunakan bidangUrusanMap hasil batch — tidak ada query loop
+// 		mapKey := tujuan.KodeBidangUrusan
+// 		if mapKey == "" {
+// 			mapKey = "000"
+// 		}
+// 		if existing, exists := responseMap[mapKey]; exists {
+// 			existing.TujuanOpd = append(existing.TujuanOpd, tujuanResponse)
+// 		} else {
+// 			bu := bidangUrusanMap[tujuan.KodeBidangUrusan]
+// 			kodeUrusan := ""
+// 			if len(bu.KodeBidangUrusan) > 0 {
+// 				kodeUrusan = bu.KodeBidangUrusan[:1]
+// 			}
+// 			responseMap[mapKey] = &tujuanopd.TujuanOpdwithBidangUrusanResponse{
+// 				Urusan:           bu.NamaUrusan,
+// 				KodeUrusan:       kodeUrusan,
+// 				KodeBidangUrusan: bu.KodeBidangUrusan,
+// 				NamaBidangUrusan: bu.NamaBidangUrusan,
+// 				KodeOpd:          tujuan.KodeOpd,
+// 				NamaOpd:          opd.NamaOpd,
+// 				TujuanOpd:        []tujuanopd.TujuanOpdResponse{tujuanResponse},
+// 			}
+// 		}
+// 	}
+// 	var responses []tujuanopd.TujuanOpdwithBidangUrusanResponse
+// 	for _, r := range responseMap {
+// 		responses = append(responses, *r)
+// 	}
+// 	sort.Slice(responses, func(i, j int) bool {
+// 		return responses[i].KodeBidangUrusan < responses[j].KodeBidangUrusan
+// 	})
+// 	if len(responses) == 0 {
+// 		return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0)
+// 	}
+// 	return responses
+// }
 
 // ─────────────────────────────────────────────────────────────────
 // GET /tujuan_opd/renstra/:kode_opd/:tahun_awal/:tahun_akhir
@@ -867,7 +951,7 @@ func (service *TujuanOpdServiceImpl) FindTujuanRenstra(
 	if err != nil {
 		return nil, err
 	}
-	return service.buildTujuanOpdResponse(tujuanOpds, opd, bidangUrusanMap), nil
+	return BuildTujuanOpdBidangResponse(tujuanOpds, opd, bidangUrusanMap, &TujuanOpdBidangResponseOpts{ForceIndicatorJenisRankhir: true}), nil
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -915,6 +999,7 @@ func (service *TujuanOpdServiceImpl) FindTujuanRanwal(
 // jenis indikator hardcode = "rankhir"
 // target: 1 slot untuk tahun yang diminta
 // ─────────────────────────────────────────────────────────────────
+
 func (service *TujuanOpdServiceImpl) FindTujuanRankhir(
 	ctx context.Context,
 	kodeOpd, tahun, jenisPeriode string,
@@ -934,21 +1019,88 @@ func (service *TujuanOpdServiceImpl) FindTujuanRankhir(
 	if err != nil {
 		return nil, err
 	}
-	tujuanOpds, err := service.TujuanOpdRepository.FindAllByTahun(
+	ranwalOpds, err := service.TujuanOpdRepository.FindAllByTahun(
+		ctx, tx, kodeOpd, tahun, jenisPeriode, "ranwal",
+	)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	rankhirOpds, err := service.TujuanOpdRepository.FindAllByTahun(
 		ctx, tx, kodeOpd, tahun, jenisPeriode, "rankhir",
 	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0), nil
-		}
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
+	}
+	tujuanOpds := mergeRanwalPrioritasRankhirPerTujuan(ranwalOpds, rankhirOpds)
+	if len(tujuanOpds) == 0 {
+		return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0), nil
 	}
 	bidangUrusanMap, err := service.fetchBidangUrusanMap(ctx, tx, tujuanOpds)
 	if err != nil {
 		return nil, err
 	}
-	return service.buildTujuanOpdResponse(tujuanOpds, opd, bidangUrusanMap), nil
+	return service.buildTujuanOpdResponseRankhir(tujuanOpds, opd, bidangUrusanMap), nil
 }
+
+func mergeRanwalPrioritasRankhirPerTujuan(ranwalOpds, rankhirOpds []domain.TujuanOpd) []domain.TujuanOpd {
+	rhMap := make(map[int]domain.TujuanOpd, len(rankhirOpds))
+	for _, rh := range rankhirOpds {
+		rhMap[rh.Id] = rh
+	}
+	out := make([]domain.TujuanOpd, 0, len(ranwalOpds)+len(rankhirOpds))
+	seen := make(map[int]struct{}, len(ranwalOpds))
+	for _, rt := range ranwalOpds {
+		merged := rt
+		if rh, ok := rhMap[rt.Id]; ok && len(rh.Indikator) > 0 {
+			merged.Indikator = rh.Indikator
+		}
+		out = append(out, merged)
+		seen[rt.Id] = struct{}{}
+	}
+	// Tujuan yang ada indikator rankhir tapi tidak muncul pada layer ranwal (edge case)
+	for _, rh := range rankhirOpds {
+		if _, ok := seen[rh.Id]; ok {
+			continue
+		}
+		if len(rh.Indikator) == 0 {
+			continue
+		}
+		out = append(out, rh)
+	}
+	return out
+}
+
+// func (service *TujuanOpdServiceImpl) FindTujuanRankhir(	ctx context.Context,	kodeOpd, tahun, jenisPeriode string,) ([]tujuanopd.TujuanOpdwithBidangUrusanResponse, error) {
+// 	if len(tahun) != 4 {
+// 		return nil, fmt.Errorf("format tahun tidak valid")
+// 	}
+// 	if _, err := strconv.Atoi(tahun); err != nil {
+// 		return nil, fmt.Errorf("tahun harus berupa angka")
+// 	}
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+// 	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	tujuanOpds, err := service.TujuanOpdRepository.FindAllByTahun(
+// 		ctx, tx, kodeOpd, tahun, jenisPeriode, "rankhir",
+// 	)
+// 	if err != nil {
+// 		if err == sql.ErrNoRows {
+// 			return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0), nil
+// 		}
+// 		return nil, err
+// 	}
+// 	bidangUrusanMap, err := service.fetchBidangUrusanMap(ctx, tx, tujuanOpds)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return service.buildTujuanOpdResponse(tujuanOpds, opd, bidangUrusanMap), nil
+// }
 
 func (service *TujuanOpdServiceImpl) CreateTujuanRenjaIndikator(
 	ctx context.Context,
@@ -1137,4 +1289,454 @@ func (service *TujuanOpdServiceImpl) FindTujuanPenetapan(
 		return nil, err
 	}
 	return service.buildTujuanOpdResponse(tujuanOpds, opd, bidangUrusanMap), nil
+}
+
+const lockJenisTujuanOpd = "tujuan_opd"
+
+func (service *TujuanOpdServiceImpl) TujuanOpdPenetapan(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]tujuanopd.TujuanOpdPenetapanResponse, error) {
+	if len(tahun) != 4 {
+		return nil, fmt.Errorf("format tahun tidak valid")
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	// ── 1. Cek status lock dari tb_lock_data ──────────────────────
+	isLocked, err := service.LockDataRepository.IsLocked(ctx, tx, lockJenisTujuanOpd, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	wasLockedBefore := isLocked
+
+	log.Printf("[TujuanOpdPenetapan] status lock kodeOpd=%s tahun=%s: %v", kodeOpd, tahun, isLocked)
+	// ── 2. Selalu fetch dari Penetapan Service ────────────────────
+	penetapanURL := os.Getenv("PENETAPAN_SERVICE")
+	url := fmt.Sprintf("%s/opd/tujuan?kodeOpd=%s&tahun=%s", penetapanURL, kodeOpd, tahun)
+	log.Printf("[TujuanOpdPenetapan] fetch ke: %s", url)
+	serviceItems, fetchErr := fetchPenetapanServiceItems(url)
+	serviceHasData := fetchErr == nil && len(serviceItems) > 0
+	if fetchErr != nil {
+		log.Printf("[TujuanOpdPenetapan] fetch GAGAL: %v", fetchErr)
+	} else {
+		log.Printf("[TujuanOpdPenetapan] fetch berhasil: %d item", len(serviceItems))
+	}
+	// ── 3. Jika service punya data  ─────────────
+	var serviceResp []tujuanopd.TujuanOpdPenetapanResponse
+	if serviceHasData {
+		serviceResp = buildPenetapanServiceResponse(serviceItems, opd, wasLockedBefore)
+	}
+	// ── 4. Jika TIDAK terkunci → tampilkan juga data rankhir DB ───
+	var dbResp []tujuanopd.TujuanOpdPenetapanResponse
+	if !wasLockedBefore {
+		// ── 4a. Bangun "rankhir efektif" sama persis seperti FindTujuanRankhir ──
+		//         ranwal sebagai kerangka; indikator rankhir menimpa per tujuan.
+		ranwalOpds, ranwalErr := service.TujuanOpdRepository.FindAllByTahun(
+			ctx, tx, kodeOpd, tahun, jenisPeriode, "ranwal",
+		)
+		if ranwalErr != nil && ranwalErr != sql.ErrNoRows {
+			return nil, ranwalErr
+		}
+		rankhirOpds, rankhirErr := service.TujuanOpdRepository.FindAllByTahun(
+			ctx, tx, kodeOpd, tahun, jenisPeriode, "rankhir",
+		)
+		if rankhirErr != nil && rankhirErr != sql.ErrNoRows {
+			return nil, rankhirErr
+		}
+		// Gabung ranwal + rankhir → "rankhir efektif" (sama dengan endpoint rankhir)
+		rankhirEfektif := mergeRanwalPrioritasRankhirPerTujuan(ranwalOpds, rankhirOpds)
+		log.Printf("[TujuanOpdPenetapan] rankhir-efektif: ranwal %d tujuan, rankhir %d tujuan → %d baris gabungan",
+			len(ranwalOpds), len(rankhirOpds), len(rankhirEfektif))
+		// ── 4b. Fetch layer penetapan lalu timpa indikator per tujuan bila ada ──
+		penetapanOpds, penetapanErr := service.TujuanOpdRepository.FindAllByTahun(
+			ctx, tx, kodeOpd, tahun, jenisPeriode, "penetapan",
+		)
+		if penetapanErr != nil && penetapanErr != sql.ErrNoRows {
+			return nil, penetapanErr
+		}
+		perencanaaanSrc := mergeRankhirPrioritasPenetapanPerTujuan(rankhirEfektif, penetapanOpds)
+		log.Printf("[TujuanOpdPenetapan] perencanaan final: rankhir-efektif %d, penetapan-layer %d → %d baris",
+			len(rankhirEfektif), len(penetapanOpds), len(perencanaaanSrc))
+		if len(perencanaaanSrc) > 0 {
+			bidangUrusanMap, err := service.fetchBidangUrusanMap(ctx, tx, perencanaaanSrc)
+			if err != nil {
+				return nil, err
+			}
+			dbResp = buildTujuanOpdPenetapanFromDB(perencanaaanSrc, opd, bidangUrusanMap, false)
+		}
+	}
+	// ── 5. Gabungkan hasil ────────────────────────────────────────
+	result := make([]tujuanopd.TujuanOpdPenetapanResponse, 0, len(serviceResp)+len(dbResp))
+	result = append(result, serviceResp...)
+	result = append(result, dbResp...)
+	return result, nil
+}
+
+func rankhirHasIndikatorDanTarget(tujuanOpds []domain.TujuanOpd) bool {
+	for _, t := range tujuanOpds {
+		for _, ind := range t.Indikator {
+			if len(ind.Target) > 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func mergeRankhirPrioritasPenetapanPerTujuan(rankhirOpds, penetapanOpds []domain.TujuanOpd) []domain.TujuanOpd {
+	penMap := make(map[int]domain.TujuanOpd, len(penetapanOpds))
+	for _, pt := range penetapanOpds {
+		penMap[pt.Id] = pt
+	}
+	out := make([]domain.TujuanOpd, 0, len(rankhirOpds))
+	for _, rt := range rankhirOpds {
+		merged := rt
+		if pt, ok := penMap[rt.Id]; ok && indikatorPunyaMinimalSatuJenisPenetapan(pt.Indikator) {
+			merged.Indikator = pt.Indikator
+		}
+		out = append(out, merged)
+	}
+	return out
+}
+
+func (service *TujuanOpdServiceImpl) SetTujuanOpdLocked(
+	ctx context.Context, tujuanOpdId int, locked bool,
+) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.TujuanOpdRepository.SetTujuanOpdLocked(ctx, tx, tujuanOpdId, locked)
+}
+
+func parseTujuanOpdId(kode string) int {
+	parts := strings.Split(kode, "-")
+	if len(parts) == 0 {
+		return 0
+	}
+	id, _ := strconv.Atoi(parts[len(parts)-1])
+	return id
+}
+
+// Struct untuk decode response Penetapan Service
+type penetapanServiceWrapper struct {
+	Data penetapanServiceData `json:"data"`
+}
+type penetapanServiceData struct {
+	KodeOpd    string                 `json:"kode_opd"`
+	TahunAktif int                    `json:"tahun_aktif"`
+	Versi      int                    `json:"versi"`
+	IsLocked   bool                   `json:"is_locked"`
+	TujuanOpds []penetapanServiceItem `json:"tujuan_opds"`
+}
+type penetapanServiceItem struct {
+	Id            int    `json:"id"`
+	KodeTujuanOpd string `json:"kode_tujuan_opd"`
+	TujuanOpd     string `json:"tujuan_opd"`
+	Periode       string `json:"periode"`
+	Indikators    []struct {
+		Id                  int    `json:"id"`
+		KodeIndikator       string `json:"kode_indikator"`
+		Indikator           string `json:"indikator"`
+		RumusPerhitungan    string `json:"rumus_perhitungan"`
+		SumberData          string `json:"sumber_data"`
+		DefinisiOperasional string `json:"definisi_operasional"`
+		TahunAktif          int    `json:"tahun_aktif"`
+		Targets             []struct {
+			Id         int    `json:"id"`
+			KodeTarget string `json:"kode_target"`
+			Tahun      int    `json:"tahun"`
+			Target     int    `json:"target"`
+			Satuan     string `json:"satuan"`
+		} `json:"targets"`
+	} `json:"indikators"`
+}
+
+func fetchPenetapanServiceItems(url string) ([]penetapanServiceItem, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Printf("[fetchPenetapanServiceItems] HTTP error ke %s: %v", url, err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	log.Printf("[fetchPenetapanServiceItems] response status: %d dari %s", resp.StatusCode, url)
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("penetapan service status: %d", resp.StatusCode)
+	}
+	// Response adalah single object { "data": { ..., "tujuan_opds": [...] } }
+	var wrapper penetapanServiceWrapper
+	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
+		log.Printf("[fetchPenetapanServiceItems] decode error: %v", err)
+		return nil, err
+	}
+	items := wrapper.Data.TujuanOpds
+	log.Printf("[fetchPenetapanServiceItems] berhasil decode %d tujuan_opds (kode_opd=%s, tahun=%d, is_locked=%v)",
+		len(items), wrapper.Data.KodeOpd, wrapper.Data.TahunAktif, wrapper.Data.IsLocked)
+	return items, nil
+}
+
+func buildPenetapanServiceResponse(
+	items []penetapanServiceItem,
+	opd domainmaster.Opd,
+	isLock bool,
+) []tujuanopd.TujuanOpdPenetapanResponse {
+	tujuanResponses := make([]tujuanopd.TujuanOpdResponse, 0, len(items))
+	for _, item := range items {
+		dbId := parseTujuanOpdId(item.KodeTujuanOpd) // "TUJ-OPD-126" → 126
+		indikators := make([]tujuanopd.IndikatorResponse, 0, len(item.Indikators))
+		for _, ind := range item.Indikators {
+			targets := make([]tujuanopd.TargetResponse, 0, len(ind.Targets))
+			for _, t := range ind.Targets {
+				targets = append(targets, tujuanopd.TargetResponse{
+					Id:              strconv.Itoa(t.Id),
+					IndikatorId:     ind.KodeIndikator,
+					Tahun:           strconv.Itoa(t.Tahun),
+					TargetIndikator: strconv.Itoa(t.Target),
+					SatuanIndikator: t.Satuan,
+				})
+			}
+			indikators = append(indikators, tujuanopd.IndikatorResponse{
+				Id:                  strconv.Itoa(ind.Id),
+				KodeIndikator:       ind.KodeIndikator,
+				IdTujuanOpd:         dbId,
+				NamaIndikator:       ind.Indikator,
+				DefinisiOperasional: ind.DefinisiOperasional,
+				RumusPerhitungan:    ind.RumusPerhitungan,
+				SumberData:          ind.SumberData,
+				Target:              targets,
+			})
+		}
+		tujuanResponses = append(tujuanResponses, tujuanopd.TujuanOpdResponse{
+			Id:     dbId,
+			Tujuan: item.TujuanOpd,
+			// IsLocked:       true,
+			JenisPenetapan: "penetapan_service",
+			Indikator:      indikators,
+		})
+	}
+	// Semua tujuan dari satu response service masuk ke satu wrapper
+	return []tujuanopd.TujuanOpdPenetapanResponse{{
+		KodeOpd:   opd.KodeOpd,
+		NamaOpd:   opd.NamaOpd,
+		TujuanOpd: tujuanResponses,
+	}}
+}
+
+func buildTujuanOpdPenetapanFromDB(
+	tujuanOpds []domain.TujuanOpd,
+	opd domainmaster.Opd,
+	bidangUrusanMap map[string]domainmaster.BidangUrusan,
+	isLock bool,
+	// sumberJenis string,
+) []tujuanopd.TujuanOpdPenetapanResponse {
+	responseMap := make(map[string]*tujuanopd.TujuanOpdPenetapanResponse)
+	for _, tujuan := range tujuanOpds {
+		// Bangun indikator beserta target
+		indikatorResponses := make([]tujuanopd.IndikatorResponse, 0, len(tujuan.Indikator))
+		for _, ind := range tujuan.Indikator {
+			targetResponses := make([]tujuanopd.TargetResponse, 0, len(ind.Target))
+			for _, t := range ind.Target {
+				targetResponses = append(targetResponses, tujuanopd.TargetResponse{
+					Id:              t.Id,
+					IndikatorId:     ind.KodeIndikator,
+					Tahun:           t.Tahun,
+					TargetIndikator: t.Target,
+					SatuanIndikator: t.Satuan,
+				})
+			}
+			indikatorResponses = append(indikatorResponses, tujuanopd.IndikatorResponse{
+				Id:                  ind.Id,
+				KodeIndikator:       ind.KodeIndikator,
+				IdTujuanOpd:         tujuan.Id,
+				NamaIndikator:       ind.Indikator,
+				RumusPerhitungan:    ind.RumusPerhitungan.String,
+				SumberData:          ind.SumberData.String,
+				DefinisiOperasional: ind.DefinisiOperasional.String,
+				Jenis:               ind.Jenis,
+				Target:              targetResponses,
+			})
+		}
+		tujuanResp := tujuanopd.TujuanOpdResponse{
+			Id:             tujuan.Id,
+			Tujuan:         tujuan.Tujuan,
+			TahunAwal:      tujuan.TahunAwal,
+			TahunAkhir:     tujuan.TahunAkhir,
+			JenisPeriode:   tujuan.JenisPeriode,
+			JenisPenetapan: "penetapan_perencanaan",
+			Indikator:      indikatorResponses,
+		}
+		mapKey := tujuan.KodeBidangUrusan
+		if mapKey == "" {
+			mapKey = "000"
+		}
+		if existing, ok := responseMap[mapKey]; ok {
+			existing.TujuanOpd = append(existing.TujuanOpd, tujuanResp)
+		} else {
+			bu := bidangUrusanMap[tujuan.KodeBidangUrusan]
+			kodeUrusan := ""
+			if len(bu.KodeBidangUrusan) > 0 {
+				kodeUrusan = bu.KodeBidangUrusan[:1]
+			}
+			responseMap[mapKey] = &tujuanopd.TujuanOpdPenetapanResponse{
+				Urusan:           bu.NamaUrusan,
+				KodeUrusan:       kodeUrusan,
+				KodeBidangUrusan: bu.KodeBidangUrusan,
+				NamaBidangUrusan: bu.NamaBidangUrusan,
+				KodeOpd:          tujuan.KodeOpd,
+				NamaOpd:          opd.NamaOpd,
+				IsLock:           isLock,
+				TujuanOpd:        []tujuanopd.TujuanOpdResponse{tujuanResp},
+			}
+		}
+	}
+	result := make([]tujuanopd.TujuanOpdPenetapanResponse, 0, len(responseMap))
+	for _, r := range responseMap {
+		result = append(result, *r)
+	}
+	return result
+}
+
+func tujuanOpdListPunyaMinimalSatuIndikator(tujuanOpds []domain.TujuanOpd) bool {
+	for _, t := range tujuanOpds {
+		if len(t.Indikator) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func indikatorPunyaMinimalSatuJenisPenetapan(rows []domain.Indikator) bool {
+	for _, i := range rows {
+		if strings.EqualFold(strings.TrimSpace(i.Jenis), "penetapan") {
+			return true
+		}
+	}
+	return false
+}
+
+func (service *TujuanOpdServiceImpl) LockTujuanOpd(ctx context.Context, kodeOpd, tahun string) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.LockDataRepository.Lock(ctx, tx, lockJenisTujuanOpd, kodeOpd, tahun)
+}
+func (service *TujuanOpdServiceImpl) UnlockTujuanOpd(ctx context.Context, kodeOpd, tahun string) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.LockDataRepository.Unlock(ctx, tx, lockJenisTujuanOpd, kodeOpd, tahun)
+}
+
+// rankhiir builder
+type TujuanOpdBidangResponseOpts struct {
+	// ForceIndicatorJenisRankhir = true → kolom "jenis" di JSON selalu "rankhir";
+	// nilai asli di database (ranwal/rankhir/penetapan) dipindah ke "sumber_jenis".
+	ForceIndicatorJenisRankhir bool
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helper murni (pure function, tidak bergantung receiver).
+// ─────────────────────────────────────────────────────────────────
+// buildIndikatorJenisDisplay menentukan nilai "jenis" dan "sumber_jenis" untuk JSON.
+func buildIndikatorJenisDisplay(dbJenis string, opts *TujuanOpdBidangResponseOpts) (jenisJSON, sumberJenisJSON string) {
+	db := strings.TrimSpace(dbJenis)
+	if opts != nil && opts.ForceIndicatorJenisRankhir {
+		return "rankhir", db
+	}
+	return db, ""
+}
+
+// buildIndikatorResponseItem mengonversi satu domain.Indikator + target → IndikatorResponse.
+func buildIndikatorResponseItem(ind domain.Indikator, tujuanId int, opts *TujuanOpdBidangResponseOpts) tujuanopd.IndikatorResponse {
+	jenisJSON, sumberJenisJSON := buildIndikatorJenisDisplay(ind.Jenis, opts)
+	targets := make([]tujuanopd.TargetResponse, 0, len(ind.Target))
+	for _, t := range ind.Target {
+		targets = append(targets, tujuanopd.TargetResponse{
+			Id:              t.Id,
+			IndikatorId:     ind.KodeIndikator,
+			Tahun:           t.Tahun,
+			TargetIndikator: t.Target,
+			SatuanIndikator: t.Satuan,
+		})
+	}
+	return tujuanopd.IndikatorResponse{
+		Id:                  ind.Id,
+		KodeIndikator:       ind.KodeIndikator,
+		IdTujuanOpd:         tujuanId,
+		NamaIndikator:       ind.Indikator,
+		RumusPerhitungan:    ind.RumusPerhitungan.String,
+		SumberData:          ind.SumberData.String,
+		DefinisiOperasional: ind.DefinisiOperasional.String,
+		Jenis:               jenisJSON,
+		SumberJenis:         sumberJenisJSON,
+		Target:              targets,
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Builder utama (standalone function, dipanggil dari method service).
+// ─────────────────────────────────────────────────────────────────
+// BuildTujuanOpdBidangResponse membangun []TujuanOpdwithBidangUrusanResponse
+// dari slice domain, opd, dan bidangUrusanMap.
+// opts boleh nil (perilaku default: jenis = dari DB, sumber_jenis kosong).
+func BuildTujuanOpdBidangResponse(
+	tujuanOpds []domain.TujuanOpd,
+	opd domainmaster.Opd,
+	bidangUrusanMap map[string]domainmaster.BidangUrusan,
+	opts *TujuanOpdBidangResponseOpts,
+) []tujuanopd.TujuanOpdwithBidangUrusanResponse {
+	responseMap := make(map[string]*tujuanopd.TujuanOpdwithBidangUrusanResponse)
+	for _, tujuan := range tujuanOpds {
+		indikatorResponses := make([]tujuanopd.IndikatorResponse, 0, len(tujuan.Indikator))
+		for _, ind := range tujuan.Indikator {
+			indikatorResponses = append(indikatorResponses, buildIndikatorResponseItem(ind, tujuan.Id, opts))
+		}
+		tujuanResp := tujuanopd.TujuanOpdResponse{
+			Id:           tujuan.Id,
+			Tujuan:       tujuan.Tujuan,
+			TahunAwal:    tujuan.TahunAwal,
+			TahunAkhir:   tujuan.TahunAkhir,
+			JenisPeriode: tujuan.JenisPeriode,
+			Indikator:    indikatorResponses,
+		}
+		mapKey := tujuan.KodeBidangUrusan
+		if mapKey == "" {
+			mapKey = "000"
+		}
+		if existing, ok := responseMap[mapKey]; ok {
+			existing.TujuanOpd = append(existing.TujuanOpd, tujuanResp)
+		} else {
+			bu := bidangUrusanMap[tujuan.KodeBidangUrusan]
+			kodeUrusan := ""
+			if len(bu.KodeBidangUrusan) > 0 {
+				kodeUrusan = bu.KodeBidangUrusan[:1]
+			}
+			responseMap[mapKey] = &tujuanopd.TujuanOpdwithBidangUrusanResponse{
+				Urusan:           bu.NamaUrusan,
+				KodeUrusan:       kodeUrusan,
+				KodeBidangUrusan: bu.KodeBidangUrusan,
+				NamaBidangUrusan: bu.NamaBidangUrusan,
+				KodeOpd:          tujuan.KodeOpd,
+				NamaOpd:          opd.NamaOpd,
+				TujuanOpd:        []tujuanopd.TujuanOpdResponse{tujuanResp},
+			}
+		}
+	}
+	result := make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0, len(responseMap))
+	for _, r := range responseMap {
+		result = append(result, *r)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].KodeBidangUrusan < result[j].KodeBidangUrusan
+	})
+	return result
 }

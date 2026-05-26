@@ -2499,6 +2499,73 @@
                 }
             }
         },
+        "/trialtujuan_opd/penetapan/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Penetapan"
+                ],
+                "summary": "Tujuan Opd Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TujuanOpdPenetapanResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tujuan_opd/detail/{tujuanOpdId}": {
             "get": {
                 "security": [
@@ -5513,6 +5580,35 @@
                 }
             }
         },
+        "tujuanopd.TujuanOpdPenetapanResponse": {
+            "type": "object",
+            "properties": {
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kode_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "tujuan_opd": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TujuanOpdResponse"
+                    }
+                },
+                "urusan": {
+                    "type": "string"
+                }
+            }
+        },
         "tujuanopd.TujuanOpdResponse": {
             "type": "object",
             "properties": {
@@ -5524,6 +5620,12 @@
                     "items": {
                         "$ref": "#/definitions/tujuanopd.IndikatorResponse"
                     }
+                },
+                "is_locked": {
+                    "type": "boolean"
+                },
+                "jenis_penetapan": {
+                    "type": "string"
                 },
                 "jenis_periode": {
                     "type": "string"
