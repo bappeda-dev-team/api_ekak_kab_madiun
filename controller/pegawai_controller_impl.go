@@ -115,7 +115,8 @@ func (controller *PegawaiControllerImpl) FindById(writer http.ResponseWriter, re
 
 func (controller *PegawaiControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := request.URL.Query().Get("kode_opd")
-	pegawaiResponses, err := controller.PegawaiService.FindAll(request.Context(), kodeOpd)
+	nip := request.URL.Query().Get("nip")
+	pegawaiResponses, err := controller.PegawaiService.FindAll(request.Context(), kodeOpd, nip)
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   500,
