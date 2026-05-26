@@ -357,18 +357,19 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 				emptyTargets := createEmptyTargets(indikatorId.String, tahunAwal, tahunAkhir)
 
 				iku = &domain.Indikator{
-					Id:               indikatorId.String,
-					AsalIku:          jenis,
-					ParentOpdId:      helper.GetNullStringValue(parentId),
-					ParentName:       helper.GetNullStringValue(namaParent),
-					Indikator:        helper.GetNullStringValue(namaIndikator),
-					RumusPerhitungan: rumusPerhitungan,
-					SumberData:       sumberData,
-					TahunAwal:        tahunAwal,
-					TahunAkhir:       tahunAkhir,
-					JenisPeriode:     jenisPeriode,
-					Target:           emptyTargets,
-					IkuActive:        active,
+					Id:                  indikatorId.String,
+					AsalIku:             jenis,
+					ParentOpdId:         helper.GetNullStringValue(parentId),
+					ParentName:          helper.GetNullStringValue(namaParent),
+					Indikator:           helper.GetNullStringValue(namaIndikator),
+					DefinisiOperasional: definisiOperasional,
+					RumusPerhitungan:    rumusPerhitungan,
+					SumberData:          sumberData,
+					TahunAwal:           tahunAwal,
+					TahunAkhir:          tahunAkhir,
+					JenisPeriode:        jenisPeriode,
+					Target:              emptyTargets,
+					IkuActive:           active,
 				}
 				ikuMap[key] = iku
 			}

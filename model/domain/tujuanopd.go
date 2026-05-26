@@ -12,4 +12,5 @@ type TujuanOpd struct {
 	TahunAkhir       string
 	JenisPeriode     string
 	Indikator        []Indikator
+	IsLocked         bool
 }
