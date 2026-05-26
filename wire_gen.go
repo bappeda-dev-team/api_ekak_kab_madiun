@@ -117,7 +117,8 @@ func InitializeServer() *http.Server {
 	userControllerImpl := controller.NewUserControllerImpl(userServiceImpl)
 	roleServiceImpl := service.NewRoleServiceImpl(roleRepositoryImpl, db)
 	roleControllerImpl := controller.NewRoleControllerImpl(roleServiceImpl)
-	tujuanOpdServiceImpl := service.NewTujuanOpdServiceImpl(tujuanOpdRepositoryImpl, opdRepositoryImpl, periodeRepositoryImpl, bidangUrusanRepositoryImpl, db)
+	lockDataRepositoryImpl := repository.NewLockDataRepositoryImpl()
+	tujuanOpdServiceImpl := service.NewTujuanOpdServiceImpl(tujuanOpdRepositoryImpl, opdRepositoryImpl, periodeRepositoryImpl, bidangUrusanRepositoryImpl, lockDataRepositoryImpl, db)
 	tujuanOpdControllerImpl := controller.NewTujuanOpdControllerImpl(tujuanOpdServiceImpl)
 	crosscuttingOpdServiceImpl := service.NewCrosscuttingOpdServiceImpl(crosscuttingOpdRepositoryImpl, pohonKinerjaRepositoryImpl, pegawaiRepositoryImpl, opdRepositoryImpl, db)
 	crosscuttingOpdControllerImpl := controller.NewCrosscuttingOpdControllerImpl(crosscuttingOpdServiceImpl)
@@ -287,3 +288,5 @@ var strukturOrganisasiSet = wire.NewSet(repository.NewStrukturOrganisasiReposito
 var jabatanPegawaiSet = wire.NewSet(repository.NewJabatanPegawaiRepositoryImpl, wire.Bind(new(repository.JabatanPegawaiRepository), new(*repository.JabatanPegawaiRepositoryImpl)))
 
 var cloneRecordSet = wire.NewSet(repository.NewCloneRecordRepositoryImpl, wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)))
+
+var lockDataRepository = wire.NewSet(repository.NewLockDataRepositoryImpl, wire.Bind(new(repository.LockDataRepository), new(*repository.LockDataRepositoryImpl)))

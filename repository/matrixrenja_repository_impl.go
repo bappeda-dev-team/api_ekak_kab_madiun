@@ -626,7 +626,8 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
         sp.pegawai_id,
         COALESCE(pg.nama, '') AS nama_pegawai,
         CASE WHEN tp.kode_subkegiatan IS NOT NULL THEN COALESCE(tp.pagu, 0) ELSE 0 END AS pagu_subkegiatan,
-        CASE WHEN tp.kode_subkegiatan IS NULL THEN sp.total_pagu ELSE 0 END AS total_anggaran_subkegiatan
+        CASE WHEN tp.kode_subkegiatan IS NULL THEN sp.total_pagu ELSE 0 END AS total_anggaran_subkegiatan,
+		CASE WHEN tp.kode_subkegiatan IS  NOT NULL THEN 'penetapan' ELSE 'rankhir' END AS jenis_pagu
     FROM subkeg_pagu sp
     JOIN tb_subkegiatan s ON sp.kode_subkegiatan = s.kode_subkegiatan
     JOIN tb_master_kegiatan k
@@ -674,6 +675,7 @@ func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapan(ctx context.Conte
 			&row.NamaPegawai,
 			&row.PaguSubKegiatan,
 			&row.TotalAnggaranSubKegiatan,
+			&row.JenisPagu,
 		); err != nil {
 			return nil, err
 		}

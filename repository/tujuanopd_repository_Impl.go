@@ -1637,3 +1637,13 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Co
 	}
 	return result, nil
 }
+
+func (repository *TujuanOpdRepositoryImpl) SetTujuanOpdLocked(ctx context.Context, tx *sql.Tx, id int, locked bool) error {
+	val := 0
+	if locked {
+		val = 1
+	}
+	_, err := tx.ExecContext(ctx,
+		`UPDATE tb_tujuan_opd SET is_locked = ? WHERE id = ?`, val, id)
+	return err
+}
