@@ -230,8 +230,8 @@ func (service *IkdServiceImpl) Create(ctx context.Context, requests []ikd.Progra
 
 		response := ikd.ProgramOpdTerpilihResponse{
 			Id:          result.Id,
-			TacticalId:  result.PohonKinerjaId,
-			Parent:      result.ProgramOpdId,
+			TacticalId:  result.ProgramOpdId,
+			Parent:      result.PohonKinerjaId,
 			NamaProgram: tactical.NamaPokin,
 		}
 
