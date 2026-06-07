@@ -671,3 +671,35 @@ func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaPenetapanIndikator(w
 		Data:   indikatorResponses,
 	})
 }
+
+// Tujuan Opd Penetapan godoc
+// @Summary      Tujuan Opd Penetapan
+// @Description  Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.
+// @Tags         Tujuan Opd Penetapan
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path     string  true  "Tahun"      example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TujuanOpdPenetapanResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /trialtujuan_opd/penetapan/{kode_opd}/{tahun} [get]
+func (controller *TujuanOpdControllerImpl) TujuanOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	tujuanOpdResponses, err := controller.TujuanOpdService.TujuanOpdPenetapan(request.Context(), kodeOpd, tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success",
+		Data:   tujuanOpdResponses,
+	})
+}

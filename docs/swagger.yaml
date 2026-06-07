@@ -1369,6 +1369,25 @@ definitions:
       tujuan:
         type: string
     type: object
+  tujuanopd.TujuanOpdPenetapanResponse:
+    properties:
+      kode_bidang_urusan:
+        type: string
+      kode_opd:
+        type: string
+      kode_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      nama_opd:
+        type: string
+      tujuan_opd:
+        items:
+          $ref: '#/definitions/tujuanopd.TujuanOpdResponse'
+        type: array
+      urusan:
+        type: string
+    type: object
   tujuanopd.TujuanOpdResponse:
     properties:
       id_tujuan_opd:
@@ -1377,6 +1396,10 @@ definitions:
         items:
           $ref: '#/definitions/tujuanopd.IndikatorResponse'
         type: array
+      is_locked:
+        type: boolean
+      jenis_penetapan:
+        type: string
       jenis_periode:
         type: string
       kode_bidang_urusan:
@@ -2972,6 +2995,48 @@ paths:
       summary: Update Sasaran Opd Renstra
       tags:
       - Sasaran Opd Renstra
+  /trialtujuan_opd/penetapan/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan
+        tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TujuanOpdPenetapanResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Opd Penetapan
+      tags:
+      - Tujuan Opd Penetapan
   /tujuan_opd/detail/{tujuanOpdId}:
     get:
       consumes:
