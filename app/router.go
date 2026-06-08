@@ -544,6 +544,7 @@ func NewRouter(
 	router.GET("/pk_opd/:kode_opd/:tahun", pkController.FindAllPkOpdTahunan)
 	router.POST("/pk_opd/hubungkan", pkController.HubungkanRekin)
 	router.POST("/pk_opd/hubungkan_atasan", pkController.HubungkanAtasan)
+	router.POST("/pk_opd/kunci_pk", pkController.KunciPK)
 
 	//clone rekin
 	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)

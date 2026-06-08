@@ -114,3 +114,27 @@ func (controller *PkControllerImpl) HubungkanAtasan(w http.ResponseWriter, r *ht
 
 	helper.WriteToResponseBody(w, webResponse)
 }
+
+func (controller *PkControllerImpl) KunciPK(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	kunciPkRequest := pkopd.KunciPkRequest{}
+	helper.ReadFromRequestBody(r, &kunciPkRequest)
+
+	resp, err := controller.pkOpdService.KunciPK(r.Context(), kunciPkRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "[ERROR] Terjadi kesalahan saat mengunci PK",
+			Data:   nil,
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: http.StatusText(http.StatusOK),
+		Data:   resp,
+	}
+
+	helper.WriteToResponseBody(w, webResponse)
+}

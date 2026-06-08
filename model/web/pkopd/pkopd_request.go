@@ -18,3 +18,9 @@ type HubungkanAtasanRequest struct {
 	NipBawahan string `json:"nip_bawahan" validate:"required"`
 	NipAtasan  string `json:"nip_atasan" validate:"required"`
 }
+
+type KunciPkRequest struct {
+	KodeOpd   string `json:"kode_opd" validate:"required"`
+	Tahun     int    `json:"tahun" validate:"required"`
+	IdPegawai string `json:"id_pegawai" validate:"required"`
+}

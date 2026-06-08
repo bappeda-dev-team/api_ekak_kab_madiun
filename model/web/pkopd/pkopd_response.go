@@ -91,3 +91,10 @@ type TargetIndPk struct {
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
 }
+
+type KunciPKResponse struct {
+	IdKunci    int64  `json:"id_pk"`
+	IdPegawai  string `json:"id_pegawai"`
+	StatusPk   string `json:"status_pk"`   // terkunci, terbuka, revisi
+	PkTerkunci bool   `json:"pk_terkunci"` // true, false, false
+}

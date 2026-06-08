@@ -15,12 +15,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 )
 
 type PkServiceImpl struct {
-	pkOpdRepository              repository.PkRepository
+	pkRepository                 repository.PkRepository
 	pegawaiService               PegawaiService
 	rekinService                 RencanaKinerjaService
 	opdService                   OpdService
@@ -30,7 +31,7 @@ type PkServiceImpl struct {
 }
 
 func NewPkServiceImpl(
-	pkOpdRepository repository.PkRepository,
+	pkRepository repository.PkRepository,
 	pegawaiService PegawaiService,
 	rekinService RencanaKinerjaService,
 	opdService OpdService,
@@ -39,7 +40,7 @@ func NewPkServiceImpl(
 	DB *sql.DB,
 ) *PkServiceImpl {
 	return &PkServiceImpl{
-		pkOpdRepository:              pkOpdRepository,
+		pkRepository:                 pkRepository,
 		pegawaiService:               pegawaiService,
 		rekinService:                 rekinService,
 		opdService:                   opdService,
@@ -106,7 +107,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	// beserta nama dan nik / nip kepala daerah
 	// di setting di master lembaga
 	var sasaranPemdaResponses []pkopd.SasaranPemdaPk
-	sasaranPemda, err := service.pkOpdRepository.FindSasaranPemdaByTahun(ctx, tx, tahun)
+	sasaranPemda, err := service.pkRepository.FindSasaranPemdaByTahun(ctx, tx, tahun)
 	if err != nil {
 		log.Printf("[WARN] Sasaran OPD gagal di-load: %v", err)
 	} else {
@@ -137,48 +138,14 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				NamaJabatan: namaJabatanKepalaDaerah,
 			}
 	}
-	// DEPRECATED 1/04/2026
-	// changed to pagu penetapan from subkegiatan
-	// anggaran by rekin id
-	// [rekinId] = 9999
-	// PAGU DIAMBIL DARI RENJA SUBKEGIATAN
-	// paguByRekinId, err := service.pkOpdRepository.FindTotalPaguAnggaranByRekinIds(ctx, tx, rekinIds)
-	// if err != nil {
-	// 	log.Printf("[ERROR] findTotalPagu: %v", err)
-	// 	return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
-	// }
 
 	// find subkegiatan by rekin id
 	// [rekinId] = { namaSub: ..., kodeSub: ...}
-	rekinSubkegiatan, err := service.pkOpdRepository.FindSubkegiatanByKodeOpdTahunRekinIds(ctx, tx, kodeOpd, tahun, rekinIds)
+	rekinSubkegiatan, err := service.pkRepository.FindSubkegiatanByKodeOpdTahunRekinIds(ctx, tx, kodeOpd, tahun, rekinIds)
 	if err != nil {
 		log.Printf("[ERROR] rekinSubkegiatan: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
 	}
-	// disable normalize pagu, confusing
-	// paguSubKegiatan, err := service.pkOpdRepository.PaguPkByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
-	// if err != nil {
-	// 	log.Printf("[ERROR] paguSubkegiatan: %v", err)
-	// 	return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
-	// }
-	// // penyesuaian kode paguSubkegiatan
-	// normalizedKodePagu := make(map[string]int64)
-	// for kode, pagu := range paguSubKegiatan {
-	// 	newKode := replaceKode(kode, kodeOpd)
-	// 	normalizedKodePagu[newKode] = pagu
-	// }
-	// // susun pagu subkegiatan
-	// for key, sub := range rekinSubkegiatan {
-	// 	kode := sub.KodeSubkegiatan
-
-	// 	if pagu, ok := normalizedKodePagu[kode]; ok {
-	// 		sub.PaguSubkegiatan = pagu
-	// 	} else {
-	// 		sub.PaguSubkegiatan = 0
-	// 	}
-
-	// 	rekinSubkegiatan[key] = sub // wajib re-assign
-	// }
 
 	// data struktur untuk penyusunan
 	// lookup pegawai by nip untuk susun nama atasan
@@ -219,7 +186,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	listAtasanByPegawaiId := buildAtasanMap(rekins)
 	// pk yang sudah tersimpan di opd dan tahun
 	// grouping by level
-	pkOpds, err := service.pkOpdRepository.FindByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
+	pkOpds, err := service.pkRepository.FindByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
 	if err != nil {
 		log.Printf("[ERROR] Find PK OPD by kodeOpd and tahun: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
@@ -636,7 +603,7 @@ func (service *PkServiceImpl) HubungkanRekin(
 			log.Printf("[ERROR] Find Rekin Pemda: %v", err)
 			return pkopd.PkOpdResponse{}, fmt.Errorf("rekin pemda tidak ditemukan")
 		}
-		rekinPemda, err := service.pkOpdRepository.FindSasaranPemdaById(ctx, tx, sasaranPemdaId)
+		rekinPemda, err := service.pkRepository.FindSasaranPemdaById(ctx, tx, sasaranPemdaId)
 		if err != nil {
 			log.Printf("[ERROR] Find Rekin Pemda: %v", err)
 			return pkopd.PkOpdResponse{}, fmt.Errorf("rekin pemda tidak ditemukan")
@@ -715,7 +682,7 @@ func (service *PkServiceImpl) HubungkanRekin(
 	// 5. bentuk domain PK OPD
 
 	// 6. simpan relasi
-	if err = service.pkOpdRepository.HubungkanRekin(ctx, tx, pk); err != nil {
+	if err = service.pkRepository.HubungkanRekin(ctx, tx, pk); err != nil {
 		log.Printf("[ERROR] HubungkanRekin repo: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("gagal menghubungkan rekin")
 	}
@@ -768,6 +735,57 @@ func (service *PkServiceImpl) HubungkanAtasan(
 	}
 
 	return service.FindByKodeOpdTahun(ctx, request.KodeOpd, request.Tahun)
+}
+
+func (service *PkServiceImpl) KunciPK(
+	ctx context.Context,
+	request pkopd.KunciPkRequest,
+) (pkopd.KunciPKResponse, error) {
+	kunciPK := domain.KunciPK{
+		IdPegawai:   request.IdPegawai,
+		KodeOpd:     request.KodeOpd,
+		Tahun:       request.Tahun,
+		DikunciOleh: helper.GetUserInfo(ctx).Nip,
+		DikunciPada: time.Now(),
+		StatusPk:    "TERKUNCI",
+		PkTerkunci:  true,
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pkopd.KunciPKResponse{}, fmt.Errorf("gagal memulai transaksi")
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	idKunci, err := service.pkRepository.KunciPK(ctx, tx, kunciPK)
+	if err != nil {
+		return pkopd.KunciPKResponse{}, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return pkopd.KunciPKResponse{}, err
+	}
+	// TODO -> Sync to penetapan service
+	// go func() {
+	// 	if err := service.penetapanClient.SyncPK(context.Background()); err != nil {
+	// 		log.Printf("[ERROR]PenetapanClient - sync penetapan gagal: %v", err)
+	// 	}
+	// }()
+
+	return pkopd.KunciPKResponse{
+		IdKunci:    idKunci,
+		IdPegawai:  request.IdPegawai,
+		StatusPk:   "TERKUNCI",
+		PkTerkunci: true,
+	}, nil
 }
 
 func translateJenisItem(level int) string {

@@ -41,3 +41,13 @@ type AllSasaranPemdaPk struct {
 	SasaranPemdaId     int
 	SasaranPemda       string
 }
+
+type KunciPK struct {
+	IdPegawai   string
+	KodeOpd     string
+	Tahun       int
+	DikunciOleh string
+	DikunciPada time.Time
+	StatusPk    string
+	PkTerkunci  bool
+}

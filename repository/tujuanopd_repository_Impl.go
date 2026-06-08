@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
-	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -373,7 +372,7 @@ func (repository *TujuanOpdRepositoryImpl) FindTargetByIndikatorId(ctx context.C
         SELECT id, target, satuan, tahun
         FROM tb_target 
         WHERE indikator_id = ?
-        AND tahun = ?
+        AND tahun = ?  -- Ubah dari tahun <= ? menjadi tahun = ?
         ORDER BY tahun ASC
     `
 
@@ -421,7 +420,7 @@ func (repository *TujuanOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.
             tg.satuan,
             tg.tahun as tahun_target
         FROM tb_tujuan_opd t
-        LEFT JOIN tb_indikator i ON t.id = i.tujuan_opd_id
+        LEFT JOIN tb_indikator_matrix i ON t.id = i.tujuan_opd_id
         LEFT JOIN tb_target tg ON i.id = tg.indikator_id
         WHERE t.kode_opd = ? 
         AND t.tahun_awal = ?
@@ -1453,7 +1452,7 @@ func (r *TujuanOpdRepositoryImpl) FindIndikatorByKodeIndikator(
 }
 
 func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisIndikator string) ([]domain.TujuanOpd, error) {
-	var finalArgs []any
+	var finalArgs []interface{}
 	// Args untuk subquery (dalam tanda kurung)
 	finalArgs = append(finalArgs, tahun) // tg.tahun = ?
 	jenisClause := ""
@@ -1486,7 +1485,7 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Co
         im_tg.satuan,
         im_tg.tahun_target
     FROM tb_tujuan_opd t
-    JOIN (
+    LEFT JOIN (
         SELECT
             im.id                                  AS indikator_id,
             im.kode_indikator                      AS kode_indikator,
@@ -1639,359 +1638,12 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Co
 	return result, nil
 }
 
-func (repository *TujuanOpdRepositoryImpl) FindIndikatorTargetsRenstraByTujuanIds(
-	ctx context.Context,
-	tx *sql.Tx,
-	tujuanIds []int,
-) ([]domain.Indikator, error) {
-
-	if len(tujuanIds) == 0 {
-		return []domain.Indikator{}, nil
+func (repository *TujuanOpdRepositoryImpl) SetTujuanOpdLocked(ctx context.Context, tx *sql.Tx, id int, locked bool) error {
+	val := 0
+	if locked {
+		val = 1
 	}
-
-	// buat placeholder (?, ?, ?, ...)
-	placeholders := make([]string, len(tujuanIds))
-	args := make([]any, len(tujuanIds))
-
-	for i, id := range tujuanIds {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-
-	query := fmt.Sprintf(`
-		SELECT ind.kode_indikator, ind.indikator, ind.tujuan_opd_id,
-                     ind.rumus_perhitungan, ind.sumber_data,
-                     ind.definisi_operasional,
-                     tar.id, tar.target, tar.satuan, tar.tahun, tar.jenis
-		FROM tb_indikator_matrix ind
-                LEFT JOIN tb_target tar ON tar.indikator_id = ind.kode_indikator
-		WHERE ind.tujuan_opd_id IN (%s)
-	`, strings.Join(placeholders, ","))
-
-	rows, err := tx.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	indikatorMap := make(map[string]*domain.Indikator)
-
-	for rows.Next() {
-		var (
-			indId                 string
-			indikatorName         string
-			tujuanOpdId           int
-			rumusPerhitunganNS    sql.NullString
-			sumberDataNS          sql.NullString
-			definisiOperasionalNS sql.NullString
-
-			tarIdNS  sql.NullString
-			targetNS sql.NullString
-			satuanNS sql.NullString
-			tahunNS  sql.NullString
-			jenisNS  sql.NullString
-		)
-
-		err := rows.Scan(
-			&indId,
-			&indikatorName,
-			&tujuanOpdId,
-			&rumusPerhitunganNS,
-			&sumberDataNS,
-			&definisiOperasionalNS,
-			&tarIdNS,
-			&targetNS,
-			&satuanNS,
-			&tahunNS,
-			&jenisNS,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// 🔹 ambil / buat indikator
-		ind, exists := indikatorMap[indId]
-		if !exists {
-			ind = &domain.Indikator{
-				Id:                  indId,
-				KodeIndikator:       indId,
-				Indikator:           indikatorName,
-				TujuanOpdId:         tujuanOpdId,
-				RumusPerhitungan:    rumusPerhitunganNS,
-				DefinisiOperasional: definisiOperasionalNS,
-				SumberData:          sumberDataNS,
-				Target:              []domain.Target{},
-			}
-			indikatorMap[indId] = ind
-		}
-
-		// 🔹 kalau ada target, append
-		if tarIdNS.Valid {
-			target := domain.Target{
-				Id: tarIdNS.String,
-			}
-
-			if targetNS.Valid {
-				target.Target = targetNS.String
-			}
-			if satuanNS.Valid {
-				target.Satuan = satuanNS.String
-			}
-			if tahunNS.Valid {
-				target.Tahun = tahunNS.String
-			}
-			if jenisNS.Valid {
-				target.Jenis = jenisNS.String
-			}
-
-			ind.Target = append(ind.Target, target)
-		}
-	}
-
-	result := make([]domain.Indikator, 0, len(indikatorMap))
-	for _, v := range indikatorMap {
-		result = append(result, *v)
-	}
-
-	return result, nil
-}
-
-func (repository *TujuanOpdRepositoryImpl) FindIndikatorTargetsByTujuanIds(
-	ctx context.Context,
-	tx *sql.Tx,
-	tujuanIds []int,
-) ([]domain.Indikator, error) {
-
-	if len(tujuanIds) == 0 {
-		return []domain.Indikator{}, nil
-	}
-
-	// buat placeholder (?, ?, ?, ...)
-	placeholders := make([]string, len(tujuanIds))
-	args := make([]any, len(tujuanIds))
-
-	for i, id := range tujuanIds {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-
-	query := fmt.Sprintf(`
-		SELECT ind.id, ind.indikator, ind.tujuan_opd_id,
-                     ind.rumus_perhitungan, ind.sumber_data,
-                     tar.id, tar.target, tar.satuan, tar.tahun, tar.jenis
-		FROM tb_indikator ind
-                LEFT JOIN tb_target tar ON tar.indikator_id = ind.id
-		WHERE ind.tujuan_opd_id IN (%s)
-	`, strings.Join(placeholders, ","))
-
-	rows, err := tx.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	indikatorMap := make(map[string]*domain.Indikator)
-
-	for rows.Next() {
-		var (
-			indId         string
-			indikatorName string
-			tujuanOpdId   int
-
-			rumusPerhitunganNS sql.NullString
-			sumberDataNS       sql.NullString
-			tarIdNS            sql.NullString
-			targetNS           sql.NullString
-			satuanNS           sql.NullString
-			tahunNS            sql.NullString
-			jenisNS            sql.NullString
-		)
-
-		err := rows.Scan(
-			&indId,
-			&indikatorName,
-			&tujuanOpdId,
-			&rumusPerhitunganNS,
-			&sumberDataNS,
-			&tarIdNS,
-			&targetNS,
-			&satuanNS,
-			&tahunNS,
-			&jenisNS,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// 🔹 ambil / buat indikator
-		ind, exists := indikatorMap[indId]
-		if !exists {
-			ind = &domain.Indikator{
-				Id:               indId,
-				KodeIndikator:    indId,
-				Indikator:        indikatorName,
-				TujuanOpdId:      tujuanOpdId,
-				RumusPerhitungan: rumusPerhitunganNS,
-				SumberData:       sumberDataNS,
-				Target:           []domain.Target{},
-			}
-			indikatorMap[indId] = ind
-		}
-
-		// 🔹 kalau ada target, append
-		if tarIdNS.Valid {
-			target := domain.Target{
-				Id: tarIdNS.String,
-			}
-
-			if targetNS.Valid {
-				target.Target = targetNS.String
-			}
-			if satuanNS.Valid {
-				target.Satuan = satuanNS.String
-			}
-			if tahunNS.Valid {
-				target.Tahun = tahunNS.String
-			}
-			if jenisNS.Valid {
-				target.Jenis = jenisNS.String
-			}
-
-			ind.Target = append(ind.Target, target)
-		}
-	}
-
-	result := make([]domain.Indikator, 0, len(indikatorMap))
-	for _, v := range indikatorMap {
-		result = append(result, *v)
-	}
-
-	return result, nil
-}
-
-func (repository *TujuanOpdRepositoryImpl) FindByIdOnly(
-	ctx context.Context,
-	tx *sql.Tx,
-	tujuanOpdId int,
-) (domain.TujuanOpd, error) {
-
-	script := `
-		SELECT
-			t.id,
-			t.kode_opd,
-			COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
-			t.tujuan,
-			t.tahun_awal,
-			t.tahun_akhir,
-			t.jenis_periode
-		FROM tb_tujuan_opd t
-		WHERE t.id = ?
-	`
-
-	var result domain.TujuanOpd
-
-	err := tx.QueryRowContext(ctx, script, tujuanOpdId).Scan(
-		&result.Id,
-		&result.KodeOpd,
-		&result.KodeBidangUrusan,
-		&result.Tujuan,
-		&result.TahunAwal,
-		&result.TahunAkhir,
-		&result.JenisPeriode,
-	)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return domain.TujuanOpd{}, err
-		}
-		return domain.TujuanOpd{}, err
-	}
-
-	return result, nil
-}
-
-func (repository *TujuanOpdRepositoryImpl) FindAllOnly(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error) {
-	scriptTujuan := `
-        SELECT
-            t.id,
-            t.kode_opd,
-            COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
-            t.tujuan,
-            t.tahun_awal,
-            t.tahun_akhir,
-            t.jenis_periode
-        FROM tb_tujuan_opd t
-        WHERE t.kode_opd = ?
-        AND t.tahun_awal = ?
-        AND t.tahun_akhir = ?
-        AND t.jenis_periode = ?
-        ORDER BY t.id ASC
-    `
-
-	rows, err := tx.QueryContext(ctx, scriptTujuan,
-		kodeOpd,
-		tahunAwal,
-		tahunAkhir,
-		jenisPeriode,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	tujuanOpdMap := make(map[int]*domain.TujuanOpd)
-
-	for rows.Next() {
-		var (
-			tujuanId         int
-			kodeOpd          string
-			kodeBidangUrusan string
-			tujuan           string
-			// periodeId        int
-			tahunAwalData    string
-			tahunAkhirData   string
-			jenisPeriodeData string
-		)
-
-		err := rows.Scan(
-			&tujuanId,
-			&kodeOpd,
-			&kodeBidangUrusan,
-			&tujuan,
-			// &periodeId,
-			&tahunAwalData,
-			&tahunAkhirData,
-			&jenisPeriodeData,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// Buat atau ambil TujuanOpd
-		if _, exists := tujuanOpdMap[tujuanId]; !exists {
-			tujuanOpdMap[tujuanId] = &domain.TujuanOpd{
-				Id:               tujuanId,
-				KodeOpd:          kodeOpd,
-				KodeBidangUrusan: kodeBidangUrusan,
-				Tujuan:           tujuan,
-				TahunAwal:        tahunAwalData,
-				TahunAkhir:       tahunAkhirData,
-				JenisPeriode:     jenisPeriodeData,
-				Indikator:        []domain.Indikator{},
-			}
-		}
-
-	}
-
-	// Perbaikan pada bagian generate target
-	var result []domain.TujuanOpd
-	for _, tujuanOpd := range tujuanOpdMap {
-		result = append(result, *tujuanOpd)
-	}
-
-	if len(result) == 0 {
-		return make([]domain.TujuanOpd, 0), nil
-	}
-
-	return result, nil
+	_, err := tx.ExecContext(ctx,
+		`UPDATE tb_tujuan_opd SET is_locked = ? WHERE id = ?`, val, id)
+	return err
 }

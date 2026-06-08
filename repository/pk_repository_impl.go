@@ -475,3 +475,46 @@ func (repository *PkRepositoryImpl) PaguPkByKodeOpdTahun(ctx context.Context, tx
 	}
 	return paguSubkegiatanMap, nil
 }
+
+func (repository *PkRepositoryImpl) KunciPK(
+	ctx context.Context,
+	tx *sql.Tx,
+	model domain.KunciPK,
+) (int64, error) {
+	script := `INSERT INTO tb_kunci_pk (
+			id_pegawai,
+			kode_opd,
+			tahun,
+			dikunci_oleh,
+			dikunci_pada,
+			status_pk,
+			pk_terkunci
+		)
+ 		   VALUES(
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		);`
+	result, err := tx.ExecContext(
+		ctx,
+		script,
+		model.IdPegawai,
+		model.KodeOpd,
+		model.Tahun,
+		model.DikunciOleh,
+		model.DikunciPada,
+		model.StatusPk,
+		model.PkTerkunci)
+	if err != nil {
+		return 0, fmt.Errorf("kunci pk failed: %w", err)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("get last kunciPk id failed: %w", err)
+	}
+	return id, nil
+}
