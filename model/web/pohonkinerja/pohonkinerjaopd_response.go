@@ -242,3 +242,19 @@ type CrosscuttingDikirimResponse struct {
 	NamaOpdTujuan          string `json:"nama_opd_tujuan,omitempty"`
 	Status                 string `json:"status"`
 }
+
+type BasePokinOpdResponse struct {
+	Id          int                         `json:"id"`
+	Parent      *int                        `json:"parent"`
+	NamaPohon   string                      `json:"nama_pohon"`
+	JenisPohon  string                      `json:"jenis_pohon"`
+	LevelPohon  int                         `json:"level_pohon"`
+	Keterangan  string                      `json:"keterangan"`
+	Status      string                      `json:"status"`
+	IdTematik   *int                        `json:"id_tematik"`
+	NamaTematik *string                     `json:"nama_tematik"`
+	KodeOpd     opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
+	IsActive    bool                        `json:"is_active"`
+	Indikator   []IndikatorResponse         `json:"indikator"`
+	Childs      []BasePokinOpdResponse      `json:"childs,omitempty"`
+}

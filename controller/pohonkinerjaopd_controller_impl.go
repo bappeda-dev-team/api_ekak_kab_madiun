@@ -264,6 +264,7 @@ func (controller *PohonKinerjaOpdControllerImpl) FindAllArah(writer http.Respons
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
 // func (controller *PohonKinerjaOpdControllerImpl) FindAllArahPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 // 	kodeOpd := params.ByName("kode_opd")
 // 	tahun := params.ByName("tahun")
@@ -843,4 +844,35 @@ func (controller *PohonKinerjaOpdControllerImpl) FindLeaderboardHiddenKodeOpds(w
 		Data:   response,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaOpdControllerImpl) FindByIdWithChilds(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Error",
+			Data:   "id pokin invalid",
+		}
+		helper.WriteToResponseBodyWstatus(w, webResponse)
+		return
+	}
+
+	response, err := controller.PohonKinerjaOpdService.FindPokinWithChilds(r.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBodyWstatus(w, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Find Leaderboard Hidden Kode Opds",
+		Data:   response,
+	}
+	helper.WriteToResponseBodyWstatus(w, webResponse)
 }

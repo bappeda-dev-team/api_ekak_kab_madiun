@@ -3731,3 +3731,134 @@ func buildFullChain(
 
 	return result
 }
+
+func (service *PohonKinerjaOpdServiceImpl) FindPokinWithChilds(
+	ctx context.Context,
+	id int,
+) (pohonkinerja.BasePokinOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.BasePokinOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// 1. Ambil data pohon kinerja
+	pokin, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return pohonkinerja.BasePokinOpdResponse{}, err
+	}
+
+	// 2. Validasi data pohon kinerja
+	if pokin.Id == 0 {
+		return pohonkinerja.BasePokinOpdResponse{}, errors.New("data tidak ditemukan")
+	}
+
+	// 6. Ambil data indikator dan target
+	var indikatorResponses []pohonkinerja.IndikatorResponse
+	indikatorList, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinId(ctx, tx, fmt.Sprint(pokin.Id))
+	if err == nil {
+		for _, indikator := range indikatorList {
+			// Ambil target untuk setiap indikator
+			targetList, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
+			if err != nil {
+				continue
+			}
+
+			var targetResponses []pohonkinerja.TargetResponse
+			for _, target := range targetList {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
+				})
+			}
+
+			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+				Id:            indikator.Id,
+				IdPokin:       indikator.PokinId,
+				NamaIndikator: indikator.Indikator,
+				Target:        targetResponses,
+			})
+		}
+	}
+
+	childs, err := service.pohonKinerjaOpdRepository.FindChildPokins(ctx, tx, int64(pokin.Id))
+	if err != nil {
+		return pohonkinerja.BasePokinOpdResponse{}, err
+	}
+
+	var childIds []int
+	childResponse := make([]pohonkinerja.BasePokinOpdResponse, 0, len(childs))
+	for _, child := range childs {
+		childIds = append(childIds, child.Id)
+		childResponse = append(childResponse,
+			pohonkinerja.BasePokinOpdResponse{
+				Id:         child.Id,
+				NamaPohon:  child.NamaPohon,
+				JenisPohon: child.JenisPohon,
+				LevelPohon: child.LevelPohon,
+				Keterangan: child.Keterangan,
+				Status:     child.Status,
+			},
+		)
+	}
+	// child indikators
+	childIndikators, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinIdsBatch(ctx, tx, childIds)
+	if err != nil {
+		return pohonkinerja.BasePokinOpdResponse{}, err
+	}
+	var indikatorIdChilds []string
+	for _, inds := range childIndikators {
+		for _, ind := range inds {
+			indikatorIdChilds = append(indikatorIdChilds, ind.Id)
+		}
+	}
+	// target child indikators
+	targetChildInds, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, indikatorIdChilds)
+	if err != nil {
+		return pohonkinerja.BasePokinOpdResponse{}, err
+	}
+
+	for i, childRes := range childResponse {
+
+		indikators := childIndikators[childRes.Id]
+		indikatorResponses := make([]pohonkinerja.IndikatorResponse, 0, len(indikators))
+		for _, indikator := range indikators {
+			targetList := targetChildInds[indikator.Id]
+			var targetResponses []pohonkinerja.TargetResponse
+			for _, target := range targetList {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
+				})
+			}
+			indikatorResponses = append(indikatorResponses,
+				pohonkinerja.IndikatorResponse{
+					Id:            indikator.Id,
+					IdPokin:       indikator.PokinId,
+					NamaIndikator: indikator.Indikator,
+					Target:        targetResponses,
+				},
+			)
+		}
+		childResponse[i].Indikator = indikatorResponses
+
+	}
+
+	// Susun response
+	response := pohonkinerja.BasePokinOpdResponse{
+		Id:         pokin.Id,
+		NamaPohon:  pokin.NamaPohon,
+		JenisPohon: pokin.JenisPohon,
+		LevelPohon: pokin.LevelPohon,
+		Keterangan: pokin.Keterangan,
+		Status:     pokin.Status,
+		Indikator:  indikatorResponses,
+		Childs:     childResponse,
+	}
+
+	return response, nil
+}

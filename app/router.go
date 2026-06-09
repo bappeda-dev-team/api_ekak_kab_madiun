@@ -200,6 +200,7 @@ func NewRouter(
 	router.PUT("/pohon_kinerja_opd/pindah_parent/:id", pohonKinerjaOpdController.UpdateParent)
 	router.GET("/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/:kode_opd/:tahun/:level_pohon", pohonKinerjaOpdController.FindAllPokinParentClonePokinOpd)
 	router.PUT("/pohon_kinerja_opd/update_parent_clone/:id", pohonKinerjaOpdController.UpdateParentClone)
+	router.GET("/pohon_kinerja_opd/findchilds/:id", pohonKinerjaOpdController.FindByIdWithChilds)
 
 	// strategic arah kebijakan opd
 	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
@@ -474,7 +475,7 @@ func NewRouter(
 	router.GET("/program_unggulan/findbytahun/:tahun", programUnggulanController.FindByTahun)
 	router.GET("/program_unggulan/findunusedbytahun/:tahun", programUnggulanController.FindUnusedByTahun)
 	router.POST("/program_unggulan/findbyidterkait", programUnggulanController.FindByIdTerkait)
-	
+
 	//Master Program Prioritas Pusat
 	router.GET("/program_prioritas_pusat/findall", programPrioritasPusatController.FindAll)
 	router.GET("/program_prioritas_pusat/detail/:id", programPrioritasPusatController.FindById)
