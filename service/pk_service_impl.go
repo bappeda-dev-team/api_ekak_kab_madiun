@@ -839,8 +839,8 @@ func (service *PkServiceImpl) BukaKunciPK(
 	return pkopd.KunciPKResponse{
 		IdKunci:    idKunci,
 		IdPegawai:  request.IdPegawai,
-		StatusPk:   "TERKUNCI",
-		PkTerkunci: true,
+		StatusPk:   "TERBUKA",
+		PkTerkunci: false,
 	}, nil
 }
 
