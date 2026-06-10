@@ -126,7 +126,7 @@ func (controller *PkControllerImpl) KunciPK(w http.ResponseWriter, r *http.Reque
 			Status: "[ERROR] Terjadi kesalahan saat mengunci PK",
 			Data:   nil,
 		}
-		helper.WriteToResponseBody(w, webResponse)
+		helper.WriteToResponseBodyWstatus(w, webResponse)
 		return
 	}
 
@@ -136,5 +136,5 @@ func (controller *PkControllerImpl) KunciPK(w http.ResponseWriter, r *http.Reque
 		Data:   resp,
 	}
 
-	helper.WriteToResponseBody(w, webResponse)
+	helper.WriteToResponseBodyWstatus(w, webResponse)
 }

@@ -17,4 +17,5 @@ type PkRepository interface {
 	// GROUPED BY KODE SUB - PAGU
 	PaguPkByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string]int64, error)
 	KunciPK(ctx context.Context, tx *sql.Tx, model domain.KunciPK) (int64, error)
+	FindTerkunciByPegawaiIds(ctx context.Context, tx *sql.Tx, pegawaiIds []string) (map[string]bool, error)
 }

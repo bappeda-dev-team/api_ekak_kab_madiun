@@ -86,6 +86,11 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	if err != nil {
 		log.Printf("[ERROR] pegawaiService.FindRolePegawais: %v", err)
 	}
+	pegawaiIsLock, err := service.pkRepository.FindTerkunciByPegawaiIds(ctx, tx, pegawaiIds)
+	if err != nil {
+		log.Printf("[ERROR] Find PK Terkunci: %v", err)
+		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
+	}
 	// rekin in opd by tahun
 	// filter params
 	filterParams := domain.FilterParams{
@@ -279,6 +284,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 				TotalPagu:        0,
 				Roles:            rolePegawai[nip],
 				AtasanCandidates: candidateAtasans,
+				PkTerkunci:       pegawaiIsLock[nip],
 			}
 		}
 
@@ -767,10 +773,12 @@ func (service *PkServiceImpl) KunciPK(
 
 	idKunci, err := service.pkRepository.KunciPK(ctx, tx, kunciPK)
 	if err != nil {
+		log.Printf("pkRepository.KunciPK error: %v", err)
 		return pkopd.KunciPKResponse{}, err
 	}
 
 	if err = tx.Commit(); err != nil {
+		log.Printf("commit failed: %v", err)
 		return pkopd.KunciPKResponse{}, err
 	}
 	// TODO -> Sync to penetapan service

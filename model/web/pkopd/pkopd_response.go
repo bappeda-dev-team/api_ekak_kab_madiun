@@ -38,7 +38,8 @@ type PkPegawai struct {
 	// daftar atasan untuk menghubungkan rekin pegawai
 	AtasanCandidates []AtasanCandidate `json:"atasan_candidates"`
 	// rekin pegawai
-	Pks []PkAsn `json:"pks"`
+	PkTerkunci bool    `json:"pk_terkunci"` // true, false, false
+	Pks        []PkAsn `json:"pks"`
 }
 
 type ItemPk struct {
