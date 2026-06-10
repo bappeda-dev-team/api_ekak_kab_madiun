@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"strings"
@@ -525,29 +524,28 @@ func (repository *PkRepositoryImpl) KunciPK(
 	return id, nil
 }
 
-func (repository *PkRepositoryImpl) FindTerkunciByPegawaiIds(
+func (repository *PkRepositoryImpl) FindPkTerkunciByKodeOpdTahun(
 	ctx context.Context,
 	tx *sql.Tx,
-	pegawaiIds []string,
+	kodeOpd string,
+	tahun int,
 ) (map[string]bool, error) {
-	const op = "pk_repository.FindTerkunciByPegawaiIds"
+	const op = "pk_repository.FindPkTerkunciByKodeOpdTahun"
 
-	if len(pegawaiIds) == 0 {
-		return map[string]bool{}, nil
-	}
-
-	baseQuery := `
-	SELECT id_pegawai, pk_terkunci
-	FROM tb_kunci_pk
-	WHERE id_pegawai IN (?)
+	query := `
+		SELECT
+			id_pegawai,
+			pk_terkunci
+		FROM tb_kunci_pk
+		WHERE kode_opd = ? AND tahun = ?
 	`
 
-	query, args := helper.BuildInQueryString(baseQuery, pegawaiIds)
-	rows, err := tx.QueryContext(ctx, query, args...)
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
 	if err != nil {
 		return map[string]bool{}, fmt.Errorf("%s: query failed: %v", op, err)
 	}
 	defer rows.Close()
+
 	result := make(map[string]bool)
 	for rows.Next() {
 		var (

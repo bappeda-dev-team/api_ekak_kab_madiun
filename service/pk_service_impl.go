@@ -86,7 +86,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	if err != nil {
 		log.Printf("[ERROR] pegawaiService.FindRolePegawais: %v", err)
 	}
-	pegawaiIsLock, err := service.pkRepository.FindTerkunciByPegawaiIds(ctx, tx, pegawaiIds)
+	pegawaiIsLock, err := service.pkRepository.FindPkTerkunciByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
 	if err != nil {
 		log.Printf("[ERROR] Find PK Terkunci: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
