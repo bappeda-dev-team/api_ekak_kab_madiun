@@ -138,3 +138,27 @@ func (controller *PkControllerImpl) KunciPK(w http.ResponseWriter, r *http.Reque
 
 	helper.WriteToResponseBodyWstatus(w, webResponse)
 }
+
+func (controller *PkControllerImpl) BukaKunciPK(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	kunciPkRequest := pkopd.KunciPkRequest{}
+	helper.ReadFromRequestBody(r, &kunciPkRequest)
+
+	resp, err := controller.pkOpdService.BukaKunciPK(r.Context(), kunciPkRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "[ERROR] Terjadi kesalahan saat membuka kunci PK",
+			Data:   nil,
+		}
+		helper.WriteToResponseBodyWstatus(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: http.StatusText(http.StatusOK),
+		Data:   resp,
+	}
+
+	helper.WriteToResponseBodyWstatus(w, webResponse)
+}

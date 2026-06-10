@@ -796,6 +796,54 @@ func (service *PkServiceImpl) KunciPK(
 	}, nil
 }
 
+func (service *PkServiceImpl) BukaKunciPK(
+	ctx context.Context,
+	request pkopd.KunciPkRequest,
+) (pkopd.KunciPKResponse, error) {
+	// TODO: handle buka kunci untuk revisi dkk
+	kunciPK := domain.KunciPK{
+		IdPegawai:   request.IdPegawai,
+		KodeOpd:     request.KodeOpd,
+		Tahun:       request.Tahun,
+		DikunciOleh: helper.GetUserInfo(ctx).Nip,
+		DikunciPada: time.Now(),
+		StatusPk:    "TERBUKA",
+		PkTerkunci:  false,
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pkopd.KunciPKResponse{}, fmt.Errorf("gagal memulai transaksi")
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	idKunci, err := service.pkRepository.KunciPK(ctx, tx, kunciPK)
+	if err != nil {
+		log.Printf("pkRepository.KunciPK error: %v", err)
+		return pkopd.KunciPKResponse{}, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("commit failed: %v", err)
+		return pkopd.KunciPKResponse{}, err
+	}
+
+	return pkopd.KunciPKResponse{
+		IdKunci:    idKunci,
+		IdPegawai:  request.IdPegawai,
+		StatusPk:   "TERKUNCI",
+		PkTerkunci: true,
+	}, nil
+}
+
 func translateJenisItem(level int) string {
 	switch level {
 	case 4:

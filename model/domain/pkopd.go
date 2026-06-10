@@ -48,6 +48,6 @@ type KunciPK struct {
 	Tahun       int
 	DikunciOleh string
 	DikunciPada time.Time
-	StatusPk    string
-	PkTerkunci  bool
+	StatusPk    string // terkunci, terbuka, revisi
+	PkTerkunci  bool   // true, false, false
 }
