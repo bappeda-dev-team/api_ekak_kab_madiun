@@ -18,4 +18,6 @@ type PkRepository interface {
 	PaguPkByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string]int64, error)
 	KunciPK(ctx context.Context, tx *sql.Tx, model domain.KunciPK) (int64, error)
 	FindPkTerkunciByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string]bool, error)
+	FindPkPegawaiPenetapan(ctx context.Context, tx *sql.Tx, idPegawai, kodeOpd string, tahun int) ([]domain.PkOpd, error)
+	IndikatorTargetPkByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) (map[string][]domain.Indikator, error)
 }

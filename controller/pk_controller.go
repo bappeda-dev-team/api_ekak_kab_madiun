@@ -11,4 +11,5 @@ type PkController interface {
 	HubungkanAtasan(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	KunciPK(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	BukaKunciPK(w http.ResponseWriter, r *http.Request, params httprouter.Params)
+	PkPenetapan(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }

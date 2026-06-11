@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"strings"
@@ -563,5 +564,172 @@ func (repository *PkRepositoryImpl) FindPkTerkunciByKodeOpdTahun(
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	return result, nil
+}
+
+func (repository *PkRepositoryImpl) FindPkPegawaiPenetapan(
+	ctx context.Context,
+	tx *sql.Tx,
+	idPegawai, kodeOpd string,
+	tahun int,
+) ([]domain.PkOpd, error) {
+	query := `
+	SELECT pk.id,
+		pk.kode_opd,
+		pk.nama_opd,
+		pk.level_pk,
+		pk.nama_atasan,
+		pk.nip_atasan,
+		pk.id_rekin_atasan,
+		pk.rekin_atasan,
+		pk.nip_pemilik_pk,
+		pk.nama_pemilik_pk,
+		pk.id_rekin_pemilik_pk,
+		pk.rekin_pemilik_pk,
+		pk.tahun,
+		pk.keterangan
+	FROM pk_opd pk
+	WHERE pk.nip_pemilik_pk = ?
+		AND pk.kode_opd = ?
+		AND pk.tahun = ?
+		AND EXISTS (
+		SELECT 1
+		FROM tb_kunci_pk kun
+		WHERE kun.id_pegawai = pk.nip_pemilik_pk
+			AND kun.kode_opd = pk.kode_opd
+			AND kun.tahun = pk.tahun
+			AND kun.pk_terkunci = TRUE
+		)
+	ORDER BY pk.level_pk
+	`
+
+	rows, err := tx.QueryContext(ctx, query, idPegawai, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []domain.PkOpd
+	for rows.Next() {
+		var pkOpd domain.PkOpd
+
+		err := rows.Scan(
+			&pkOpd.Id,
+			&pkOpd.KodeOpd,
+			&pkOpd.NamaOpd,
+			&pkOpd.LevelPk,
+			&pkOpd.NamaAtasan,
+			&pkOpd.NipAtasan,
+			&pkOpd.IdRekinAtasan,
+			&pkOpd.RekinAtasan,
+			&pkOpd.NipPemilikPk,
+			&pkOpd.NamaPemilikPk,
+			&pkOpd.IdRekinPemilikPk,
+			&pkOpd.RekinPemilikPk,
+			&pkOpd.Tahun,
+			&pkOpd.Keterangan,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan pk_opd failed: %w", err)
+		}
+		result = append(result, pkOpd)
+	}
+	return result, nil
+}
+
+func (repository *PkRepositoryImpl) IndikatorTargetPkByIdRekins(
+	ctx context.Context,
+	tx *sql.Tx,
+	idRekins []string,
+) (map[string][]domain.Indikator, error) {
+	const op = "pk_repository.IndikatorTargetPkByIdRekins"
+
+	if len(idRekins) == 0 {
+		return map[string][]domain.Indikator{}, nil
+	}
+
+	baseQuery := `
+          SELECT ind.id,
+                 ind.rencana_kinerja_id,
+                 ind.indikator,
+                 ind.tahun,
+                 tgt.id as target_id,
+                 tgt.target,
+                 tgt.satuan,
+                 tgt.tahun as target_tahun
+          FROM tb_indikator ind
+          LEFT JOIN tb_target tgt ON ind.id = tgt.indikator_id
+          WHERE rencana_kinerja_id IN (?)
+		  ORDER BY ind.id
+    `
+
+	query, args := helper.BuildInQueryString(baseQuery, idRekins)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// rekinId -> indikatorId -> indikator
+	rekinMap := make(map[string]map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId, rekinId, indikator, tahun               string
+			targetId, target, satuan, tahunTarget, tahunNs sql.NullString
+		)
+
+		if err := rows.Scan(
+			&indId,
+			&rekinId,
+			&indikator,
+			&tahunNs,
+			&targetId,
+			&target,
+			&satuan,
+			&tahunTarget,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		// init rekinMap
+		if rekinMap[rekinId] == nil {
+			rekinMap[rekinId] = make(map[string]*domain.Indikator)
+		}
+		if rekinMap[rekinId][indId] == nil {
+			if tahunNs.Valid {
+				tahun = tahunNs.String
+			}
+			rekinMap[rekinId][indId] = &domain.Indikator{
+				Id:               indId,
+				RencanaKinerjaId: rekinId,
+				Indikator:        indikator,
+				Tahun:            tahun,
+				Target:           make([]domain.Target, 0),
+			}
+		}
+		if targetId.Valid {
+			rekinMap[rekinId][indId].Target = append(
+				rekinMap[rekinId][indId].Target,
+				domain.Target{
+					Id:          targetId.String,
+					IndikatorId: indId,
+					Target:      target.String,
+					Satuan:      satuan.String,
+					Tahun:       tahunTarget.String,
+				},
+			)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+	result := make(map[string][]domain.Indikator)
+	for rekinId, indikatorMap := range rekinMap {
+		for _, ind := range indikatorMap {
+			result[rekinId] = append(result[rekinId], *ind)
+		}
+	}
+
 	return result, nil
 }

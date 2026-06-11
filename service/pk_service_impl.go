@@ -1187,3 +1187,69 @@ func resolveLevel4Candidates(
 func normalizeNama(namaJabatan string) string {
 	return strings.ToUpper(namaJabatan)
 }
+
+func (service *PkServiceImpl) FindPkPenetapan(
+	ctx context.Context,
+	idPegawai string,
+	kodeOpd string,
+	tahun int,
+) ([]pkopd.PkAsn, error) {
+	log.Printf("[INFO] FIND PK PENETAPAN BY IDPEGAWAI KODE OPD TAHUN")
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	pks, err := service.pkRepository.FindPkPegawaiPenetapan(ctx, tx, idPegawai, kodeOpd, tahun)
+	if err != nil {
+		log.Printf("Error find pk pegawai penetapan: %v", err)
+		return nil, err
+	}
+	idRekins := make([]string, 0, len(pks))
+	for _, pk := range pks {
+		idRekins = append(idRekins, pk.IdRekinPemilikPk)
+	}
+	indikatorRekins, err := service.pkRepository.IndikatorTargetPkByIdRekins(ctx, tx, idRekins)
+	if err != nil {
+		log.Printf("Error find indikator pk penetapan: %v", err)
+		return nil, err
+	}
+	result := make([]pkopd.PkAsn, 0, len(pks))
+	for _, pk := range pks {
+		indikatorSelected := indikatorRekins[pk.IdRekinPemilikPk]
+		indikatorPks := make([]pkopd.IndikatorPk, 0, len(indikatorSelected))
+		for _, ind := range indikatorSelected {
+			targets := make([]pkopd.TargetIndPk, 0, len(ind.Target))
+			for _, tar := range ind.Target {
+				targets = append(targets,
+					pkopd.TargetIndPk{
+						IdIndikator: tar.IndikatorId,
+						IdTarget:    tar.Id,
+						Target:      tar.Target,
+						Satuan:      tar.Satuan,
+					})
+			}
+			indikatorPks = append(indikatorPks,
+				pkopd.IndikatorPk{
+					IdRekin:     ind.RencanaKinerjaId,
+					IdIndikator: ind.Id,
+					Indikator:   ind.Indikator,
+					Targets:     targets,
+				})
+		}
+		result = append(result, pkopd.PkAsn{
+			Id:               pk.Id,
+			KodeOpd:          pk.KodeOpd,
+			NamaOpd:          pk.NamaOpd,
+			LevelPk:          pk.LevelPk,
+			NipPemilikPk:     pk.NipPemilikPk,
+			NamaPemilikPk:    pk.NamaPemilikPk,
+			IdRekinPemilikPk: pk.IdRekinPemilikPk,
+			Tahun:            pk.Tahun,
+			Keterangan:       pk.Keterangan,
+			Indikators:       indikatorPks,
+		})
+	}
+	return result, nil
+}
