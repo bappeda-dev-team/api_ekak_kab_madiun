@@ -236,8 +236,8 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 			&kodeIndikator,
 			&indikatorNama,
 			&rumusPerhitungan,
-			&sumberData,
 			&definisiOperasional,
+			&sumberData,
 			&targetId,
 			&targetValue,
 			&satuan,
@@ -597,7 +597,8 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
             t.id, 
             t.kode_opd,
             COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
-            t.tujuan, 
+	    bid.nama_bidang_urusan,
+            t.tujuan,
             t.tahun_awal,
             t.tahun_akhir,
             t.jenis_periode,
@@ -612,7 +613,8 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
         FROM tb_tujuan_opd t
         LEFT JOIN tb_indikator i ON t.id = i.tujuan_opd_id
         LEFT JOIN tb_target tg ON i.id = tg.indikator_id
-        WHERE t.kode_opd = ? 
+	LEFT JOIN tb_bidang_urusan bid ON bid.kode_bidang_urusan = t.kode_bidang_urusan
+        WHERE t.kode_opd = ?
         AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
         AND t.jenis_periode = ?
         AND (tg.tahun IS NULL OR tg.tahun = ?)
@@ -635,27 +637,29 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
 
 	for rows.Next() {
 		var (
-			tujuanId         int
-			kodeOpd          string
-			kodeBidangUrusan string
-			tujuan           string
-			tahunAwalData    string
-			tahunAkhirData   string
-			jenisPeriodeData string
-			indikatorId      sql.NullString
-			indikatorNama    sql.NullString
-			rumusPerhitungan sql.NullString
-			sumberData       sql.NullString
-			targetId         sql.NullString
-			targetValue      sql.NullString
-			satuan           sql.NullString
-			tahunTarget      sql.NullString
+			tujuanId           int
+			kodeOpd            string
+			kodeBidangUrusan   string
+			tujuan             string
+			tahunAwalData      string
+			tahunAkhirData     string
+			jenisPeriodeData   string
+			indikatorId        sql.NullString
+			indikatorNama      sql.NullString
+			rumusPerhitungan   sql.NullString
+			sumberData         sql.NullString
+			targetId           sql.NullString
+			targetValue        sql.NullString
+			satuan             sql.NullString
+			tahunTarget        sql.NullString
+			namaBidangUrusanNs sql.NullString
 		)
 
 		err := rows.Scan(
 			&tujuanId,
 			&kodeOpd,
 			&kodeBidangUrusan,
+			&namaBidangUrusanNs,
 			&tujuan,
 			&tahunAwalData,
 			&tahunAkhirData,
@@ -672,6 +676,10 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
 		if err != nil {
 			return nil, err
 		}
+		var namaBidangUrusan string
+		if namaBidangUrusanNs.Valid {
+			namaBidangUrusan = namaBidangUrusanNs.String
+		}
 
 		// Buat atau ambil TujuanOpd
 		if _, exists := tujuanOpdMap[tujuanId]; !exists {
@@ -679,6 +687,7 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
 				Id:               tujuanId,
 				KodeOpd:          kodeOpd,
 				KodeBidangUrusan: kodeBidangUrusan,
+				NamaBidangUrusan: namaBidangUrusan,
 				Tujuan:           tujuan,
 				TahunAwal:        tahunAwalData,
 				TahunAkhir:       tahunAkhirData,
