@@ -1246,6 +1246,7 @@ func (service *PkServiceImpl) FindPkPenetapan(
 			NipPemilikPk:     pk.NipPemilikPk,
 			NamaPemilikPk:    pk.NamaPemilikPk,
 			IdRekinPemilikPk: pk.IdRekinPemilikPk,
+			RekinPemilikPk:   pk.RekinPemilikPk,
 			Tahun:            pk.Tahun,
 			Keterangan:       pk.Keterangan,
 			Indikators:       indikatorPks,
