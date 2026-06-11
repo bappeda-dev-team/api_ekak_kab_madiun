@@ -471,7 +471,7 @@ func (repository *SasaranOpdRepositoryImpl) Create(ctx context.Context, tx *sql.
 
 				_, err = tx.ExecContext(ctx, scriptTarget,
 					target.Id,
-					indikator.Id,
+					target.IndikatorId,
 					target.Tahun,
 					target.Target,
 					target.Satuan,
