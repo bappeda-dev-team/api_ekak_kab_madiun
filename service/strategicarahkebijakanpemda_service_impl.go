@@ -25,6 +25,8 @@ func NewStrategicArahKebijakanPemdaServiceImpl(csfRepository repository.CSFRepos
 }
 
 func (service *StrategicArahKebijakanPemdaServiceImpl) FindAll(ctx context.Context, tahunAwal string, tahunAkhir string) ([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, error) {
+	// startTime := time.Now()
+	// serviceName := "StrategicArahKebijakanPemdaService.FindAll"
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -34,6 +36,39 @@ func (service *StrategicArahKebijakanPemdaServiceImpl) FindAll(ctx context.Conte
 
 	// Inisialisasi response dasar
 	response := []strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{}
+
+	// csfList, err := service.csfRepository.IsuFindBetweenTahun(ctx, tx, tahunAwal, tahunAkhir)
+	// if err != nil {
+	// 	return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
+	// }
+	// if len(csfList) > 0 {
+	// 	Responses := make([]strategicarahkebijakan.IsuStrategiPemdaResponse, 0, len(csfList))
+	// 	for _, tujuan := range csfList {
+	// 		Responses = append(Responses, strategicarahkebijakan.IsuStrategiPemdaResponse{
+	// 			NamaIsu:        tujuan.NamaIsu,
+	// 		})
+	// 	}
+	// 	response.IsuStrategisPemda = Responses
+	// } else {
+	// 	response.IsuStrategisPemda = nil
+	// }
+	
+
+	// Ambil data tujuan OPD dengan batch
+	// tujuanPemdas, err := service.tujuanPemdaRepository.FindAllBetweenTahun(ctx, tx, tahunAwal, tahunAkhir, "RPJMD")
+	// if err != nil {
+	// 	return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
+	// }
+	// if len(tujuanPemdas) > 0 {
+	// 	tujuanResponses := make([]strategicarahkebijakan.TujuanPemdaResponse, 0, len(tujuanPemdas))
+	// 	for _, tujuan := range tujuanPemdas {
+	// 		tujuanResponses = append(tujuanResponses, strategicarahkebijakan.TujuanPemdaResponse{
+	// 			Id:        tujuan.Id,
+	// 			Tujuan:    tujuan.TujuanPemda,
+	// 		})
+	// 	}
+	// 	response.TujuanPemda = tujuanResponses
+	// }
 
 	sasaranOpds, err := service.sasaranPemdaRepository.FindStrategicArahKebijakanPemda(ctx, tx, tahunAwal, tahunAkhir, "RPJMD")
 	if err != nil {
@@ -74,6 +109,11 @@ func (service *StrategicArahKebijakanPemdaServiceImpl) FindAll(ctx context.Conte
 
 		response = strategiResponses
 	}
+
+
+
+	// log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
+	// 	time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.TujuanPemda))
 
 	return response, nil
 }
