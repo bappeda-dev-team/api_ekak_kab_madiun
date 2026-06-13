@@ -6,5 +6,5 @@ import (
 )
 
 type StrategicArahKebijakanPemdaService interface {
-	FindAll(ctx context.Context, tahunAwal, tahunAkhir string) (strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse, error)
+	FindAll(ctx context.Context, tahunAwal string, tahunAkhir string) ([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, error)
 }

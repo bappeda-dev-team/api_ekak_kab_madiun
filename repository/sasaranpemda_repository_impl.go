@@ -846,43 +846,51 @@ func (repository *SasaranPemdaRepositoryImpl) FindAllWithPokin(ctx context.Conte
 func (r *SasaranPemdaRepositoryImpl) FindStrategicArahKebijakanPemda(ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir, jenisPeriode string) ([]domain.StrategicPemdaRow, error) {
 
 	query := `SELECT
-	COALESCE(tp.tujuan_pemda, '') AS tujuan,
-	COALESCE(sp.sasaran_pemda, '') AS sasaran,
+    COALESCE(tp.tujuan_pemda, '') AS tujuan,
+    COALESCE(sp.sasaran_pemda, '') AS sasaran,
 
-	-- Strategi (gabungan level 1 & 2)
-	TRIM(
-		CONCAT(
-			COALESCE(pk_lvl1.nama_pohon, ''),
-			CASE 
-				WHEN pk_lvl1.nama_pohon IS NOT NULL 
-				     AND pk_lvl2.nama_pohon IS NOT NULL 
-				THEN ' -> ' 
-				ELSE '' 
-			END,
-			COALESCE(pk_lvl2.nama_pohon, '')
-		)
-	) AS strategi,
+    TRIM(
+        CONCAT(
+            COALESCE(pk_lvl1.nama_pohon, ''),
+            CASE 
+                WHEN pk_lvl1.nama_pohon IS NOT NULL 
+                     AND pk_subtema.nama_pohon IS NOT NULL 
+                THEN ' -> ' 
+                ELSE '' 
+            END,
+            COALESCE(pk_subtema.nama_pohon, ''),
+            CASE 
+                WHEN pk_lvl3.nama_pohon IS NOT NULL 
+                THEN CONCAT(' -> ', pk_lvl3.nama_pohon)
+                ELSE '' 
+            END
+        )
+    ) AS strategi,
 
-	COALESCE(pk_lvl4.nama_pohon, '') AS arah_kebijakan
+    COALESCE(pk_lvl4.nama_pohon, '') AS arah_kebijakan
 
 	FROM tb_sasaran_pemda sp
 
 	JOIN tb_tujuan_pemda tp 
 		ON sp.tujuan_pemda_id = tp.id
 
-	-- level 2 (strategi bawah)
-	LEFT JOIN tb_pohon_kinerja pk_lvl2 
-		ON sp.subtema_id = pk_lvl2.id 
-		AND pk_lvl2.level_pohon = 2
+	-- entry dynamic (level 1/2/3)
+	LEFT JOIN tb_pohon_kinerja pk_subtema 
+		ON sp.subtema_id = pk_subtema.id
 
-	-- level 1 (parent dari level 2)
+	-- level 1
 	LEFT JOIN tb_pohon_kinerja pk_lvl1 
-		ON pk_lvl2.parent = pk_lvl1.id 
+		ON pk_subtema.parent = pk_lvl1.id 
 		AND pk_lvl1.level_pohon = 1
+
+	-- level 3 (optional child)
+	LEFT JOIN tb_pohon_kinerja pk_lvl3 
+		ON pk_lvl3.parent = pk_subtema.id 
+		AND pk_lvl3.level_pohon = 3
 
 	-- arah kebijakan (level 4)
 	LEFT JOIN tb_pohon_kinerja pk_lvl4 
-		ON pk_lvl4.parent = pk_lvl2.id 
+		ON pk_lvl4.parent = pk_subtema.id 
 		AND pk_lvl4.level_pohon = 4
 
 	WHERE 
