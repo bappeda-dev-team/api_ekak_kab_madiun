@@ -33,10 +33,10 @@ func NewCrosscuttingOpdServiceImpl(crosscuttingOpdRepository repository.Crosscut
 	}
 }
 
-func (service *CrosscuttingOpdServiceImpl) Create(ctx context.Context, request pohonkinerja.CrosscuttingOpdCreateRequest, parentId int) (pohonkinerja.CrosscuttingOpdResponse, error) {
+func (service *CrosscuttingOpdServiceImpl) Create(ctx context.Context, request pohonkinerja.CrosscuttingOpdCreateRequest, parentId int) (pohonkinerja.CrosscuttingDikirimResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return pohonkinerja.CrosscuttingOpdResponse{}, err
+		return pohonkinerja.CrosscuttingDikirimResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
 
@@ -80,41 +80,20 @@ func (service *CrosscuttingOpdServiceImpl) Create(ctx context.Context, request p
 
 	result, err := service.CrosscuttingOpdRepository.CreateCrosscutting(ctx, tx, pokin, parentId)
 	if err != nil {
-		return pohonkinerja.CrosscuttingOpdResponse{}, err
+		return pohonkinerja.CrosscuttingDikirimResponse{}, err
 	}
-
-	// Konversi ke response
-	response := pohonkinerja.CrosscuttingOpdResponse{
-		Id:         result.Id,
-		NamaPohon:  result.NamaPohon,
-		JenisPohon: result.JenisPohon,
-		LevelPohon: result.LevelPohon,
-		KodeOpd:    result.KodeOpd,
-		Keterangan: result.Keterangan,
-		Tahun:      result.Tahun,
-		Status:     result.Status,
+	namaOpdTujuan := ""
+	if opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, result.KodeOpd); err == nil {
+		namaOpdTujuan = opd.NamaOpd
 	}
-
-	// Konversi indikator untuk response
-	for _, indikator := range result.Indikator {
-		indikatorResponse := pohonkinerja.IndikatorResponse{
-			Id:            indikator.Id,
-			NamaIndikator: indikator.Indikator,
-		}
-
-		// Konversi target untuk response
-		for _, target := range indikator.Target {
-			targetResponse := pohonkinerja.TargetResponse{
-				Id:              target.Id,
-				IndikatorId:     target.IndikatorId,
-				TargetIndikator: target.Target,
-				SatuanIndikator: target.Satuan,
-			}
-			indikatorResponse.Target = append(indikatorResponse.Target, targetResponse)
-		}
-		response.Indikator = append(response.Indikator, indikatorResponse)
+	response := pohonkinerja.CrosscuttingDikirimResponse{
+		IdCrosscutting:         result.Id,
+		KeteranganCrosscutting: result.Keterangan,
+		NamaPohonTujuan:        request.NamaPohon,
+		KodeOpdTujuan:          result.KodeOpd,
+		NamaOpdTujuan:          namaOpdTujuan,
+		Status:                 result.Status,
 	}
-
 	return response, nil
 }
 
