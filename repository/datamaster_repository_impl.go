@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain/datamaster"
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -386,7 +385,7 @@ func (repo *DataMasterRepositoryImpl) DeleteRB(ctx context.Context, tx *sql.Tx, 
 
 func (repo *DataMasterRepositoryImpl) PokinByIdRBs(ctx context.Context, tx *sql.Tx, listIdRB []int) ([]datamaster.PokinIdRBTagging, error) {
 	if len(listIdRB) == 0 {
-		return []datamaster.PokinIdRBTagging{}, errors.New("ids tidak boleh kosong")
+		return []datamaster.PokinIdRBTagging{}, nil
 	}
 
 	// Buat placeholder untuk IN clause
