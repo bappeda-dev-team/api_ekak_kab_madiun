@@ -27,11 +27,12 @@ type PohonKinerjaAdminServiceImpl struct {
 	pegawaiRepository         repository.PegawaiRepository
 	reviewRepository          repository.ReviewRepository
 	csfRepository             repository.CSFRepository
+	dataMasterRepository      repository.DataMasterRepository
 	DB                        *sql.DB
 	programUnggulanRepository repository.ProgramUnggulanRepository
 }
 
-func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, csfRepository repository.CSFRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaAdminServiceImpl {
+func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, csfRepository repository.CSFRepository, dataMasterRepository repository.DataMasterRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaAdminServiceImpl {
 	return &PohonKinerjaAdminServiceImpl{
 		pohonKinerjaRepository:    pohonKinerjaRepository,
 		opdRepository:             opdRepository,
@@ -39,6 +40,7 @@ func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKine
 		DB:                        DB,
 		reviewRepository:          reviewRepository,
 		csfRepository:             csfRepository,
+		dataMasterRepository:      dataMasterRepository,
 		programUnggulanRepository: programUnggulanRepository,
 	}
 }
@@ -212,6 +214,28 @@ func (service *PohonKinerjaAdminServiceImpl) Create(ctx context.Context, request
 	for _, tagging := range result.TaggingPokin {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+			// -------- CASE RB --------
+			if tagging.NamaTagging == "RB" {
+				rbId, err := strconv.Atoi(keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
+
+				rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+				if err != nil {
+					continue
+				}
+
+				// Response
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: &rbTagging.KegiatanUtama,
+					Tahun:               keterangan.Tahun,
+				})
+				continue // penting: JANGAN LANJUT KE GENERAL LOGIC
+			}
+
+			// --------- CASE NON RB ---------
 			programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
 			if err != nil {
 				continue
@@ -557,6 +581,10 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
 	helper.PanicIfError(err)
 
+	tahunPokin, err := strconv.Atoi(updatedPokin.Tahun)
+	if err != nil {
+		log.Printf("TAHUN TIDAK SESUAI")
+	}
 	updatedCsfInput := domain.CSF{
 		PohonID:                    updatedPokin.Id,
 		PernyataanKondisiStrategis: request.PernyataanKondisiStrategis,
@@ -564,6 +592,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		DataTerukur:                request.DataTerukur,
 		KondisiTerukur:             request.KondisiTerukur,
 		KondisiWujud:               request.KondisiWujud,
+		Tahun:                      tahunPokin,
 	}
 
 	updatedCsf, err := service.csfRepository.UpdateCSFByPohonID(ctx, tx, updatedCsfInput)
@@ -584,6 +613,29 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 	for _, tagging := range updatedPokin.TaggingPokin {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+
+			// -------- CASE RB --------
+			if tagging.NamaTagging == "RB" {
+				rbId, err := strconv.Atoi(keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
+
+				rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+				if err != nil {
+					continue
+				}
+
+				// Response
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: &rbTagging.KegiatanUtama,
+					Tahun:               keterangan.Tahun,
+				})
+
+				continue // penting: JANGAN LANJUT KE GENERAL LOGIC
+			}
+
 			programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
 			if err != nil {
 				continue
@@ -1129,6 +1181,29 @@ func (service *PohonKinerjaAdminServiceImpl) FindById(ctx context.Context, id in
 	for _, tagging := range taggingList {
 		var keteranganResponses []pohonkinerja.KeteranganTaggingResponse
 		for _, keterangan := range tagging.KeteranganTaggingProgram {
+
+			// -------- CASE RB --------
+			if tagging.NamaTagging == "RB" {
+				rbId, err := strconv.Atoi(keterangan.KodeProgramUnggulan)
+				if err != nil {
+					continue
+				}
+
+				rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+				if err != nil {
+					continue
+				}
+
+				// Response
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					KodeProgramUnggulan: keterangan.KodeProgramUnggulan,
+					RencanaImplementasi: &rbTagging.KegiatanUtama,
+					Tahun:               keterangan.Tahun,
+				})
+
+				continue // penting: JANGAN LANJUT KE GENERAL LOGIC
+			}
+
 			programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, keterangan.KodeProgramUnggulan)
 			if err != nil {
 				continue
@@ -1369,6 +1444,21 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarki(ctx cont
 			for i := range taggings {
 				if len(taggings[i].KeteranganTaggingProgram) > 0 {
 					for j := range taggings[i].KeteranganTaggingProgram {
+						if taggings[i].NamaTagging == "RB" {
+
+							rbId, err := strconv.Atoi(taggings[i].KeteranganTaggingProgram[j].KodeProgramUnggulan)
+							if err != nil {
+								continue
+							}
+
+							rbTagging, err := service.dataMasterRepository.FindRBById(ctx, tx, rbId)
+							if err != nil {
+								continue
+							}
+							taggings[i].KeteranganTaggingProgram[j].RencanaImplementasi = &rbTagging.KegiatanUtama
+
+							continue
+						}
 						programUnggulan, err := service.programUnggulanRepository.FindByKodeProgramUnggulan(
 							ctx,
 							tx,

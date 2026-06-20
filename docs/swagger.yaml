@@ -47,6 +47,140 @@ definitions:
       target:
         type: string
     type: object
+  iku.TargetResponse:
+    properties:
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  indikator.IkmRequest:
+    properties:
+      definisi_operasional:
+        type: string
+      indikator:
+        type: string
+      is_active:
+        type: boolean
+      jenis:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/iku.TargetResponse'
+        type: array
+    type: object
+  indikator.IkmResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      indikator:
+        type: string
+      is_active:
+        type: boolean
+      jenis:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/iku.TargetResponse'
+        type: array
+    type: object
+  pohonkinerja.ControlPokinOpdData:
+    properties:
+      jumlah_pelaksana:
+        type: integer
+      jumlah_pokin:
+        type: integer
+      jumlah_pokin_ada_pelaksana:
+        type: integer
+      jumlah_pokin_ada_rekin:
+        description: ← BARU
+        type: integer
+      jumlah_pokin_tanpa_pelaksana:
+        type: integer
+      jumlah_pokin_tanpa_rekin:
+        description: ← BARU
+        type: integer
+      jumlah_rencana_kinerja:
+        description: ← BARU
+        type: integer
+      level_pohon:
+        type: integer
+      nama_level:
+        type: string
+      persentase:
+        description: pelaksana
+        type: string
+      persentase_cascading:
+        description: '← BARU: cascading'
+        type: string
+    type: object
+  pohonkinerja.ControlPokinOpdResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/pohonkinerja.ControlPokinOpdData'
+        type: array
+      tematik:
+        items:
+          $ref: '#/definitions/pohonkinerja.LeaderboardTematikItem'
+        type: array
+      total:
+        $ref: '#/definitions/pohonkinerja.ControlPokinOpdTotal'
+    type: object
+  pohonkinerja.ControlPokinOpdTotal:
+    properties:
+      persentase:
+        description: pelaksana
+        type: string
+      persentase_cascading:
+        description: '← BARU: cascading'
+        type: string
+      total_pelaksana:
+        type: integer
+      total_pokin:
+        type: integer
+      total_pokin_ada_pelaksana:
+        type: integer
+      total_pokin_ada_rekin:
+        description: ← BARU
+        type: integer
+      total_pokin_tanpa_pelaksana:
+        type: integer
+      total_pokin_tanpa_rekin:
+        description: ← BARU
+        type: integer
+      total_rencana_kinerja:
+        description: ← BARU
+        type: integer
+    type: object
   pohonkinerja.IndikatorResponse:
     properties:
       id_indikator:
@@ -74,7 +208,34 @@ definitions:
         type: string
       kode_program_unggulan:
         type: string
+      nama_program_prioritas:
+        type: string
       tahun:
+        type: string
+    type: object
+  pohonkinerja.LeaderboardHiddenUpsertRequest:
+    properties:
+      is_hidden:
+        type: boolean
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+    required:
+    - kode_opd
+    - tahun
+    type: object
+  pohonkinerja.LeaderboardTematikItem:
+    properties:
+      child:
+        items:
+          $ref: '#/definitions/pohonkinerja.LeaderboardTematikItem'
+        type: array
+      jenis:
+        type: string
+      level:
+        type: integer
+      nama:
         type: string
     type: object
   pohonkinerja.PelaksanaOpdResponse:
@@ -982,6 +1143,158 @@ info:
   title: EKAK Kabupaten Madiun API
   version: "1.0"
 paths:
+  /ikm:
+    get:
+      consumes:
+      - application/json
+      description: Get all indikator IKM berdasarkan tahun awal dan akhir
+      parameters:
+      - description: Tahun Awal
+        in: query
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        in: query
+        name: tahun_akhir
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/indikator.IkmResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Get IKM by Periode
+      tags:
+      - Indikator IKM
+    post:
+      consumes:
+      - application/json
+      description: Membuat indikator IKM baru
+      parameters:
+      - description: Request Body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/indikator.IkmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Create IKM
+      tags:
+      - Indikator IKM
+  /ikm/{id}:
+    delete:
+      description: Hapus indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Delete IKM
+      tags:
+      - Indikator IKM
+    get:
+      description: Get indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Get IKM by ID
+      tags:
+      - Indikator IKM
+    put:
+      consumes:
+      - application/json
+      description: Update indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request Body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/indikator.IkmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Update IKM
+      tags:
+      - Indikator IKM
   /iku_renja_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -1197,6 +1510,39 @@ paths:
       summary: Update IKU Opd Active
       tags:
       - IKU Renja Opd
+  /leaderboard_rekin_hidden/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Upsert leaderboard rekin hidden.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Leaderboard Rekin Hidden
+      tags:
+      - Leaderboard Rekin Hidden
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:
@@ -1648,6 +1994,80 @@ paths:
       summary: Clone Pohon Kinerja opd
       tags:
       - Clone Pohon Kinerja Opd
+  /pohon_kinerja_opd/control_pokin_opd/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Get control pokin opd by kode opd and tahun.
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ControlPokinOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Control Pokin Opd
+      tags:
+      - Control Pokin Opd
+  /pohon_kinerja_opd/leaderboard_pokin_opd/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Get leaderboard rekin hidden by tahun.
+      parameters:
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Leaderboard Rekin Hidden
+      tags:
+      - Leaderboard Rekin Hidden
   /pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/{kode_opd}/{tahun}/{level_pohon}:
     get:
       consumes:

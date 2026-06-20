@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"strings"
@@ -114,6 +115,8 @@ func (repository *PkRepositoryImpl) HubungkanRekin(
 		?
 	)
 	ON DUPLICATE KEY UPDATE
+                kode_opd           = VALUES(kode_opd),
+                nama_opd           = VALUES(nama_opd),
 		level_pk           = VALUES(level_pk),
 		nip_atasan         = VALUES(nip_atasan),
 		nama_atasan        = VALUES(nama_atasan),
@@ -148,17 +151,21 @@ func (repository *PkRepositoryImpl) HubungkanRekin(
 	return nil
 }
 
-func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]domain.AllItemPk, error) {
+// tambah kode opd dan tahun untuk spesifik mencari pagu dari input
+// indikator di tahun tsb via matrix-renja
+func (repository *PkRepositoryImpl) FindSubkegiatanByKodeOpdTahunRekinIds(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, rekinIds []string) (map[string]domain.AllItemPk, error) {
 	subMap := make(map[string]domain.AllItemPk)
+
 	if len(rekinIds) == 0 {
 		return subMap, nil
 	}
 
 	placeholders := make([]string, len(rekinIds))
-	args := make([]any, len(rekinIds))
+	args := make([]any, 0, len(rekinIds)+2)
+
 	for i, id := range rekinIds {
 		placeholders[i] = "?"
-		args[i] = id
+		args = append(args, id)
 	}
 
 	script := fmt.Sprintf(`
@@ -168,14 +175,21 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
           k.kode_kegiatan,
           k.nama_kegiatan,
           sub.kode_subkegiatan,
-          sub.nama_subkegiatan
-		FROM tb_subkegiatan_terpilih st
+          sub.nama_subkegiatan,
+          tp.pagu AS pagu_subkegiatan
+	FROM tb_subkegiatan_terpilih st
         JOIN tb_subkegiatan sub ON sub.id = st.subkegiatan_id
         LEFT JOIN tb_master_kegiatan k ON k.kode_kegiatan = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 5)
         LEFT JOIN tb_master_program p ON p.kode_program = SUBSTRING_INDEX(st.kode_subkegiatan, '.', 3)
+        LEFT JOIN tb_pagu tp ON tp.kode_subkegiatan = st.kode_subkegiatan AND tp.kode_opd = ? AND tp.tahun = ? AND tp.jenis = 'penetapan'
 		WHERE st.rekin_id IN (%s)`,
 		strings.Join(placeholders, ","))
-	rows, err := tx.QueryContext(ctx, script, args...)
+
+	finalArgs := make([]any, 0, len(args)+2)
+	finalArgs = append(finalArgs, kodeOpd, tahun)
+	finalArgs = append(finalArgs, args...)
+
+	rows, err := tx.QueryContext(ctx, script, finalArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +199,7 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
 		var itemPk domain.AllItemPk
 		var kodeProgram, namaProgram sql.NullString
 		var kodeKegiatan, namaKegiatan sql.NullString
+		var paguSubkegiatan sql.NullInt64
 
 		err := rows.Scan(&itemPk.RekinId,
 			&kodeProgram,
@@ -192,7 +207,9 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
 			&kodeKegiatan,
 			&namaKegiatan,
 			&itemPk.KodeSubkegiatan,
-			&itemPk.NamaSubkegiatan)
+			&itemPk.NamaSubkegiatan,
+			&paguSubkegiatan,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -207,6 +224,9 @@ func (repository *PkRepositoryImpl) FindSubkegiatanByRekinIds(ctx context.Contex
 		}
 		if namaKegiatan.Valid {
 			itemPk.NamaKegiatan = namaKegiatan.String
+		}
+		if paguSubkegiatan.Valid {
+			itemPk.PaguSubkegiatan = paguSubkegiatan.Int64
 		}
 		subMap[itemPk.RekinId] = itemPk
 	}
@@ -455,4 +475,261 @@ func (repository *PkRepositoryImpl) PaguPkByKodeOpdTahun(ctx context.Context, tx
 		paguSubkegiatanMap[kodeSubkegiatan] = pagu
 	}
 	return paguSubkegiatanMap, nil
+}
+
+func (repository *PkRepositoryImpl) KunciPK(
+	ctx context.Context,
+	tx *sql.Tx,
+	model domain.KunciPK,
+) (int64, error) {
+	script := `INSERT INTO tb_kunci_pk (
+			id_pegawai,
+			kode_opd,
+			tahun,
+			dikunci_oleh,
+			dikunci_pada,
+			status_pk,
+			pk_terkunci
+		)
+ 		   VALUES(
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		) ON DUPLICATE KEY UPDATE
+			dikunci_oleh = VALUES(dikunci_oleh),
+			dikunci_pada = VALUES(dikunci_pada),
+			status_pk    = VALUES(status_pk),
+			pk_terkunci  = VALUES(pk_terkunci)
+		`
+	result, err := tx.ExecContext(
+		ctx,
+		script,
+		model.IdPegawai,
+		model.KodeOpd,
+		model.Tahun,
+		model.DikunciOleh,
+		model.DikunciPada,
+		model.StatusPk,
+		model.PkTerkunci)
+	if err != nil {
+		return 0, fmt.Errorf("kunci pk failed: %w", err)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("get last kunciPk id failed: %w", err)
+	}
+	return id, nil
+}
+
+func (repository *PkRepositoryImpl) FindPkTerkunciByKodeOpdTahun(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	tahun int,
+) (map[string]bool, error) {
+	const op = "pk_repository.FindPkTerkunciByKodeOpdTahun"
+
+	query := `
+		SELECT
+			id_pegawai,
+			pk_terkunci
+		FROM tb_kunci_pk
+		WHERE kode_opd = ? AND tahun = ?
+	`
+
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	if err != nil {
+		return map[string]bool{}, fmt.Errorf("%s: query failed: %v", op, err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]bool)
+	for rows.Next() {
+		var (
+			idPegawai string
+			terkunci  bool
+		)
+		if err := rows.Scan(
+			&idPegawai,
+			&terkunci,
+		); err != nil {
+			return nil, err
+		}
+		result[idPegawai] = terkunci
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (repository *PkRepositoryImpl) FindPkPegawaiPenetapan(
+	ctx context.Context,
+	tx *sql.Tx,
+	idPegawai, kodeOpd string,
+	tahun int,
+) ([]domain.PkOpd, error) {
+	query := `
+	SELECT pk.id,
+		pk.kode_opd,
+		pk.nama_opd,
+		pk.level_pk,
+		pk.nama_atasan,
+		pk.nip_atasan,
+		pk.id_rekin_atasan,
+		pk.rekin_atasan,
+		pk.nip_pemilik_pk,
+		pk.nama_pemilik_pk,
+		pk.id_rekin_pemilik_pk,
+		pk.rekin_pemilik_pk,
+		pk.tahun,
+		pk.keterangan
+	FROM pk_opd pk
+	WHERE pk.nip_pemilik_pk = ?
+		AND pk.kode_opd = ?
+		AND pk.tahun = ?
+		AND EXISTS (
+		SELECT 1
+		FROM tb_kunci_pk kun
+		WHERE kun.id_pegawai = pk.nip_pemilik_pk
+			AND kun.kode_opd = pk.kode_opd
+			AND kun.tahun = pk.tahun
+			AND kun.pk_terkunci = TRUE
+		)
+	ORDER BY pk.level_pk
+	`
+
+	rows, err := tx.QueryContext(ctx, query, idPegawai, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []domain.PkOpd
+	for rows.Next() {
+		var pkOpd domain.PkOpd
+
+		err := rows.Scan(
+			&pkOpd.Id,
+			&pkOpd.KodeOpd,
+			&pkOpd.NamaOpd,
+			&pkOpd.LevelPk,
+			&pkOpd.NamaAtasan,
+			&pkOpd.NipAtasan,
+			&pkOpd.IdRekinAtasan,
+			&pkOpd.RekinAtasan,
+			&pkOpd.NipPemilikPk,
+			&pkOpd.NamaPemilikPk,
+			&pkOpd.IdRekinPemilikPk,
+			&pkOpd.RekinPemilikPk,
+			&pkOpd.Tahun,
+			&pkOpd.Keterangan,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan pk_opd failed: %w", err)
+		}
+		result = append(result, pkOpd)
+	}
+	return result, nil
+}
+
+func (repository *PkRepositoryImpl) IndikatorTargetPkByIdRekins(
+	ctx context.Context,
+	tx *sql.Tx,
+	idRekins []string,
+) (map[string][]domain.Indikator, error) {
+	const op = "pk_repository.IndikatorTargetPkByIdRekins"
+
+	if len(idRekins) == 0 {
+		return map[string][]domain.Indikator{}, nil
+	}
+
+	baseQuery := `
+          SELECT ind.id,
+                 ind.rencana_kinerja_id,
+                 ind.indikator,
+                 ind.tahun,
+                 tgt.id as target_id,
+                 tgt.target,
+                 tgt.satuan,
+                 tgt.tahun as target_tahun
+          FROM tb_indikator ind
+          LEFT JOIN tb_target tgt ON ind.id = tgt.indikator_id
+          WHERE rencana_kinerja_id IN (?)
+		  ORDER BY ind.id
+    `
+
+	query, args := helper.BuildInQueryString(baseQuery, idRekins)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// rekinId -> indikatorId -> indikator
+	rekinMap := make(map[string]map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId, rekinId, indikator, tahun               string
+			targetId, target, satuan, tahunTarget, tahunNs sql.NullString
+		)
+
+		if err := rows.Scan(
+			&indId,
+			&rekinId,
+			&indikator,
+			&tahunNs,
+			&targetId,
+			&target,
+			&satuan,
+			&tahunTarget,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		// init rekinMap
+		if rekinMap[rekinId] == nil {
+			rekinMap[rekinId] = make(map[string]*domain.Indikator)
+		}
+		if rekinMap[rekinId][indId] == nil {
+			if tahunNs.Valid {
+				tahun = tahunNs.String
+			}
+			rekinMap[rekinId][indId] = &domain.Indikator{
+				Id:               indId,
+				RencanaKinerjaId: rekinId,
+				Indikator:        indikator,
+				Tahun:            tahun,
+				Target:           make([]domain.Target, 0),
+			}
+		}
+		if targetId.Valid {
+			rekinMap[rekinId][indId].Target = append(
+				rekinMap[rekinId][indId].Target,
+				domain.Target{
+					Id:          targetId.String,
+					IndikatorId: indId,
+					Target:      target.String,
+					Satuan:      satuan.String,
+					Tahun:       tahunTarget.String,
+				},
+			)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+	result := make(map[string][]domain.Indikator)
+	for rekinId, indikatorMap := range rekinMap {
+		for _, ind := range indikatorMap {
+			result[rekinId] = append(result[rekinId], *ind)
+		}
+	}
+
+	return result, nil
 }

@@ -16,4 +16,6 @@ type MatrixRenstraRepository interface {
 	DeleteTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) error
 	UpsertAnggaran(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun string, pagu int64) error
 	DeleteIndicatorsExcept(ctx context.Context, tx *sql.Tx, kode, kodeOpd, tahun string, keepList []string) error
+	FindIndikatorRenstra(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error)
+	FindIndikatorLama(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error)
 }

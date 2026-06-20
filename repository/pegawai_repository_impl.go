@@ -243,3 +243,59 @@ func (repository *PegawaiRepositoryImpl) FindPegawaiByNipsBatch(ctx context.Cont
 
 	return result, nil
 }
+
+func (repo *PegawaiRepositoryImpl) FindRolePegawaiByNipsBatch(ctx context.Context, tx *sql.Tx, nips []string) (map[string][]string, error) {
+	if len(nips) <= 0 {
+		return map[string][]string{}, nil
+	}
+
+	placeholders := make([]string, len(nips))
+	args := make([]any, len(nips))
+	for i, nip := range nips {
+		placeholders[i] = "?"
+		args[i] = nip
+	}
+
+	script := fmt.Sprintf(`
+		SELECT
+			peg.nip,
+                        role.role
+		FROM tb_pegawai peg
+		LEFT JOIN tb_role role
+			ON role.id = (
+				SELECT usr.role_id
+				FROM tb_user_role usr
+                                JOIN tb_users us ON us.id = usr.user_id
+				WHERE us.nip = peg.nip
+			)
+		WHERE peg.nip IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]string)
+	for _, nip := range nips {
+		result[nip] = []string{}
+	}
+	for rows.Next() {
+		var nip string
+		var namaRoleNS sql.NullString
+
+		err := rows.Scan(
+			&nip,
+			&namaRoleNS,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if namaRoleNS.Valid {
+			result[nip] = append(result[nip], namaRoleNS.String)
+		}
+	}
+
+	return result, nil
+}

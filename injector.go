@@ -420,6 +420,15 @@ var matrixRenjaSet = wire.NewSet(
 	wire.Bind(new(controller.MatrixRenjaController), new(*controller.MatrixRenjaControllerImpl)),
 )
 
+var dataMasterSet = wire.NewSet(
+	repository.NewDataMasterRepositoryImpl,
+	wire.Bind(new(repository.DataMasterRepository), new(*repository.DataMasterRepositoryImpl)),
+	service.NewDataMasterServiceImpl,
+	wire.Bind(new(service.DataMasterService), new(*service.DataMasterServiceImpl)),
+	controller.NewDataMasterControllerImpl,
+	wire.Bind(new(controller.DataMasterController), new(*controller.DataMasterControllerImpl)),
+)
+
 var pkOpdSet = wire.NewSet(
 	repository.NewPkRepositoryImpl,
 	wire.Bind(new(repository.PkRepository), new(*repository.PkRepositoryImpl)),
@@ -442,6 +451,24 @@ var jabatanPegawaiSet = wire.NewSet(
 var cloneRecordSet = wire.NewSet(
 	repository.NewCloneRecordRepositoryImpl,
 	wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)),
+)
+
+var programPrioritasPusatSet = wire.NewSet(
+	repository.NewProgramPrioritasPusatRepositoryImpl,
+	wire.Bind(new(repository.ProgramPrioritasPusatRepository), new(*repository.ProgramPrioritasPusatRepositoryImpl)),
+	service.NewProgramPrioritasPusatServiceImpl,
+	wire.Bind(new(service.ProgramPrioritasPusatService), new(*service.ProgramPrioritasPusatServiceImpl)),
+	controller.NewProgramPrioritasPusatControllerImpl,
+	wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)),
+)
+
+var indikatorSet = wire.NewSet(
+	repository.NewIkmRepositoryImpl,
+	wire.Bind(new(repository.IkmRepository), new(*repository.IkmRepositoryImpl)),
+	service.NewIkmServiceImpl,
+	wire.Bind(new(service.IkmService), new(*service.IkmServiceImpl)),
+	controller.NewIndikatorControllerImpl,
+	wire.Bind(new(controller.IndikatorController), new(*controller.IndikatorControllerImpl)),
 )
 
 func InitializeServer() *http.Server {
@@ -495,10 +522,13 @@ func InitializeServer() *http.Server {
 		isustrategisSet,
 		programUnggulanSet,
 		matrixRenjaSet,
+		dataMasterSet,
 		pkOpdSet,
 		strukturOrganisasiSet,
 		jabatanPegawaiSet,
 		cloneRecordSet,
+		programPrioritasPusatSet,
+		indikatorSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

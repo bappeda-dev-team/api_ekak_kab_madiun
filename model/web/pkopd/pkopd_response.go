@@ -23,17 +23,23 @@ type PkOpdByLevel struct {
 }
 
 type PkPegawai struct {
-	NipAtasan      string   `json:"nip_atasan"`
-	NamaAtasan     string   `json:"nama_atasan"`
-	JabatanAtasan  string   `json:"jabatan_atasan"`
-	Nama           string   `json:"nama_pegawai"`
-	Nip            string   `json:"nip"`
-	JabatanPegawai string   `json:"jabatan_pegawai"`
-	Pks            []PkAsn  `json:"pks"`
-	LevelPk        int      `json:"level_pk"`
-	JenisItem      string   `json:"jenis_item"`
-	Item           []ItemPk `json:"item_pk"`
-	TotalPagu      int64    `json:"total_pagu"`
+	NipAtasan      string `json:"nip_atasan"`
+	NamaAtasan     string `json:"nama_atasan"`
+	JabatanAtasan  string `json:"jabatan_atasan"`
+	Nama           string `json:"nama_pegawai"`
+	Nip            string `json:"nip"`
+	JabatanPegawai string `json:"jabatan_pegawai"`
+	LevelPk        int    `json:"level_pk"`
+	JenisItem      string `json:"jenis_item"`
+	// program kegiatan subkegiatan
+	Item      []ItemPk `json:"item_pk"`
+	TotalPagu int64    `json:"total_pagu"`
+	Roles     []string `json:"roles"`
+	// daftar atasan untuk menghubungkan rekin pegawai
+	AtasanCandidates []AtasanCandidate `json:"atasan_candidates"`
+	// rekin pegawai
+	PkTerkunci bool    `json:"pk_terkunci"` // true, false, false
+	Pks        []PkAsn `json:"pks"`
 }
 
 type ItemPk struct {
@@ -63,6 +69,16 @@ type PkAsn struct {
 	Indikators       []IndikatorPk `json:"indikators"`
 }
 
+type AtasanCandidate struct {
+	IdPegawai           string `json:"id_pegawai"`
+	NamaPegawai         string `json:"nama_pegawai"`
+	LevelPegawai        int    `json:"level_pegawai"`
+	KodeOpd             string `json:"kode_opd"`
+	NamaOpd             string `json:"nama_opd"`
+	IdPohonAtasan       int    `json:"id_pohon_atasan"`
+	IdParentPohonAtasan int    `json:"id_parent_pohon_atasan"`
+}
+
 type IndikatorPk struct {
 	IdRekin     string        `json:"id_rekin"`
 	IdIndikator string        `json:"id_indikator"`
@@ -75,4 +91,11 @@ type TargetIndPk struct {
 	IdTarget    string `json:"id_target"`
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
+}
+
+type KunciPKResponse struct {
+	IdKunci    int64  `json:"id_pk"`
+	IdPegawai  string `json:"id_pegawai"`
+	StatusPk   string `json:"status_pk"`   // terkunci, terbuka, revisi
+	PkTerkunci bool   `json:"pk_terkunci"` // true, false, false
 }

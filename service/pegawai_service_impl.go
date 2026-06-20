@@ -239,3 +239,18 @@ func (service *PegawaiServiceImpl) TambahJabatan(
 
 	return service.FindPegawaiWithJabatan(ctx, tx, request.Nip)
 }
+
+func (s *PegawaiServiceImpl) FindRolePegawais(ctx context.Context, pegawaiIds []string) (map[string][]string, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return map[string][]string{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	pegawais, err := s.pegawaiRepository.FindRolePegawaiByNipsBatch(ctx, tx, pegawaiIds)
+	if err != nil {
+		return map[string][]string{}, err
+	}
+
+	return pegawais, nil
+}

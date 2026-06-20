@@ -10,6 +10,7 @@ import (
 )
 
 type CSFRepository interface {
+	AllCsfByTahun(ctx context.Context, tx *sql.Tx, tahun string, repository PohonKinerjaRepository) ([]domain.PohonKinerja, error)
 	FindByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]isustrategis.CSFPokin, error)
 	IsuFindByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]strategic.IsuStrategiOpd, error)
 	IsuFindBetweenTahun(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string) ([]strategicarahkebijakan.IsuStrategiPemda, error)

@@ -10,6 +10,7 @@ import (
 	"ekak_kabupaten_madiun/repository"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -61,9 +62,35 @@ func (service *SasaranOpdServiceImpl) FindAll(ctx context.Context, KodeOpd strin
 	}
 	defer helper.CommitOrRollback(tx)
 
-	sasaranOpds, err := service.sasaranOpdRepository.FindAll(ctx, tx, KodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	sasaranOpds, err := service.sasaranOpdRepository.FindAllOnly(ctx, tx, KodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
 	if err != nil {
 		return nil, err
+	}
+
+	sasaranOpdIds := []int{}
+	for _, so := range sasaranOpds {
+		for _, sas := range so.SasaranOpd {
+			sasaranOpdIds = append(sasaranOpdIds, sas.Id)
+		}
+	}
+	indikatorSasaran, err := service.getIndikatorWithFallback(ctx, tx, sasaranOpdIds)
+	if err != nil {
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
+		return nil, err
+	}
+	indSasaranById := make(map[int][]domain.Indikator)
+	for _, ind := range indikatorSasaran {
+		indSasaranById[ind.SasaranOpdId] = append(indSasaranById[ind.SasaranOpdId], ind)
+	}
+
+	for _, so := range sasaranOpds {
+
+		for i := range so.SasaranOpd {
+			id := so.SasaranOpd[i].Id
+			if inds, ok := indSasaranById[id]; ok {
+				so.SasaranOpd[i].Indikator = inds
+			}
+		}
 	}
 
 	// Sort sasaranOpds berdasarkan nama_pohon, jika sama berdasarkan id ASC
@@ -124,11 +151,12 @@ func (service *SasaranOpdServiceImpl) FindAll(ctx context.Context, KodeOpd strin
 			// Convert Indikator
 			for _, indikator := range sasaran.Indikator {
 				indResponse := sasaranopd.IndikatorResponse{
-					Id:               indikator.Id,
-					Indikator:        indikator.Indikator,
-					RumusPerhitungan: indikator.RumusPerhitungan.String,
-					SumberData:       indikator.SumberData.String,
-					Target:           make([]sasaranopd.TargetResponse, 0),
+					Id:                  indikator.Id,
+					Indikator:           indikator.Indikator,
+					RumusPerhitungan:    indikator.RumusPerhitungan.String,
+					DefinisiOperasional: indikator.DefinisiOperasional.String,
+					SumberData:          indikator.SumberData.String,
+					Target:              make([]sasaranopd.TargetResponse, 0),
 				}
 
 				// Convert Target
@@ -168,9 +196,29 @@ func (service *SasaranOpdServiceImpl) FindById(ctx context.Context, id int) (*sa
 	}
 	defer helper.CommitOrRollback(tx)
 
-	sasaranOpd, err := service.sasaranOpdRepository.FindById(ctx, tx, id)
+	sasaranOpd, err := service.sasaranOpdRepository.FindByIdOnly(ctx, tx, id)
 	if err != nil {
 		return nil, err
+	}
+	sasaranOpdIds := []int{}
+	for _, sas := range sasaranOpd.SasaranOpd {
+		sasaranOpdIds = append(sasaranOpdIds, sas.Id)
+	}
+	indikatorSasaran, err := service.getIndikatorWithFallback(ctx, tx, sasaranOpdIds)
+	if err != nil {
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
+		return nil, err
+	}
+	indSasaranById := make(map[int][]domain.Indikator)
+	for _, ind := range indikatorSasaran {
+		indSasaranById[ind.SasaranOpdId] = append(indSasaranById[ind.SasaranOpdId], ind)
+	}
+
+	for i := range sasaranOpd.SasaranOpd {
+		id := sasaranOpd.SasaranOpd[i].Id
+		if inds, ok := indSasaranById[id]; ok {
+			sasaranOpd.SasaranOpd[i].Indikator = inds
+		}
 	}
 
 	response := &sasaranopd.SasaranOpdResponse{
@@ -210,11 +258,12 @@ func (service *SasaranOpdServiceImpl) FindById(ctx context.Context, id int) (*sa
 		// Convert Indikator
 		for _, indikator := range sasaran.Indikator {
 			indResponse := sasaranopd.IndikatorResponse{
-				Id:               indikator.Id,
-				Indikator:        indikator.Indikator,
-				RumusPerhitungan: indikator.RumusPerhitungan.String,
-				SumberData:       indikator.SumberData.String,
-				Target:           make([]sasaranopd.TargetResponse, 0),
+				Id:                  indikator.Id,
+				Indikator:           indikator.Indikator,
+				RumusPerhitungan:    indikator.RumusPerhitungan.String,
+				DefinisiOperasional: indikator.DefinisiOperasional.String,
+				SumberData:          indikator.SumberData.String,
+				Target:              make([]sasaranopd.TargetResponse, 0),
 			}
 
 			// Convert Target
@@ -385,17 +434,7 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 	var indikatorList []domain.Indikator
 	var indikatorResponses []sasaranopd.IndikatorDetail
 	for _, indikatorReq := range request.Indikator {
-		// Tentukan kode_indikator: prioritas KodeIndikator → Id → generate baru
-		var kodeIndikator string
-		switch {
-		case indikatorReq.KodeIndikator != "":
-			kodeIndikator = indikatorReq.KodeIndikator
-		case indikatorReq.Id != "":
-			kodeIndikator = indikatorReq.Id
-		default:
-			kodeIndikator = fmt.Sprintf("IND-SAS-%s", uuid.New().String()[:5])
-		}
-		// Validasi: setiap indikator wajib punya minimal 1 target
+		kodeIndikator := helper.GenerateID("IND-SAS")
 		if len(indikatorReq.Target) == 0 {
 			return nil, fmt.Errorf("indikator '%s' harus memiliki minimal 1 target", indikatorReq.Indikator)
 		}
@@ -403,13 +442,7 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 		var targetResponses []sasaranopd.TargetDetail
 		for _, targetReq := range indikatorReq.Target {
 			// Tentukan ID target
-			var targetId string
-			if targetReq.Id != "" {
-				targetId = targetReq.Id
-			} else {
-				targetId = fmt.Sprintf("TRG-SAS-%d-%s-%s",
-					request.IdSasaranOpd, kodeIndikator, targetReq.Tahun)
-			}
+			targetId := helper.GenerateID("TRG-SAS")
 			targetList = append(targetList, domain.Target{
 				Id:          targetId,
 				IndikatorId: kodeIndikator, // referensi ke kode_indikator
@@ -796,12 +829,37 @@ func (s *SasaranOpdServiceImpl) FindSasaranRenstra(
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
-	sasaranOpds, err := s.sasaranOpdRepository.FindSasaranByPeriod(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, "renstra")
+	sasaranOpds, err := s.sasaranOpdRepository.FindAllOnly(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+
+	sasaranOpdIds := []int{}
+	for _, so := range sasaranOpds {
+		for _, sas := range so.SasaranOpd {
+			sasaranOpdIds = append(sasaranOpdIds, sas.Id)
+		}
+	}
+	indikatorSasaran, err := s.getIndikatorWithFallback(ctx, tx, sasaranOpdIds)
 	if err != nil {
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
 		return nil, err
 	}
+	indSasaranById := make(map[int][]domain.Indikator)
+	for _, ind := range indikatorSasaran {
+		indSasaranById[ind.SasaranOpdId] = append(indSasaranById[ind.SasaranOpdId], ind)
+	}
+
+	for _, so := range sasaranOpds {
+
+		for i := range so.SasaranOpd {
+			id := so.SasaranOpd[i].Id
+			if inds, ok := indSasaranById[id]; ok {
+				so.SasaranOpd[i].Indikator = inds
+			}
+		}
+	}
+
 	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
 }
+
 func (s *SasaranOpdServiceImpl) FindSasaranRanwal(
 	ctx context.Context, kodeOpd, tahun, jenisPeriode string,
 ) ([]sasaranopd.SasaranOpdResponse, error) {
@@ -896,11 +954,12 @@ func (s *SasaranOpdServiceImpl) buildSasaranResponse(
 			for _, ind := range sas.Indikator {
 				indResp := sasaranopd.IndikatorResponse{
 					Id: ind.KodeIndikator, KodeIndikator: ind.KodeIndikator,
-					Jenis: ind.Jenis, DefinisiOperasional: ind.DefinisiOperasional.String,
-					Indikator:        ind.Indikator,
-					RumusPerhitungan: ind.RumusPerhitungan.String,
-					SumberData:       ind.SumberData.String,
-					Target:           []sasaranopd.TargetResponse{},
+					Jenis:               ind.Jenis,
+					DefinisiOperasional: ind.DefinisiOperasional.String,
+					Indikator:           ind.Indikator,
+					RumusPerhitungan:    ind.RumusPerhitungan.String,
+					SumberData:          ind.SumberData.String,
+					Target:              []sasaranopd.TargetResponse{},
 				}
 				for _, t := range ind.Target {
 					indResp.Target = append(indResp.Target, sasaranopd.TargetResponse{
@@ -1061,4 +1120,25 @@ func (service *SasaranOpdServiceImpl) DeleteRenjaIndikator(ctx context.Context, 
 		return err
 	}
 	return service.sasaranOpdRepository.DeleteIndikatorTargetRenja(ctx, tx, kodeIndikator) // ← lowercase
+}
+
+func (s *SasaranOpdServiceImpl) getIndikatorWithFallback(
+	ctx context.Context,
+	tx *sql.Tx,
+	sasaranIds []int,
+) ([]domain.Indikator, error) {
+
+	indikatorBaru, err := s.sasaranOpdRepository.
+		FindIndikatorTargetsRenstraBySasaranIds(ctx, tx, sasaranIds)
+	if err != nil {
+		return nil, err
+	}
+
+	indikatorLama, err := s.sasaranOpdRepository.
+		FindIndikatorTargetsBySasaranIds(ctx, tx, sasaranIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeIndikator(indikatorBaru, indikatorLama), nil
 }

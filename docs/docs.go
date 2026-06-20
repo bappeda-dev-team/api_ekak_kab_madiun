@@ -18,6 +18,253 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/ikm": {
+            "get": {
+                "description": "Get all indikator IKM berdasarkan tahun awal dan akhir",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Get IKM by Periode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun Awal",
+                        "name": "tahun_awal",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun Akhir",
+                        "name": "tahun_akhir",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/indikator.IkmResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Membuat indikator IKM baru",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Create IKM",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/indikator.IkmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/indikator.IkmResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ikm/{id}": {
+            "get": {
+                "description": "Get indikator IKM berdasarkan ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Get IKM by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID IKM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/indikator.IkmResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update indikator IKM berdasarkan ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Update IKM",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID IKM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request Body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/indikator.IkmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/indikator.IkmResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Hapus indikator IKM berdasarkan ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Delete IKM",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID IKM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/iku_renja_opd/penetapan/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -348,6 +595,63 @@ const docTemplate = `{
                                             "items": {
                                                 "$ref": "#/definitions/iku.IkuOpdResponse"
                                             }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/leaderboard_rekin_hidden/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert leaderboard rekin hidden.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Leaderboard Rekin Hidden"
+                ],
+                "summary": "Upsert Leaderboard Rekin Hidden",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.LeaderboardHiddenUpsertRequest"
                                         }
                                     }
                                 }
@@ -1097,6 +1401,129 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/control_pokin_opd/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get control pokin opd by kode opd and tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Control Pokin Opd"
+                ],
+                "summary": "Get Control Pokin Opd",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ControlPokinOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/leaderboard_pokin_opd/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get leaderboard rekin hidden by tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Leaderboard Rekin Hidden"
+                ],
+                "summary": "Get Leaderboard Rekin Hidden",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
                                         }
                                     }
                                 }
@@ -3215,6 +3642,205 @@ const docTemplate = `{
                 }
             }
         },
+        "iku.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "indikator.IkmRequest": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/iku.TargetResponse"
+                    }
+                }
+            }
+        },
+        "indikator.IkmResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/iku.TargetResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.ControlPokinOpdData": {
+            "type": "object",
+            "properties": {
+                "jumlah_pelaksana": {
+                    "type": "integer"
+                },
+                "jumlah_pokin": {
+                    "type": "integer"
+                },
+                "jumlah_pokin_ada_pelaksana": {
+                    "type": "integer"
+                },
+                "jumlah_pokin_ada_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "jumlah_pokin_tanpa_pelaksana": {
+                    "type": "integer"
+                },
+                "jumlah_pokin_tanpa_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "jumlah_rencana_kinerja": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_level": {
+                    "type": "string"
+                },
+                "persentase": {
+                    "description": "pelaksana",
+                    "type": "string"
+                },
+                "persentase_cascading": {
+                    "description": "← BARU: cascading",
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ControlPokinOpdResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ControlPokinOpdData"
+                    }
+                },
+                "tematik": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.LeaderboardTematikItem"
+                    }
+                },
+                "total": {
+                    "$ref": "#/definitions/pohonkinerja.ControlPokinOpdTotal"
+                }
+            }
+        },
+        "pohonkinerja.ControlPokinOpdTotal": {
+            "type": "object",
+            "properties": {
+                "persentase": {
+                    "description": "pelaksana",
+                    "type": "string"
+                },
+                "persentase_cascading": {
+                    "description": "← BARU: cascading",
+                    "type": "string"
+                },
+                "total_pelaksana": {
+                    "type": "integer"
+                },
+                "total_pokin": {
+                    "type": "integer"
+                },
+                "total_pokin_ada_pelaksana": {
+                    "type": "integer"
+                },
+                "total_pokin_ada_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "total_pokin_tanpa_pelaksana": {
+                    "type": "integer"
+                },
+                "total_pokin_tanpa_rekin": {
+                    "description": "← BARU",
+                    "type": "integer"
+                },
+                "total_rencana_kinerja": {
+                    "description": "← BARU",
+                    "type": "integer"
+                }
+            }
+        },
         "pohonkinerja.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -3256,7 +3882,48 @@ const docTemplate = `{
                 "kode_program_unggulan": {
                     "type": "string"
                 },
+                "nama_program_prioritas": {
+                    "type": "string"
+                },
                 "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.LeaderboardHiddenUpsertRequest": {
+            "type": "object",
+            "required": [
+                "kode_opd",
+                "tahun"
+            ],
+            "properties": {
+                "is_hidden": {
+                    "type": "boolean"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.LeaderboardTematikItem": {
+            "type": "object",
+            "properties": {
+                "child": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.LeaderboardTematikItem"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "nama": {
                     "type": "string"
                 }
             }

@@ -569,3 +569,54 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindOPDCrosscuttingFrom(ctx con
 	}
 	return kodeOpd, nil
 }
+
+func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsFrom(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.Crosscutting, error) {
+		if (len(pokinIds) == 0) {
+			return 	nil, errors.New("Pohon id tidak boleh kosong")
+		}
+
+	// Build IN clause
+	placeholders := make([]string, len(pokinIds))
+	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+        SELECT
+            c.id,
+            c.crosscutting_from,
+            c.keterangan_crosscutting,
+            c.kode_opd,
+            opd.nama_opd,
+            c.status
+        FROM tb_crosscutting c
+        JOIN tb_operasional_daerah opd ON c.kode_opd = opd.kode_opd
+        WHERE c.crosscutting_from IN (%s)
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var crosscuttings []domain.Crosscutting
+	for rows.Next() {
+		var crosscutting domain.Crosscutting
+		err := rows.Scan(
+			&crosscutting.Id,
+			&crosscutting.CrosscuttingFrom, // from pokin id yang dicari
+			&crosscutting.Keterangan,
+			&crosscutting.KodeOpd,
+			&crosscutting.OpdPengirim,
+			&crosscutting.Status,
+		)
+		if err != nil {
+			return nil, err
+		}
+		crosscuttings = append(crosscuttings, crosscutting)
+	}
+	return crosscuttings, nil
+}

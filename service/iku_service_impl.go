@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/iku"
 	"ekak_kabupaten_madiun/repository"
+	"errors"
 	"sort"
 	"strconv"
 )
@@ -51,15 +53,16 @@ func (service *IkuServiceImpl) FindAll(ctx context.Context, tahunAwal string, ta
 			IndikatorId: item.Id,
 			Sumber:      item.Sumber,
 			// IsActive:         item.IsActive,
-			IkuActive:        item.IkuActive,
-			Indikator:        item.Indikator,
-			RumusPerhitungan: item.RumusPerhitungan.String,
-			SumberData:       item.SumberData.String,
-			CreatedAt:        item.CreatedAt,
-			TahunAwal:        item.TahunAwal,
-			TahunAkhir:       item.TahunAkhir,
-			JenisPeriode:     item.JenisPeriode,
-			Target:           targetResponses,
+			IkuActive:           item.IkuActive,
+			Indikator:           item.Indikator,
+			RumusPerhitungan:    item.RumusPerhitungan.String,
+			DefinisiOperasional: item.DefinisiOperasional.String,
+			SumberData:          item.SumberData.String,
+			CreatedAt:           item.CreatedAt,
+			TahunAwal:           item.TahunAwal,
+			TahunAkhir:          item.TahunAkhir,
+			JenisPeriode:        item.JenisPeriode,
+			Target:              targetResponses,
 		})
 	}
 
@@ -73,7 +76,7 @@ func (service *IkuServiceImpl) FindAllIkuOpd(ctx context.Context, kodeOpd string
 	}
 	defer helper.CommitOrRollback(tx)
 
-	indikators, err := service.IkuRepository.FindAllIkuOpd(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	indikators, err := service.getIndikatorWithFallback(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
 	if err != nil {
 		return nil, err
 	}
@@ -132,13 +135,25 @@ func (service *IkuServiceImpl) UpdateIkuActive(ctx context.Context, id string, r
 		return err
 	}
 	defer helper.CommitOrRollback(tx)
+	// 1. coba update di tabel baru
 
-	err = service.IkuRepository.UpdateIkuActive(ctx, tx, id, request.IsActive)
+	rows, err := service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
 	if err != nil {
 		return err
 	}
-
-	return nil
+	if rows > 0 {
+		return nil
+	}
+	// 2. fallback ke tabel lama
+	rows, err = service.IkuRepository.UpdateIkuActive(ctx, tx, id, request.IsActive)
+	if err != nil {
+		return err
+	}
+	if rows > 0 {
+		return nil
+	}
+	// 3. benar-benar tidak ditemukan
+	return errors.New("iku not found in both indikator and indikator_matrix")
 }
 
 func (service *IkuServiceImpl) UpdateIkuOpdActive(ctx context.Context, id string, request iku.IkuUpdateActiveRequest) error {
@@ -148,12 +163,16 @@ func (service *IkuServiceImpl) UpdateIkuOpdActive(ctx context.Context, id string
 	}
 	defer helper.CommitOrRollback(tx)
 
-	err = service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
+	rows, err := service.IkuRepository.UpdateIkuOpdActive(ctx, tx, id, request.IsActive)
 	if err != nil {
 		return err
 	}
+	if rows > 0 {
+		return nil
+	}
 
-	return nil
+	// 3. benar-benar tidak ditemukan
+	return errors.New("iku not found")
 }
 
 func (service *IkuServiceImpl) FindAllIkuRenja(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string, jenisIndikator string) ([]iku.IkuOpdResponse, error) {
@@ -199,4 +218,27 @@ func (service *IkuServiceImpl) FindAllIkuRenja(ctx context.Context, kodeOpd stri
 		responses = make([]iku.IkuOpdResponse, 0)
 	}
 	return responses, nil
+}
+
+func (s *IkuServiceImpl) getIndikatorWithFallback(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	tahunAwal string,
+	tahunAkhir string,
+	jenisPeriode string,
+) ([]domain.Indikator, error) {
+
+	indikatorBaru, err := s.IkuRepository.FindAllIkuOpd(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+
+	indikatorLama, err := s.IkuRepository.
+		FindAllIkuOpdOld(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeIndikator(indikatorBaru, indikatorLama), nil
 }

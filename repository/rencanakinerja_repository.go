@@ -27,6 +27,7 @@ type RencanaKinerjaRepository interface {
 	FindIndikatorSasaranbyRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error)
 	FindTargetByIndikatorIdAndTahun(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) ([]domain.Target, error)
 	FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error)
+	FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int, tahunNext int) ([]domain.RencanaKinerja, error)
 
 	// Method untuk clone
 	CloneRencanaKinerja(ctx context.Context, tx *sql.Tx, rekinId string, tahunBaru string) (domain.RencanaKinerja, error)
@@ -40,7 +41,7 @@ type RencanaKinerjaRepository interface {
 	CreateIndikatorClone(ctx context.Context, tx *sql.Tx, newIndikatorId string, rekinIdBaru string, indikator string, tahunBaru string) error
 
 	FindRekinByFilters(ctx context.Context, tx *sql.Tx, filter domain.FilterParams) ([]domain.RencanaKinerja, error)
-	FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error)
+	FindByPokinIdsArray(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error)
 	IndikatorTargetSasaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string][]domain.Indikator, error)
 	GetByKodeOpdAndTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAsal string) ([]domain.RencanaKinerja, error)
 	CreateBatch(ctx context.Context, tx *sql.Tx, rencanaKinerjas []domain.RencanaKinerja) error

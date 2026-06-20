@@ -273,10 +273,19 @@ func (service *TujuanOpdServiceImpl) FindById(ctx context.Context, tujuanOpdId i
 	}
 	defer helper.CommitOrRollback(tx)
 
-	tujuanOpd, err := service.TujuanOpdRepository.FindById(ctx, tx, tujuanOpdId)
+	tujuanOpd, err := service.TujuanOpdRepository.FindByIdOnly(ctx, tx, tujuanOpdId)
 	if err != nil {
 		return tujuanopd.TujuanOpdResponse{}, err
 	}
+
+	tujuanOpdIds := []int{tujuanOpd.Id}
+	indikatorTujuan, err := service.getIndikatorWithFallback(ctx, tx, tujuanOpdIds)
+	if err != nil {
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
+		return tujuanopd.TujuanOpdResponse{}, err
+	}
+
+	tujuanOpd.Indikator = indikatorTujuan
 
 	// Ambil data OPD
 	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, tujuanOpd.KodeOpd)
@@ -380,12 +389,34 @@ func (service *TujuanOpdServiceImpl) FindAll(ctx context.Context, kodeOpd string
 	}
 
 	// Ambil semua tujuan OPD
-	tujuanOpds, err := service.TujuanOpdRepository.FindAll(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
+	tujuanOpds, err := service.TujuanOpdRepository.FindAllOnly(ctx, tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return make([]tujuanopd.TujuanOpdwithBidangUrusanResponse, 0), nil
 		}
 		return nil, err
+	}
+	tujuanOpdIds := []int{}
+	for _, tuj := range tujuanOpds {
+		tujuanOpdIds = append(tujuanOpdIds, tuj.Id)
+	}
+
+	indikatorTujuan, err := service.getIndikatorWithFallback(ctx, tx, tujuanOpdIds)
+	if err != nil {
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
+		return nil, err
+	}
+	indTujuanById := make(map[int][]domain.Indikator)
+	for _, ind := range indikatorTujuan {
+		indTujuanById[ind.TujuanOpdId] = append(indTujuanById[ind.TujuanOpdId], ind)
+	}
+
+	for i := range tujuanOpds {
+		id := tujuanOpds[i].Id
+
+		if inds, ok := indTujuanById[id]; ok {
+			tujuanOpds[i].Indikator = inds
+		}
 	}
 
 	// Buat map untuk mengelompokkan response berdasarkan kode_bidang_urusan
@@ -410,12 +441,13 @@ func (service *TujuanOpdServiceImpl) FindAll(ctx context.Context, kodeOpd string
 		// Proses indikator dan target seperti sebelumnya
 		for _, indikator := range tujuan.Indikator {
 			indikatorResponse := tujuanopd.IndikatorResponse{
-				Id:               indikator.Id,
-				IdTujuanOpd:      tujuan.Id,
-				NamaIndikator:    indikator.Indikator,
-				RumusPerhitungan: indikator.RumusPerhitungan.String,
-				SumberData:       indikator.SumberData.String,
-				Target:           make([]tujuanopd.TargetResponse, 0),
+				Id:                  indikator.Id,
+				IdTujuanOpd:         tujuan.Id,
+				NamaIndikator:       indikator.Indikator,
+				DefinisiOperasional: indikator.DefinisiOperasional.String,
+				RumusPerhitungan:    indikator.RumusPerhitungan.String,
+				SumberData:          indikator.SumberData.String,
+				Target:              make([]tujuanopd.TargetResponse, 0),
 			}
 
 			tahunAwalInt, _ := strconv.Atoi(tujuan.TahunAwal)
@@ -1137,4 +1169,54 @@ func (service *TujuanOpdServiceImpl) FindTujuanPenetapan(
 		return nil, err
 	}
 	return service.buildTujuanOpdResponse(tujuanOpds, opd, bidangUrusanMap), nil
+}
+
+func (s *TujuanOpdServiceImpl) getIndikatorWithFallback(
+	ctx context.Context,
+	tx *sql.Tx,
+	tujuanIds []int,
+) ([]domain.Indikator, error) {
+
+	indikatorBaru, err := s.TujuanOpdRepository.
+		FindIndikatorTargetsRenstraByTujuanIds(ctx, tx, tujuanIds)
+	if err != nil {
+		return nil, err
+	}
+
+	indikatorLama, err := s.TujuanOpdRepository.
+		FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeIndikator(indikatorBaru, indikatorLama), nil
+}
+func mergeIndikator(
+	indikatorBaru []domain.Indikator,
+	indikatorLama []domain.Indikator,
+) []domain.Indikator {
+
+	// fallback kalau data baru kosong
+	if len(indikatorBaru) == 0 {
+		log.Println("USING INDIKATOR LAMA")
+		return indikatorLama
+	}
+
+	log.Println("USING INDIKATOR BARU")
+
+	return indikatorBaru
+}
+
+func isEmptyIndikator(ind domain.Indikator) bool {
+	return !ind.DefinisiOperasional.Valid &&
+		len(ind.Target) == 0
+}
+
+func fallbackNullString(newVal, oldVal sql.NullString) sql.NullString {
+	if !newVal.Valid || newVal.String == "" {
+		if oldVal.Valid {
+			return oldVal
+		}
+	}
+	return newVal
 }

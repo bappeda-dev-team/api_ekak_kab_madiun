@@ -90,7 +90,11 @@ type PohonKinerjaRepository interface {
 	cloneIndikatorAndTarget(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
 	clonePelaksana(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
 	ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error)
+	FindControlPokinTematikNodes(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]LeaderboardTematikNode, error)
 	LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error)
+	FindLeaderboardTematikNodes(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardTematikNode, error)
+	FindLeaderboardHiddenKodeOpdsByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]string, error)
+	UpsertLeaderboardHidden(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, hidden bool) error
 
 	// Batch fetch methods untuk optimasi
 	FindPelaksanaPokinBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.PelaksanaPokin, error)
@@ -99,7 +103,11 @@ type PohonKinerjaRepository interface {
 	FindTaggingByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.TaggingPokin, error)
 	FindTematikByCloneFromBatch(ctx context.Context, tx *sql.Tx, cloneFromIds []int) (map[int]*domain.PohonKinerja, error)
 	FindByIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.PohonKinerja, error)
+	FindAncestorClosure(ctx context.Context, tx *sql.Tx, seeds []int) ([]domain.PohonMap, error)
 	FindPelaksanaPokinBatchForCascading(ctx context.Context, tx *sql.Tx, pohonKinerjaIds []int) ([]domain.PelaksanaPokin, error)
 
 	CheckIfSourceAlreadyCloned(ctx context.Context, tx *sql.Tx, sourceId int, tahunTarget string) (bool, error)
+	FindParentPokinByTahunGrupByKodeOpd(ctx context.Context, tx *sql.Tx, tahun string) (map[string][]int, error)
+	FindPokinOpdByParentIdsAndTahun(ctx context.Context, tx *sql.Tx, parentIds []int, tahun string) ([]domain.PohonKinerja, error)
+	FindPokinPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)
 }

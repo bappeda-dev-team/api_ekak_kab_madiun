@@ -18,6 +18,61 @@ func NewCSFRepositoryImpl() CSFRepository {
 	return &CSFRepositoryImpl{}
 }
 
+func (repo *CSFRepositoryImpl) AllCsfByTahun(ctx context.Context, tx *sql.Tx, tahun string, pokinRepo PohonKinerjaRepository) ([]domain.PohonKinerja, error) {
+	// get pokin level 0
+	allPohons, err := pokinRepo.FindPokinAdminAll(ctx, tx, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("[ERROR] Gagal mendapatkan pokin: %v", err)
+	}
+	// Filter manual level_pohon == 0
+	var pohons []domain.PohonKinerja
+	for _, p := range allPohons {
+		if p.LevelPohon == 0 {
+			pohons = append(pohons, p)
+		}
+	}
+
+	// csf in tahun
+	queryCsf := `
+	SELECT pohon_id,
+	pernyataan_kondisi_strategis, alasan_kondisi_strategis,
+    data_terukur, kondisi_terukur, kondisi_wujud, tahun
+	FROM tb_csf
+	WHERE tahun = ?
+	`
+	rows, err := tx.QueryContext(ctx, queryCsf, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("[ERROR] Gagal mendapatkan data CSF: %v", err)
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("[ERROR] Gagal menutup rows: %v", err)
+		}
+	}(rows)
+
+	csfMap := make(map[int]*domain.CSF)
+	for rows.Next() {
+		var csf domain.CSF
+		if err := rows.Scan(
+			&csf.PohonID,
+			&csf.PernyataanKondisiStrategis, &csf.AlasanKondisiStrategis,
+			&csf.DataTerukur, &csf.KondisiTerukur, &csf.KondisiWujud, &csf.Tahun,
+		); err != nil {
+			return nil, fmt.Errorf("[ERROR] Gagal mendapatkan data CSF: %v", err)
+		}
+		csfMap[csf.PohonID] = &csf
+	}
+
+	// join ke pokin
+	for i, p := range pohons {
+		if csf, exists := csfMap[p.Id]; exists {
+			pohons[i].CSF = csf
+		}
+	}
+	return pohons, nil
+}
+
 func (repository *CSFRepositoryImpl) FindByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]isustrategis.CSFPokin, error) {
 	query := `
 	SELECT
@@ -316,99 +371,132 @@ func (r *CSFRepositoryImpl) CreateCsf(ctx context.Context, tx *sql.Tx, csf domai
 	return nil
 }
 
+// THIS IS UPSERT IMPLEMENTATION
 func (r *CSFRepositoryImpl) UpdateCSFByPohonID(ctx context.Context, tx *sql.Tx, csf domain.CSF) (domain.CSF, error) {
-	query := `
-	UPDATE tb_csf
-	SET
-		pernyataan_kondisi_strategis = ?,
-		alasan_kondisi_strategis = ?,
-		data_terukur = ?,
-		kondisi_terukur = ?,
-		kondisi_wujud = ?
-	WHERE pohon_id = ?
-`
 	if csf.PohonID == 0 {
 		return domain.CSF{}, fmt.Errorf("[ERROR] POHON ID TIDAK BOLEH 0")
 	}
-	result, err := tx.ExecContext(ctx, query,
-		csf.PernyataanKondisiStrategis,
-		csf.AlasanKondisiStrategis,
-		csf.DataTerukur,
-		csf.KondisiTerukur,
-		csf.KondisiWujud,
-		csf.PohonID,
-	)
+
+	// Cek apakah CSF dengan pohon_id sudah ada
+	var count int
+	checkQuery := `SELECT COUNT(*) FROM tb_csf WHERE pohon_id = ?`
+	err := tx.QueryRowContext(ctx, checkQuery, csf.PohonID).Scan(&count)
 	if err != nil {
-		return domain.CSF{}, err
+		return domain.CSF{}, fmt.Errorf("gagal cek keberadaan csf: %w", err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return domain.CSF{}, err
+	if count > 0 {
+		// UPDATE
+		updateQuery := `
+		UPDATE tb_csf
+		SET
+			pernyataan_kondisi_strategis = ?,
+			alasan_kondisi_strategis = ?,
+			data_terukur = ?,
+			kondisi_terukur = ?,
+			kondisi_wujud = ?,
+            tahun = ?
+		WHERE pohon_id = ?
+		`
+		result, err := tx.ExecContext(ctx, updateQuery,
+			csf.PernyataanKondisiStrategis,
+			csf.AlasanKondisiStrategis,
+			csf.DataTerukur,
+			csf.KondisiTerukur,
+			csf.KondisiWujud,
+			csf.Tahun,
+			csf.PohonID,
+		)
+		if err != nil {
+			return domain.CSF{}, err
+		}
+		rowsAffected, _ := result.RowsAffected()
+		log.Printf("[LOG] CSF updated (pohon_id = %d), rows affected = %d", csf.PohonID, rowsAffected)
+	} else {
+		// INSERT
+		insertQuery := `
+		INSERT INTO tb_csf (
+			pohon_id,
+			pernyataan_kondisi_strategis,
+			alasan_kondisi_strategis,
+			data_terukur,
+			kondisi_terukur,
+			kondisi_wujud,
+			tahun
+		) VALUES (?, ?, ?, ?, ?, ?, ?)
+		`
+		_, err := tx.ExecContext(ctx, insertQuery,
+			csf.PohonID,
+			csf.PernyataanKondisiStrategis,
+			csf.AlasanKondisiStrategis,
+			csf.DataTerukur,
+			csf.KondisiTerukur,
+			csf.KondisiWujud,
+			csf.Tahun, // pastikan `Tahun` ada di `domain.CSF`
+		)
+		if err != nil {
+			return domain.CSF{}, fmt.Errorf("gagal insert csf: %w", err)
+		}
+		log.Printf("[LOG] CSF inserted (pohon_id = %d)", csf.PohonID)
 	}
-	log.Printf("[LOG] ROW CSF UPDATED: %d", rowsAffected)
 
 	return csf, nil
 }
 
-func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, csfId int) (isustrategis.CSFPokin, error) {
+func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, pohonId int) (isustrategis.CSFPokin, error) {
+	// id tetap csf
+	// get by pohon_kinerja_id yang valid
 	query := `
 	SELECT
 		tb_csf.id,
-		tb_csf.pohon_id,
+		tb_pohon_kinerja.id,
 		tb_csf.pernyataan_kondisi_strategis,
 		tb_csf.alasan_kondisi_strategis,
 		tb_csf.data_terukur,
 		tb_csf.kondisi_terukur,
 		tb_csf.kondisi_wujud,
-		tb_csf.tahun,
+		tb_pohon_kinerja.tahun,
 		tb_pohon_kinerja.jenis_pohon,
 		tb_pohon_kinerja.level_pohon,
 		tb_pohon_kinerja.nama_pohon,
 		tb_pohon_kinerja.keterangan,
 		tb_pohon_kinerja.is_active,
-		i.id as indikator_id,
-		i.indikator as nama_indikator,
-		t.id as target_id,
-		t.target as target_value,
-		t.satuan as target_satuan
+		i.id AS indikator_id,
+		i.indikator AS nama_indikator,
+		t.id AS target_id,
+		t.target AS target_value,
+		t.satuan AS target_satuan
 	FROM
-		tb_csf
-	JOIN tb_pohon_kinerja ON tb_csf.pohon_id = tb_pohon_kinerja.id
+		tb_pohon_kinerja
+	LEFT JOIN tb_csf ON tb_csf.pohon_id = tb_pohon_kinerja.id
 	LEFT JOIN tb_indikator i ON tb_pohon_kinerja.id = i.pokin_id
 	LEFT JOIN tb_target t ON i.id = t.indikator_id
 	WHERE
-		tb_csf.id = ?
-	ORDER BY i.id, t.id
+		tb_pohon_kinerja.id = ?
+	ORDER BY
+		i.id, t.id;
 	`
 
-	rows, err := tx.QueryContext(ctx, query, csfId)
+	rows, err := tx.QueryContext(ctx, query, pohonId)
 	if err != nil {
 		return isustrategis.CSFPokin{}, err
 	}
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-
-		}
-	}(rows)
+	defer rows.Close()
 
 	var csf *isustrategis.CSFPokin
 	indikatorMap := make(map[string]*domain.Indikator)
 
 	for rows.Next() {
 		var (
-			csfID, pohonID               int
-			pernyataan, alasan, data     string
-			kondisiTerukur, kondisiWujud string
-			tahunInt                     int
+			csfID, pohonID               sql.NullInt64
+			pernyataan, alasan, data     sql.NullString
+			kondisiTerukur, kondisiWujud sql.NullString
+			tahunInt                     sql.NullInt64
 			jenisPohon, namaPohon, ket   string
 			levelPohon                   int
 			isActive                     bool
-			indikatorID                  sql.NullString
-			namaIndikator                sql.NullString
-			targetID                     sql.NullString
-			targetValue                  sql.NullString
+			indikatorID, namaIndikator   sql.NullString
+			targetID, targetValue        sql.NullString
 			targetSatuan                 sql.NullString
 		)
 
@@ -422,16 +510,17 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, c
 			return isustrategis.CSFPokin{}, err
 		}
 
+		// Inisialisasi struct utama hanya sekali
 		if csf == nil {
 			csf = &isustrategis.CSFPokin{
-				ID:                         csfID,
-				PohonID:                    pohonID,
-				PernyataanKondisiStrategis: pernyataan,
-				AlasanKondisiStrategis:     alasan,
-				DataTerukur:                data,
-				KondisiTerukur:             kondisiTerukur,
-				KondisiWujud:               kondisiWujud,
-				Tahun:                      tahunInt,
+				ID:                         int(csfID.Int64),
+				PohonID:                    int(pohonID.Int64),
+				PernyataanKondisiStrategis: pernyataan.String,
+				AlasanKondisiStrategis:     alasan.String,
+				DataTerukur:                data.String,
+				KondisiTerukur:             kondisiTerukur.String,
+				KondisiWujud:               kondisiWujud.String,
+				Tahun:                      int(tahunInt.Int64),
 				JenisPohon:                 jenisPohon,
 				LevelPohon:                 levelPohon,
 				Strategi:                   namaPohon,
@@ -441,15 +530,16 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, c
 			}
 		}
 
+		// Indikator + target
 		if indikatorID.Valid && namaIndikator.Valid {
 			indID := indikatorID.String
 			indikator, exists := indikatorMap[indID]
 			if !exists {
 				indikator = &domain.Indikator{
 					Id:        indID,
-					PokinId:   fmt.Sprint(pohonID),
+					PokinId:   fmt.Sprint(pohonId),
 					Indikator: namaIndikator.String,
-					Tahun:     fmt.Sprint(tahunInt),
+					Tahun:     fmt.Sprint(tahunInt.Int64),
 					Target:    []domain.Target{},
 				}
 				indikatorMap[indID] = indikator
@@ -461,15 +551,15 @@ func (repository *CSFRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, c
 					IndikatorId: indID,
 					Target:      targetValue.String,
 					Satuan:      targetSatuan.String,
-					Tahun:       fmt.Sprint(tahunInt),
+					Tahun:       fmt.Sprint(tahunInt.Int64),
 				})
 			}
 		}
 	}
 
-	// Akumulasi indikator yang ditemukan
+	// Gabungkan indikator
 	for _, indikator := range indikatorMap {
-		if csf != nil && indikator != nil { // Add check for csf != nil
+		if csf != nil && indikator != nil {
 			csf.Indikator = append(csf.Indikator, *indikator)
 		}
 	}

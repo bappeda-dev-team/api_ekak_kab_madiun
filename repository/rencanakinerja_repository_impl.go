@@ -86,7 +86,7 @@ func (repository *RencanaKinerjaRepositoryImpl) Update(ctx context.Context, tx *
 
 func (repository *RencanaKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error) {
 	script := "SELECT id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, created_at FROM tb_rencana_kinerja WHERE 1=1"
-	params := []interface{}{}
+	params := []any{}
 
 	if pegawaiId != "" {
 		script += " AND pegawai_id = ?"
@@ -125,7 +125,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAll(ctx context.Context, tx 
 
 func (repository *RencanaKinerjaRepositoryImpl) FindIndikatorbyRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error) {
 	script := "SELECT id, rencana_kinerja_id, indikator, tahun FROM tb_indikator WHERE rencana_kinerja_id = ?"
-	params := []interface{}{rekinId}
+	params := []any{rekinId}
 
 	rows, err := tx.QueryContext(ctx, script, params...)
 	if err != nil {
@@ -149,7 +149,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIndikatorbyRekinId(ctx conte
 
 func (repository *RencanaKinerjaRepositoryImpl) FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error) {
 	script := "SELECT id, indikator_id, target, satuan, tahun FROM tb_target WHERE indikator_id = ?"
-	params := []interface{}{indikatorId}
+	params := []any{indikatorId}
 
 	rows, err := tx.QueryContext(ctx, script, params...)
 	if err != nil {
@@ -173,7 +173,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindTargetByIndikatorId(ctx cont
 
 func (repository *RencanaKinerjaRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string, kodeOPD string, tahun string) (domain.RencanaKinerja, error) {
 	script := "SELECT id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id FROM tb_rencana_kinerja WHERE id = ?"
-	params := []interface{}{id}
+	params := []any{id}
 
 	if kodeOPD != "" {
 		script += " AND kode_opd = ?"
@@ -216,21 +216,21 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAllRincianKak(ctx context.Co
 	log.Printf("Mencari rencana kinerja dengan ID: %s dan PegawaiID: %s", rencanaKinerjaId, pegawaiId)
 
 	script := `
-		SELECT 
-			id, 
-			id_pohon, 
-			nama_rencana_kinerja, 
-			tahun, 
-			status_rencana_kinerja, 
-			catatan, 
-			kode_opd, 
-			pegawai_id, 
-			kode_subkegiatan, 
-			created_at 
-		FROM tb_rencana_kinerja 
+		SELECT
+			id,
+			id_pohon,
+			nama_rencana_kinerja,
+			tahun,
+			status_rencana_kinerja,
+			catatan,
+			kode_opd,
+			pegawai_id,
+			kode_subkegiatan,
+			created_at
+		FROM tb_rencana_kinerja
 		WHERE 1=1
 	`
-	var params []interface{}
+	var params []any
 
 	if rencanaKinerjaId != "" {
 		script += " AND id = ?"
@@ -282,15 +282,15 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAllRincianKak(ctx context.Co
 
 func (repository *RencanaKinerjaRepositoryImpl) RekinsasaranOpd(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error) {
 	script := `
-              SELECT DISTINCT 
-            rk.id, 
-            rk.id_pohon, 
+              SELECT DISTINCT
+            rk.id,
+            rk.id_pohon,
             rk.nama_rencana_kinerja,
             rk.tahun_awal,
-            rk.tahun_akhir, 
-            rk.status_rencana_kinerja, 
-            COALESCE(rk.catatan, ''), 
-            rk.kode_opd, 
+            rk.tahun_akhir,
+            rk.status_rencana_kinerja,
+            COALESCE(rk.catatan, ''),
+            rk.kode_opd,
             rk.pegawai_id,
             rk.created_at
         FROM tb_rencana_kinerja rk
@@ -302,7 +302,7 @@ func (repository *RencanaKinerjaRepositoryImpl) RekinsasaranOpd(ctx context.Cont
         WHERE 1=1
         AND ? BETWEEN rk.tahun_awal AND rk.tahun_akhir
     `
-	params := []interface{}{tahun}
+	params := []any{tahun}
 
 	if pegawaiId != "" {
 		script += " AND pp.nip = ?"
@@ -355,13 +355,13 @@ func (repository *RencanaKinerjaRepositoryImpl) RekinsasaranOpd(ctx context.Cont
 
 func (repository *RencanaKinerjaRepositoryImpl) FindIndikatorSasaranbyRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error) {
 	script := `
-        SELECT 
+        SELECT
             id,
             rencana_kinerja_id,
             indikator,
             COALESCE(tahun, ''),
             created_at
-        FROM tb_indikator 
+        FROM tb_indikator
         WHERE rencana_kinerja_id = ?
     `
 
@@ -392,13 +392,13 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIndikatorSasaranbyRekinId(ct
 
 func (repository *RencanaKinerjaRepositoryImpl) FindTargetByIndikatorIdAndTahun(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) ([]domain.Target, error) {
 	script := `
-        SELECT 
+        SELECT
             id,
             indikator_id,
             COALESCE(target, ''),
             COALESCE(satuan, ''),
             COALESCE(tahun, '')
-        FROM tb_target 
+        FROM tb_target
         WHERE indikator_id = ?
         AND tahun = ?
     `
@@ -508,7 +508,7 @@ func (repository *RencanaKinerjaRepositoryImpl) UpdateRekinLevel1(ctx context.Co
 
 func (repository *RencanaKinerjaRepositoryImpl) FindIdRekinLevel1(ctx context.Context, tx *sql.Tx, id string) (domain.RencanaKinerja, error) {
 	script := `
-        SELECT 
+        SELECT
             rk.id,
             rk.id_pohon,
             rk.sasaranopd_id,
@@ -696,7 +696,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindIdRekinLevel1(ctx context.Co
 
 func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error) {
 	SQL := `
-    SELECT 
+    SELECT
         rk.id,
         rk.nama_rencana_kinerja,
         rk.pegawai_id,
@@ -786,7 +786,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinId(ctx context.Contex
 
 func (repository *RencanaKinerjaRepositoryImpl) FindRekinLevel3(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.RencanaKinerja, error) {
 	script := `
-        SELECT DISTINCT 
+        SELECT DISTINCT
             rk.id,
             rk.id_pohon,
             rk.nama_rencana_kinerja,
@@ -930,7 +930,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinLevel3(ctx context.Cont
 
 func (repository *RencanaKinerjaRepositoryImpl) FindParentPokin(ctx context.Context, tx *sql.Tx, pokinId int) (domain.PohonKinerja, error) {
 	script := `
-		SELECT 
+		SELECT
 			parent_pk.id,
 			COALESCE(parent_pk.nama_pohon, '') as nama_pohon,
 			COALESCE(parent_pk.parent, 0) as parent,
@@ -981,6 +981,159 @@ func (repository *RencanaKinerjaRepositoryImpl) ValidateRekinId(ctx context.Cont
 
 	return nil
 }
+func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	pokinIds []int,
+	tahunNext int,
+) ([]domain.RencanaKinerja, error) {
+
+	if len(pokinIds) == 0 {
+		return nil, errors.New("ids tidak boleh kosong")
+	}
+
+	// Build IN clause
+	placeholders := make([]string, len(pokinIds))
+	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	SQL := fmt.Sprintf(`
+        SELECT
+            rk.id,
+            rk.id_pohon,
+            rk.nama_rencana_kinerja,
+            rk.tahun,
+            rk.kode_opd,
+            opd.nama_opd,
+            rk.pegawai_id,
+            peg.nama AS nama_pegawai,
+
+            ind.id AS indikator_id,
+            ind.indikator,
+
+            tar.id AS target_id,
+            tar.target,
+            tar.satuan,
+            tar.tahun AS target_tahun
+        FROM tb_rencana_kinerja rk
+        JOIN tb_operasional_daerah opd ON opd.kode_opd = rk.kode_opd
+        LEFT JOIN tb_pegawai peg ON peg.nip = rk.pegawai_id
+        LEFT JOIN tb_indikator ind ON ind.rencana_kinerja_id = rk.id
+        LEFT JOIN tb_target tar ON tar.indikator_id = ind.id
+        WHERE rk.id_pohon IN (%s) AND tar.tahun = ?
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, SQL, append(args, tahunNext)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Map untuk grouping RK → Indikator → Target
+	rkMap := make(map[string]*domain.RencanaKinerja)
+
+	for rows.Next() {
+
+		var (
+			rk      domain.RencanaKinerja
+			indId   sql.NullString
+			indNama sql.NullString
+
+			tarId     sql.NullString
+			tarTarget sql.NullString
+			tarSatuan sql.NullString
+			tarTahun  sql.NullString
+
+			namaOpd, namaPegawai sql.NullString
+		)
+
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.KodeOpd,
+			&namaOpd,
+			&rk.PegawaiId,
+			&namaPegawai,
+			&indId,
+			&indNama,
+			&tarId,
+			&tarTarget,
+			&tarSatuan,
+			&tarTahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if namaOpd.Valid {
+			rk.NamaOpd = namaOpd.String
+		}
+		if namaPegawai.Valid {
+			rk.NamaPegawai = namaPegawai.String
+		}
+
+		// Ambil atau buat RK
+		existingRK, ok := rkMap[rk.Id]
+		if !ok {
+			rk.Indikator = []domain.Indikator{}
+			rkMap[rk.Id] = &rk
+			existingRK = &rk
+		}
+
+		// Jika indikator NULL, lanjut
+		if !indId.Valid {
+			continue
+		}
+
+		// Ambil atau buat indikator
+		var currentInd *domain.Indikator
+		found := false
+		for i := range existingRK.Indikator {
+			if existingRK.Indikator[i].Id == indId.String {
+				currentInd = &existingRK.Indikator[i]
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			newInd := domain.Indikator{
+				Id:        indId.String,
+				Indikator: indNama.String,
+				Target:    []domain.Target{},
+			}
+			existingRK.Indikator = append(existingRK.Indikator, newInd)
+			currentInd = &existingRK.Indikator[len(existingRK.Indikator)-1]
+		}
+
+		// Jika target null, selesai
+		if !tarId.Valid {
+			continue
+		}
+
+		// Tambahkan target
+		currentInd.Target = append(currentInd.Target, domain.Target{
+			Id:     tarId.String,
+			Target: tarTarget.String,
+			Satuan: tarSatuan.String,
+			Tahun:  tarTahun.String,
+		})
+	}
+
+	// Convert map → slice
+	result := make([]domain.RencanaKinerja, 0, len(rkMap))
+	for _, v := range rkMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
+}
+
 func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaKinerja(ctx context.Context, tx *sql.Tx, rekinId string, tahunBaru string) (domain.RencanaKinerja, error) {
 
 	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
@@ -989,10 +1142,10 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaKinerja(ctx context.
 
 	script := `
 		INSERT INTO tb_rencana_kinerja (
-			id, id_pohon, nama_rencana_kinerja, tahun, 
+			id, id_pohon, nama_rencana_kinerja, tahun,
 			status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode
 		)
-		SELECT 
+		SELECT
 			?,
 			0,
 			nama_rencana_kinerja,
@@ -1017,7 +1170,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaKinerja(ctx context.
 	// Retrieve the cloned record menggunakan ID yang baru di-generate
 	var newRekin domain.RencanaKinerja
 	querySelect := `
-		SELECT id, id_pohon, nama_rencana_kinerja, tahun, 
+		SELECT id, id_pohon, nama_rencana_kinerja, tahun,
 		       status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode
 		FROM tb_rencana_kinerja
 		WHERE id = ?
@@ -1051,7 +1204,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneIndikator(ctx context.Conte
 		INSERT INTO tb_indikator (
 			id, rencana_kinerja_id, indikator, tahun
 		)
-		SELECT 
+		SELECT
 			REPLACE(UUID(), '-', ''),
 			?,
 			indikator,
@@ -1074,7 +1227,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneTarget(ctx context.Context,
 		INSERT INTO tb_target (
 			id, indikator_id, target, satuan, tahun
 		)
-		SELECT 
+		SELECT
 			REPLACE(UUID(), '-', ''),
 			?,
 			target,
@@ -1098,7 +1251,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneRencanaAksi(ctx context.Con
 		INSERT INTO tb_rencana_aksi (
 			id, rencana_kinerja_id, kode_opd, urutan, nama_rencana_aksi
 		)
-		SELECT 
+		SELECT
 			REPLACE(UUID(), '-', ''),
 			?,
 			kode_opd,
@@ -1122,7 +1275,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneDasarHukum(ctx context.Cont
 		INSERT INTO tb_dasar_hukum (
 			id, rekin_id, urutan, peraturan_terkait, uraian
 		)
-		SELECT 
+		SELECT
 			REPLACE(UUID(), '-', ''),
 			?,
 			urutan,
@@ -1146,7 +1299,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneGambaranUmum(ctx context.Co
 		INSERT INTO tb_gambaran_umum (
 			id, rekin_id, kode_opd, urutan, gambaran_umum
 		)
-		SELECT 
+		SELECT
 			REPLACE(UUID(), '-', ''),
 			?,
 			kode_opd,
@@ -1170,7 +1323,7 @@ func (repository *RencanaKinerjaRepositoryImpl) CloneInovasi(ctx context.Context
 		INSERT INTO tb_inovasi (
 			id, rekin_id, judul_inovasi, jenis_inovasi, gambaran_nilai_kebaruan
 		)
-		SELECT 
+		SELECT
 			REPLACE(UUID(), '-', ''),
 			?,
 			judul_inovasi,
@@ -1194,7 +1347,7 @@ func (repository *RencanaKinerjaRepositoryImpl) ClonePermasalahan(ctx context.Co
 		INSERT INTO tb_permasalahan (
 			rekin_id, permasalahan, penyebab_internal, penyebab_eksternal, jenis_permasalahan
 		)
-		SELECT 
+		SELECT
 			?,
 			permasalahan,
 			penyebab_internal,
@@ -1263,7 +1416,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.C
         LEFT JOIN tb_target t ON i.id = t.indikator_id
         LEFT JOIN tb_manual_ik m ON i.id = m.indikator_id
         LEFT JOIN tb_operasional_daerah opd ON opd.kode_opd = rk.kode_opd
-        WHERE 1=1`
+        WHERE 1=1 AND rk.status_rencana_kinerja = 'aktif'`
 
 	args := []any{}
 
@@ -1410,8 +1563,8 @@ func (repository *RencanaKinerjaRepositoryImpl) FindRekinByFilters(ctx context.C
 	return results, nil
 }
 
-func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error) {
-	const op = "rencanakinerja_repository.FindByPokinIds"
+func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIdsArray(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.RencanaKinerja, error) {
+	const op = "rencanakinerja_repository.FindByPokinIdsArray"
 
 	if len(pokinIds) == 0 {
 		return []domain.RencanaKinerja{}, nil

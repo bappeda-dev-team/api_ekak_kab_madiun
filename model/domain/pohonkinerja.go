@@ -9,7 +9,7 @@ type PohonKinerja struct {
 	IdCrosscutting         int
 	Id                     int
 	Parent                 int
-	CSF                    CSF
+	CSF                    *CSF
 	NamaPohon              string
 	KodeOpd                string
 	NamaOpd                string
@@ -25,7 +25,7 @@ type PohonKinerja struct {
 	Status                 string
 	CloneFrom              int
 	Crosscutting           []Crosscutting
-	PegawaiAction          interface{}
+	PegawaiAction          any
 	CrosscuttingTo         int
 	CountReview            int
 	IsActive               bool
@@ -69,4 +69,10 @@ type PegawaiAction struct {
 type OpdList struct {
 	KodeOpd         string `json:"kode_opd"`
 	PerangkatDaerah string `json:"perangkat_daerah"`
+}
+
+type PohonMap struct {
+	ID     int
+	Parent int
+	Level  int
 }
