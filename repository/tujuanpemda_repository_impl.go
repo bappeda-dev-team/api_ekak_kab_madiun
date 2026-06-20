@@ -356,6 +356,61 @@ func (repository *TujuanPemdaRepositoryImpl) FindAll(ctx context.Context, tx *sq
 
 	return result, nil
 }
+func (repository *TujuanPemdaRepositoryImpl) FindAllBetweenTahun(ctx context.Context, tx *sql.Tx, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanPemda, error) {
+	query := `
+        SELECT DISTINCT
+            tp.id,
+            tp.tujuan_pemda,
+            tp.tematik_id,
+            tp.periode_id,
+            p.tahun_awal,
+            p.tahun_akhir,
+            p.jenis_periode
+        FROM 
+            tb_tujuan_pemda tp
+            INNER JOIN tb_periode p ON tp.periode_id = p.id
+            INNER JOIN tb_pohon_kinerja pk ON tp.tematik_id = pk.id
+        WHERE 
+            p.tahun_awal <= ?
+			AND p.tahun_akhir >= ?
+            AND p.jenis_periode = ?
+            AND pk.is_active = true
+            AND pk.level_pohon = 0
+        ORDER BY 
+            tp.id`
+
+	rows, err := tx.QueryContext(ctx, query, tahunAkhir, tahunAwal, jenisPeriode)
+	if err != nil {
+		return nil, fmt.Errorf("error querying tujuan pemda: %v", err)
+	}
+	defer rows.Close()
+
+	var result []domain.TujuanPemda
+
+	for rows.Next() {
+		var tujuanPemda domain.TujuanPemda
+		err := rows.Scan(
+			&tujuanPemda.Id,
+			&tujuanPemda.TujuanPemda,
+			&tujuanPemda.TematikId,
+			&tujuanPemda.PeriodeId,
+			&tujuanPemda.Periode.TahunAwal,
+			&tujuanPemda.Periode.TahunAkhir,
+			&tujuanPemda.Periode.JenisPeriode,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning row: %v", err)
+		}
+
+		result = append(result, tujuanPemda)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return result, nil
+}
 
 func (repository *TujuanPemdaRepositoryImpl) DeleteIndikator(ctx context.Context, tx *sql.Tx, tujuanPemdaId int) error {
 	query := "DELETE FROM tb_indikator WHERE tujuan_pemda_id = ?"

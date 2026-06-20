@@ -843,6 +843,98 @@ func (repository *SasaranPemdaRepositoryImpl) FindAllWithPokin(ctx context.Conte
 	return result, nil
 }
 
+func (r *SasaranPemdaRepositoryImpl) FindStrategicArahKebijakanPemda(ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir, jenisPeriode string) ([]domain.StrategicPemdaRow, error) {
+
+	query := `SELECT
+    COALESCE(tp.tujuan_pemda, '') AS tujuan,
+    COALESCE(sp.sasaran_pemda, '') AS sasaran,
+
+    TRIM(
+        CONCAT(
+            COALESCE(pk_lvl1.nama_pohon, ''),
+            CASE 
+                WHEN pk_lvl1.nama_pohon IS NOT NULL 
+                     AND pk_subtema.nama_pohon IS NOT NULL 
+                THEN ' -> ' 
+                ELSE '' 
+            END,
+            COALESCE(pk_subtema.nama_pohon, ''),
+            CASE 
+                WHEN pk_lvl3.nama_pohon IS NOT NULL 
+                THEN CONCAT(' -> ', pk_lvl3.nama_pohon)
+                ELSE '' 
+            END
+        )
+    ) AS strategi,
+
+    COALESCE(pk_lvl4.nama_pohon, '') AS arah_kebijakan
+
+	FROM tb_sasaran_pemda sp
+
+	JOIN tb_tujuan_pemda tp 
+		ON sp.tujuan_pemda_id = tp.id
+
+	-- entry dynamic (level 1/2/3)
+	LEFT JOIN tb_pohon_kinerja pk_subtema 
+		ON sp.subtema_id = pk_subtema.id
+
+	-- level 1
+	LEFT JOIN tb_pohon_kinerja pk_lvl1 
+		ON pk_subtema.parent = pk_lvl1.id 
+		AND pk_lvl1.level_pohon = 1
+
+	-- level 3 (optional child)
+	LEFT JOIN tb_pohon_kinerja pk_lvl3 
+		ON pk_lvl3.parent = pk_subtema.id 
+		AND pk_lvl3.level_pohon = 3
+
+	-- arah kebijakan (level 4)
+	LEFT JOIN tb_pohon_kinerja pk_lvl4 
+		ON pk_lvl4.parent = pk_subtema.id 
+		AND pk_lvl4.level_pohon = 4
+
+	WHERE 
+		sp.jenis_periode = ?
+		AND sp.tahun_awal <= ?
+		AND sp.tahun_akhir >= ?
+
+	ORDER BY 
+		tp.tujuan_pemda,
+		sp.sasaran_pemda,
+		strategi,
+		arah_kebijakan
+	`
+
+	rows, err := tx.QueryContext(ctx, query,
+		jenisPeriode, tahunAkhir, tahunAwal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.StrategicPemdaRow
+
+	for rows.Next() {
+		var row domain.StrategicPemdaRow
+
+		err := rows.Scan(
+			&row.NamaTujuanPemda,
+			&row.NamaSasaranPemda,
+			&row.NamaStrategi,
+			&row.NamaArahKebijakan,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, row)
+	}
+
+	return results, nil
+}
+
+
 func (repository *SasaranPemdaRepositoryImpl) IsSubtemaIdExists(ctx context.Context, tx *sql.Tx, subtemaId int) bool {
 	query := "SELECT COUNT(*) FROM tb_sasaran_pemda WHERE subtema_id = ?"
 	var count int

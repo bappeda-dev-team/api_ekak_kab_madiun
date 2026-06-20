@@ -61,6 +61,7 @@ func NewRouter(
 	matrixRenjaController controller.MatrixRenjaController,
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
+	strategicArahKebijakanController controller.SrategicArahKebijakanPemdaController,
 	indikatorController controller.IndikatorController,
 	ikkController controller.IkkController,
 	ikdController controller.IkdController,
@@ -204,7 +205,11 @@ func NewRouter(
 	router.GET("/pohon_kinerja_opd/pokin_clone_pokin_opd_statistik/:kode_opd/:tahun/:level_pohon", pohonKinerjaOpdController.FindAllPokinParentClonePokinOpd)
 	router.PUT("/pohon_kinerja_opd/update_parent_clone/:id", pohonKinerjaOpdController.UpdateParentClone)
 
+	// strategic arah kebijakan opd
 	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
+
+	// strategic arah kebijakan pemda
+	router.GET("/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.FindAll)
 
 	//pohon kinerja admin
 	router.POST("/pohon_kinerja_admin/create", pohonKinerjaAdminController.Create)
