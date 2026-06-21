@@ -587,8 +587,10 @@ func (repository *PkRepositoryImpl) FindPkPegawaiPenetapan(
 		pk.id_rekin_pemilik_pk,
 		pk.rekin_pemilik_pk,
 		pk.tahun,
-		pk.keterangan
+		pk.keterangan,
+		rk.sasaranopd_id
 	FROM pk_opd pk
+	LEFT JOIN tb_rencana_kinerja rk ON rk.id = pk.id_rekin_pemilik_pk
 	WHERE pk.nip_pemilik_pk = ?
 		AND pk.kode_opd = ?
 		AND pk.tahun = ?
@@ -611,6 +613,7 @@ func (repository *PkRepositoryImpl) FindPkPegawaiPenetapan(
 	var result []domain.PkOpd
 	for rows.Next() {
 		var pkOpd domain.PkOpd
+		var sasaranOpdIdNInt64 sql.NullInt64
 
 		err := rows.Scan(
 			&pkOpd.Id,
@@ -627,9 +630,13 @@ func (repository *PkRepositoryImpl) FindPkPegawaiPenetapan(
 			&pkOpd.RekinPemilikPk,
 			&pkOpd.Tahun,
 			&pkOpd.Keterangan,
+			&sasaranOpdIdNInt64,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan pk_opd failed: %w", err)
+		}
+		if sasaranOpdIdNInt64.Valid {
+			pkOpd.SasaranOpdId = sasaranOpdIdNInt64.Int64
 		}
 		result = append(result, pkOpd)
 	}

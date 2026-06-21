@@ -21,6 +21,7 @@ type PkOpd struct {
 	Keterangan       string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	SasaranOpdId     int64
 }
 
 type AllItemPk struct {
