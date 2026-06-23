@@ -1409,8 +1409,8 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		NamaOpd:                   opd.NamaOpd,
 		Tahun:                     tahun,
 		IsuStrategisOpd:           make([]strategic.IsuStrategiOpdResponse, 0),
-		TujuanOpd:                 make([]strategic.TujuanOpdResponse, 0),
-		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
+		TujuanOpd:                 make([]strategic.TujuanOpdResponse, 0),  // revisi harus ubah alur 
+		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0), // revisi harus ubah alur
 	}
 
 	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
@@ -1428,7 +1428,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 	}
 
 	// Ambil data tujuan OPD dengan batch
-	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
+	tujuanOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
@@ -1436,15 +1436,14 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		tujuanResponses := make([]strategic.TujuanOpdResponse, 0, len(tujuanOpds))
 		for _, tujuan := range tujuanOpds {
 			tujuanResponses = append(tujuanResponses, strategic.TujuanOpdResponse{
-				Id:      tujuan.Id,
 				KodeOpd: tujuan.KodeOpd,
-				Tujuan:  tujuan.Tujuan,
+				Tujuan:  tujuan.NamaTujuanOpd,
 			})
 		}
 		response.TujuanOpd = tujuanResponses
 	}
 
-	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "renstra")
+	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
