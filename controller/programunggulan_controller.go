@@ -16,4 +16,6 @@ type ProgramUnggulanController interface {
 	FindByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindUnusedByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByIdTerkait(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CreateOpdProgramUnggulan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	DeleteOpdProgramUnggulan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

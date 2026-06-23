@@ -38,7 +38,7 @@ type PohonKinerjaOpdServiceImpl struct {
 	CSFRepository             repository.CSFRepository
 	sasaranOpdRepository      repository.SasaranOpdRepository
 	ikkService                IkkService
-	IkkRepository			  repository.IkkRepository
+	IkkRepository             repository.IkkRepository
 }
 
 func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate,
@@ -60,8 +60,8 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		RedisClient:               redisClient,
 		CSFRepository:             csfRepository,
 		sasaranOpdRepository:      sasaranOpdRepository,
-		ikkService:      ikkService,
-		IkkRepository:      IkkRepository,
+		ikkService:                ikkService,
+		IkkRepository:             IkkRepository,
 	}
 }
 
@@ -304,34 +304,34 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 
 		for _, indikator := range detailIkk.Indikators {
 
-		targetResponses := make([]ikk.TargetResponse, 0)
+			targetResponses := make([]ikk.TargetResponse, 0)
 
-		for _, target := range indikator.Targets {
-			targetResponses = append(targetResponses, ikk.TargetResponse{
-				ID:      target.ID,
-				Target:  target.Target,
-				Satuan:  target.Satuan,
-			})
-		}
+			for _, target := range indikator.Targets {
+				targetResponses = append(targetResponses, ikk.TargetResponse{
+					ID:     target.ID,
+					Target: target.Target,
+					Satuan: target.Satuan,
+				})
+			}
 
-		indikatorResponses = append(indikatorResponses, ikk.IndikatorResponse{
-				ID:         indikator.ID,
-				Indikator:  indikator.Indikator,
-				Targets:    targetResponses,
+			indikatorResponses = append(indikatorResponses, ikk.IndikatorResponse{
+				ID:        indikator.ID,
+				Indikator: indikator.Indikator,
+				Targets:   targetResponses,
 			})
 		}
 
 		// append response
 		ikkResponses = append(ikkResponses, ikk.IkkFullResponse{
-			ID:                 detailIkk.ID,
-			KodeOpd:            detailIkk.KodeOpd,
-			NamaOpd:            detailIkk.NamaOpd,
-			KodeBidangUrusan:   detailIkk.KodeBidangUrusan,
-			NamaBidangUrusan:   detailIkk.NamaBidangUrusan,
-			Jenis:              detailIkk.Jenis,
-			Tahun:              detailIkk.Tahun,
-			Keterangan:         detailIkk.Keterangan,
-			Indikators:         indikatorResponses,
+			ID:               detailIkk.ID,
+			KodeOpd:          detailIkk.KodeOpd,
+			NamaOpd:          detailIkk.NamaOpd,
+			KodeBidangUrusan: detailIkk.KodeBidangUrusan,
+			NamaBidangUrusan: detailIkk.NamaBidangUrusan,
+			Jenis:            detailIkk.Jenis,
+			Tahun:            detailIkk.Tahun,
+			Keterangan:       detailIkk.Keterangan,
+			Indikators:       indikatorResponses,
 		})
 	}
 
@@ -369,7 +369,7 @@ func (service *PohonKinerjaOpdServiceImpl) Create(ctx context.Context, request p
 		Pelaksana:   pelaksanaResponses,
 		Indikator:   indikatorResponses,
 		Tagging:     taggingResponses,
-		Ikk: ikkResponses,
+		Ikk:         ikkResponses,
 	}
 
 	return response, nil
@@ -584,7 +584,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		if pokin.Id == request.Id {
 			updatedPokin = result
 		}
-		
+
 		// =====================================
 		// UPDATE IKK HANYA UNTUK POKIN ASLI
 		// =====================================
@@ -696,9 +696,9 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 
 					for _, target := range indikator.Targets {
 						targetResponses = append(targetResponses, ikk.TargetResponse{
-							ID:      target.ID,
-							Target:  target.Target,
-							Satuan:  target.Satuan,
+							ID:     target.ID,
+							Target: target.Target,
+							Satuan: target.Satuan,
 						})
 					}
 
@@ -722,7 +722,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 				})
 			}
 		}
-		
+
 	}
 
 	countReview, err := service.reviewRepository.CountReviewByPohonKinerja(ctx, tx, updatedPokin.Id)
@@ -882,7 +882,7 @@ func (service *PohonKinerjaOpdServiceImpl) Update(ctx context.Context, request p
 		Pelaksana:              pelaksanaResponses,
 		Indikator:              indikatorResponses,
 		Tagging:                taggingResponses,
-		Ikk: 					ikkResponses,
+		Ikk:                    ikkResponses,
 		KeteranganCrosscutting: updatedPokin.KeteranganCrosscutting,
 		UpdatedBy:              updatedPokin.UpdatedBy,
 	}, nil
@@ -1066,9 +1066,9 @@ func (service *PohonKinerjaOpdServiceImpl) FindById(ctx context.Context, id int)
 
 			for _, target := range indikator.Targets {
 				targetResponses = append(targetResponses, ikk.TargetResponse{
-					ID:      target.ID,
-					Target:  target.Target,
-					Satuan:  target.Satuan,
+					ID:     target.ID,
+					Target: target.Target,
+					Satuan: target.Satuan,
 				})
 			}
 
@@ -1413,7 +1413,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
 	}
 
-	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, tahun)
+	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
@@ -1444,7 +1444,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		response.TujuanOpd = tujuanResponses
 	}
 
-	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
+	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "renstra")
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
@@ -1477,6 +1477,99 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 
 	return response, nil
 }
+// func (service *PohonKinerjaOpdServiceImpl) FindAllArahPemda(ctx context.Context, kodeOpd, tahun string) (strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse, error) {
+// 	startTime := time.Now()
+// 	serviceName := "PohonKinerjaOpdService.FindAllArahPemda"
+
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
+
+// 	// Validasi OPD
+// 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+// 	if err != nil {
+// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, errors.New("kode opd tidak ditemukan")
+// 	}
+
+
+// 	// Inisialisasi response dasar
+// 	response := strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{
+// 		KodePemda:    kodeOpd,
+// 		NamaPemda:    opd.NamaOpd,
+// 		Tahun:      tahun,
+// 		IsuStrategisPemda: make([]strategicarahkebijakan.IsuStrategiPemdaResponse, 0),
+// 		TujuanPemda:  make([]strategicarahkebijakan.TujuanPemdaResponse, 0),
+// 		StrategiArahKebijakanPemdas: make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0),
+// 	}
+
+// 	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
+// 	if err != nil {
+// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
+// 	}
+// 	if len(csfList) > 0 {
+// 		Responses := make([]strategicarahkebijakan.IsuStrategiPemdaResponse, 0, len(csfList))
+// 		for _, tujuan := range csfList {
+// 			Responses = append(Responses, strategicarahkebijakan.IsuStrategiPemdaResponse{
+// 				NamaIsu:        tujuan.NamaIsu,
+// 			})
+// 		}
+// 		response.IsuStrategisPemda = Responses
+// 	}
+	
+
+// 	// Ambil data tujuan OPD dengan batch
+// 	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
+// 	if err != nil {
+// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
+// 	}
+// 	if len(tujuanOpds) > 0 {
+// 		tujuanResponses := make([]strategicarahkebijakan.TujuanPemdaResponse, 0, len(tujuanOpds))
+// 		for _, tujuan := range tujuanOpds {
+// 			tujuanResponses = append(tujuanResponses, strategicarahkebijakan.TujuanPemdaResponse{
+// 				Id:        tujuan.Id,
+// 				KodePemda:   tujuan.KodeOpd,
+// 				Tujuan:    tujuan.Tujuan,
+// 			})
+// 		}
+// 		response.TujuanPemda = tujuanResponses
+// 	}
+
+// 	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
+// 	if err != nil {
+// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
+// 	}
+// 	if len(sasaranOpds) > 0 {
+// 	strategiResponses := make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0)
+
+// 		for _, s := range sasaranOpds {
+
+// 			strategiResponses = append(strategiResponses, strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{
+// 				TujuanPemda: s.NamaTujuanOpd, // pastikan field ini ada di domain
+// 				SasaranPemdas: []strategicarahkebijakan.SasaranPemdaResponse{
+// 					{
+// 						SasaranPemda: s.NamaSasaranOpd,
+// 						StrategiPemda: s.NamaStrategi, // kalau ada
+// 						ArahKebijakanPemdas: []strategicarahkebijakan.ArahKebijakanPemdaResponse{
+// 							{
+// 								ArahKebijakanPemda: s.NamaArahKebijakan, // kalau ada
+// 							},
+// 						},
+// 					},
+// 				},
+// 			})
+// 		}
+
+// 		response.StrategiArahKebijakanPemdas = strategiResponses
+// 	}
+
+
+// 	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
+// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.TujuanPemda))
+
+// 	return response, nil
+// }
 
 // Helper function untuk flatten dan sort strategic
 func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonKinerja {
@@ -1616,7 +1709,7 @@ func buildTacticalOnly(
 		Tagging:     taggingMap[tactical.Id],
 		Pelaksana:   pelaksanaMap[tactical.Id],
 		Indikator:   indikatorMap[tactical.Id],
-		Ikk:   ikkMap[tactical.Id],
+		Ikk:         ikkMap[tactical.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}
@@ -1672,7 +1765,7 @@ func buildOperationalOnly(
 		Tagging:     taggingMap[operational.Id],
 		Pelaksana:   pelaksanaMap[operational.Id],
 		Indikator:   indikatorMap[operational.Id],
-		Ikk:   ikkMap[operational.Id],
+		Ikk:         ikkMap[operational.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}
@@ -1713,7 +1806,7 @@ func buildOperationalNOnly(
 		Tagging:     taggingMap[operationalN.Id],
 		Pelaksana:   pelaksanaMap[operationalN.Id],
 		Indikator:   indikatorMap[operationalN.Id],
-		Ikk:   ikkMap[operationalN.Id],
+		Ikk:         ikkMap[operationalN.Id],
 		Review:      reviewPokin,
 		CountReview: countReview,
 	}

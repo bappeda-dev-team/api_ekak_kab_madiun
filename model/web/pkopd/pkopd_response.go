@@ -38,7 +38,8 @@ type PkPegawai struct {
 	// daftar atasan untuk menghubungkan rekin pegawai
 	AtasanCandidates []AtasanCandidate `json:"atasan_candidates"`
 	// rekin pegawai
-	Pks []PkAsn `json:"pks"`
+	PkTerkunci bool    `json:"pk_terkunci"` // true, false, false
+	Pks        []PkAsn `json:"pks"`
 }
 
 type ItemPk struct {
@@ -62,6 +63,7 @@ type PkAsn struct {
 	NipPemilikPk     string        `json:"nip_pemilik_pk"`
 	NamaPemilikPk    string        `json:"nama_pemilik_pk"`
 	IdRekinPemilikPk string        `json:"id_rekin_pemilik_pk"`
+	SasaranOpdId     int64         `json:"id_sasaran_opd"`
 	RekinPemilikPk   string        `json:"rekin_pemilik_pk"`
 	Tahun            int           `json:"tahun"`
 	Keterangan       string        `json:"keterangan"`
@@ -90,4 +92,11 @@ type TargetIndPk struct {
 	IdTarget    string `json:"id_target"`
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
+}
+
+type KunciPKResponse struct {
+	IdKunci    int64  `json:"id_pk"`
+	IdPegawai  string `json:"id_pegawai"`
+	StatusPk   string `json:"status_pk"`   // terkunci, terbuka, revisi
+	PkTerkunci bool   `json:"pk_terkunci"` // true, false, false
 }

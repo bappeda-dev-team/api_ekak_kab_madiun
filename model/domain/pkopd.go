@@ -21,6 +21,7 @@ type PkOpd struct {
 	Keterangan       string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	SasaranOpdId     int64
 }
 
 type AllItemPk struct {
@@ -40,4 +41,14 @@ type AllSasaranPemdaPk struct {
 	NipKepalaPemda     string
 	SasaranPemdaId     int
 	SasaranPemda       string
+}
+
+type KunciPK struct {
+	IdPegawai   string
+	KodeOpd     string
+	Tahun       int
+	DikunciOleh string
+	DikunciPada time.Time
+	StatusPk    string // terkunci, terbuka, revisi
+	PkTerkunci  bool   // true, false, false
 }

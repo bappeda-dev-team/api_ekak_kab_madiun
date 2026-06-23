@@ -9,4 +9,7 @@ type PkService interface {
 	FindByKodeOpdTahun(ctx context.Context, kodeOpd string, tahun int) (pkopd.PkOpdResponse, error)
 	HubungkanRekin(ctx context.Context, request pkopd.PkOpdRequest) (pkopd.PkOpdResponse, error)
 	HubungkanAtasan(ctx context.Context, request pkopd.HubungkanAtasanRequest) (pkopd.PkOpdResponse, error)
+	KunciPK(ctx context.Context, request pkopd.KunciPkRequest) (pkopd.KunciPKResponse, error)
+	BukaKunciPK(ctx context.Context, request pkopd.KunciPkRequest) (pkopd.KunciPKResponse, error)
+	FindPkPenetapan(ctx context.Context, idPegawai string, kodeOpd string, tahun int) ([]pkopd.PkAsn, error)
 }

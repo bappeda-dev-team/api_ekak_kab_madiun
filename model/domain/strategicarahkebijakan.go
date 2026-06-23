@@ -7,3 +7,10 @@ type StrategicRow struct {
 	NamaStrategi      string // level 4
 	NamaArahKebijakan string // level 5
 }
+
+type StrategicPemdaRow struct {
+	NamaTujuanPemda   string
+	NamaSasaranPemda  string
+	NamaStrategi      string // level 1 & 2
+	NamaArahKebijakan string // level 4
+}

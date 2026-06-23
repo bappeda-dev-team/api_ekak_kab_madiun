@@ -169,18 +169,18 @@ func (repository *TujuanOpdRepositoryImpl) Delete(ctx context.Context, tx *sql.T
 
 func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, tujuanOpdId int) (domain.TujuanOpd, error) {
 	script := `
-        SELECT 
-            t.id, 
+        SELECT
+            t.id,
             t.kode_opd,
             COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
-            t.tujuan, 
+            t.tujuan,
             t.tahun_awal,
             t.tahun_akhir,
             t.jenis_periode,
             i.id as indikator_id,
             i.kode_indikator,
             i.indikator,
-            i.rumus_perhitungan, 
+            i.rumus_perhitungan,
             i.definisi_operasional,
             i.sumber_data,
             COALESCE(tg.id, '') as target_id,
@@ -345,8 +345,8 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 }
 
 func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanId(ctx context.Context, tx *sql.Tx, tujuanOpdId int) ([]domain.Indikator, error) {
-	script := `SELECT id, indikator 
-               FROM tb_indikator 
+	script := `SELECT id, indikator
+               FROM tb_indikator
                WHERE tujuan_opd_id = ?`
 
 	rows, err := tx.QueryContext(ctx, script, tujuanOpdId)
@@ -371,7 +371,7 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanId(ctx context.C
 func (repository *TujuanOpdRepositoryImpl) FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) ([]domain.Target, error) {
 	script := `
         SELECT id, target, satuan, tahun
-        FROM tb_target 
+        FROM tb_target
         WHERE indikator_id = ?
         AND tahun = ?
         ORDER BY tahun ASC
@@ -404,17 +404,17 @@ func (repository *TujuanOpdRepositoryImpl) FindTargetByIndikatorId(ctx context.C
 
 func (repository *TujuanOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error) {
 	scriptTujuan := `
-        SELECT 
-            t.id, 
+        SELECT
+            t.id,
             t.kode_opd,
             COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
-            t.tujuan, 
+            t.tujuan,
             t.tahun_awal,
             t.tahun_akhir,
             t.jenis_periode,
             i.id as indikator_id,
             i.indikator,
-            i.rumus_perhitungan, 
+            i.rumus_perhitungan,
             i.sumber_data,
             tg.id as target_id,
             tg.target as target_value,
@@ -423,7 +423,7 @@ func (repository *TujuanOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.
         FROM tb_tujuan_opd t
         LEFT JOIN tb_indikator i ON t.id = i.tujuan_opd_id
         LEFT JOIN tb_target tg ON i.id = tg.indikator_id
-        WHERE t.kode_opd = ? 
+        WHERE t.kode_opd = ?
         AND t.tahun_awal = ?
         AND t.tahun_akhir = ?
         AND t.jenis_periode = ?
@@ -593,8 +593,8 @@ func (repository *TujuanOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.
 
 func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error) {
 	scriptTujuan := `
-        SELECT 
-            t.id, 
+        SELECT
+            t.id,
             t.kode_opd,
             COALESCE(t.kode_bidang_urusan, '') as kode_bidang_urusan,
 	    bid.nama_bidang_urusan,
@@ -604,7 +604,7 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
             t.jenis_periode,
             i.id as indikator_id,
             i.indikator,
-            i.rumus_perhitungan, 
+            i.rumus_perhitungan,
             i.sumber_data,
             tg.id as target_id,
             tg.target as target_value,
@@ -752,8 +752,8 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
 // Perbaikan pada FindIndikatorByTujuanOpdId untuk menyertakan rumus_perhitungan dan sumber_data
 func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdId(ctx context.Context, tx *sql.Tx, tujuanOpdId int) ([]domain.Indikator, error) {
 	script := `
-        SELECT 
-            id, 
+        SELECT
+            id,
             indikator,
             COALESCE(rumus_perhitungan, '') as rumus_perhitungan,
             COALESCE(sumber_data, '') as sumber_data
@@ -803,9 +803,9 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdForCascadingOpd(ctx cont
 			t.jenis_periode,
 			t.kode_bidang_urusan
 		FROM tb_tujuan_opd t
-		INNER JOIN tb_periode p ON 
-			t.tahun_awal = p.tahun_awal 
-			AND t.tahun_akhir = p.tahun_akhir 
+		INNER JOIN tb_periode p ON
+			t.tahun_awal = p.tahun_awal
+			AND t.tahun_akhir = p.tahun_akhir
 			AND t.jenis_periode = p.jenis_periode
 		WHERE t.kode_opd = ?
 		AND CAST(? AS SIGNED) BETWEEN CAST(p.tahun_awal AS SIGNED) AND CAST(p.tahun_akhir AS SIGNED)
@@ -881,8 +881,8 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdIdsBatch(ctx 
 	}
 
 	script := fmt.Sprintf(`
-		SELECT 
-			id, 
+		SELECT
+			id,
 			tujuan_opd_id,
 			indikator,
 			COALESCE(rumus_perhitungan, '') as rumus_perhitungan,

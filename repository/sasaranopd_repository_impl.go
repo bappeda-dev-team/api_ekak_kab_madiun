@@ -1469,11 +1469,7 @@ func (r *SasaranOpdRepositoryImpl) scanSasaranRowsOptimized(
 	return result, nil
 }
 
-func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(
-	ctx context.Context,
-	tx *sql.Tx,
-	kodeOpd, tahun, jenisPeriode string,
-) ([]domain.StrategicRow, error) {
+func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode string) ([]domain.StrategicRow, error) {
 
 	query := `
 	SELECT
