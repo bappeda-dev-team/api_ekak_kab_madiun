@@ -54,13 +54,14 @@ func (repository *TujuanOpdRepositoryImpl) Create(ctx context.Context, tx *sql.T
 			return domain.TujuanOpd{}, err
 		}
 		for _, target := range indikator.Target {
-			scriptTarget := "INSERT INTO tb_target (id, indikator_id, target, satuan, tahun) VALUES (?, ?, ?, ?, ?)"
-			_, err := tx.ExecContext(ctx, scriptTarget,
+			_, err := tx.ExecContext(ctx,
+				"INSERT INTO tb_target (id, indikator_id, target, satuan, tahun, jenis) VALUES (?, ?, ?, ?, ?, ?)",
 				target.Id,
-				indikator.KodeIndikator, // FIX: pakai kode_indikator (VARCHAR), bukan indikator.Id
+				indikator.KodeIndikator,
 				target.Target,
 				target.Satuan,
 				target.Tahun,
+				indikator.Jenis, // jenis target mengikuti jenis indikator (renstra)
 			)
 			if err != nil {
 				return domain.TujuanOpd{}, err
@@ -124,13 +125,14 @@ func (repository *TujuanOpdRepositoryImpl) Update(ctx context.Context, tx *sql.T
 			return err
 		}
 		for _, target := range indikator.Target {
-			scriptTarget := "INSERT INTO tb_target (id, indikator_id, target, satuan, tahun) VALUES (?, ?, ?, ?, ?)"
-			_, err = tx.ExecContext(ctx, scriptTarget,
+			_, err = tx.ExecContext(ctx,
+				"INSERT INTO tb_target (id, indikator_id, target, satuan, tahun, jenis) VALUES (?, ?, ?, ?, ?, ?)",
 				target.Id,
-				indikator.KodeIndikator, // FIX: pakai kode_indikator (VARCHAR)
+				indikator.KodeIndikator,
 				target.Target,
 				target.Satuan,
 				target.Tahun,
+				indikator.Jenis, // jenis target mengikuti jenis indikator (renstra)
 			)
 			if err != nil {
 				return err
@@ -1089,22 +1091,27 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByPeriod(
 	return result, nil
 }
 
+// FindAllByTahun mengambil tujuan OPD dengan indikator default dari renstra,
+// dan target sesuai jenisIndikator (renstra/ranwal/rankhir/penetapan) untuk tahun yang diminta.
+// Metadata indikator (nama, rumus, sumber data, dll) selalu bersumber dari layer renstra.
+// Catatan: untuk jenis="renstra", data lama dengan jenis='' juga diambil (backward compat).
 func (repository *TujuanOpdRepositoryImpl) FindAllByTahun(
 	ctx context.Context, tx *sql.Tx,
 	kodeOpd, tahun, jenisPeriode, jenisIndikator string,
 ) ([]domain.TujuanOpd, error) {
-	var finalArgs []interface{}
-	// Args untuk subquery (dalam tanda kurung)
-	finalArgs = append(finalArgs, tahun) // tg.tahun = ?
-	jenisClause := ""
-	if jenisIndikator != "" {
-		jenisClause = "AND im.jenis = ?"
-		finalArgs = append(finalArgs, jenisIndikator) // im.jenis = ?
+	// Untuk layer renstra, ambil juga target dengan jenis='' (data sebelum migrasi).
+	var (
+		targetJenisClause string
+		finalArgs         []interface{}
+	)
+	if jenisIndikator == "renstra" {
+		targetJenisClause = "(tg.jenis = 'renstra' OR tg.jenis = '')"
+		finalArgs = []interface{}{tahun, kodeOpd, jenisPeriode, tahun, tahun}
+	} else {
+		targetJenisClause = "tg.jenis = ?"
+		finalArgs = []interface{}{tahun, jenisIndikator, kodeOpd, jenisPeriode, tahun, tahun}
 	}
-	// Args untuk WHERE tujuan_opd
-	finalArgs = append(finalArgs, kodeOpd)      // t.kode_opd = ?
-	finalArgs = append(finalArgs, jenisPeriode) // t.jenis_periode = ?
-	finalArgs = append(finalArgs, tahun, tahun) // tahun_awal <= ? AND tahun_akhir >= ?
+
 	query := fmt.Sprintf(`
     SELECT
         t.id,
@@ -1141,17 +1148,17 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahun(
             tg.satuan,
             tg.tahun                               AS tahun_target
         FROM tb_indikator_matrix im
-        INNER JOIN tb_target tg
+        LEFT JOIN tb_target tg
             ON im.kode_indikator = tg.indikator_id
             AND tg.tahun = ?
-        %s
+            AND %s
+        WHERE im.jenis = 'renstra'
     ) im_tg ON t.id = im_tg.tujuan_opd_id
-    WHERE t.kode_opd     = ?
-      AND t.jenis_periode = ?
+    WHERE t.kode_opd      = ?
+      AND t.jenis_periode  = ?
       AND CAST(t.tahun_awal  AS SIGNED) <= CAST(? AS SIGNED)
       AND CAST(t.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
-    ORDER BY t.id, im_tg.indikator_id
-`, jenisClause)
+    ORDER BY t.id, im_tg.indikator_id`, targetJenisClause)
 	rows, err := tx.QueryContext(ctx, query, finalArgs...)
 	if err != nil {
 		return nil, err
@@ -1355,11 +1362,11 @@ func (r *TujuanOpdRepositoryImpl) CreateRenjaIndikator(
 		if err != nil {
 			return err
 		}
-		// 1 target per indikator
+		// 1 target per indikator; jenis target = jenis indikator (ranwal/rankhir/penetapan)
 		t := ind.Target[0]
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO tb_target (id, indikator_id, target, satuan, tahun) VALUES (?, ?, ?, ?, ?)",
-			t.Id, ind.KodeIndikator, t.Target, t.Satuan, t.Tahun,
+			"INSERT INTO tb_target (id, indikator_id, target, satuan, tahun, jenis) VALUES (?, ?, ?, ?, ?, ?)",
+			t.Id, ind.KodeIndikator, t.Target, t.Satuan, t.Tahun, ind.Jenis,
 		)
 		if err != nil {
 			return err
@@ -1386,18 +1393,18 @@ func (r *TujuanOpdRepositoryImpl) UpdateRenjaIndikator(
 		if err != nil {
 			return err
 		}
-		// DELETE target lama yang sama tahunnya + INSERT baru
+		// DELETE target lama dengan tahun+jenis yang sama, lalu INSERT baru
 		t := ind.Target[0]
 		_, err = tx.ExecContext(ctx,
-			"DELETE FROM tb_target WHERE indikator_id = ? AND tahun = ?",
-			ind.KodeIndikator, t.Tahun,
+			"DELETE FROM tb_target WHERE indikator_id = ? AND tahun = ? AND jenis = ?",
+			ind.KodeIndikator, t.Tahun, ind.Jenis,
 		)
 		if err != nil {
 			return err
 		}
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO tb_target (id, indikator_id, target, satuan, tahun) VALUES (?, ?, ?, ?, ?)",
-			t.Id, ind.KodeIndikator, t.Target, t.Satuan, t.Tahun,
+			"INSERT INTO tb_target (id, indikator_id, target, satuan, tahun, jenis) VALUES (?, ?, ?, ?, ?, ?)",
+			t.Id, ind.KodeIndikator, t.Target, t.Satuan, t.Tahun, ind.Jenis,
 		)
 		if err != nil {
 			return err
@@ -1451,19 +1458,22 @@ func (r *TujuanOpdRepositoryImpl) FindIndikatorByKodeIndikator(
 	return indikator, nil
 }
 
+// FindAllByTahunForPokin identik dengan FindAllByTahun namun diperuntukkan
+// khusus pemanggil dari pohon kinerja. Indikator default dari renstra,
+// target difilter berdasarkan jenisIndikator dengan fallback renstra backward compat.
 func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisIndikator string) ([]domain.TujuanOpd, error) {
-	var finalArgs []interface{}
-	// Args untuk subquery (dalam tanda kurung)
-	finalArgs = append(finalArgs, tahun) // tg.tahun = ?
-	jenisClause := ""
-	if jenisIndikator != "" {
-		jenisClause = "AND im.jenis = ?"
-		finalArgs = append(finalArgs, jenisIndikator) // im.jenis = ?
+	var (
+		targetJenisClause string
+		finalArgs         []interface{}
+	)
+	if jenisIndikator == "renstra" {
+		targetJenisClause = "(tg.jenis = 'renstra' OR tg.jenis = '')"
+		finalArgs = []interface{}{tahun, kodeOpd, jenisPeriode, tahun, tahun}
+	} else {
+		targetJenisClause = "tg.jenis = ?"
+		finalArgs = []interface{}{tahun, jenisIndikator, kodeOpd, jenisPeriode, tahun, tahun}
 	}
-	// Args untuk WHERE tujuan_opd
-	finalArgs = append(finalArgs, kodeOpd)      // t.kode_opd = ?
-	finalArgs = append(finalArgs, jenisPeriode) // t.jenis_periode = ?
-	finalArgs = append(finalArgs, tahun, tahun) // tahun_awal <= ? AND tahun_akhir >= ?
+
 	query := fmt.Sprintf(`
     SELECT
         t.id,
@@ -1503,14 +1513,14 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahunForPokin(ctx context.Co
         LEFT JOIN tb_target tg
             ON im.kode_indikator = tg.indikator_id
             AND tg.tahun = ?
-        %s
+            AND %s
+        WHERE im.jenis = 'renstra'
     ) im_tg ON t.id = im_tg.tujuan_opd_id
-    WHERE t.kode_opd     = ?
-      AND t.jenis_periode = ?
+    WHERE t.kode_opd      = ?
+      AND t.jenis_periode  = ?
       AND CAST(t.tahun_awal  AS SIGNED) <= CAST(? AS SIGNED)
       AND CAST(t.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
-    ORDER BY t.id, im_tg.indikator_id
-`, jenisClause)
+    ORDER BY t.id, im_tg.indikator_id`, targetJenisClause)
 	rows, err := tx.QueryContext(ctx, query, finalArgs...)
 	if err != nil {
 		return nil, err

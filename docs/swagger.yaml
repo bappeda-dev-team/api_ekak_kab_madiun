@@ -1283,6 +1283,8 @@ definitions:
         type: string
       sumber_data:
         type: string
+      sumber_jenis:
+        type: string
       target:
         items:
           $ref: '#/definitions/tujuanopd.TargetResponse'
@@ -1371,6 +1373,8 @@ definitions:
     type: object
   tujuanopd.TujuanOpdPenetapanResponse:
     properties:
+      is_lock:
+        type: boolean
       kode_bidang_urusan:
         type: string
       kode_opd:
@@ -1396,9 +1400,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanopd.IndikatorResponse'
         type: array
-      is_locked:
-        type: boolean
       jenis_penetapan:
+        description: IsLocked         bool                `json:"is_locked"`
         type: string
       jenis_periode:
         type: string
@@ -1457,10 +1460,119 @@ definitions:
       nama_opd:
         type: string
       tujuan_opd:
+        description: IsLock           bool                `json:"is_lock"`
         items:
           $ref: '#/definitions/tujuanopd.TujuanOpdResponse'
         type: array
       urusan:
+        type: string
+    type: object
+  tujuanpemda.IndikatorResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: integer
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/tujuanpemda.TargetResponse'
+        type: array
+    type: object
+  tujuanpemda.LayerTargetBatchRequest:
+    properties:
+      targets:
+        items:
+          $ref: '#/definitions/tujuanpemda.LayerTargetItemRequest'
+        type: array
+    type: object
+  tujuanpemda.LayerTargetItemRequest:
+    properties:
+      kode_indikator:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: number
+    type: object
+  tujuanpemda.LayerTargetUpdateBatchRequest:
+    properties:
+      targets:
+        items:
+          $ref: '#/definitions/tujuanpemda.LayerTargetUpdateItemRequest'
+        type: array
+    type: object
+  tujuanpemda.LayerTargetUpdateItemRequest:
+    properties:
+      id:
+        type: integer
+      satuan:
+        type: string
+      target:
+        type: number
+    type: object
+  tujuanpemda.PeriodeResponse:
+    properties:
+      jenis_periode:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+    type: object
+  tujuanpemda.TargetDisplay:
+    type: object
+  tujuanpemda.TargetResponse:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        $ref: '#/definitions/tujuanpemda.TargetDisplay'
+    type: object
+  tujuanpemda.TujuanPemdaResponse:
+    properties:
+      id:
+        type: integer
+      id_misi:
+        type: integer
+      id_visi:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/tujuanpemda.IndikatorResponse'
+        type: array
+      jenis_pohon:
+        type: string
+      misi:
+        type: string
+      nama_tematik:
+        type: string
+      periode:
+        $ref: '#/definitions/tujuanpemda.PeriodeResponse'
+      periode_id:
+        type: integer
+      tematik_id:
+        type: integer
+      tujuan_pemda:
+        type: string
+      visi:
         type: string
     type: object
   user.UserLoginRequest:
@@ -3594,6 +3706,487 @@ paths:
       summary: Update Tujuan Opd Renstra
       tags:
       - Tujuan Opd Renstra
+  /tujuan_pemda/{jenis}/target/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Menyimpan atau memperbarui target tujuan pemda untuk layer ranwal,
+        rankhir, atau penetapan. Hanya mengubah target — metadata indikator (nama,
+        rumus, dll.) tidak diubah.
+      parameters:
+      - description: 'Jenis layer: ranwal, rankhir, atau penetapan'
+        example: '"ranwal"'
+        in: path
+        name: jenis
+        required: true
+        type: string
+      - description: Daftar target yang akan di-upsert
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanpemda.LayerTargetBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Target Tujuan Pemda Layer RKPD
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/findall_with_pokin_renstra/{tahun_awal}/{tahun_akhir}/{jenis_periode}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data Pohon Kinerja berdasarkan tahun awal, tahun akhir,
+        dan jenis periode
+      parameters:
+      - description: Tahun Awal
+        in: path
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        in: path
+        name: tahun_akhir
+        required: true
+        type: string
+      - description: Jenis Periode (triwulan, semester, tahunan, dll)
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Pokin With Periode Renstra
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/penetapan/{tahun}/{jenis_periode}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan pemda penetapan berdasarkan tahun dan jenis
+        periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja).
+        Target penetapan menimpa rankhir → ranwal → renstra jika tersedia.
+      parameters:
+      - description: Tahun yang berada dalam range RPJMD
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Jenis Periode
+        example: '"renstra"'
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Pemda Penetapan
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/penetapan_dual/{tahun}/{jenis_periode}:
+    get:
+      description: 'Menampilkan 2 target per indikator: rankhir dan penetapan. Tanpa
+        fallback antar jenis.'
+      parameters:
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Jenis Periode
+        example: '"renstra"'
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+                  type: array
+              type: object
+      summary: Tujuan Pemda Penetapan (Dual Target)
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/pokin_with_periode/{pokin_id}/{jenis_periode}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data Pohon Kinerja berdasarkan ID Pokin dan jenis periode
+      parameters:
+      - description: Pokin ID
+        in: path
+        name: pokin_id
+        required: true
+        type: integer
+      - description: Jenis Periode (triwulan, semester, tahunan, dll)
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Pokin With Periode
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/rankhir/{tahun}/{jenis_periode}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan pemda rankhir berdasarkan tahun dan jenis
+        periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja).
+        Target rankhir menimpa ranwal → renstra jika tersedia.
+      parameters:
+      - description: Tahun yang berada dalam range RPJMD
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Jenis Periode
+        example: '"renstra"'
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Pemda Rankhir
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/rankhir_dual/{tahun}/{jenis_periode}:
+    get:
+      description: 'Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa
+        fallback antar jenis.'
+      parameters:
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Jenis Periode
+        example: '"renstra"'
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+                  type: array
+              type: object
+      summary: Tujuan Pemda Rankhir (Dual Target)
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/ranwal/{tahun}/{jenis_periode}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data tujuan pemda ranwal berdasarkan tahun dan jenis
+        periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja).
+        Target ranwal menimpa renstra jika tersedia.
+      parameters:
+      - description: Tahun yang berada dalam range RPJMD
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Jenis Periode
+        example: '"renstra"'
+        in: path
+        name: jenis_periode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tujuan Pemda Ranwal
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/target/penetapan/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target baru untuk penetapan. Gagal jika target sudah ada.
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Target Tujuan Pemda Penetapan
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/target/penetapan/update:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui target dan satuan saja. Jenis, kode_indikator, dan
+        tahun tidak diubah.
+      parameters:
+      - description: Daftar target (wajib ada id)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanpemda.LayerTargetUpdateBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Tujuan Pemda Penetapan
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/target/rankhir/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target baru untuk rankhir. Gagal jika target sudah ada.
+      parameters:
+      - description: Daftar target yang akan dibuat
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanpemda.LayerTargetBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Target Tujuan Pemda Rankhir
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/target/rankhir/update:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui target dan satuan saja. Jenis, kode_indikator, dan
+        tahun tidak diubah.
+      parameters:
+      - description: Daftar target (wajib ada id)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanpemda.LayerTargetUpdateBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Tujuan Pemda Rankhir
+      tags:
+      - Tujuan Pemda
   /user/login:
     post:
       consumes:

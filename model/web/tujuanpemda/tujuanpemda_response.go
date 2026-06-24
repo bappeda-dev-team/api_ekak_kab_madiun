@@ -15,18 +15,22 @@ type TujuanPemdaResponse struct {
 	Indikator   []IndikatorResponse `json:"indikator"`
 }
 type IndikatorResponse struct {
-	Id               string           `json:"id"`
-	Indikator        string           `json:"indikator"`
-	RumusPerhitungan string           `json:"rumus_perhitungan"`
-	SumberData       string           `json:"sumber_data"`
-	Target           []TargetResponse `json:"target"`
+	Id                  int              `json:"id"`
+	KodeIndikator       string           `json:"kode_indikator"`
+	Indikator           string           `json:"indikator"`
+	RumusPerhitungan    string           `json:"rumus_perhitungan"`
+	SumberData          string           `json:"sumber_data"`
+	DefinisiOperasional string           `json:"definisi_operasional"`
+	Jenis               string           `json:"jenis"`
+	Target              []TargetResponse `json:"target"`
 }
 
 type TargetResponse struct {
-	Id     string `json:"id"`
-	Target string `json:"target"`
-	Satuan string `json:"satuan"`
-	Tahun  string `json:"tahun"`
+	Id     int           `json:"id"`
+	Jenis  string        `json:"jenis"`
+	Target TargetDisplay `json:"target"`
+	Satuan string        `json:"satuan"`
+	Tahun  string        `json:"tahun"`
 }
 
 type PeriodeResponse struct {
