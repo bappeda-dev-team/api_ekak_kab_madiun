@@ -3797,53 +3797,6 @@ paths:
       - Tujuan Pemda
   /tujuan_pemda/penetapan/{tahun}/{jenis_periode}:
     get:
-      consumes:
-      - application/json
-      description: Mendapatkan data tujuan pemda penetapan berdasarkan tahun dan jenis
-        periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja).
-        Target penetapan menimpa rankhir → ranwal → renstra jika tersedia.
-      parameters:
-      - description: Tahun yang berada dalam range RPJMD
-        example: '"2025"'
-        in: path
-        name: tahun
-        required: true
-        type: string
-      - description: Jenis Periode
-        example: '"renstra"'
-        in: path
-        name: jenis_periode
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/web.WebResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/web.WebResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/web.WebResponse'
-      security:
-      - BearerAuth: []
-      summary: Tujuan Pemda Penetapan
-      tags:
-      - Tujuan Pemda
-  /tujuan_pemda/penetapan_dual/{tahun}/{jenis_periode}:
-    get:
       description: 'Menampilkan 2 target per indikator: rankhir dan penetapan. Tanpa
         fallback antar jenis.'
       parameters:
@@ -3911,53 +3864,6 @@ paths:
       tags:
       - Tujuan Pemda
   /tujuan_pemda/rankhir/{tahun}/{jenis_periode}:
-    get:
-      consumes:
-      - application/json
-      description: Mendapatkan data tujuan pemda rankhir berdasarkan tahun dan jenis
-        periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja).
-        Target rankhir menimpa ranwal → renstra jika tersedia.
-      parameters:
-      - description: Tahun yang berada dalam range RPJMD
-        example: '"2025"'
-        in: path
-        name: tahun
-        required: true
-        type: string
-      - description: Jenis Periode
-        example: '"renstra"'
-        in: path
-        name: jenis_periode
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/web.WebResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/web.WebResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/web.WebResponse'
-      security:
-      - BearerAuth: []
-      summary: Tujuan Pemda Rankhir
-      tags:
-      - Tujuan Pemda
-  /tujuan_pemda/rankhir_dual/{tahun}/{jenis_periode}:
     get:
       description: 'Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa
         fallback antar jenis.'
