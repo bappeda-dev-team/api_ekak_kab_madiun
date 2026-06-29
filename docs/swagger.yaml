@@ -1469,6 +1469,56 @@ definitions:
       urusan:
         type: string
     type: object
+  tujuanpemda.IndikatorPenetapanDualResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: integer
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target_penetapan:
+        items:
+          $ref: '#/definitions/tujuanpemda.TargetDualResponse'
+        type: array
+      target_rankhir:
+        items:
+          $ref: '#/definitions/tujuanpemda.TargetDualResponse'
+        type: array
+    type: object
+  tujuanpemda.IndikatorRankhirDualResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: integer
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target_rankhir:
+        items:
+          $ref: '#/definitions/tujuanpemda.TargetDualResponse'
+        type: array
+      target_ranwal:
+        items:
+          $ref: '#/definitions/tujuanpemda.TargetDualResponse'
+        type: array
+    type: object
   tujuanpemda.IndikatorResponse:
     properties:
       definisi_operasional:
@@ -1571,6 +1621,17 @@ definitions:
     type: object
   tujuanpemda.TargetDisplay:
     type: object
+  tujuanpemda.TargetDualResponse:
+    properties:
+      id:
+        type: integer
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        $ref: '#/definitions/tujuanpemda.TargetDisplay'
+    type: object
   tujuanpemda.TargetResponse:
     properties:
       id:
@@ -1596,6 +1657,56 @@ definitions:
         type: string
       target:
         type: number
+    type: object
+  tujuanpemda.TujuanPemdaPenetapanDualResponse:
+    properties:
+      id:
+        type: integer
+      id_misi:
+        type: integer
+      id_visi:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/tujuanpemda.IndikatorPenetapanDualResponse'
+        type: array
+      misi:
+        type: string
+      nama_tematik:
+        type: string
+      periode:
+        $ref: '#/definitions/tujuanpemda.PeriodeResponse'
+      tematik_id:
+        type: integer
+      tujuan_pemda:
+        type: string
+      visi:
+        type: string
+    type: object
+  tujuanpemda.TujuanPemdaRankhirDualResponse:
+    properties:
+      id:
+        type: integer
+      id_misi:
+        type: integer
+      id_visi:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/tujuanpemda.IndikatorRankhirDualResponse'
+        type: array
+      misi:
+        type: string
+      nama_tematik:
+        type: string
+      periode:
+        $ref: '#/definitions/tujuanpemda.PeriodeResponse'
+      tematik_id:
+        type: integer
+      tujuan_pemda:
+        type: string
+      visi:
+        type: string
     type: object
   tujuanpemda.TujuanPemdaResponse:
     properties:
@@ -4027,7 +4138,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+                    $ref: '#/definitions/tujuanpemda.TujuanPemdaPenetapanDualResponse'
                   type: array
               type: object
       security:
@@ -4097,7 +4208,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+                    $ref: '#/definitions/tujuanpemda.TujuanPemdaRankhirDualResponse'
                   type: array
               type: object
         "400":

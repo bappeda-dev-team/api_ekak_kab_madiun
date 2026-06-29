@@ -459,7 +459,7 @@ func (controller *TujuanPemdaControllerImpl) UpsertTargetPemdaLayer(
 // @Tags         Tujuan Pemda
 // @Param        tahun         path  string  true  "Tahun"          example("2025")
 // @Param        jenis_periode path  string  true  "Jenis Periode"  example("renstra")
-// @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaResponse}
+// @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaRankhirDualResponse}
 // @Failure      400  {object}  web.WebResponse
 // @Failure      500  {object}  web.WebResponse
 // @Security     BearerAuth
@@ -495,7 +495,7 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhirDual(
 // @Tags         Tujuan Pemda
 // @Param        tahun         path  string  true  "Tahun"          example("2025")
 // @Param        jenis_periode path  string  true  "Jenis Periode"  example("renstra")
-// @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaResponse}
+// @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaPenetapanDualResponse}
 // @Security     BearerAuth
 // @Router       /tujuan_pemda/penetapan/{tahun}/{jenis_periode} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaPenetapanDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {

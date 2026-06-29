@@ -1116,7 +1116,30 @@ func (s *TujuanPemdaServiceImpl) loadLayerRankhirDual(
 func (s *TujuanPemdaServiceImpl) loadLayerPenetapanDual(
 	ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string,
 ) ([]domain.TujuanPemda, error) {
-	return s.loadTujuanPemdaWithDualTargets(ctx, tx, tahun, jenisPeriode, []string{"rankhir", "penetapan"})
+	base, err := s.TujuanPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	for i := range base {
+		for j := range base[i].IndikatorPemda {
+			kode := base[i].IndikatorPemda[j].KodeIndikator
+			base[i].IndikatorPemda[j].Target = []domain.TargetPemda{
+				{Id: 0, KodeIndikator: kode, Target: "-", Satuan: "-", Tahun: tahun, Jenis: "rankhir"},
+				{Id: 0, KodeIndikator: kode, Target: "-", Satuan: "-", Tahun: tahun, Jenis: "penetapan"},
+			}
+		}
+	}
+	rankhirData, err := s.TujuanPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	fillTargetSlotForJenis(&base, rankhirData, "rankhir")
+	penetapanData, err := s.TujuanPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "penetapan")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	fillTargetSlotForJenis(&base, penetapanData, "penetapan")
+	return base, nil
 }
 
 func validateLayerJenis(jenis string) (string, error) {
@@ -1245,13 +1268,53 @@ func (s *TujuanPemdaServiceImpl) UpdateTargetPemdaLayer(
 // ── Public: Opsi B ──────────────────────────────────────────────
 func (s *TujuanPemdaServiceImpl) FindTujuanPemdaRankhirDual(
 	ctx context.Context, tahun, jenisPeriode string,
-) ([]tujuanpemda.TujuanPemdaResponse, error) {
-	return s.findByLayerTahun(ctx, tahun, jenisPeriode, s.loadLayerRankhirDual)
+) ([]tujuanpemda.TujuanPemdaRankhirDualResponse, error) {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return nil, fmt.Errorf("format tahun tidak valid, contoh: 2025")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	list, err := s.loadLayerRankhirDual(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]tujuanpemda.TujuanPemdaRankhirDualResponse, 0, len(list))
+	for _, tp := range list {
+		resp, err := s.toTujuanPemdaRankhirDualResponse(ctx, tx, tp)
+		if err != nil {
+			return nil, err
+		}
+		responses = append(responses, resp)
+	}
+	return responses, nil
 }
 func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDual(
 	ctx context.Context, tahun, jenisPeriode string,
-) ([]tujuanpemda.TujuanPemdaResponse, error) {
-	return s.findByLayerTahun(ctx, tahun, jenisPeriode, s.loadLayerPenetapanDual)
+) ([]tujuanpemda.TujuanPemdaPenetapanDualResponse, error) {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return nil, fmt.Errorf("format tahun tidak valid, contoh: 2025")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	list, err := s.loadLayerPenetapanDual(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]tujuanpemda.TujuanPemdaPenetapanDualResponse, 0, len(list))
+	for _, tp := range list {
+		resp, err := s.toTujuanPemdaPenetapanDualResponse(ctx, tx, tp)
+		if err != nil {
+			return nil, err
+		}
+		responses = append(responses, resp)
+	}
+	return responses, nil
 }
 
 // lock pemda
@@ -1320,6 +1383,89 @@ func (s *TujuanPemdaServiceImpl) assertTargetLayerAllowedWhenLocked(
 	default:
 		return fmt.Errorf("jenis target '%s' tidak dikenali", targetJenis)
 	}
+}
+
+// helper
+func toTargetDualResponse(t domain.TargetPemda) tujuanpemda.TargetDualResponse {
+	return tujuanpemda.TargetDualResponse{
+		Id:     t.Id,
+		Target: tujuanpemda.NewTargetDisplayFromString(t.Target),
+		Satuan: t.Satuan,
+		Tahun:  t.Tahun,
+	}
+}
+func toTargetDualSlice(t domain.TargetPemda) []tujuanpemda.TargetDualResponse {
+	return []tujuanpemda.TargetDualResponse{toTargetDualResponse(t)}
+}
+func findTargetByJenis(ind domain.IndikatorPemda, jenis string) domain.TargetPemda {
+	for _, t := range ind.Target {
+		if t.Jenis == jenis {
+			return t
+		}
+	}
+	return domain.TargetPemda{}
+}
+func (s *TujuanPemdaServiceImpl) toTujuanPemdaRankhirDualResponse(
+	ctx context.Context, tx *sql.Tx, tp domain.TujuanPemda,
+) (tujuanpemda.TujuanPemdaRankhirDualResponse, error) {
+	base, err := s.toTujuanPemdaResponse(ctx, tx, tp) // reuse header (visi, misi, tematik)
+	if err != nil {
+		return tujuanpemda.TujuanPemdaRankhirDualResponse{}, err
+	}
+	indikators := make([]tujuanpemda.IndikatorRankhirDualResponse, 0, len(tp.IndikatorPemda))
+	for _, ind := range tp.IndikatorPemda {
+		ranwal := findTargetByJenis(ind, "ranwal")
+		rankhir := findTargetByJenis(ind, "rankhir")
+		indikators = append(indikators, tujuanpemda.IndikatorRankhirDualResponse{
+			Id:                  ind.Id,
+			KodeIndikator:       ind.KodeIndikator,
+			Indikator:           ind.Indikator.String,
+			RumusPerhitungan:    ind.RumusPerhitungan.String,
+			SumberData:          ind.SumberData.String,
+			DefinisiOperasional: ind.DefinisiOperasional.String,
+			Jenis:               ind.Jenis,
+			TargetRanwal:        toTargetDualSlice(ranwal),
+			TargetRankhir:       toTargetDualSlice(rankhir),
+		})
+	}
+	return tujuanpemda.TujuanPemdaRankhirDualResponse{
+		Id: base.Id, IdVisi: base.IdVisi, Visi: base.Visi,
+		IdMisi: base.IdMisi, Misi: base.Misi,
+		TujuanPemda: base.TujuanPemda, TematikId: base.TematikId,
+		NamaTematik: base.NamaTematik, Periode: base.Periode,
+		Indikator: indikators,
+	}, nil
+}
+func (s *TujuanPemdaServiceImpl) toTujuanPemdaPenetapanDualResponse(
+	ctx context.Context, tx *sql.Tx, tp domain.TujuanPemda,
+) (tujuanpemda.TujuanPemdaPenetapanDualResponse, error) {
+	base, err := s.toTujuanPemdaResponse(ctx, tx, tp)
+	if err != nil {
+		return tujuanpemda.TujuanPemdaPenetapanDualResponse{}, err
+	}
+	indikators := make([]tujuanpemda.IndikatorPenetapanDualResponse, 0, len(tp.IndikatorPemda))
+	for _, ind := range tp.IndikatorPemda {
+		rankhir := findTargetByJenis(ind, "rankhir")
+		penetapan := findTargetByJenis(ind, "penetapan")
+		indikators = append(indikators, tujuanpemda.IndikatorPenetapanDualResponse{
+			Id:                  ind.Id,
+			KodeIndikator:       ind.KodeIndikator,
+			Indikator:           ind.Indikator.String,
+			RumusPerhitungan:    ind.RumusPerhitungan.String,
+			SumberData:          ind.SumberData.String,
+			DefinisiOperasional: ind.DefinisiOperasional.String,
+			Jenis:               ind.Jenis,
+			TargetRankhir:       toTargetDualSlice(rankhir),
+			TargetPenetapan:     toTargetDualSlice(penetapan),
+		})
+	}
+	return tujuanpemda.TujuanPemdaPenetapanDualResponse{
+		Id: base.Id, IdVisi: base.IdVisi, Visi: base.Visi,
+		IdMisi: base.IdMisi, Misi: base.Misi,
+		TujuanPemda: base.TujuanPemda, TematikId: base.TematikId,
+		NamaTematik: base.NamaTematik, Periode: base.Periode,
+		Indikator: indikators,
+	}, nil
 }
 
 // ── Public API lock ─────────────────────────────────────────────

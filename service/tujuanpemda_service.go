@@ -24,8 +24,8 @@ type TujuanPemdaService interface {
 	UpdateTargetPemdaLayer(ctx context.Context, jenis string, request tujuanpemda.LayerTargetUpdateBatchRequest) ([]tujuanpemda.TargetResponse, error)
 
 	// Opsi B — tampilkan 2 jenis target sekaligus (tanpa fallback)
-	FindTujuanPemdaRankhirDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
-	FindTujuanPemdaPenetapanDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
+	FindTujuanPemdaRankhirDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaRankhirDualResponse, error)
+	FindTujuanPemdaPenetapanDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaPenetapanDualResponse, error)
 
 	//lock pemda
 	LockTujuanPemda(ctx context.Context, tahun string) error

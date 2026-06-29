@@ -3793,7 +3793,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/tujuanpemda.TujuanPemdaResponse"
+                                                "$ref": "#/definitions/tujuanpemda.TujuanPemdaPenetapanDualResponse"
                                             }
                                         }
                                     }
@@ -3904,7 +3904,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/tujuanpemda.TujuanPemdaResponse"
+                                                "$ref": "#/definitions/tujuanpemda.TujuanPemdaRankhirDualResponse"
                                             }
                                         }
                                     }
@@ -6652,6 +6652,82 @@ const docTemplate = `{
                 }
             }
         },
+        "tujuanpemda.IndikatorPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                }
+            }
+        },
+        "tujuanpemda.IndikatorRankhirDualResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                },
+                "target_ranwal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                }
+            }
+        },
         "tujuanpemda.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -6809,6 +6885,23 @@ const docTemplate = `{
         "tujuanpemda.TargetDisplay": {
             "type": "object"
         },
+        "tujuanpemda.TargetDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/tujuanpemda.TargetDisplay"
+                }
+            }
+        },
         "tujuanpemda.TargetResponse": {
             "type": "object",
             "properties": {
@@ -6846,6 +6939,82 @@ const docTemplate = `{
                 },
                 "target": {
                     "type": "number"
+                }
+            }
+        },
+        "tujuanpemda.TujuanPemdaPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_misi": {
+                    "type": "integer"
+                },
+                "id_visi": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.IndikatorPenetapanDualResponse"
+                    }
+                },
+                "misi": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "periode": {
+                    "$ref": "#/definitions/tujuanpemda.PeriodeResponse"
+                },
+                "tematik_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
+                    "type": "string"
+                },
+                "visi": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.TujuanPemdaRankhirDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_misi": {
+                    "type": "integer"
+                },
+                "id_visi": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.IndikatorRankhirDualResponse"
+                    }
+                },
+                "misi": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "periode": {
+                    "$ref": "#/definitions/tujuanpemda.PeriodeResponse"
+                },
+                "tematik_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
+                    "type": "string"
+                },
+                "visi": {
+                    "type": "string"
                 }
             }
         },
