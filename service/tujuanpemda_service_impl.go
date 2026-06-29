@@ -1070,7 +1070,46 @@ func (s *TujuanPemdaServiceImpl) loadTujuanPemdaWithDualTargets(
 func (s *TujuanPemdaServiceImpl) loadLayerRankhirDual(
 	ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string,
 ) ([]domain.TujuanPemda, error) {
-	return s.loadTujuanPemdaWithDualTargets(ctx, tx, tahun, jenisPeriode, []string{"ranwal", "rankhir"})
+	renstra, err := s.TujuanPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	for i := range renstra {
+		for j := range renstra[i].IndikatorPemda {
+			kode := renstra[i].IndikatorPemda[j].KodeIndikator
+			// Slot 1: ranwal = renstra (label "ranwal" untuk UI)
+			var ranwalSlot domain.TargetPemda
+			if len(renstra[i].IndikatorPemda[j].Target) > 0 && hasRealTarget(renstra[i].IndikatorPemda[j].Target[0]) {
+				tg := renstra[i].IndikatorPemda[j].Target[0]
+				ranwalSlot = domain.TargetPemda{
+					Id:            tg.Id,
+					KodeIndikator: kode,
+					Target:        tg.Target,
+					Satuan:        tg.Satuan,
+					Tahun:         tg.Tahun,
+					Jenis:         "ranwal",
+				}
+			} else {
+				ranwalSlot = domain.TargetPemda{
+					Id: 0, KodeIndikator: kode,
+					Target: "-", Satuan: "-", Tahun: tahun, Jenis: "ranwal",
+				}
+			}
+			// Slot 2: rankhir placeholder
+			rankhirSlot := domain.TargetPemda{
+				Id: 0, KodeIndikator: kode,
+				Target: "-", Satuan: "-", Tahun: tahun, Jenis: "rankhir",
+			}
+			renstra[i].IndikatorPemda[j].Target = []domain.TargetPemda{ranwalSlot, rankhirSlot}
+		}
+	}
+	// Isi slot rankhir dari DB
+	rankhirData, err := s.TujuanPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	fillTargetSlotForJenis(&renstra, rankhirData, "rankhir")
+	return renstra, nil
 }
 
 // loadLayerPenetapanDual — rankhir + penetapan

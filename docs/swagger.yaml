@@ -1330,6 +1330,8 @@ definitions:
         type: string
       indikator_id:
         type: string
+      jenis:
+        type: string
       satuan:
         type: string
       tahun:
@@ -4028,6 +4030,8 @@ paths:
                     $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
                   type: array
               type: object
+      security:
+      - BearerAuth: []
       summary: Tujuan Pemda Penetapan (Dual Target)
       tags:
       - Tujuan Pemda
@@ -4096,6 +4100,16 @@ paths:
                     $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
                   type: array
               type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
       summary: Tujuan Pemda Rankhir (Dual Target)
       tags:
       - Tujuan Pemda
