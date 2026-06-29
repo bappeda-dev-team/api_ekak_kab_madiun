@@ -3476,7 +3476,7 @@
                 }
             }
         },
-        "/tujuan_pemda/findall_with_pokin_renstra/{tahun_awal}/{tahun_akhir}/{jenis_periode}": {
+        "/tujuan_pemda/findall_with_pokin/{tahun_awal}/{tahun_akhir}/{jenis_periode}": {
             "get": {
                 "security": [
                     {
@@ -4207,6 +4207,76 @@
                                             "items": {
                                                 "$ref": "#/definitions/tujuanpemda.TargetResponse"
                                             }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui data tujuan pemda.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Update Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Tujuan Pemda ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data tujuan pemda yang akan diupdate",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanpemda.TujuanPemdaUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/tujuanpemda.TujuanPemdaResponse"
                                         }
                                     }
                                 }
@@ -6586,6 +6656,44 @@
                 }
             }
         },
+        "tujuanpemda.IndikatorUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "id_indikator": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetUpdateRequest"
+                    }
+                },
+                "tujuan_pemda_id": {
+                    "type": "string"
+                }
+            }
+        },
         "tujuanpemda.LayerTargetBatchRequest": {
             "type": "object",
             "properties": {
@@ -6693,6 +6801,26 @@
                 }
             }
         },
+        "tujuanpemda.TargetUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "number"
+                }
+            }
+        },
         "tujuanpemda.TujuanPemdaResponse": {
             "type": "object",
             "properties": {
@@ -6733,6 +6861,44 @@
                     "type": "string"
                 },
                 "visi": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.TujuanPemdaUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_misi": {
+                    "type": "integer"
+                },
+                "id_visi": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.IndikatorUpdateRequest"
+                    }
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "periode_id": {
+                    "type": "integer"
+                },
+                "tahun_akhir_periode": {
+                    "type": "string"
+                },
+                "tahun_awal_periode": {
+                    "type": "string"
+                },
+                "tema_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
                     "type": "string"
                 }
             }

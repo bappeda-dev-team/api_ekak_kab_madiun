@@ -321,33 +321,38 @@ func (service *TujuanPemdaServiceImpl) Update(
 	if err != nil {
 		return tujuanpemda.TujuanPemdaResponse{}, err
 	}
-	periode, err := service.PeriodeRepository.FindById(ctx, tx, request.PeriodeId)
-	if err != nil {
-		return tujuanpemda.TujuanPemdaResponse{}, fmt.Errorf("periode tidak ditemukan: %v", err)
-	}
-	tahunAwal, _ := strconv.Atoi(periode.TahunAwal)
-	tahunAkhir, _ := strconv.Atoi(periode.TahunAkhir)
+	// Periode tidak di-update di endpoint ini — pakai data existing untuk validasi tahun target
+	// periode, err := service.PeriodeRepository.FindById(ctx, tx, request.PeriodeId)
+	// if err != nil {
+	// 	return tujuanpemda.TujuanPemdaResponse{}, fmt.Errorf("periode tidak ditemukan: %v", err)
+	// }
+	tahunAwal, _ := strconv.Atoi(existing.TahunAwalPeriode)
+	tahunAkhir, _ := strconv.Atoi(existing.TahunAkhirPeriode)
 	if err = validateTargetTahunUpdate(request.Indikator, tahunAwal, tahunAkhir); err != nil {
 		return tujuanpemda.TujuanPemdaResponse{}, err
 	}
 	if err = validateTargetValuesUpdate(request.Indikator); err != nil {
 		return tujuanpemda.TujuanPemdaResponse{}, err
 	}
-	// Map indikator existing by id untuk resolve kode_indikator
 	existingIndMap := make(map[int]domain.IndikatorPemda)
 	for _, ind := range existing.IndikatorPemda {
 		existingIndMap[ind.Id] = ind
 	}
 	tp := domain.TujuanPemda{
-		Id:                request.Id,
-		TujuanPemda:       request.TujuanPemda,
-		IdVisi:            request.IdVisi,
-		IdMisi:            request.IdMisi,
-		TematikId:         request.TematikId,
-		PeriodeId:         request.PeriodeId,
-		TahunAwalPeriode:  periode.TahunAwal,
-		TahunAkhirPeriode: periode.TahunAkhir,
-		JenisPeriode:      periode.JenisPeriode,
+		Id:          request.Id,
+		TujuanPemda: request.TujuanPemda,
+		IdVisi:      request.IdVisi,
+		IdMisi:      request.IdMisi,
+		TematikId:   request.TematikId,
+		// PeriodeId, TahunAwalPeriode, TahunAkhirPeriode, JenisPeriode — tidak di-update, pertahankan dari existing
+		PeriodeId:         existing.PeriodeId,
+		TahunAwalPeriode:  existing.TahunAwalPeriode,
+		TahunAkhirPeriode: existing.TahunAkhirPeriode,
+		JenisPeriode:      existing.JenisPeriode,
+		// PeriodeId:         request.PeriodeId,
+		// TahunAwalPeriode:  periode.TahunAwal,
+		// TahunAkhirPeriode: periode.TahunAkhir,
+		// JenisPeriode:      periode.JenisPeriode,
 	}
 	for _, indReq := range request.Indikator {
 		jenis := defaultJenisPemda(indReq.Jenis)

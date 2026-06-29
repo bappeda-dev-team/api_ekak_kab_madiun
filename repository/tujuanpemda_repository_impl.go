@@ -130,11 +130,9 @@ func (r *TujuanPemdaRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, tp d
 	_, err := tx.ExecContext(ctx,
 		`UPDATE tb_tujuan_pemda
 		 SET tujuan_pemda=?, tematik_id=?, periode_id=?,
-		     tahun_awal_periode=?, tahun_akhir_periode=?, jenis_periode=?,
 		     id_visi=?, id_misi=?
 		 WHERE id=?`,
 		tp.TujuanPemda, tp.TematikId, tp.PeriodeId,
-		tp.TahunAwalPeriode, tp.TahunAkhirPeriode, tp.JenisPeriode,
 		tp.IdVisi, tp.IdMisi, tp.Id)
 	if err != nil {
 		return tp, err
@@ -177,10 +175,11 @@ func (r *TujuanPemdaRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, tp d
 			if t.Id > 0 {
 				// UPDATE target existing — id tetap
 				_, err = tx.ExecContext(ctx, `
-					UPDATE tb_target_pemda
-					SET target=?, satuan=?, tahun=?, jenis=?
-					WHERE id=? AND kode_indikator=?`,
-					t.Target, t.Satuan, t.Tahun, t.Jenis, t.Id, kodeInd)
+				UPDATE tb_target_pemda
+				SET target=?, satuan=?, tahun=?
+				WHERE id=? AND kode_indikator=?
+				  AND (jenis = 'renstra' OR jenis = '' OR jenis IS NULL)`,
+					t.Target, t.Satuan, t.Tahun, t.Id, kodeInd)
 				if err != nil {
 					return tp, err
 				}
@@ -209,7 +208,9 @@ func (r *TujuanPemdaRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, tp d
 			}
 			_, err = tx.ExecContext(ctx,
 				fmt.Sprintf(`DELETE FROM tb_target_pemda
-				             WHERE kode_indikator=? AND id NOT IN (%s)`, placeholders),
+                 WHERE kode_indikator=?
+                   AND (jenis = 'renstra' OR jenis = '' OR jenis IS NULL)
+                   AND id NOT IN (%s)`, placeholders),
 				args...)
 			if err != nil {
 				return tp, err
@@ -228,8 +229,9 @@ func (r *TujuanPemdaRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, tp d
 		// Hapus target orphan dulu
 		_, err = tx.ExecContext(ctx,
 			fmt.Sprintf(`DELETE tg FROM tb_target_pemda tg
-			             INNER JOIN tb_indikator_matrix_pemda i ON tg.kode_indikator = i.kode_indikator
-			             WHERE i.tujuan_pemda_id=? AND i.jenis='renstra' AND i.id NOT IN (%s)`, placeholders),
+						 INNER JOIN tb_indikator_matrix_pemda i ON tg.kode_indikator = i.kode_indikator
+						 WHERE i.tujuan_pemda_id=? AND i.jenis='renstra' AND i.id NOT IN (%s)
+						   AND (tg.jenis = 'renstra' OR tg.jenis = '' OR tg.jenis IS NULL)`, placeholders),
 			args...)
 		if err != nil {
 			return tp, err

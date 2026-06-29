@@ -1488,6 +1488,31 @@ definitions:
           $ref: '#/definitions/tujuanpemda.TargetResponse'
         type: array
     type: object
+  tujuanpemda.IndikatorUpdateRequest:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      id_indikator:
+        type: integer
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/tujuanpemda.TargetUpdateRequest'
+        type: array
+      tujuan_pemda_id:
+        type: string
+    type: object
   tujuanpemda.LayerTargetBatchRequest:
     properties:
       targets:
@@ -1557,6 +1582,19 @@ definitions:
       target:
         $ref: '#/definitions/tujuanpemda.TargetDisplay'
     type: object
+  tujuanpemda.TargetUpdateRequest:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: number
+    type: object
   tujuanpemda.TujuanPemdaResponse:
     properties:
       id:
@@ -1584,6 +1622,31 @@ definitions:
       tujuan_pemda:
         type: string
       visi:
+        type: string
+    type: object
+  tujuanpemda.TujuanPemdaUpdateRequest:
+    properties:
+      id:
+        type: integer
+      id_misi:
+        type: integer
+      id_visi:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/tujuanpemda.IndikatorUpdateRequest'
+        type: array
+      jenis_periode:
+        type: string
+      periode_id:
+        type: integer
+      tahun_akhir_periode:
+        type: string
+      tahun_awal_periode:
+        type: string
+      tema_id:
+        type: integer
+      tujuan_pemda:
         type: string
     type: object
   user.UserLoginRequest:
@@ -3764,7 +3827,7 @@ paths:
       summary: Upsert Target Tujuan Pemda Layer RKPD
       tags:
       - Tujuan Pemda
-  /tujuan_pemda/findall_with_pokin_renstra/{tahun_awal}/{tahun_akhir}/{jenis_periode}:
+  /tujuan_pemda/findall_with_pokin/{tahun_awal}/{tahun_akhir}/{jenis_periode}:
     get:
       consumes:
       - application/json
@@ -4232,6 +4295,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Update Target Tujuan Pemda Rankhir
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data tujuan pemda.
+      parameters:
+      - description: Tujuan Pemda ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data tujuan pemda yang akan diupdate
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanpemda.TujuanPemdaUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanpemda.TujuanPemdaResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Tujuan Pemda
       tags:
       - Tujuan Pemda
   /user/login:

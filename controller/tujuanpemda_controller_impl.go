@@ -46,6 +46,19 @@ func (controller *TujuanPemdaControllerImpl) Create(writer http.ResponseWriter, 
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// Update godoc
+// @Summary      Update Tujuan Pemda
+// @Description  Memperbarui data tujuan pemda.
+// @Tags         Tujuan Pemda
+// @Accept       json
+// @Produce      json
+// @Param        id   path  int  true  "Tujuan Pemda ID"
+// @Param        body   body  tujuanpemda.TujuanPemdaUpdateRequest  true  "Data tujuan pemda yang akan diupdate"
+// @Success      200  {object}  web.WebResponse{data=tujuanpemda.TujuanPemdaResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_pemda/update/{id} [put]
 func (controller *TujuanPemdaControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	tujuanPemdaUpdateRequest := tujuanpemda.TujuanPemdaUpdateRequest{}
 	helper.ReadFromRequestBody(request, &tujuanPemdaUpdateRequest)
@@ -288,7 +301,7 @@ func (controller *TujuanPemdaControllerImpl) FindPokinWithPeriode(writer http.Re
 // @Failure 400 {object} web.WebResponse
 // @Failure 500 {object} web.WebResponse
 // @Security     BearerAuth
-// @Router /tujuan_pemda/findall_with_pokin_renstra/{tahun_awal}/{tahun_akhir}/{jenis_periode} [get]
+// @Router /tujuan_pemda/findall_with_pokin/{tahun_awal}/{tahun_akhir}/{jenis_periode} [get]
 func (controller *TujuanPemdaControllerImpl) FindAllWithPokinRenstra(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	tahunAwal := params.ByName("tahun_awal")
 	tahunAkhir := params.ByName("tahun_akhir")
