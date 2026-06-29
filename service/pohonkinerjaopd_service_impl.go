@@ -1428,7 +1428,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 	}
 
 	// Ambil data tujuan OPD dengan batch
-	tujuanOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
+	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdByTahunByStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
@@ -1437,7 +1437,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		for _, tujuan := range tujuanOpds {
 			tujuanResponses = append(tujuanResponses, strategic.TujuanOpdResponse{
 				KodeOpd: tujuan.KodeOpd,
-				Tujuan:  tujuan.NamaTujuanOpd,
+				Tujuan:  tujuan.Tujuan,
 			})
 		}
 		response.TujuanOpd = tujuanResponses
