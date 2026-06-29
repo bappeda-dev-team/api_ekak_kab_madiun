@@ -351,18 +351,6 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRanwal(
 }
 
 // FindTujuanPemdaRankhir godoc
-// @Summary      Tujuan Pemda Rankhir
-// @Description  Mendapatkan data tujuan pemda rankhir berdasarkan tahun dan jenis periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja). Target rankhir menimpa ranwal → renstra jika tersedia.
-// @Tags         Tujuan Pemda
-// @Accept       json
-// @Produce      json
-// @Param        tahun         path  string  true  "Tahun yang berada dalam range RPJMD"  example("2025")
-// @Param        jenis_periode path  string  true  "Jenis Periode"                        example("renstra")
-// @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaResponse}
-// @Failure      400  {object}  web.WebResponse
-// @Failure      500  {object}  web.WebResponse
-// @Security     BearerAuth
-// @Router       /tujuan_pemda/rankhir/{tahun}/{jenis_periode} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhir(
 	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
 ) {
@@ -388,19 +376,6 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhir(
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
-// FindTujuanPemdaPenetapan godoc
-// @Summary      Tujuan Pemda Penetapan
-// @Description  Mendapatkan data tujuan pemda penetapan berdasarkan tahun dan jenis periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja). Target penetapan menimpa rankhir → ranwal → renstra jika tersedia.
-// @Tags         Tujuan Pemda
-// @Accept       json
-// @Produce      json
-// @Param        tahun         path  string  true  "Tahun yang berada dalam range RPJMD"  example("2025")
-// @Param        jenis_periode path  string  true  "Jenis Periode"                        example("renstra")
-// @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaResponse}
-// @Failure      400  {object}  web.WebResponse
-// @Failure      500  {object}  web.WebResponse
-// @Security     BearerAuth
-// @Router       /tujuan_pemda/penetapan/{tahun}/{jenis_periode} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaPenetapan(
 	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
 ) {
@@ -660,4 +635,147 @@ func (controller *TujuanPemdaControllerImpl) UpdateTargetPenetapan(
 	helper.WriteToResponseBody(writer, web.WebResponse{
 		Code: http.StatusOK, Status: "success update target tujuan pemda", Data: result,
 	})
+}
+
+// lock
+// LockTujuanPemda godoc
+// @Summary      Lock Data Tujuan Pemda
+// @Description  Mengunci data tujuan pemda untuk tahun tertentu. Setelah lock: indikator tidak bisa ditambah/diubah, delete diblokir, target ranwal & penetapan tidak bisa diubah. Target renstra & rankhir masih boleh diubah.
+// @Tags         Tujuan Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan di-lock"  example("2025")
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_pemda/lock/{tahun} [post]
+func (controller *TujuanPemdaControllerImpl) LockTujuanPemda(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	tahun := params.ByName("tahun")
+	err := controller.TujuanPemdaService.LockTujuanPemda(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success lock tujuan pemda",
+		Data: tujuanpemda.LockDataPemdaResponse{
+			Tahun:  tahun,
+			Locked: true,
+		},
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// UnlockTujuanPemda godoc
+// @Summary      Unlock Data Tujuan Pemda
+// @Description  Membuka kunci data tujuan pemda untuk tahun tertentu.
+// @Tags         Tujuan Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan di-unlock"  example("2025")
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_pemda/lock/{tahun} [delete]
+func (controller *TujuanPemdaControllerImpl) UnlockTujuanPemda(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	tahun := params.ByName("tahun")
+	err := controller.TujuanPemdaService.UnlockTujuanPemda(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success unlock tujuan pemda",
+		Data: tujuanpemda.LockDataPemdaResponse{
+			Tahun:  tahun,
+			Locked: false,
+		},
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// IsTujuanPemdaLocked godoc
+// @Summary      Cek Status Lock Tujuan Pemda
+// @Description  Mengecek apakah data tujuan pemda untuk tahun tertentu sedang terkunci.
+// @Tags         Tujuan Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang dicek"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=tujuanpemda.LockDataPemdaResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_pemda/lock/{tahun} [get]
+func (controller *TujuanPemdaControllerImpl) IsTujuanPemdaLocked(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	tahun := params.ByName("tahun")
+	locked, err := controller.TujuanPemdaService.IsTujuanPemdaLocked(request.Context(), tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data: tujuanpemda.LockDataPemdaResponse{
+			Tahun:  tahun,
+			Locked: locked,
+		},
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// FindAllLockTujuanPemda godoc
+// @Summary      Daftar Semua Lock Tujuan Pemda
+// @Description  Mengambil seluruh daftar tahun yang sedang di-lock untuk modul tujuan pemda.
+// @Tags         Tujuan Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.LockDataPemdaResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_pemda/lock [get]
+func (controller *TujuanPemdaControllerImpl) FindAllLockTujuanPemda(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	result, err := controller.TujuanPemdaService.FindAllLockTujuanPemda(request.Context())
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   result,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
 }

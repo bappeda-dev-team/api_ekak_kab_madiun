@@ -1522,6 +1522,17 @@ definitions:
       target:
         type: number
     type: object
+  tujuanpemda.LockDataPemdaResponse:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      locked:
+        type: boolean
+      tahun:
+        type: string
+    type: object
   tujuanpemda.PeriodeResponse:
     properties:
       jenis_periode:
@@ -3795,6 +3806,136 @@ paths:
       summary: Get Pokin With Periode Renstra
       tags:
       - Tujuan Pemda
+  /tujuan_pemda/lock:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil seluruh daftar tahun yang sedang di-lock untuk modul
+        tujuan pemda.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanpemda.LockDataPemdaResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Semua Lock Tujuan Pemda
+      tags:
+      - Tujuan Pemda Lock
+  /tujuan_pemda/lock/{tahun}:
+    delete:
+      consumes:
+      - application/json
+      description: Membuka kunci data tujuan pemda untuk tahun tertentu.
+      parameters:
+      - description: Tahun yang akan di-unlock
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unlock Data Tujuan Pemda
+      tags:
+      - Tujuan Pemda Lock
+    get:
+      consumes:
+      - application/json
+      description: Mengecek apakah data tujuan pemda untuk tahun tertentu sedang terkunci.
+      parameters:
+      - description: Tahun yang dicek
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanpemda.LockDataPemdaResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Cek Status Lock Tujuan Pemda
+      tags:
+      - Tujuan Pemda Lock
+    post:
+      consumes:
+      - application/json
+      description: 'Mengunci data tujuan pemda untuk tahun tertentu. Setelah lock:
+        indikator tidak bisa ditambah/diubah, delete diblokir, target ranwal & penetapan
+        tidak bisa diubah. Target renstra & rankhir masih boleh diubah.'
+      parameters:
+      - description: Tahun yang akan di-lock
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Lock Data Tujuan Pemda
+      tags:
+      - Tujuan Pemda Lock
   /tujuan_pemda/penetapan/{tahun}/{jenis_periode}:
     get:
       description: 'Menampilkan 2 target per indikator: rankhir dan penetapan. Tanpa

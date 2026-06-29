@@ -27,4 +27,10 @@ type TujuanPemdaController interface {
 	CreateTargetPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateTargetRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateTargetPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	//lock
+	LockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UnlockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	IsTujuanPemdaLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllLockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

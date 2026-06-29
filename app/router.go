@@ -563,5 +563,11 @@ func NewRouter(
 	//tujuan opd penetapan
 	router.GET("/tujuan_opd/penetapan/:kode_opd/:tahun", tujuanOpdController.TujuanOpdPenetapan)
 
+	//tujuan pemda lock
+	router.GET("/tujuan_pemda/lock", tujuanPemdaController.FindAllLockTujuanPemda)
+	router.GET("/tujuan_pemda/lock/:tahun", tujuanPemdaController.IsTujuanPemdaLocked)
+	router.POST("/tujuan_pemda/lock/:tahun", tujuanPemdaController.LockTujuanPemda)
+	router.DELETE("/tujuan_pemda/lock/:tahun", tujuanPemdaController.UnlockTujuanPemda)
+
 	return router
 }

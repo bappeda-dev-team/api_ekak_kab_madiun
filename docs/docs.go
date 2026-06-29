@@ -3542,6 +3542,213 @@ const docTemplate = `{
                 }
             }
         },
+        "/tujuan_pemda/lock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh daftar tahun yang sedang di-lock untuk modul tujuan pemda.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Daftar Semua Lock Tujuan Pemda",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.LockDataPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/lock/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengecek apakah data tujuan pemda untuk tahun tertentu sedang terkunci.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Cek Status Lock Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang dicek",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/tujuanpemda.LockDataPemdaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengunci data tujuan pemda untuk tahun tertentu. Setelah lock: indikator tidak bisa ditambah/diubah, delete diblokir, target ranwal \u0026 penetapan tidak bisa diubah. Target renstra \u0026 rankhir masih boleh diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Lock Data Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan di-lock",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuka kunci data tujuan pemda untuk tahun tertentu.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Unlock Data Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan di-unlock",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tujuan_pemda/penetapan/{tahun}/{jenis_periode}": {
             "get": {
                 "description": "Menampilkan 2 target per indikator: rankhir dan penetapan. Tanpa fallback antar jenis.",
@@ -6432,6 +6639,23 @@ const docTemplate = `{
                 },
                 "target": {
                     "type": "number"
+                }
+            }
+        },
+        "tujuanpemda.LockDataPemdaResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "tahun": {
+                    "type": "string"
                 }
             }
         },

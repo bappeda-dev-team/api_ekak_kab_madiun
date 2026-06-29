@@ -19,22 +19,24 @@ import (
 )
 
 type TujuanPemdaServiceImpl struct {
-	TujuanPemdaRepository  repository.TujuanPemdaRepository
-	PeriodeRepository      repository.PeriodeRepository
-	PohonKinerjaRepository repository.PohonKinerjaRepository
-	VisiPemdaRepository    repository.VisiPemdaRepository
-	MisiPemdaRepository    repository.MisiPemdaRepository
-	DB                     *sql.DB
+	TujuanPemdaRepository   repository.TujuanPemdaRepository
+	PeriodeRepository       repository.PeriodeRepository
+	PohonKinerjaRepository  repository.PohonKinerjaRepository
+	VisiPemdaRepository     repository.VisiPemdaRepository
+	MisiPemdaRepository     repository.MisiPemdaRepository
+	LockDataPemdaRepository repository.LockDataPemdaRepository
+	DB                      *sql.DB
 }
 
-func NewTujuanPemdaServiceImpl(tujuanPemdaRepository repository.TujuanPemdaRepository, periodeRepository repository.PeriodeRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, visiPemdaRepository repository.VisiPemdaRepository, misiPemdaRepository repository.MisiPemdaRepository, DB *sql.DB) *TujuanPemdaServiceImpl {
+func NewTujuanPemdaServiceImpl(tujuanPemdaRepository repository.TujuanPemdaRepository, periodeRepository repository.PeriodeRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, visiPemdaRepository repository.VisiPemdaRepository, misiPemdaRepository repository.MisiPemdaRepository, lockDataPemdaRepository repository.LockDataPemdaRepository, DB *sql.DB) *TujuanPemdaServiceImpl {
 	return &TujuanPemdaServiceImpl{
-		TujuanPemdaRepository:  tujuanPemdaRepository,
-		PeriodeRepository:      periodeRepository,
-		PohonKinerjaRepository: pohonKinerjaRepository,
-		VisiPemdaRepository:    visiPemdaRepository,
-		MisiPemdaRepository:    misiPemdaRepository,
-		DB:                     DB,
+		TujuanPemdaRepository:   tujuanPemdaRepository,
+		PeriodeRepository:       periodeRepository,
+		PohonKinerjaRepository:  pohonKinerjaRepository,
+		VisiPemdaRepository:     visiPemdaRepository,
+		MisiPemdaRepository:     misiPemdaRepository,
+		LockDataPemdaRepository: lockDataPemdaRepository,
+		DB:                      DB,
 	}
 }
 
@@ -1206,4 +1208,124 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDual(
 	ctx context.Context, tahun, jenisPeriode string,
 ) ([]tujuanpemda.TujuanPemdaResponse, error) {
 	return s.findByLayerTahun(ctx, tahun, jenisPeriode, s.loadLayerPenetapanDual)
+}
+
+// lock pemda
+const lockJenisTujuanPemda = "tujuan_pemda"
+
+// isTahunInPeriode — cek apakah tahun lock masuk range periode renstra
+func isTahunInPeriode(tahun, tahunAwal, tahunAkhir string) bool {
+	t, _ := strconv.Atoi(strings.TrimSpace(tahun))
+	ta, _ := strconv.Atoi(strings.TrimSpace(tahunAwal))
+	tb, _ := strconv.Atoi(strings.TrimSpace(tahunAkhir))
+	return t >= ta && t <= tb
+}
+
+// isPeriodeOverlapLock — apakah periode tujuan pemda overlap dengan tahun yang di-lock
+func (s *TujuanPemdaServiceImpl) isPeriodeOverlapLock(
+	ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir string,
+) (bool, string, error) {
+	locks, err := s.LockDataPemdaRepository.FindAllByJenis(ctx, tx, lockJenisTujuanPemda)
+	if err != nil {
+		return false, "", err
+	}
+	for _, lock := range locks {
+		if isTahunInPeriode(lock.Tahun, tahunAwal, tahunAkhir) {
+			return true, lock.Tahun, nil
+		}
+	}
+	return false, "", nil
+}
+
+// assertIndikatorNotLocked — blok create/update/delete indikator & tujuan pemda
+func (s *TujuanPemdaServiceImpl) assertIndikatorNotLocked(
+	ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir string,
+) error {
+	locked, tahun, err := s.isPeriodeOverlapLock(ctx, tx, tahunAwal, tahunAkhir)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return fmt.Errorf(
+			"data tujuan pemda terkunci untuk tahun %s (periode %s-%s). Indikator dan penghapusan tidak diizinkan",
+			tahun, tahunAwal, tahunAkhir,
+		)
+	}
+	return nil
+}
+
+// assertTargetLayerAllowedWhenLocked — cek izin ubah target per jenis layer
+func (s *TujuanPemdaServiceImpl) assertTargetLayerAllowedWhenLocked(
+	ctx context.Context, tx *sql.Tx, tahun, targetJenis string,
+) error {
+	locked, err := s.LockDataPemdaRepository.IsLocked(ctx, tx, lockJenisTujuanPemda, tahun)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return nil // belum lock → semua jenis boleh
+	}
+	switch strings.TrimSpace(targetJenis) {
+	case "renstra", "rankhir":
+		return nil // ✅ boleh diubah
+	case "ranwal", "penetapan":
+		return fmt.Errorf(
+			"target jenis '%s' tahun %s tidak dapat diubah karena data tujuan pemda terkunci",
+			targetJenis, tahun,
+		)
+	default:
+		return fmt.Errorf("jenis target '%s' tidak dikenali", targetJenis)
+	}
+}
+
+// ── Public API lock ─────────────────────────────────────────────
+func (s *TujuanPemdaServiceImpl) LockTujuanPemda(ctx context.Context, tahun string) error {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return fmt.Errorf("format tahun tidak valid")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	return s.LockDataPemdaRepository.Lock(ctx, tx, lockJenisTujuanPemda, tahun)
+}
+func (s *TujuanPemdaServiceImpl) UnlockTujuanPemda(ctx context.Context, tahun string) error {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return fmt.Errorf("format tahun tidak valid")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	return s.LockDataPemdaRepository.Unlock(ctx, tx, lockJenisTujuanPemda, tahun)
+}
+func (s *TujuanPemdaServiceImpl) IsTujuanPemdaLocked(ctx context.Context, tahun string) (bool, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer helper.CommitOrRollback(tx)
+	return s.LockDataPemdaRepository.IsLocked(ctx, tx, lockJenisTujuanPemda, tahun)
+}
+func (s *TujuanPemdaServiceImpl) FindAllLockTujuanPemda(
+	ctx context.Context,
+) ([]tujuanpemda.LockDataPemdaResponse, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	locks, err := s.LockDataPemdaRepository.FindAllByJenis(ctx, tx, lockJenisTujuanPemda)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]tujuanpemda.LockDataPemdaResponse, 0, len(locks))
+	for _, l := range locks {
+		result = append(result, tujuanpemda.LockDataPemdaResponse{
+			Id: l.Id, Jenis: l.Jenis, Tahun: l.Tahun, Locked: true,
+		})
+	}
+	return result, nil
 }

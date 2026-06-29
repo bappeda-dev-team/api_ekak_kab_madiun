@@ -26,4 +26,10 @@ type TujuanPemdaService interface {
 	// Opsi B — tampilkan 2 jenis target sekaligus (tanpa fallback)
 	FindTujuanPemdaRankhirDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
 	FindTujuanPemdaPenetapanDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
+
+	//lock pemda
+	LockTujuanPemda(ctx context.Context, tahun string) error
+	UnlockTujuanPemda(ctx context.Context, tahun string) error
+	IsTujuanPemdaLocked(ctx context.Context, tahun string) (bool, error)
+	FindAllLockTujuanPemda(ctx context.Context) ([]tujuanpemda.LockDataPemdaResponse, error)
 }

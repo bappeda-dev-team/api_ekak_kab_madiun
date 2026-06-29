@@ -449,6 +449,11 @@ var lockDataRepository = wire.NewSet(
 	wire.Bind(new(repository.LockDataRepository), new(*repository.LockDataRepositoryImpl)),
 )
 
+var lockDataPemdaRepository = wire.NewSet(
+	repository.NewLockDataPemdaRepositoryImpl,
+	wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -505,6 +510,7 @@ func InitializeServer() *http.Server {
 		jabatanPegawaiSet,
 		cloneRecordSet,
 		lockDataRepository,
+		lockDataPemdaRepository,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,
