@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -26,9 +27,10 @@ type TujuanPemdaServiceImpl struct {
 	MisiPemdaRepository     repository.MisiPemdaRepository
 	LockDataPemdaRepository repository.LockDataPemdaRepository
 	DB                      *sql.DB
+	Validator               *validator.Validate
 }
 
-func NewTujuanPemdaServiceImpl(tujuanPemdaRepository repository.TujuanPemdaRepository, periodeRepository repository.PeriodeRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, visiPemdaRepository repository.VisiPemdaRepository, misiPemdaRepository repository.MisiPemdaRepository, lockDataPemdaRepository repository.LockDataPemdaRepository, DB *sql.DB) *TujuanPemdaServiceImpl {
+func NewTujuanPemdaServiceImpl(tujuanPemdaRepository repository.TujuanPemdaRepository, periodeRepository repository.PeriodeRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, visiPemdaRepository repository.VisiPemdaRepository, misiPemdaRepository repository.MisiPemdaRepository, lockDataPemdaRepository repository.LockDataPemdaRepository, DB *sql.DB, validator *validator.Validate) *TujuanPemdaServiceImpl {
 	return &TujuanPemdaServiceImpl{
 		TujuanPemdaRepository:   tujuanPemdaRepository,
 		PeriodeRepository:       periodeRepository,
@@ -37,6 +39,7 @@ func NewTujuanPemdaServiceImpl(tujuanPemdaRepository repository.TujuanPemdaRepos
 		MisiPemdaRepository:     misiPemdaRepository,
 		LockDataPemdaRepository: lockDataPemdaRepository,
 		DB:                      DB,
+		Validator:               validator,
 	}
 }
 
@@ -204,6 +207,9 @@ func validateTargetValuesUpdate(indikators []tujuanpemda.IndikatorUpdateRequest)
 func (service *TujuanPemdaServiceImpl) Create(
 	ctx context.Context, request tujuanpemda.TujuanPemdaCreateRequest,
 ) (tujuanpemda.TujuanPemdaResponse, error) {
+	if err := service.Validator.Struct(request); err != nil {
+		return tujuanpemda.TujuanPemdaResponse{}, err
+	}
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return tujuanpemda.TujuanPemdaResponse{}, err
@@ -312,6 +318,9 @@ func (service *TujuanPemdaServiceImpl) Create(
 func (service *TujuanPemdaServiceImpl) Update(
 	ctx context.Context, request tujuanpemda.TujuanPemdaUpdateRequest,
 ) (tujuanpemda.TujuanPemdaResponse, error) {
+	if err := service.Validator.Struct(request); err != nil {
+		return tujuanpemda.TujuanPemdaResponse{}, err
+	}
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return tujuanpemda.TujuanPemdaResponse{}, err
@@ -1155,6 +1164,9 @@ func validateLayerJenis(jenis string) (string, error) {
 func (s *TujuanPemdaServiceImpl) CreateTargetPemdaLayer(
 	ctx context.Context, jenis string, req tujuanpemda.LayerTargetBatchRequest,
 ) ([]tujuanpemda.TargetResponse, error) {
+	if err := s.Validator.Struct(req); err != nil {
+		return nil, err
+	}
 	var err error
 	jenis, err = validateLayerJenis(jenis)
 	if err != nil {
@@ -1219,6 +1231,10 @@ func (s *TujuanPemdaServiceImpl) CreateTargetPemdaLayer(
 func (s *TujuanPemdaServiceImpl) UpdateTargetPemdaLayer(
 	ctx context.Context, jenis string, req tujuanpemda.LayerTargetUpdateBatchRequest,
 ) ([]tujuanpemda.TargetResponse, error) {
+	if err := s.Validator.Struct(req); err != nil {
+		return nil, err
+	}
+
 	var err error
 	jenis, err = validateLayerJenis(jenis)
 	if err != nil {
@@ -1302,13 +1318,18 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDual(
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
+	// Cek status lock untuk tahun yang diminta
+	isLocked, err := s.LockDataPemdaRepository.IsLocked(ctx, tx, lockJenisTujuanPemda, tahun)
+	if err != nil {
+		return nil, err
+	}
 	list, err := s.loadLayerPenetapanDual(ctx, tx, tahun, jenisPeriode)
 	if err != nil {
 		return nil, err
 	}
 	responses := make([]tujuanpemda.TujuanPemdaPenetapanDualResponse, 0, len(list))
 	for _, tp := range list {
-		resp, err := s.toTujuanPemdaPenetapanDualResponse(ctx, tx, tp)
+		resp, err := s.toTujuanPemdaPenetapanDualResponse(ctx, tx, tp, isLocked)
 		if err != nil {
 			return nil, err
 		}
@@ -1437,7 +1458,7 @@ func (s *TujuanPemdaServiceImpl) toTujuanPemdaRankhirDualResponse(
 	}, nil
 }
 func (s *TujuanPemdaServiceImpl) toTujuanPemdaPenetapanDualResponse(
-	ctx context.Context, tx *sql.Tx, tp domain.TujuanPemda,
+	ctx context.Context, tx *sql.Tx, tp domain.TujuanPemda, isLocked bool,
 ) (tujuanpemda.TujuanPemdaPenetapanDualResponse, error) {
 	base, err := s.toTujuanPemdaResponse(ctx, tx, tp)
 	if err != nil {
@@ -1464,6 +1485,7 @@ func (s *TujuanPemdaServiceImpl) toTujuanPemdaPenetapanDualResponse(
 		IdMisi: base.IdMisi, Misi: base.Misi,
 		TujuanPemda: base.TujuanPemda, TematikId: base.TematikId,
 		NamaTematik: base.NamaTematik, Periode: base.Periode,
+		IsLock:    isLocked,
 		Indikator: indikators,
 	}, nil
 }

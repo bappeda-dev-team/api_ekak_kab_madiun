@@ -1670,6 +1670,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorPenetapanDualResponse'
         type: array
+      is_lock:
+        type: boolean
       misi:
         type: string
       nama_tematik:
@@ -4114,7 +4116,7 @@ paths:
       - Tujuan Pemda Lock
   /tujuan_pemda/penetapan/{tahun}/{jenis_periode}:
     get:
-      description: 'Menampilkan 2 target per indikator: rankhir dan penetapan. Tanpa
+      description: 'Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa
         fallback antar jenis.'
       parameters:
       - description: Tahun
@@ -4124,7 +4126,7 @@ paths:
         required: true
         type: string
       - description: Jenis Periode
-        example: '"renstra"'
+        example: '"RPJMD"'
         in: path
         name: jenis_periode
         required: true
@@ -4141,6 +4143,14 @@ paths:
                     $ref: '#/definitions/tujuanpemda.TujuanPemdaPenetapanDualResponse'
                   type: array
               type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
       security:
       - BearerAuth: []
       summary: Tujuan Pemda Penetapan (Dual Target)

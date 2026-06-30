@@ -3756,7 +3756,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Menampilkan 2 target per indikator: rankhir dan penetapan. Tanpa fallback antar jenis.",
+                "description": "Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa fallback antar jenis.",
                 "tags": [
                     "Tujuan Pemda"
                 ],
@@ -3772,7 +3772,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "example": "\"renstra\"",
+                        "example": "\"RPJMD\"",
                         "description": "Jenis Periode",
                         "name": "jenis_periode",
                         "in": "path",
@@ -3799,6 +3799,18 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     }
                 }
@@ -6959,6 +6971,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/tujuanpemda.IndikatorPenetapanDualResponse"
                     }
+                },
+                "is_lock": {
+                    "type": "boolean"
                 },
                 "misi": {
                     "type": "string"

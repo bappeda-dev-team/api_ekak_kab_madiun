@@ -136,6 +136,7 @@ type TujuanPemdaPenetapanDualResponse struct {
 	TujuanPemda string                           `json:"tujuan_pemda"`
 	TematikId   int                              `json:"tematik_id,omitempty"`
 	NamaTematik string                           `json:"nama_tematik,omitempty"`
+	IsLock      bool                             `json:"is_lock"`
 	Periode     PeriodeResponse                  `json:"periode"`
 	Indikator   []IndikatorPenetapanDualResponse `json:"indikator"`
 }

@@ -132,7 +132,7 @@ func InitializeServer() *http.Server {
 	visiPemdaRepositoryImpl := repository.NewVisiPemdaRepositoryImpl()
 	misiPemdaRepositoryImpl := repository.NewMisiPemdaRepositoryImpl()
 	lockDataPemdaRepositoryImpl := repository.NewLockDataPemdaRepositoryImpl()
-	tujuanPemdaServiceImpl := service.NewTujuanPemdaServiceImpl(tujuanPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, visiPemdaRepositoryImpl, misiPemdaRepositoryImpl, lockDataPemdaRepositoryImpl, db)
+	tujuanPemdaServiceImpl := service.NewTujuanPemdaServiceImpl(tujuanPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, visiPemdaRepositoryImpl, misiPemdaRepositoryImpl, lockDataPemdaRepositoryImpl, db, validate)
 	tujuanPemdaControllerImpl := controller.NewTujuanPemdaControllerImpl(tujuanPemdaServiceImpl)
 	sasaranPemdaRepositoryImpl := repository.NewSasaranPemdaRepositoryImpl()
 	sasaranPemdaServiceImpl := service.NewSasaranPemdaServiceImpl(sasaranPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, tujuanPemdaRepositoryImpl, db)
