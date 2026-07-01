@@ -45,40 +45,150 @@ func (service *StrategicArahKebijakanPemdaServiceImpl) FindAll(ctx context.Conte
 	if err != nil {
 		return []strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{}, err
 	}
+	// if len(sasaranOpds) > 0 {
+	// 	strategiResponses := make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0)
+
+	// 	for _, s := range sasaranOpds {
+
+	// 		// arah kebijakan (bisa null)
+	// 		var arahKebijakan []strategicarahkebijakan.ArahKebijakanPemdaResponse
+	// 		if s.NamaArahKebijakan != "" {
+	// 			arahKebijakan = []strategicarahkebijakan.ArahKebijakanPemdaResponse{
+	// 				{
+	// 					ArahKebijakanPemda: s.NamaArahKebijakan,
+	// 				},
+	// 			}
+	// 		}
+
+	// 		// sasaran (bisa null)
+	// 		var sasaran []strategicarahkebijakan.SasaranPemdaResponse
+	// 		if s.NamaSasaranPemda != "" {
+	// 			sasaran = []strategicarahkebijakan.SasaranPemdaResponse{
+	// 				{
+	// 					SasaranPemda:        s.NamaSasaranPemda,
+	// 					StrategiPemda:       s.NamaStrategi,
+	// 					ArahKebijakanPemdas: arahKebijakan,
+	// 				},
+	// 			}
+	// 		}
+
+	// 		strategiResponses = append(strategiResponses, strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{
+	// 			TujuanPemda:   s.NamaTujuanPemda,
+	// 			SasaranPemdas: sasaran,
+	// 		})
+	// 	}
+
+	// 	response = strategiResponses
+	// }
+
 	if len(sasaranOpds) > 0 {
-		strategiResponses := make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0)
+
+		response = make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0)
+
+		// map tujuan -> index response
+		tujuanMap := make(map[string]int)
 
 		for _, s := range sasaranOpds {
 
-			// arah kebijakan (bisa null)
-			var arahKebijakan []strategicarahkebijakan.ArahKebijakanPemdaResponse
-			if s.NamaArahKebijakan != "" {
-				arahKebijakan = []strategicarahkebijakan.ArahKebijakanPemdaResponse{
-					{
-						ArahKebijakanPemda: s.NamaArahKebijakan,
+			// =========================
+			// TUJUAN
+			// =========================
+			tujuanIdx, exists := tujuanMap[s.NamaTujuanPemda]
+
+			if !exists {
+				response = append(response,
+					strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{
+						TujuanPemda:   s.NamaTujuanPemda,
+						SasaranPemdas: []strategicarahkebijakan.SasaranPemdaResponse{},
 					},
+				)
+
+				tujuanIdx = len(response) - 1
+				tujuanMap[s.NamaTujuanPemda] = tujuanIdx
+			}
+
+			// =========================
+			// SASARAN
+			// =========================
+			sasaranIdx := -1
+
+			for i, sasaran := range response[tujuanIdx].SasaranPemdas {
+				if sasaran.SasaranPemda == s.NamaSasaranPemda {
+					sasaranIdx = i
+					break
 				}
 			}
 
-			// sasaran (bisa null)
-			var sasaran []strategicarahkebijakan.SasaranPemdaResponse
-			if s.NamaSasaranPemda != "" {
-				sasaran = []strategicarahkebijakan.SasaranPemdaResponse{
-					{
-						SasaranPemda:        s.NamaSasaranPemda,
+			if sasaranIdx == -1 {
+				response[tujuanIdx].SasaranPemdas = append(
+					response[tujuanIdx].SasaranPemdas,
+					strategicarahkebijakan.SasaranPemdaResponse{
+						SasaranPemda:   s.NamaSasaranPemda,
+						StrategiPemdas: []strategicarahkebijakan.StrategiPemdaResponse{},
+					},
+				)
+
+				sasaranIdx = len(response[tujuanIdx].SasaranPemdas) - 1
+			}
+
+			// =========================
+			// STRATEGI
+			// =========================
+			strategiIdx := -1
+
+			for i, strategi := range response[tujuanIdx].SasaranPemdas[sasaranIdx].StrategiPemdas {
+				if strategi.StrategiPemda == s.NamaStrategi {
+					strategiIdx = i
+					break
+				}
+			}
+
+			if strategiIdx == -1 {
+				response[tujuanIdx].SasaranPemdas[sasaranIdx].StrategiPemdas = append(
+					response[tujuanIdx].SasaranPemdas[sasaranIdx].StrategiPemdas,
+					strategicarahkebijakan.StrategiPemdaResponse{
 						StrategiPemda:       s.NamaStrategi,
-						ArahKebijakanPemdas: arahKebijakan,
+						ArahKebijakanPemdas: []strategicarahkebijakan.ArahKebijakanPemdaResponse{},
 					},
-				}
+				)
+
+				strategiIdx = len(response[tujuanIdx].SasaranPemdas[sasaranIdx].StrategiPemdas) - 1
 			}
 
-			strategiResponses = append(strategiResponses, strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{
-				TujuanPemda:   s.NamaTujuanPemda,
-				SasaranPemdas: sasaran,
-			})
-		}
+			// =========================
+			// ARAH KEBIJAKAN
+			// =========================
+			if s.NamaArahKebijakan != "" {
 
-		response = strategiResponses
+				sudahAda := false
+
+				for _, ak := range response[tujuanIdx].
+					SasaranPemdas[sasaranIdx].
+					StrategiPemdas[strategiIdx].
+					ArahKebijakanPemdas {
+
+					if ak.ArahKebijakanPemda == s.NamaArahKebijakan {
+						sudahAda = true
+						break
+					}
+				}
+
+				if !sudahAda {
+					response[tujuanIdx].
+						SasaranPemdas[sasaranIdx].
+						StrategiPemdas[strategiIdx].
+						ArahKebijakanPemdas = append(
+						response[tujuanIdx].
+							SasaranPemdas[sasaranIdx].
+							StrategiPemdas[strategiIdx].
+							ArahKebijakanPemdas,
+						strategicarahkebijakan.ArahKebijakanPemdaResponse{
+							ArahKebijakanPemda: s.NamaArahKebijakan,
+						},
+					)
+				}
+			}
+		}
 	}
 
 	return response, nil

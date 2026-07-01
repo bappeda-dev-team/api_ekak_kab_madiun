@@ -23,8 +23,22 @@ type StrategiArahKebijakanOpdResponse struct {
 	SasaranOpds []SasaranOpdResponse `json:"sasaran_opds"`
 }
 
+// type SasaranOpdResponse struct {
+// 	SasaranOpd        string                     `json:"sasaran_opd"`
+// 	StrategiOpd       string                     `json:"strategi_opd"`
+// 	ArahKebijakanOpds []ArahKebijakanOpdResponse `json:"arah_kebijakan_opds"`
+// }
+
+// type ArahKebijakanOpdResponse struct {
+// 	ArahKebijakanOpd string `json:"arah_kebijakan_opd"`
+// }
+
 type SasaranOpdResponse struct {
-	SasaranOpd        string                     `json:"sasaran_opd"`
+	SasaranOpd   string                `json:"sasaran_opd"`
+	StrategiOpds []StrategiOpdResponse `json:"strategi_opds"`
+}
+
+type StrategiOpdResponse struct {
 	StrategiOpd       string                     `json:"strategi_opd"`
 	ArahKebijakanOpds []ArahKebijakanOpdResponse `json:"arah_kebijakan_opds"`
 }

@@ -15,13 +15,32 @@ type TujuanPemdaResponse struct {
 	Tujuan string `json:"tujuan"`
 }
 
+// type StrategiArahKebijakanPemdaResponse struct {
+// 	TujuanPemda   string                 `json:"tujuan_pemda"`
+// 	SasaranPemdas []SasaranPemdaResponse `json:"sasaran_pemdas"`
+// }
+
+// type SasaranPemdaResponse struct {
+// 	SasaranPemda        string                       `json:"sasaran_pemda"`
+// 	StrategiPemda       string                       `json:"strategi_pemda"`
+// 	ArahKebijakanPemdas []ArahKebijakanPemdaResponse `json:"arah_kebijakan_pemdas"`
+// }
+
+// type ArahKebijakanPemdaResponse struct {
+// 	ArahKebijakanPemda string `json:"arah_kebijakan_pemda"`
+// }
+
 type StrategiArahKebijakanPemdaResponse struct {
 	TujuanPemda   string                 `json:"tujuan_pemda"`
 	SasaranPemdas []SasaranPemdaResponse `json:"sasaran_pemdas"`
 }
 
 type SasaranPemdaResponse struct {
-	SasaranPemda        string                       `json:"sasaran_pemda"`
+	SasaranPemda   string                  `json:"sasaran_pemda"`
+	StrategiPemdas []StrategiPemdaResponse `json:"strategi_pemdas"`
+}
+
+type StrategiPemdaResponse struct {
 	StrategiPemda       string                       `json:"strategi_pemda"`
 	ArahKebijakanPemdas []ArahKebijakanPemdaResponse `json:"arah_kebijakan_pemdas"`
 }

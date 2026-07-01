@@ -1447,25 +1447,129 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
+	// if len(sasaranOpds) > 0 {
+	// 	strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
+
+	// 	for _, s := range sasaranOpds {
+
+	// 		strategiResponses = append(strategiResponses, strategic.StrategiArahKebijakanOpdResponse{
+	// 			TujuanOpd: s.NamaTujuanOpd, // pastikan field ini ada di domain
+	// 			SasaranOpds: []strategic.SasaranOpdResponse{
+	// 				{
+	// 					SasaranOpd:  s.NamaSasaranOpd,
+	// 					StrategiOpd: s.NamaStrategi, // kalau ada
+	// 					ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{
+	// 						{
+	// 							ArahKebijakanOpd: s.NamaArahKebijakan, // kalau ada
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		})
+	// 	}
+
+	// 	response.StrategiArahKebijakanOpds = strategiResponses
+	// }
 	if len(sasaranOpds) > 0 {
+
 		strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
+
+		// map tujuan -> index
+		tujuanIndex := make(map[string]int)
+
+		// map tujuan|sasaran -> index sasaran
+		sasaranIndex := make(map[string]int)
+
+		// map tujuan|sasaran|strategi -> index strategi
+		strategiIndex := make(map[string]int)
 
 		for _, s := range sasaranOpds {
 
-			strategiResponses = append(strategiResponses, strategic.StrategiArahKebijakanOpdResponse{
-				TujuanOpd: s.NamaTujuanOpd, // pastikan field ini ada di domain
-				SasaranOpds: []strategic.SasaranOpdResponse{
-					{
-						SasaranOpd:  s.NamaSasaranOpd,
-						StrategiOpd: s.NamaStrategi, // kalau ada
-						ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{
-							{
-								ArahKebijakanOpd: s.NamaArahKebijakan, // kalau ada
-							},
-						},
+			// =========================
+			// TUJUAN
+			// =========================
+			idxTujuan, ok := tujuanIndex[s.NamaTujuanOpd]
+			if !ok {
+
+				strategiResponses = append(strategiResponses, strategic.StrategiArahKebijakanOpdResponse{
+					TujuanOpd:   s.NamaTujuanOpd,
+					SasaranOpds: []strategic.SasaranOpdResponse{},
+				})
+
+				idxTujuan = len(strategiResponses) - 1
+				tujuanIndex[s.NamaTujuanOpd] = idxTujuan
+			}
+
+			// =========================
+			// SASARAN
+			// =========================
+			keySasaran := s.NamaTujuanOpd + "|" + s.NamaSasaranOpd
+
+			idxSasaran, ok := sasaranIndex[keySasaran]
+			if !ok {
+
+				strategiResponses[idxTujuan].SasaranOpds = append(
+					strategiResponses[idxTujuan].SasaranOpds,
+					strategic.SasaranOpdResponse{
+						SasaranOpd:   s.NamaSasaranOpd,
+						StrategiOpds: []strategic.StrategiOpdResponse{},
 					},
-				},
-			})
+				)
+
+				idxSasaran = len(strategiResponses[idxTujuan].SasaranOpds) - 1
+				sasaranIndex[keySasaran] = idxSasaran
+			}
+
+			// =========================
+			// STRATEGI
+			// =========================
+			keyStrategi := keySasaran + "|" + s.NamaStrategi
+
+			idxStrategi, ok := strategiIndex[keyStrategi]
+			if !ok {
+
+				strategiResponses[idxTujuan].SasaranOpds[idxSasaran].StrategiOpds =
+					append(
+						strategiResponses[idxTujuan].SasaranOpds[idxSasaran].StrategiOpds,
+						strategic.StrategiOpdResponse{
+							StrategiOpd: s.NamaStrategi,
+						},
+					)
+
+				idxStrategi = len(
+					strategiResponses[idxTujuan].SasaranOpds[idxSasaran].StrategiOpds,
+				) - 1
+
+				strategiIndex[keyStrategi] = idxStrategi
+			}
+
+			// =========================
+			// ARAH KEBIJAKAN
+			// =========================
+			if s.NamaArahKebijakan != "" {
+
+				strategi := &strategiResponses[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi]
+
+				exist := false
+
+				for _, a := range strategi.ArahKebijakanOpds {
+					if a.ArahKebijakanOpd == s.NamaArahKebijakan {
+						exist = true
+						break
+					}
+				}
+
+				if !exist {
+					strategi.ArahKebijakanOpds = append(
+						strategi.ArahKebijakanOpds,
+						strategic.ArahKebijakanOpdResponse{
+							ArahKebijakanOpd: s.NamaArahKebijakan,
+						},
+					)
+				}
+			}
 		}
 
 		response.StrategiArahKebijakanOpds = strategiResponses
