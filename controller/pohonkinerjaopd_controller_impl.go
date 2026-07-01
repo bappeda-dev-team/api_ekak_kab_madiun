@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/service"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -251,6 +252,56 @@ func (controller *PohonKinerjaOpdControllerImpl) FindAllArah(writer http.Respons
 		Data:   pohonKinerjaResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaOpdControllerImpl) ExportExcel(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	if kodeOpd == "" || tahun == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "kode opd dan tahun wajib diisi",
+		}
+
+		writer.WriteHeader(http.StatusBadRequest)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	buffer, err := controller.PohonKinerjaOpdService.ExportExcel(
+		request.Context(),
+		kodeOpd,
+		tahun,
+	)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+
+		writer.WriteHeader(http.StatusInternalServerError)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	filename := fmt.Sprintf(
+		"Strategic_Arah_Kebijakan_%s_%s.xlsx",
+		kodeOpd,
+		tahun,
+	)
+
+	writer.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	writer.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	writer.Header().Set("Content-Length", strconv.Itoa(buffer.Len()))
+
+	_, err = writer.Write(buffer.Bytes())
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 // func (controller *PohonKinerjaOpdControllerImpl) FindAllArahPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 // 	kodeOpd := params.ByName("kode_opd")

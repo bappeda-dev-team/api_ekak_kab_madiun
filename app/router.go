@@ -207,6 +207,7 @@ func NewRouter(
 
 	// strategic arah kebijakan opd
 	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
+	router.GET("/export/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ExportExcel)
 
 	// strategic arah kebijakan pemda
 	router.GET("/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.FindAll)

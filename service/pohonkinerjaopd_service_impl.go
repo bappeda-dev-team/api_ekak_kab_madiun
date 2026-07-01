@@ -1,10 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"ekak_kabupaten_madiun/model/web/ikk"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
@@ -21,6 +23,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/xuri/excelize/v2"
 )
 
 type PohonKinerjaOpdServiceImpl struct {
@@ -1387,6 +1390,214 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 
 	return response, nil
 }
+
+func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	tahun string,
+	opd domainmaster.Opd,
+) (strategic.StrategicArahKebijakanOpdAllResponse, error) {
+
+	response := strategic.StrategicArahKebijakanOpdAllResponse{
+		KodeOpd:                   kodeOpd,
+		NamaOpd:                   opd.NamaOpd,
+		Tahun:                     tahun,
+		IsuStrategisOpd:           make([]strategic.IsuStrategiOpdResponse, 0),
+		TujuanOpd:                 make([]strategic.TujuanOpdResponse, 0),
+		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
+	}
+
+	// =====================================================
+	// ISU STRATEGIS
+	// =====================================================
+	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return response, err
+	}
+
+	for _, isu := range csfList {
+		response.IsuStrategisOpd = append(
+			response.IsuStrategisOpd,
+			strategic.IsuStrategiOpdResponse{
+				NamaIsu: isu.NamaIsu,
+			},
+		)
+	}
+
+	// =====================================================
+	// TUJUAN OPD
+	// =====================================================
+	tujuanOpds, err := service.tujuanOpdRepository.
+		FindTujuanOpdByTahunByStrategicArahKebijakan(
+			ctx,
+			tx,
+			kodeOpd,
+			tahun,
+			"RPJMD",
+		)
+	if err != nil {
+		return response, err
+	}
+
+	for _, tujuan := range tujuanOpds {
+
+		response.TujuanOpd = append(
+			response.TujuanOpd,
+			strategic.TujuanOpdResponse{
+				KodeOpd: tujuan.KodeOpd,
+				Tujuan:  tujuan.Tujuan,
+			},
+		)
+	}
+
+	// =====================================================
+	// STRATEGI
+	// =====================================================
+
+	rows, err := service.sasaranOpdRepository.
+		FindStrategicArahKebijakan(
+			ctx,
+			tx,
+			kodeOpd,
+			tahun,
+			"RPJMD",
+		)
+
+	if err != nil {
+		return response, err
+	}
+
+	tujuanIndex := make(map[string]int)
+	sasaranIndex := make(map[string]int)
+	strategiIndex := make(map[string]int)
+
+	for _, s := range rows {
+
+		// ==================================
+		// TUJUAN
+		// ==================================
+
+		idxTujuan, ok := tujuanIndex[s.NamaTujuanOpd]
+
+		if !ok {
+
+			response.StrategiArahKebijakanOpds =
+				append(
+					response.StrategiArahKebijakanOpds,
+					strategic.StrategiArahKebijakanOpdResponse{
+						TujuanOpd:   s.NamaTujuanOpd,
+						SasaranOpds: []strategic.SasaranOpdResponse{},
+					},
+				)
+
+			idxTujuan = len(response.StrategiArahKebijakanOpds) - 1
+
+			tujuanIndex[s.NamaTujuanOpd] = idxTujuan
+		}
+
+		// ==================================
+		// SASARAN
+		// ==================================
+
+		keySasaran := s.NamaTujuanOpd + "|" + s.NamaSasaranOpd
+
+		idxSasaran, ok := sasaranIndex[keySasaran]
+
+		if !ok {
+
+			response.StrategiArahKebijakanOpds[idxTujuan].
+				SasaranOpds = append(
+				response.StrategiArahKebijakanOpds[idxTujuan].SasaranOpds,
+				strategic.SasaranOpdResponse{
+					SasaranOpd:   s.NamaSasaranOpd,
+					StrategiOpds: []strategic.StrategiOpdResponse{},
+				},
+			)
+
+			idxSasaran = len(
+				response.StrategiArahKebijakanOpds[idxTujuan].SasaranOpds,
+			) - 1
+
+			sasaranIndex[keySasaran] = idxSasaran
+		}
+
+		// ==================================
+		// STRATEGI
+		// ==================================
+
+		keyStrategi := keySasaran + "|" + s.NamaStrategi
+
+		idxStrategi, ok := strategiIndex[keyStrategi]
+
+		if !ok {
+
+			response.StrategiArahKebijakanOpds[idxTujuan].
+				SasaranOpds[idxSasaran].
+				StrategiOpds = append(
+				response.StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds,
+				strategic.StrategiOpdResponse{
+					StrategiOpd:       s.NamaStrategi,
+					ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{},
+				},
+			)
+
+			idxStrategi = len(
+				response.StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds,
+			) - 1
+
+			strategiIndex[keyStrategi] = idxStrategi
+		}
+
+		// ==================================
+		// ARAH KEBIJAKAN
+		// ==================================
+
+		if s.NamaArahKebijakan != "" {
+
+			sudahAda := false
+
+			for _, arah := range response.
+				StrategiArahKebijakanOpds[idxTujuan].
+				SasaranOpds[idxSasaran].
+				StrategiOpds[idxStrategi].
+				ArahKebijakanOpds {
+
+				if arah.ArahKebijakanOpd == s.NamaArahKebijakan {
+					sudahAda = true
+					break
+				}
+			}
+
+			if !sudahAda {
+
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					ArahKebijakanOpds = append(
+
+					response.
+						StrategiArahKebijakanOpds[idxTujuan].
+						SasaranOpds[idxSasaran].
+						StrategiOpds[idxStrategi].
+						ArahKebijakanOpds,
+
+					strategic.ArahKebijakanOpdResponse{
+						ArahKebijakanOpd: s.NamaArahKebijakan,
+					},
+				)
+			}
+		}
+	}
+
+	return response, nil
+}
+
 func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kodeOpd, tahun string) (strategic.StrategicArahKebijakanOpdAllResponse, error) {
 	startTime := time.Now()
 	serviceName := "PohonKinerjaOpdService.FindAllArah"
@@ -1403,176 +1614,16 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, errors.New("kode opd tidak ditemukan")
 	}
 
-	// Inisialisasi response dasar
-	response := strategic.StrategicArahKebijakanOpdAllResponse{
-		KodeOpd:                   kodeOpd,
-		NamaOpd:                   opd.NamaOpd,
-		Tahun:                     tahun,
-		IsuStrategisOpd:           make([]strategic.IsuStrategiOpdResponse, 0),
-		TujuanOpd:                 make([]strategic.TujuanOpdResponse, 0),  // revisi harus ubah alur 
-		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0), // revisi harus ubah alur
-	}
-
-	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
+	// respon ambil dari build
+	response, err := service.buildStrategicArahKebijakanOpd(
+		ctx,
+		tx,
+		kodeOpd,
+		tahun,
+		opd,
+	)
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
-	}
-	if len(csfList) > 0 {
-		Responses := make([]strategic.IsuStrategiOpdResponse, 0, len(csfList))
-		for _, tujuan := range csfList {
-			Responses = append(Responses, strategic.IsuStrategiOpdResponse{
-				NamaIsu: tujuan.NamaIsu,
-			})
-		}
-		response.IsuStrategisOpd = Responses
-	}
-
-	// Ambil data tujuan OPD dengan batch
-	tujuanOpds, err := service.tujuanOpdRepository.FindTujuanOpdByTahunByStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
-	if err != nil {
-		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
-	}
-	if len(tujuanOpds) > 0 {
-		tujuanResponses := make([]strategic.TujuanOpdResponse, 0, len(tujuanOpds))
-		for _, tujuan := range tujuanOpds {
-			tujuanResponses = append(tujuanResponses, strategic.TujuanOpdResponse{
-				KodeOpd: tujuan.KodeOpd,
-				Tujuan:  tujuan.Tujuan,
-			})
-		}
-		response.TujuanOpd = tujuanResponses
-	}
-
-	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
-	if err != nil {
-		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
-	}
-	// if len(sasaranOpds) > 0 {
-	// 	strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
-
-	// 	for _, s := range sasaranOpds {
-
-	// 		strategiResponses = append(strategiResponses, strategic.StrategiArahKebijakanOpdResponse{
-	// 			TujuanOpd: s.NamaTujuanOpd, // pastikan field ini ada di domain
-	// 			SasaranOpds: []strategic.SasaranOpdResponse{
-	// 				{
-	// 					SasaranOpd:  s.NamaSasaranOpd,
-	// 					StrategiOpd: s.NamaStrategi, // kalau ada
-	// 					ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{
-	// 						{
-	// 							ArahKebijakanOpd: s.NamaArahKebijakan, // kalau ada
-	// 						},
-	// 					},
-	// 				},
-	// 			},
-	// 		})
-	// 	}
-
-	// 	response.StrategiArahKebijakanOpds = strategiResponses
-	// }
-	if len(sasaranOpds) > 0 {
-
-		strategiResponses := make([]strategic.StrategiArahKebijakanOpdResponse, 0)
-
-		// map tujuan -> index
-		tujuanIndex := make(map[string]int)
-
-		// map tujuan|sasaran -> index sasaran
-		sasaranIndex := make(map[string]int)
-
-		// map tujuan|sasaran|strategi -> index strategi
-		strategiIndex := make(map[string]int)
-
-		for _, s := range sasaranOpds {
-
-			// =========================
-			// TUJUAN
-			// =========================
-			idxTujuan, ok := tujuanIndex[s.NamaTujuanOpd]
-			if !ok {
-
-				strategiResponses = append(strategiResponses, strategic.StrategiArahKebijakanOpdResponse{
-					TujuanOpd:   s.NamaTujuanOpd,
-					SasaranOpds: []strategic.SasaranOpdResponse{},
-				})
-
-				idxTujuan = len(strategiResponses) - 1
-				tujuanIndex[s.NamaTujuanOpd] = idxTujuan
-			}
-
-			// =========================
-			// SASARAN
-			// =========================
-			keySasaran := s.NamaTujuanOpd + "|" + s.NamaSasaranOpd
-
-			idxSasaran, ok := sasaranIndex[keySasaran]
-			if !ok {
-
-				strategiResponses[idxTujuan].SasaranOpds = append(
-					strategiResponses[idxTujuan].SasaranOpds,
-					strategic.SasaranOpdResponse{
-						SasaranOpd:   s.NamaSasaranOpd,
-						StrategiOpds: []strategic.StrategiOpdResponse{},
-					},
-				)
-
-				idxSasaran = len(strategiResponses[idxTujuan].SasaranOpds) - 1
-				sasaranIndex[keySasaran] = idxSasaran
-			}
-
-			// =========================
-			// STRATEGI
-			// =========================
-			keyStrategi := keySasaran + "|" + s.NamaStrategi
-
-			idxStrategi, ok := strategiIndex[keyStrategi]
-			if !ok {
-
-				strategiResponses[idxTujuan].SasaranOpds[idxSasaran].StrategiOpds =
-					append(
-						strategiResponses[idxTujuan].SasaranOpds[idxSasaran].StrategiOpds,
-						strategic.StrategiOpdResponse{
-							StrategiOpd: s.NamaStrategi,
-						},
-					)
-
-				idxStrategi = len(
-					strategiResponses[idxTujuan].SasaranOpds[idxSasaran].StrategiOpds,
-				) - 1
-
-				strategiIndex[keyStrategi] = idxStrategi
-			}
-
-			// =========================
-			// ARAH KEBIJAKAN
-			// =========================
-			if s.NamaArahKebijakan != "" {
-
-				strategi := &strategiResponses[idxTujuan].
-					SasaranOpds[idxSasaran].
-					StrategiOpds[idxStrategi]
-
-				exist := false
-
-				for _, a := range strategi.ArahKebijakanOpds {
-					if a.ArahKebijakanOpd == s.NamaArahKebijakan {
-						exist = true
-						break
-					}
-				}
-
-				if !exist {
-					strategi.ArahKebijakanOpds = append(
-						strategi.ArahKebijakanOpds,
-						strategic.ArahKebijakanOpdResponse{
-							ArahKebijakanOpd: s.NamaArahKebijakan,
-						},
-					)
-				}
-			}
-		}
-
-		response.StrategiArahKebijakanOpds = strategiResponses
 	}
 
 	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
@@ -1580,99 +1631,405 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 
 	return response, nil
 }
-// func (service *PohonKinerjaOpdServiceImpl) FindAllArahPemda(ctx context.Context, kodeOpd, tahun string) (strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse, error) {
-// 	startTime := time.Now()
-// 	serviceName := "PohonKinerjaOpdService.FindAllArahPemda"
 
-// 	tx, err := service.DB.Begin()
-// 	if err != nil {
-// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
-// 	}
-// 	defer helper.CommitOrRollback(tx)
+func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
+	ctx context.Context,
+	kodeOpd string,
+	tahun string,
+) (*bytes.Buffer, error) {
 
-// 	// Validasi OPD
-// 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
-// 	if err != nil {
-// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, errors.New("kode opd tidak ditemukan")
-// 	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
 
+	// ==========================
+	// Validasi OPD
+	// ==========================
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return nil, errors.New("kode opd tidak ditemukan")
+	}
 
-// 	// Inisialisasi response dasar
-// 	response := strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{
-// 		KodePemda:    kodeOpd,
-// 		NamaPemda:    opd.NamaOpd,
-// 		Tahun:      tahun,
-// 		IsuStrategisPemda: make([]strategicarahkebijakan.IsuStrategiPemdaResponse, 0),
-// 		TujuanPemda:  make([]strategicarahkebijakan.TujuanPemdaResponse, 0),
-// 		StrategiArahKebijakanPemdas: make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0),
-// 	}
+	// ==========================
+	// Build Response
+	// ==========================
+	response, err := service.buildStrategicArahKebijakanOpd(
+		ctx,
+		tx,
+		kodeOpd,
+		tahun,
+		opd,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-// 	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
-// 	if err != nil {
-// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
-// 	}
-// 	if len(csfList) > 0 {
-// 		Responses := make([]strategicarahkebijakan.IsuStrategiPemdaResponse, 0, len(csfList))
-// 		for _, tujuan := range csfList {
-// 			Responses = append(Responses, strategicarahkebijakan.IsuStrategiPemdaResponse{
-// 				NamaIsu:        tujuan.NamaIsu,
-// 			})
-// 		}
-// 		response.IsuStrategisPemda = Responses
-// 	}
-	
+	f := excelize.NewFile()
 
-// 	// Ambil data tujuan OPD dengan batch
-// 	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahun, "RPJMD", "renstra")
-// 	if err != nil {
-// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
-// 	}
-// 	if len(tujuanOpds) > 0 {
-// 		tujuanResponses := make([]strategicarahkebijakan.TujuanPemdaResponse, 0, len(tujuanOpds))
-// 		for _, tujuan := range tujuanOpds {
-// 			tujuanResponses = append(tujuanResponses, strategicarahkebijakan.TujuanPemdaResponse{
-// 				Id:        tujuan.Id,
-// 				KodePemda:   tujuan.KodeOpd,
-// 				Tujuan:    tujuan.Tujuan,
-// 			})
-// 		}
-// 		response.TujuanPemda = tujuanResponses
-// 	}
+	sheet := "Strategic Arah Kebijakan OPD"
+	f.SetSheetName("Sheet1", sheet)
 
-// 	sasaranOpds, err := service.sasaranOpdRepository.FindStrategicArahKebijakan(ctx, tx, kodeOpd, tahun, "RPJMD")
-// 	if err != nil {
-// 		return strategicarahkebijakan.StrategicArahKebijakanPemdaAllResponse{}, err
-// 	}
-// 	if len(sasaranOpds) > 0 {
-// 	strategiResponses := make([]strategicarahkebijakan.StrategiArahKebijakanPemdaResponse, 0)
+	// =====================================================
+	// STYLE JUDUL
+	// =====================================================
 
-// 		for _, s := range sasaranOpds {
+	titleStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold: true,
+			Size: 16,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+	})
 
-// 			strategiResponses = append(strategiResponses, strategicarahkebijakan.StrategiArahKebijakanPemdaResponse{
-// 				TujuanPemda: s.NamaTujuanOpd, // pastikan field ini ada di domain
-// 				SasaranPemdas: []strategicarahkebijakan.SasaranPemdaResponse{
-// 					{
-// 						SasaranPemda: s.NamaSasaranOpd,
-// 						StrategiPemda: s.NamaStrategi, // kalau ada
-// 						ArahKebijakanPemdas: []strategicarahkebijakan.ArahKebijakanPemdaResponse{
-// 							{
-// 								ArahKebijakanPemda: s.NamaArahKebijakan, // kalau ada
-// 							},
-// 						},
-// 					},
-// 				},
-// 			})
-// 		}
+	// =====================================================
+	// STYLE HEADER
+	// =====================================================
 
-// 		response.StrategiArahKebijakanPemdas = strategiResponses
-// 	}
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold:  true,
+			Color: "FFFFFF",
+			Size:  12,
+		},
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Pattern: 1,
+			Color:   []string{"#10B981"},
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+			WrapText:   true,
+		},
+	})
 
+	// =====================================================
+	// STYLE BODY
+	// =====================================================
 
-// 	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
-// 		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.TujuanPemda))
+	bodyStyle, _ := f.NewStyle(&excelize.Style{
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		},
+		Alignment: &excelize.Alignment{
+			Vertical:   "center",
+			Horizontal: "left",
+			WrapText:   true,
+		},
+	})
 
-// 	return response, nil
-// }
+	// =====================================================
+	// STYLE NOMOR
+	// =====================================================
+
+	noStyle, _ := f.NewStyle(&excelize.Style{
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+	})
+
+	// =====================================================
+	// JUDUL
+	// =====================================================
+
+	f.MergeCell(sheet, "A1", "E1")
+	f.SetCellValue(sheet, "A1", "STRATEGI DAN ARAH KEBIJAKAN OPD")
+	f.SetCellStyle(sheet, "A1", "E1", titleStyle)
+	f.SetRowHeight(sheet, 1, 30)
+
+	// =====================================================
+	// INFORMASI OPD
+	// =====================================================
+
+	f.MergeCell(sheet, "A3", "B3")
+	f.SetCellValue(sheet, "A3", "Kode OPD :")
+	f.MergeCell(sheet, "C3", "E3")
+	f.SetCellValue(sheet, "C3", response.KodeOpd)
+
+	f.MergeCell(sheet, "A4", "B4")
+	f.SetCellValue(sheet, "A4", "Nama OPD :")
+	f.MergeCell(sheet, "C4", "E4")
+	f.SetCellValue(sheet, "C4", response.NamaOpd)
+
+	f.MergeCell(sheet, "A5", "B5")
+	f.SetCellValue(sheet, "A5", "Tahun :")
+	f.MergeCell(sheet, "C5", "E5")
+	f.SetCellValue(sheet, "C5", response.Tahun)
+
+	row := 7
+
+		// =====================================================
+	// ISU STRATEGIS OPD
+	// =====================================================
+
+	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "NO")
+	f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), headerStyle)
+	f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+	f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "ISU STRATEGIS OPD")
+	f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("B%d", row), headerStyle)
+
+	row++
+
+	if len(response.IsuStrategisOpd) > 0 {
+
+		for i, isu := range response.IsuStrategisOpd {
+
+			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), i+1)
+			f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), isu.NamaIsu)
+
+			f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
+			f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+			row++
+		}
+	} else {
+
+		f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "-")
+		f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+		row++
+	}
+
+	row++
+
+	// =====================================================
+	// TUJUAN OPD
+	// =====================================================
+
+	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "NO")
+	f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), headerStyle)
+	f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+	f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "TUJUAN OPD")
+	f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("B%d", row), headerStyle)
+
+	row++
+
+	if len(response.TujuanOpd) > 0 {
+
+		for i, tujuan := range response.TujuanOpd {
+
+			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), i+1)
+			f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.Tujuan)
+
+			f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
+			f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+			row++
+		}
+
+	} else {
+
+		f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "-")
+		f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+		row++
+	}
+
+	row += 2
+
+	// =====================================================
+	// HEADER TABEL STRATEGI
+	// =====================================================
+
+	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "No")
+	f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "Tujuan OPD")
+	f.SetCellValue(sheet, fmt.Sprintf("C%d", row), "Sasaran OPD")
+	f.SetCellValue(sheet, fmt.Sprintf("D%d", row), "Strategi OPD")
+	f.SetCellValue(sheet, fmt.Sprintf("E%d", row), "Arah Kebijakan")
+
+	f.SetCellStyle(
+		sheet,
+		fmt.Sprintf("A%d", row),
+		fmt.Sprintf("E%d", row),
+		headerStyle,
+	)
+
+	f.SetRowHeight(sheet, row, 25)
+
+	row++
+
+	// Header nomor kolom
+
+	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "1")
+	f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "2")
+	f.SetCellValue(sheet, fmt.Sprintf("C%d", row), "3")
+	f.SetCellValue(sheet, fmt.Sprintf("D%d", row), "4")
+	f.SetCellValue(sheet, fmt.Sprintf("E%d", row), "5")
+
+	f.SetCellStyle(
+		sheet,
+		fmt.Sprintf("A%d", row),
+		fmt.Sprintf("E%d", row),
+		headerStyle,
+	)
+
+	row++
+
+		// =====================================================
+	// ISI DATA
+	// =====================================================
+
+	no := 1
+
+	for _, tujuan := range response.StrategiArahKebijakanOpds {
+
+		tujuanStartRow := row
+
+		for _, sasaran := range tujuan.SasaranOpds {
+
+			sasaranStartRow := row
+
+			for _, strategi := range sasaran.StrategiOpds {
+
+				strategiStartRow := row
+
+				// jika tidak memiliki arah kebijakan
+				if len(strategi.ArahKebijakanOpds) == 0 {
+
+					f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
+					f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
+					f.SetCellValue(sheet, fmt.Sprintf("C%d", row), sasaran.SasaranOpd)
+					f.SetCellValue(sheet, fmt.Sprintf("D%d", row), strategi.StrategiOpd)
+					f.SetCellValue(sheet, fmt.Sprintf("E%d", row), "")
+
+					f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
+					f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+					row++
+
+				} else {
+
+					for _, arah := range strategi.ArahKebijakanOpds {
+
+						f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
+						f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
+						f.SetCellValue(sheet, fmt.Sprintf("C%d", row), sasaran.SasaranOpd)
+						f.SetCellValue(sheet, fmt.Sprintf("D%d", row), strategi.StrategiOpd)
+						f.SetCellValue(sheet, fmt.Sprintf("E%d", row), arah.ArahKebijakanOpd)
+
+						f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
+						f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+						row++
+					}
+				}
+
+				// =====================================
+				// MERGE STRATEGI
+				// =====================================
+
+				if row-1 > strategiStartRow {
+
+					f.MergeCell(
+						sheet,
+						fmt.Sprintf("D%d", strategiStartRow),
+						fmt.Sprintf("D%d", row-1),
+					)
+				}
+			}
+
+			// =====================================
+			// MERGE SASARAN
+			// =====================================
+
+			if row-1 > sasaranStartRow {
+
+				f.MergeCell(
+					sheet,
+					fmt.Sprintf("C%d", sasaranStartRow),
+					fmt.Sprintf("C%d", row-1),
+				)
+			}
+		}
+				// =====================================
+		// MERGE TUJUAN
+		// =====================================
+
+		if row-1 > tujuanStartRow {
+
+			f.MergeCell(
+				sheet,
+				fmt.Sprintf("B%d", tujuanStartRow),
+				fmt.Sprintf("B%d", row-1),
+			)
+		}
+
+		// =====================================
+		// MERGE NOMOR
+		// =====================================
+
+		if row-1 > tujuanStartRow {
+
+			f.MergeCell(
+				sheet,
+				fmt.Sprintf("A%d", tujuanStartRow),
+				fmt.Sprintf("A%d", row-1),
+			)
+		}
+
+		no++
+	}
+
+	// =====================================================
+	// LEBAR KOLOM
+	// =====================================================
+
+	f.SetColWidth(sheet, "A", "A", 8)
+	f.SetColWidth(sheet, "B", "B", 45)
+	f.SetColWidth(sheet, "C", "C", 45)
+	f.SetColWidth(sheet, "D", "D", 50)
+	f.SetColWidth(sheet, "E", "E", 60)
+
+	// =====================================================
+	// FREEZE HEADER
+	// =====================================================
+
+	_ = f.SetPanes(sheet, &excelize.Panes{
+		Freeze:      true,
+		Split:       false,
+		XSplit:      0,
+		YSplit:      0,
+		TopLeftCell: fmt.Sprintf("A%d", row),
+		ActivePane:  "bottomLeft",
+	})
+
+	// =====================================================
+	// WRITE BUFFER
+	// =====================================================
+
+	buffer := new(bytes.Buffer)
+
+	if err := f.Write(buffer); err != nil {
+		return nil, err
+	}
+
+	return buffer, nil
+}
 
 // Helper function untuk flatten dan sort strategic
 func flattenAndSort(nodesByParent map[int][]domain.PohonKinerja) []domain.PohonKinerja {
