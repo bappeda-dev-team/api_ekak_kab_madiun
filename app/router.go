@@ -210,6 +210,7 @@ func NewRouter(
 
 	// strategic arah kebijakan pemda
 	router.GET("/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.FindAll)
+	router.GET("/export/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.ExportExcel)
 
 	//pohon kinerja admin
 	router.POST("/pohon_kinerja_admin/create", pohonKinerjaAdminController.Create)

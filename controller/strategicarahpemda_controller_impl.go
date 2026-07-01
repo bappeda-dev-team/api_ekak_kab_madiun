@@ -5,7 +5,9 @@ import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/service"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -67,4 +69,54 @@ func (controller *StrategicArahKebijakanPemdaControllerImpl) FindAll(writer http
 		Data:   strategicarahkebijakanResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *StrategicArahKebijakanPemdaControllerImpl) ExportExcel(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahunAwal := params.ByName("tahun_awal")
+	tahunAkhir := params.ByName("tahun_akhir")
+
+	if tahunAwal == "" || tahunAkhir == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "tahun_awal dan tahun_akhir wajib diisi",
+		}
+
+		writer.WriteHeader(http.StatusBadRequest)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	buffer, err := controller.StrategicArahKebijakanPemdaService.ExportExcel(
+		request.Context(),
+		tahunAwal,
+		tahunAkhir,
+	)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+
+		writer.WriteHeader(http.StatusInternalServerError)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	filename := fmt.Sprintf(
+		"Strategic_Arah_Kebijakan_%s_%s.xlsx",
+		tahunAwal,
+		tahunAkhir,
+	)
+
+	writer.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	writer.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	writer.Header().Set("Content-Length", strconv.Itoa(buffer.Len()))
+
+	_, err = writer.Write(buffer.Bytes())
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

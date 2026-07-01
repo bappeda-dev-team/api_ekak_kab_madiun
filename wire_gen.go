@@ -177,7 +177,7 @@ func InitializeServer() *http.Server {
 	strukturOrganisasiRepositoryImpl := repository.NewStrukturOrganisasiRepositoryImpl()
 	pkServiceImpl := service.NewPkServiceImpl(pkRepositoryImpl, pegawaiServiceImpl, rencanaKinerjaServiceImpl, opdServiceImpl, strukturOrganisasiRepositoryImpl, validate, db)
 	pkControllerImpl := controller.NewPkControllerImpl(pkServiceImpl)
-	strategicArahKebijakanServiceImpl := service.NewStrategicArahKebijakanPemdaServiceImpl(csfRepository, db, tujuanPemdaRepositoryImpl, sasaranPemdaRepositoryImpl)
+	strategicArahKebijakanServiceImpl := service.NewStrategicArahKebijakanPemdaServiceImpl(opdRepositoryImpl, csfRepository, db, tujuanPemdaRepositoryImpl, sasaranPemdaRepositoryImpl)
 	StrategicArahKebijakanControllerImpl := controller.NewStrategicArahKebijakanPemdaControllerImpl(strategicArahKebijakanServiceImpl)
 	ikmRepositoryImpl := repository.NewIkmRepositoryImpl()
 	ikmServiceImpl := service.NewIkmServiceImpl(ikmRepositoryImpl, db, validate)
