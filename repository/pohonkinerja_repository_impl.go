@@ -2177,45 +2177,179 @@ WHERE 1=1`
 // 	return pokins, nil
 // }
 
+//lama
+// func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.PohonKinerja, error) {
+// 	script := `
+//         SELECT DISTINCT
+//             pk.id,
+//             pk.nama_pohon,
+//             pk.parent,
+//             pk.jenis_pohon,
+//             pk.level_pohon,
+//             pk.kode_opd,
+//             pk.keterangan,
+//             pk.tahun,
+//             pk.created_at,
+//             pp.id as pelaksana_id,
+//             pp.pegawai_id,
+//             p.nip,
+//             p.nama as nama_pegawai
+//         FROM
+//             tb_pohon_kinerja pk
+//         INNER JOIN
+//             tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
+//         INNER JOIN
+//             tb_pegawai p ON pp.pegawai_id = p.id
+//         WHERE
+//             p.nip = ?  -- ✅ FILTER BERDASARKAN NIP
+//             AND pk.tahun = ?
+// 			AND pk.id NOT IN (
+// 				WITH RECURSIVE excluded_tree AS (
+// 					SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+// 					UNION ALL
+// 					SELECT child.id FROM tb_pohon_kinerja child
+// 					INNER JOIN excluded_tree et ON child.parent = et.id
+// 				)
+// 				SELECT id FROM excluded_tree
+// 			)
+//         ORDER BY
+//             pk.level_pohon, pk.id, pk.created_at ASC
+//     `
+
+// 	rows, err := tx.QueryContext(ctx, script, nip, tahun) // ✅ PARAMETER NIP
+// 	if err != nil {
+// 		return nil, fmt.Errorf("gagal mengambil data pohon kinerja: %v", err)
+// 	}
+// 	defer rows.Close()
+
+// 	pokinMap := make(map[int]domain.PohonKinerja)
+
+// 	for rows.Next() {
+// 		var pokin domain.PohonKinerja
+// 		var pelaksana domain.PelaksanaPokin
+
+// 		err := rows.Scan(
+// 			&pokin.Id,
+// 			&pokin.NamaPohon,
+// 			&pokin.Parent,
+// 			&pokin.JenisPohon,
+// 			&pokin.LevelPohon,
+// 			&pokin.KodeOpd,
+// 			&pokin.Keterangan,
+// 			&pokin.Tahun,
+// 			&pokin.CreatedAt,
+// 			&pelaksana.Id,
+// 			&pelaksana.PegawaiId,
+// 			&pelaksana.Nip,         // ✅ TAMBAHKAN NIP
+// 			&pelaksana.NamaPegawai, // ✅ TAMBAHKAN NAMA PEGAWAI
+// 		)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("gagal scan data pohon kinerja: %v", err)
+// 		}
+
+// 		// Cek apakah pohon kinerja sudah ada di map
+// 		existingPokin, exists := pokinMap[pokin.Id]
+// 		if exists {
+// 			// Jika sudah ada, tambahkan pelaksana baru ke slice pelaksana yang ada
+// 			existingPokin.Pelaksana = append(existingPokin.Pelaksana, pelaksana)
+// 			pokinMap[pokin.Id] = existingPokin
+// 		} else {
+// 			// Jika belum ada, buat entry baru dengan pelaksana pertama
+// 			pokin.Pelaksana = []domain.PelaksanaPokin{pelaksana}
+// 			pokinMap[pokin.Id] = pokin
+// 		}
+// 	}
+
+// 	// Konversi map ke slice untuk hasil akhir
+// 	var result []domain.PohonKinerja
+// 	for _, pokin := range pokinMap {
+// 		result = append(result, pokin)
+// 	}
+
+// 	if len(result) == 0 {
+// 		return nil, sql.ErrNoRows
+// 	}
+
+// 	return result, nil
+// }
+
+// baru
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.PohonKinerja, error) {
 	script := `
-        SELECT DISTINCT
-            pk.id,
-            pk.nama_pohon,
-            pk.parent,
-            pk.jenis_pohon,
-            pk.level_pohon,
-            pk.kode_opd,
-            pk.keterangan,
-            pk.tahun,
-            pk.created_at,
-            pp.id as pelaksana_id,
-            pp.pegawai_id,
-            p.nip,
-            p.nama as nama_pegawai
-        FROM 
-            tb_pohon_kinerja pk
-        INNER JOIN 
-            tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
-        INNER JOIN 
-            tb_pegawai p ON pp.pegawai_id = p.id
-        WHERE 
-            p.nip = ?  -- ✅ FILTER BERDASARKAN NIP
-            AND pk.tahun = ?
-			AND pk.id NOT IN (
-				WITH RECURSIVE excluded_tree AS (
-					SELECT id FROM tb_pohon_kinerja WHERE parent = -100
-					UNION ALL
-					SELECT child.id FROM tb_pohon_kinerja child
-					INNER JOIN excluded_tree et ON child.parent = et.id
-				)
-				SELECT id FROM excluded_tree
-			)
-        ORDER BY 
-            pk.level_pohon, pk.id, pk.created_at ASC
+         WITH RECURSIVE
+excluded_tree AS (
+    SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+    UNION ALL
+    SELECT child.id FROM tb_pohon_kinerja child
+    INNER JOIN excluded_tree et ON child.parent = et.id
+),
+valid_pokin AS (
+    -- BASE: level 4 Strategic yang valid
+    SELECT
+        pk.id,
+        pk.level_pohon,
+        pk.parent,
+        pk.tahun,
+        pk.kode_opd
+    FROM tb_pohon_kinerja pk
+    WHERE pk.tahun = ?
+    AND pk.level_pohon = 4
+    AND pk.status NOT IN (
+        'menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak',
+        'crosscutting_menunggu', 'crosscutting_ditolak'
+    )
+    AND (
+        pk.parent = 0
+        OR EXISTS (
+            SELECT 1 FROM tb_pohon_kinerja p2
+            WHERE p2.id = pk.parent
+            AND p2.level_pohon BETWEEN 0 AND 3
+        )
+    )
+    AND pk.id NOT IN (SELECT id FROM excluded_tree)
+    UNION ALL
+    -- RECURSIVE: level 5, 6, ... — parent harus valid & tahun sama
+    SELECT
+        child.id,
+        child.level_pohon,
+        child.parent,
+        child.tahun,
+        child.kode_opd
+    FROM tb_pohon_kinerja child
+    INNER JOIN valid_pokin vp ON child.parent = vp.id
+    WHERE child.tahun = ?
+    AND child.level_pohon > 4
+    AND child.status NOT IN (
+        'menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak',
+        'crosscutting_menunggu', 'crosscutting_ditolak'
+    )
+    AND child.id NOT IN (SELECT id FROM excluded_tree)
+    AND child.tahun = vp.tahun
+)
+SELECT DISTINCT
+    pk.id,
+    pk.nama_pohon,
+    pk.parent,
+    pk.jenis_pohon,
+    pk.level_pohon,
+    pk.kode_opd,
+    pk.keterangan,
+    pk.tahun,
+    pk.created_at,
+    pp.id AS pelaksana_id,
+    pp.pegawai_id,
+    p.nip,
+    p.nama AS nama_pegawai
+FROM tb_pohon_kinerja pk
+INNER JOIN valid_pokin vp ON pk.id = vp.id          -- ✅ hanya pohon valid
+INNER JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
+INNER JOIN tb_pegawai p ON pp.pegawai_id = p.id
+WHERE p.nip = ?
+AND pk.tahun = ?
+ORDER BY pk.level_pohon, pk.id, pk.created_at ASC
     `
 
-	rows, err := tx.QueryContext(ctx, script, nip, tahun) // ✅ PARAMETER NIP
+	rows, err := tx.QueryContext(ctx, script, tahun, tahun, nip, tahun)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil data pohon kinerja: %v", err)
 	}
