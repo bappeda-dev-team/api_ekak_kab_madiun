@@ -240,6 +240,7 @@ func NewRouter(
 	router.GET("/pohon_kinerja/pemda/:kode_opd/:tahun", pohonKinerjaAdminController.FindPokinFromPemda)
 	router.GET("/pohon_kinerja/pilih_parent/:kode_opd/:tahun/:level_pohon", pohonKinerjaAdminController.FindPokinFromOpd)
 	router.GET("/pohon_kinerja_opd/pokinpemda_review/:id", pohonKinerjaOpdController.FindidPokinWithAllTema)
+	router.GET("/pohon_kinerja/cetak/:id", pohonKinerjaAdminController.CetakPokin)
 
 	// isustrategis - csf
 	router.GET("/isustrategis/csfs/:tahun", csfController.AllCsfsByTahun)

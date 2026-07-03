@@ -9,6 +9,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 	"strconv"
+	"time"
 
 	"log"
 
@@ -3198,4 +3199,64 @@ func (service *PohonKinerjaAdminServiceImpl) ClonePokinPemda(ctx context.Context
 	}
 
 	return response, nil
+}
+
+func (service *PohonKinerjaAdminServiceImpl) CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[pohonkinerja.PokinCetak], error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	tematik, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, tematikId)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
+	}
+
+	pokins, err := service.pohonKinerjaRepository.FindAllChildPokins(ctx, tx, tematik.Id)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
+	}
+	childs := map[int][]domain.PohonKinerja{}
+	for _, p := range pokins {
+		childs[p.Parent] = append(childs[p.Parent], p)
+	}
+
+	pokin := pohonkinerja.PokinCetak{
+		Id:         tematik.Id,
+		LevelPohon: tematik.LevelPohon,
+		JenisPohon: tematik.JenisPohon,
+		NamaPohon:  tematik.NamaPohon,
+	}
+
+	pokin.Childs = service.build(tematik.Id, childs)
+
+	version, err := helper.HashJson(pokin)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
+	}
+	result := pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{
+		Nama:    "CETAK_POKIN_PEMDA",
+		Version: version,
+		Time:    time.Now(),
+		Item:    pokin,
+	}
+
+	return result, nil
+}
+
+func (service *PohonKinerjaAdminServiceImpl) build(parentId int, children map[int][]domain.PohonKinerja) []pohonkinerja.PokinCetak {
+	result := make([]pohonkinerja.PokinCetak, 0)
+
+	for _, child := range children[parentId] {
+		result = append(result, pohonkinerja.PokinCetak{
+			Id:         child.Id,
+			NamaPohon:  child.NamaPohon,
+			JenisPohon: child.JenisPohon,
+			LevelPohon: child.LevelPohon,
+			Childs:     service.build(child.Id, children),
+		})
+	}
+
+	return result
 }

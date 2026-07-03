@@ -33,4 +33,5 @@ type PohonKinerjaAdminController interface {
 	RekapIntermediate(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	ClonePokinPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CetakPokin(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }
