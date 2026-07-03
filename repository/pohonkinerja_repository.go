@@ -91,5 +91,6 @@ type PohonKinerjaRepository interface {
 	clonePelaksana(ctx context.Context, tx *sql.Tx, sourceId int, newPokinId int64) error
 	ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error)
 	LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error)
+	FindAllChildPokins(ctx context.Context, tx *sql.Tx, parentId int) ([]domain.PohonKinerja, error)
 	FindPelaksanaPokinByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []string) ([]domain.PelaksanaPokin, error)
 }
