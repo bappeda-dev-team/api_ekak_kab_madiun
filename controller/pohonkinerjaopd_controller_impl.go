@@ -295,6 +295,7 @@ func (controller *PohonKinerjaOpdControllerImpl) ExportExcel(writer http.Respons
 
 	writer.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	writer.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	writer.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
 	writer.Header().Set("Content-Length", strconv.Itoa(buffer.Len()))
 
 	_, err = writer.Write(buffer.Bytes())
