@@ -8,7 +8,6 @@ import (
 	"ekak_kabupaten_madiun/model/web/tujuanpemda"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
-	"math"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -159,32 +158,14 @@ func validateTargetTahunUpdate(indikators []tujuanpemda.IndikatorUpdateRequest, 
 	return nil
 }
 
-func validateTargetValue(raw string) error {
-	raw = strings.TrimSpace(raw)
-	if raw == "" || raw == "-" {
-		return nil // placeholder kosong, boleh
-	}
-	if _, err := strconv.Atoi(raw); err != nil {
-		return fmt.Errorf("target '%s' harus berupa angka bulat", raw)
-	}
-	return nil
-}
-
-func targetToDBString(v float64) (string, error) {
-	if math.IsNaN(v) || math.IsInf(v, 0) {
-		return "", fmt.Errorf("target format tidak valid")
-	}
-	if v == math.Trunc(v) {
-		return strconv.FormatInt(int64(v), 10), nil
-	}
-	return strconv.FormatFloat(v, 'f', -1, 64), nil
-}
-
 func validateTargetValuesCreate(indikators []tujuanpemda.IndikatorCreateRequest) error {
 	for _, ind := range indikators {
 		for _, t := range ind.Target {
-			if _, err := targetToDBString(t.Target.Float64()); err != nil {
-				return fmt.Errorf("indikator '%s' tahun %s: %w", ind.Indikator, t.Tahun, err)
+			if err := helper.ValidateTargetFloat(t.Target.Float64()); err != nil {
+				return helper.ErrTargetIndikator(ind.Indikator, t.Tahun, err.Error())
+			}
+			if _, err := helper.TargetToDBString(t.Target.Float64()); err != nil {
+				return helper.ErrTargetIndikator(ind.Indikator, t.Tahun, err.Error())
 			}
 		}
 	}
@@ -193,8 +174,11 @@ func validateTargetValuesCreate(indikators []tujuanpemda.IndikatorCreateRequest)
 func validateTargetValuesUpdate(indikators []tujuanpemda.IndikatorUpdateRequest) error {
 	for _, ind := range indikators {
 		for _, t := range ind.Target {
-			if _, err := targetToDBString(t.Target.Float64()); err != nil {
-				return fmt.Errorf("indikator '%s' tahun %s: %w", ind.Indikator, t.Tahun, err)
+			if err := helper.ValidateTargetFloat(t.Target.Float64()); err != nil {
+				return helper.ErrTargetIndikator(ind.Indikator, t.Tahun, err.Error())
+			}
+			if _, err := helper.TargetToDBString(t.Target.Float64()); err != nil {
+				return helper.ErrTargetIndikator(ind.Indikator, t.Tahun, err.Error())
 			}
 		}
 	}
@@ -273,9 +257,9 @@ func (service *TujuanPemdaServiceImpl) Create(
 			return tujuanpemda.TujuanPemdaResponse{}, err
 		}
 		for _, tReq := range indReq.Target {
-			targetStr, err := targetToDBString(tReq.Target.Float64())
+			targetStr, err := helper.TargetToDBString(tReq.Target.Float64())
 			if err != nil {
-				return tujuanpemda.TujuanPemdaResponse{}, err
+				return tujuanpemda.TujuanPemdaResponse{}, helper.ErrTargetIndikator(indReq.Indikator, tReq.Tahun, err.Error())
 			}
 			tg := domain.TargetPemda{
 				KodeIndikator: kodeInd,
@@ -390,9 +374,9 @@ func (service *TujuanPemdaServiceImpl) Update(
 			ind.KodeIndikator = kodeInd
 		}
 		for _, tReq := range indReq.Target {
-			targetStr, err := targetToDBString(tReq.Target.Float64())
+			targetStr, err := helper.TargetToDBString(tReq.Target.Float64())
 			if err != nil {
-				return tujuanpemda.TujuanPemdaResponse{}, err
+				return tujuanpemda.TujuanPemdaResponse{}, helper.ErrTargetIndikator(indReq.Indikator, tReq.Tahun, err.Error())
 			}
 			tgJenis := defaultJenisPemda(tReq.Jenis)
 			if tgJenis == "" {
@@ -966,9 +950,9 @@ func (s *TujuanPemdaServiceImpl) UpsertTargetPemdaLayer(ctx context.Context, jen
 		if err != nil {
 			return nil, err
 		}
-		targetStr, err := targetToDBString(item.Target.Float64())
+		targetStr, err := helper.TargetToDBString(item.Target.Float64())
 		if err != nil {
-			return nil, fmt.Errorf("nilai target tidak valid untuk %s tahun %s: %w", item.KodeIndikator, item.Tahun, err)
+			return nil, helper.ErrTargetLayer(item.KodeIndikator, item.Tahun, err.Error())
 		}
 		saved, err := s.TujuanPemdaRepository.UpsertTargetPemda(ctx, tx, domain.TargetPemda{
 			KodeIndikator: item.KodeIndikator,
@@ -1209,9 +1193,9 @@ func (s *TujuanPemdaServiceImpl) CreateTargetPemdaLayer(
 				kode, tahun, jenis,
 			)
 		}
-		targetStr, err := targetToDBString(item.Target.Float64())
+		targetStr, err := helper.TargetToDBString(item.Target.Float64())
 		if err != nil {
-			return nil, fmt.Errorf("nilai target tidak valid untuk %s tahun %s: %w", kode, tahun, err)
+			return nil, helper.ErrTargetLayer(kode, tahun, err.Error())
 		}
 		saved, err := s.TujuanPemdaRepository.CreateTarget(ctx, tx, domain.TargetPemda{
 			KodeIndikator: kode,
@@ -1268,9 +1252,9 @@ func (s *TujuanPemdaServiceImpl) UpdateTargetPemdaLayer(
 				item.Id, existing.Jenis, jenis,
 			)
 		}
-		targetStr, err := targetToDBString(item.Target.Float64())
+		targetStr, err := helper.TargetToDBString(item.Target.Float64())
 		if err != nil {
-			return nil, fmt.Errorf("nilai target tidak valid untuk id %d: %w", item.Id, err)
+			return nil, helper.ErrTargetLayer(existing.KodeIndikator, existing.Tahun, err.Error())
 		}
 		saved, err := s.TujuanPemdaRepository.UpdateTargetPemda(ctx, tx, item.Id, targetStr, item.Satuan)
 		if err != nil {

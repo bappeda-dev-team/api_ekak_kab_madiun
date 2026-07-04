@@ -21,29 +21,18 @@ func NewTujuanPemdaControllerImpl(tujuanPemdaService service.TujuanPemdaService)
 	}
 }
 
-func (controller *TujuanPemdaControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// Decode request body
-	tujuanPemdaCreateRequest := tujuanpemda.TujuanPemdaCreateRequest{}
-	helper.ReadFromRequestBody(request, &tujuanPemdaCreateRequest)
-
-	// Panggil service create
-	tujuanPemdaResponse, err := controller.TujuanPemdaService.Create(request.Context(), tujuanPemdaCreateRequest)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+func (c *TujuanPemdaControllerImpl) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var req tujuanpemda.TujuanPemdaCreateRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
 		return
 	}
-
-	webResponse := web.WebResponse{
-		Code:   http.StatusCreated,
-		Status: "success create tujuan pemda",
-		Data:   tujuanPemdaResponse,
+	result, err := c.TujuanPemdaService.Create(r.Context(), req)
+	if err != nil {
+		helper.WriteServiceError(w, err)
+		return
 	}
-	helper.WriteToResponseBody(writer, webResponse)
+	helper.WriteJSON(w, http.StatusCreated, "success create tujuan pemda", result)
 }
 
 // Update godoc
@@ -59,41 +48,24 @@ func (controller *TujuanPemdaControllerImpl) Create(writer http.ResponseWriter, 
 // @Failure      500  {object}  web.WebResponse
 // @Security     BearerAuth
 // @Router       /tujuan_pemda/update/{id} [put]
-func (controller *TujuanPemdaControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	tujuanPemdaUpdateRequest := tujuanpemda.TujuanPemdaUpdateRequest{}
-	helper.ReadFromRequestBody(request, &tujuanPemdaUpdateRequest)
-
-	id := params.ByName("id")
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   "Invalid ID format",
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+func (c *TujuanPemdaControllerImpl) Update(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	var req tujuanpemda.TujuanPemdaUpdateRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
 		return
 	}
-	tujuanPemdaUpdateRequest.Id = idInt
-
-	// Panggil service update
-	tujuanPemdaResponse, err := controller.TujuanPemdaService.Update(request.Context(), tujuanPemdaUpdateRequest)
+	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteJSON(w, http.StatusBadRequest, "BAD REQUEST", "Invalid ID format")
 		return
 	}
-
-	webResponse := web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success update tujuan pemda",
-		Data:   tujuanPemdaResponse,
+	req.Id = id
+	result, err := c.TujuanPemdaService.Update(r.Context(), req)
+	if err != nil {
+		helper.WriteServiceError(w, err)
+		return
 	}
-	helper.WriteToResponseBody(writer, webResponse)
+	helper.WriteJSON(w, http.StatusOK, "success update tujuan pemda", result)
 }
 
 func (controller *TujuanPemdaControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
@@ -533,28 +505,18 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaPenetapanDual(writer
 // @Failure      500  {object}  web.WebResponse
 // @Security     BearerAuth
 // @Router       /tujuan_pemda/target/rankhir/create [post]
-func (controller *TujuanPemdaControllerImpl) CreateTargetRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	jenis := "rankhir"
+func (c *TujuanPemdaControllerImpl) CreateTargetRankhir(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req tujuanpemda.LayerTargetBatchRequest
-	helper.ReadFromRequestBody(request, &req)
-	result, err := controller.TujuanPemdaService.CreateTargetPemdaLayer(
-		request.Context(), jenis, req,
-	)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
 		return
 	}
-	webResponse := web.WebResponse{
-		Code:   http.StatusCreated,
-		Status: "success create target tujuan pemda",
-		Data:   result,
+	result, err := c.TujuanPemdaService.CreateTargetPemdaLayer(r.Context(), "rankhir", req)
+	if err != nil {
+		helper.WriteServiceError(w, err)
+		return
 	}
-	helper.WriteToResponseBody(writer, webResponse)
+	helper.WriteJSON(w, http.StatusCreated, "success create target tujuan pemda", result)
 }
 
 // CreateTargetPemdaLayer godoc
@@ -571,25 +533,18 @@ func (controller *TujuanPemdaControllerImpl) CreateTargetRankhir(writer http.Res
 func (controller *TujuanPemdaControllerImpl) CreateTargetPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	jenis := "penetapan"
 	var req tujuanpemda.LayerTargetBatchRequest
-	helper.ReadFromRequestBody(request, &req)
+	if err := helper.DecodeJSONBody(request, &req); err != nil {
+		helper.WriteBadRequest(writer, err)
+		return
+	}
 	result, err := controller.TujuanPemdaService.CreateTargetPemdaLayer(
 		request.Context(), jenis, req,
 	)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteServiceError(writer, err)
 		return
 	}
-	webResponse := web.WebResponse{
-		Code:   http.StatusCreated,
-		Status: "success create target tujuan pemda",
-		Data:   result,
-	}
-	helper.WriteToResponseBody(writer, webResponse)
+	helper.WriteJSON(writer, http.StatusCreated, "success create target tujuan pemda", result)
 }
 
 // UpdateTargetPemdaRankhir godoc
@@ -609,19 +564,18 @@ func (controller *TujuanPemdaControllerImpl) UpdateTargetRankhir(
 ) {
 	jenis := "rankhir"
 	var req tujuanpemda.LayerTargetUpdateBatchRequest
-	helper.ReadFromRequestBody(request, &req)
+	if err := helper.DecodeJSONBody(request, &req); err != nil {
+		helper.WriteBadRequest(writer, err)
+		return
+	}
 	result, err := controller.TujuanPemdaService.UpdateTargetPemdaLayer(
 		request.Context(), jenis, req,
 	)
 	if err != nil {
-		helper.WriteToResponseBody(writer, web.WebResponse{
-			Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error(),
-		})
+		helper.WriteServiceError(writer, err)
 		return
 	}
-	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code: http.StatusOK, Status: "success update target tujuan pemda", Data: result,
-	})
+	helper.WriteJSON(writer, http.StatusOK, "success update target tujuan pemda", result)
 }
 
 // UpdateTargetPemdaPenetapan godoc

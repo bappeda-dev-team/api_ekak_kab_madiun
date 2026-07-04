@@ -12,28 +12,30 @@ import (
 type TargetInput float64
 
 func (t *TargetInput) UnmarshalJSON(data []byte) error {
+	// Path 1: JSON number → 85 atau 85.5
 	var num json.Number
 	if err := json.Unmarshal(data, &num); err == nil {
 		f, err := num.Float64()
-		if err != nil {
-			return fmt.Errorf("target format tidak valid")
+		if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+			return fmt.Errorf("target format tidak valid: harus berupa angka")
 		}
 		*t = TargetInput(f)
 		return nil
 	}
+	// Path 2: JSON string → "85" atau "85.5"
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return fmt.Errorf("target format tidak valid")
+	}
+	if err := validateTargetRawString(str); err != nil {
+		return err
 	}
 	str = strings.TrimSpace(str)
 	if str == "" || str == "-" {
 		*t = 0
 		return nil
 	}
-	f, err := strconv.ParseFloat(str, 64)
-	if err != nil {
-		return fmt.Errorf("target format tidak valid")
-	}
+	f, _ := strconv.ParseFloat(str, 64)
 	*t = TargetInput(f)
 	return nil
 }
@@ -98,4 +100,26 @@ type LayerTargetUpdateItemRequest struct {
 }
 type LayerTargetUpdateBatchRequest struct {
 	Targets []LayerTargetUpdateItemRequest `json:"targets"`
+}
+
+func validateTargetRawString(raw string) error {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "-" {
+		return nil // placeholder kosong → 0
+	}
+	// Tolak koma desimal: "89,4"
+	if strings.Contains(raw, ",") {
+		return fmt.Errorf("target format tidak valid: gunakan titik (.) sebagai desimal, bukan koma (,)")
+	}
+	// Tolak huruf: "abc", "85persen"
+	for _, r := range raw {
+		if unicode.IsLetter(r) {
+			return fmt.Errorf("target format tidak valid: tidak boleh mengandung huruf")
+		}
+	}
+	f, err := strconv.ParseFloat(raw, 64)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		return fmt.Errorf("target format tidak valid: harus berupa angka")
+	}
+	return nil
 }
