@@ -3201,62 +3201,38 @@ func (service *PohonKinerjaAdminServiceImpl) ClonePokinPemda(ctx context.Context
 	return response, nil
 }
 
-func (service *PohonKinerjaAdminServiceImpl) CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[pohonkinerja.PokinCetak], error) {
+func (service *PohonKinerjaAdminServiceImpl) CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak], error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
+		return pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{}, err
 	}
 	defer helper.CommitOrRollback(tx)
 
-	tematik, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, tematikId)
+	pokins, err := service.pohonKinerjaRepository.FindAllChildPokins(ctx, tx, tematikId)
 	if err != nil {
-		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
+		return pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{}, err
 	}
 
-	pokins, err := service.pohonKinerjaRepository.FindAllChildPokins(ctx, tx, tematik.Id)
+	items := make([]pohonkinerja.PokinCetak, 0)
+	for _, pokin := range pokins {
+		items = append(items, pohonkinerja.PokinCetak{
+			Id:         pokin.Id,
+			ParentId:   pokin.Parent,
+			LevelPohon: pokin.LevelPohon,
+			JenisPohon: pokin.JenisPohon,
+			NamaPohon:  pokin.NamaPohon,
+		})
+	}
+	version, err := helper.HashJson(items)
 	if err != nil {
-		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
+		return pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{}, err
 	}
-	childs := map[int][]domain.PohonKinerja{}
-	for _, p := range pokins {
-		childs[p.Parent] = append(childs[p.Parent], p)
-	}
-
-	pokin := pohonkinerja.PokinCetak{
-		Id:         tematik.Id,
-		LevelPohon: tematik.LevelPohon,
-		JenisPohon: tematik.JenisPohon,
-		NamaPohon:  tematik.NamaPohon,
-	}
-
-	pokin.Childs = service.build(tematik.Id, childs)
-
-	version, err := helper.HashJson(pokin)
-	if err != nil {
-		return pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{}, err
-	}
-	result := pohonkinerja.CetakResponse[pohonkinerja.PokinCetak]{
+	result := pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{
 		Nama:    "CETAK_POKIN_PEMDA",
 		Version: version,
 		Time:    time.Now(),
-		Item:    pokin,
+		Item:    items,
 	}
 
 	return result, nil
-}
-
-func (service *PohonKinerjaAdminServiceImpl) build(parentId int, children map[int][]domain.PohonKinerja) []pohonkinerja.PokinCetak {
-	result := make([]pohonkinerja.PokinCetak, 0)
-
-	for _, child := range children[parentId] {
-		result = append(result, pohonkinerja.PokinCetak{
-			Id:         child.Id,
-			NamaPohon:  child.NamaPohon,
-			JenisPohon: child.JenisPohon,
-			LevelPohon: child.LevelPohon,
-			Childs:     service.build(child.Id, children),
-		})
-	}
-
-	return result
 }

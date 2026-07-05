@@ -11,8 +11,8 @@ type CetakResponse[T any] struct {
 
 type PokinCetak struct {
 	Id         int          `json:"id"`
+	ParentId   int          `json:"parent_id"`
 	LevelPohon int          `json:"level_pohon"`
 	JenisPohon string       `json:"jenis_pohon"`
 	NamaPohon  string       `json:"nama_pohon"`
-	Childs     []PokinCetak `json:"childs"`
 }

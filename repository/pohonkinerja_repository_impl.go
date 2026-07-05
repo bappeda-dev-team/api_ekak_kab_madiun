@@ -5512,7 +5512,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindAllChildPokins(ctx context.Con
 		WITH RECURSIVE pohon AS (
 		SELECT id, parent, nama_pohon, tahun, level_pohon, jenis_pohon
 		FROM tb_pohon_kinerja
-		WHERE parent = ?
+		WHERE id = ?
 
 		UNION ALL
 

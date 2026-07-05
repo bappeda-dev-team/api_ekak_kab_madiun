@@ -34,5 +34,5 @@ type PohonKinerjaAdminService interface {
 	FindPokinByCrosscuttingStatus(ctx context.Context, kodeOpd string, tahun string) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
 	FindPokinFromPemda(ctx context.Context, kodeOpd string, tahun string) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
 	FindPokinFromOpd(ctx context.Context, kodeOpd string, tahun string, levelPohon int) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
-	CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[pohonkinerja.PokinCetak], error)
+	CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak], error)
 }
