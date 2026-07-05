@@ -309,12 +309,13 @@ func (controller *TujuanPemdaControllerImpl) FindAllWithPokinRenstra(writer http
 // @Failure      400  {object}  web.WebResponse
 // @Failure      500  {object}  web.WebResponse
 // @Security     BearerAuth
-// @Router       /tujuan_pemda/ranwal/{tahun}/{jenis_periode} [get]
+// @Router       /tujuan_pemda/ranwal/{tahun} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRanwal(
 	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
 ) {
 	tahun := params.ByName("tahun")
-	jenisPeriode := params.ByName("jenis_periode")
+	// jenisPeriode := params.ByName("jenis_periode")
+	jenisPeriode := "RPJMD"
 	tujuanPemdaResponses, err := controller.TujuanPemdaService.FindTujuanPemdaRanwal(
 		request.Context(), tahun, jenisPeriode,
 	)
@@ -435,12 +436,13 @@ func (controller *TujuanPemdaControllerImpl) UpsertTargetPemdaLayer(
 // @Failure      400  {object}  web.WebResponse
 // @Failure      500  {object}  web.WebResponse
 // @Security     BearerAuth
-// @Router       /tujuan_pemda/rankhir/{tahun}/{jenis_periode} [get]
+// @Router       /tujuan_pemda/rankhir/{tahun} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhirDual(
 	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
 ) {
 	tahun := params.ByName("tahun")
-	jenisPeriode := params.ByName("jenis_periode")
+	// jenisPeriode := params.ByName("jenis_periode")
+	jenisPeriode := "RPJMD"
 	tujuanPemdaResponses, err := controller.TujuanPemdaService.FindTujuanPemdaRankhirDual(
 		request.Context(), tahun, jenisPeriode,
 	)
@@ -471,10 +473,10 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhirDual(
 // @Failure      400  {object}  web.WebResponse
 // @Failure      500  {object}  web.WebResponse
 // @Security     BearerAuth
-// @Router       /tujuan_pemda/penetapan/{tahun}/{jenis_periode} [get]
+// @Router       /tujuan_pemda/penetapan/{tahun} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaPenetapanDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	result, err := controller.TujuanPemdaService.FindTujuanPemdaPenetapanDual(
-		request.Context(), params.ByName("tahun"), params.ByName("jenis_periode"),
+		request.Context(), params.ByName("tahun"), "RPJMD",
 	)
 	if err != nil {
 		webResponse := web.WebResponse{

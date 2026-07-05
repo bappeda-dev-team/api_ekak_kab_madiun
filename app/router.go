@@ -365,11 +365,11 @@ func NewRouter(
 	// router.GET("/tujuan_pemda/findall_with_pokin/:tahun_awal/:tahun_akhir/:jenis_periode", tujuanPemdaController.FindAllWithPokin)
 	router.GET("/pohon_kinerja/pokin_with_periode/:pokin_id/:jenis_periode", tujuanPemdaController.FindPokinWithPeriode)
 	router.GET("/tujuan_pemda/findall_with_pokin/:tahun_awal/:tahun_akhir/:jenis_periode", tujuanPemdaController.FindAllWithPokinRenstra)
-	router.GET("/tujuan_pemda/ranwal/:tahun/:jenis_periode", tujuanPemdaController.FindTujuanPemdaRanwal)
+	router.GET("/tujuan_pemda/ranwal/:tahun", tujuanPemdaController.FindTujuanPemdaRanwal)
 	// router.GET("/tujuan_pemda/rankhir/:tahun/:jenis_periode", tujuanPemdaController.FindTujuanPemdaRankhir)
 	// router.GET("/tujuan_pemda/penetapan/:tahun/:jenis_periode", tujuanPemdaController.FindTujuanPemdaPenetapan)
-	router.GET("/tujuan_pemda/rankhir/:tahun/:jenis_periode", tujuanPemdaController.FindTujuanPemdaRankhirDual)
-	router.GET("/tujuan_pemda/penetapan/:tahun/:jenis_periode", tujuanPemdaController.FindTujuanPemdaPenetapanDual)
+	router.GET("/tujuan_pemda/rankhir/:tahun", tujuanPemdaController.FindTujuanPemdaRankhirDual)
+	router.GET("/tujuan_pemda/penetapan/:tahun", tujuanPemdaController.FindTujuanPemdaPenetapanDual)
 	// router.POST("/tujuan_pemda/target/upsert/:jenis", tujuanPemdaController.UpsertTargetPemdaLayer)
 	router.POST("/tujuan_pemda/target/rankhir/create", tujuanPemdaController.CreateTargetRankhir)
 	router.POST("/tujuan_pemda/target/penetapan/create", tujuanPemdaController.CreateTargetPenetapan)
@@ -383,6 +383,13 @@ func NewRouter(
 	router.GET("/sasaran_pemda/detail/:id", sasaranPemdaController.FindById)
 	// router.GET("/sasaran_pemda/findall/:tahun", sasaranPemdaController.FindAll)
 	router.GET("/sasaran_pemda/findall/tahun_awal/:tahun_awal/tahun_akhir/:tahun_akhir/jenis_periode/:jenis_periode", sasaranPemdaController.FindAllWithPokin)
+	//renstra
+	// router.GET("/sasaran_pemda/rankhir/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaRankhirDual)
+	// router.GET("/sasaran_pemda/penetapan/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaPenetapanDual)
+	// router.POST("/sasaran_pemda/target/rankhir/create", sasaranPemdaController.CreateTargetRankhir)
+	// router.PUT("/sasaran_pemda/target/rankhir/update", sasaranPemdaController.UpdateTargetRankhir)
+	// router.POST("/sasaran_pemda/target/penetapan/create", sasaranPemdaController.CreateTargetPenetapan)
+	// router.PUT("/sasaran_pemda/target/penetapan/update", sasaranPemdaController.UpdateTargetPenetapan)
 
 	//permasalahan rekin
 	router.POST("/permasalahan_rekin/create", permasalahanRekinController.Create)

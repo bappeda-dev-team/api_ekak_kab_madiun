@@ -4114,7 +4114,7 @@ paths:
       summary: Lock Data Tujuan Pemda
       tags:
       - Tujuan Pemda Lock
-  /tujuan_pemda/penetapan/{tahun}/{jenis_periode}:
+  /tujuan_pemda/penetapan/{tahun}:
     get:
       description: 'Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa
         fallback antar jenis.'
@@ -4192,7 +4192,7 @@ paths:
       summary: Get Pokin With Periode
       tags:
       - Tujuan Pemda
-  /tujuan_pemda/rankhir/{tahun}/{jenis_periode}:
+  /tujuan_pemda/rankhir/{tahun}:
     get:
       description: 'Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa
         fallback antar jenis.'
@@ -4234,7 +4234,7 @@ paths:
       summary: Tujuan Pemda Rankhir (Dual Target)
       tags:
       - Tujuan Pemda
-  /tujuan_pemda/ranwal/{tahun}/{jenis_periode}:
+  /tujuan_pemda/ranwal/{tahun}:
     get:
       consumes:
       - application/json

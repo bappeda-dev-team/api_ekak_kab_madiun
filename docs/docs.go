@@ -3749,7 +3749,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/tujuan_pemda/penetapan/{tahun}/{jenis_periode}": {
+        "/tujuan_pemda/penetapan/{tahun}": {
             "get": {
                 "security": [
                     {
@@ -3872,7 +3872,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/tujuan_pemda/rankhir/{tahun}/{jenis_periode}": {
+        "/tujuan_pemda/rankhir/{tahun}": {
             "get": {
                 "security": [
                     {
@@ -3939,7 +3939,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/tujuan_pemda/ranwal/{tahun}/{jenis_periode}": {
+        "/tujuan_pemda/ranwal/{tahun}": {
             "get": {
                 "security": [
                     {
