@@ -10,6 +10,7 @@ import (
 	"ekak_kabupaten_madiun/app"
 	"ekak_kabupaten_madiun/controller"
 	"ekak_kabupaten_madiun/dataseeder"
+	"ekak_kabupaten_madiun/internal"
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
@@ -88,7 +89,8 @@ func InitializeServer() *http.Server {
 	csfRepository := repository.NewCSFRepositoryImpl()
 	ikkRepositoryImpl := repository.NewIkkRepositoryImpl()
 	ikkServiceImpl := service.NewIkkServiceImpl(ikkRepositoryImpl, db, validate)
-	pohonKinerjaOpdServiceImpl := service.NewPohonKinerjaOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, crosscuttingOpdRepositoryImpl, reviewRepositoryImpl, db, validate, programUnggulanRepositoryImpl, dataMasterRepositoryImpl, client, csfRepository, sasaranOpdRepositoryImpl, ikkServiceImpl, ikkRepositoryImpl)
+	client_isu := internal.NewIsuStrategicClient( "https://isu-strategis-dev.zeabur.app", &http.Client{})
+	pohonKinerjaOpdServiceImpl := service.NewPohonKinerjaOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, crosscuttingOpdRepositoryImpl, reviewRepositoryImpl, db, validate, programUnggulanRepositoryImpl, dataMasterRepositoryImpl, client, csfRepository, sasaranOpdRepositoryImpl, ikkServiceImpl, ikkRepositoryImpl, *client_isu)
 	pohonKinerjaOpdControllerImpl := controller.NewPohonKinerjaOpdControllerImpl(pohonKinerjaOpdServiceImpl)
 	jabatanPegawaiRepositoryImpl := repository.NewJabatanPegawaiRepositoryImpl()
 	pegawaiServiceImpl := service.NewPegawaiServiceImpl(pegawaiRepositoryImpl, opdRepositoryImpl, jabatanPegawaiRepositoryImpl, db)
@@ -178,7 +180,7 @@ func InitializeServer() *http.Server {
 	pkServiceImpl := service.NewPkServiceImpl(pkRepositoryImpl, pegawaiServiceImpl, rencanaKinerjaServiceImpl, opdServiceImpl, strukturOrganisasiRepositoryImpl, validate, db)
 	pkControllerImpl := controller.NewPkControllerImpl(pkServiceImpl)
 	strategicArahKebijakanServiceImpl := service.NewStrategicArahKebijakanPemdaServiceImpl(opdRepositoryImpl, csfRepository, db, tujuanPemdaRepositoryImpl, sasaranPemdaRepositoryImpl)
-	StrategicArahKebijakanControllerImpl := controller.NewStrategicArahKebijakanPemdaControllerImpl(strategicArahKebijakanServiceImpl)
+	StrategicArahKebijakanControllerImpl := controller.NewStrategicArahKebijakanPemdaControllerImpl(strategicArahKebijakanServiceImpl, *client_isu)
 	ikmRepositoryImpl := repository.NewIkmRepositoryImpl()
 	ikmServiceImpl := service.NewIkmServiceImpl(ikmRepositoryImpl, db, validate)
 	indikatorControllerImpl := controller.NewIndikatorControllerImpl(ikmServiceImpl)

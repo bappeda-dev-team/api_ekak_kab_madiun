@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/internal"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"ekak_kabupaten_madiun/model/web/ikk"
@@ -42,13 +43,14 @@ type PohonKinerjaOpdServiceImpl struct {
 	sasaranOpdRepository      repository.SasaranOpdRepository
 	ikkService                IkkService
 	IkkRepository             repository.IkkRepository
+	isuStrategisMasalah		  internal.IsustrategicClient
 }
 
 func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate,
 	programUnggulanRepository repository.ProgramUnggulanRepository,
 	dataMasterRepository repository.DataMasterRepository,
 	redisClient *redis.Client, csfRepository repository.CSFRepository, sasaranOpdRepository repository.SasaranOpdRepository,
-	ikkService IkkService, IkkRepository repository.IkkRepository) *PohonKinerjaOpdServiceImpl {
+	ikkService IkkService, IkkRepository repository.IkkRepository, isuStrategisMasalah internal.IsustrategicClient) *PohonKinerjaOpdServiceImpl {
 	return &PohonKinerjaOpdServiceImpl{
 		pohonKinerjaOpdRepository: pohonKinerjaOpdRepository,
 		opdRepository:             opdRepository,
@@ -65,6 +67,7 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		sasaranOpdRepository:      sasaranOpdRepository,
 		ikkService:                ikkService,
 		IkkRepository:             IkkRepository,
+		isuStrategisMasalah:	   isuStrategisMasalah,
 	}
 }
 
@@ -1403,15 +1406,33 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		KodeOpd:                   kodeOpd,
 		NamaOpd:                   opd.NamaOpd,
 		Tahun:                     tahun,
+		PermasalahanOpd:           make([]strategic.PermasalahanOpdResponse, 0),
 		IsuStrategisOpd:           make([]strategic.IsuStrategiOpdResponse, 0),
-		TujuanOpd:                 make([]strategic.TujuanOpdResponse, 0),
 		StrategiArahKebijakanOpds: make([]strategic.StrategiArahKebijakanOpdResponse, 0),
 	}
 
 	// =====================================================
+	// 	PERMASALAHAN
+	// =====================================================
+	permasalahanList, err := service.isuStrategisMasalah.GetDataPermasalahan(ctx, kodeOpd, tahun)
+	if err != nil {
+		return response, err
+	}
+
+	for _, isu := range permasalahanList {
+		for _, p := range isu.PermasalahanOpd {
+			response.PermasalahanOpd = append(
+				response.PermasalahanOpd,
+				strategic.PermasalahanOpdResponse{
+					NamaPermasalahan: p.Permasalahan,
+				},
+			)
+		}
+	}
+	// =====================================================
 	// ISU STRATEGIS
 	// =====================================================
-	csfList, err := service.CSFRepository.IsuFindByTahun(ctx, tx, kodeOpd, tahun)
+	csfList, err := service.isuStrategisMasalah.GetDataIsuStrategic(ctx, kodeOpd, tahun)
 	if err != nil {
 		return response, err
 	}
@@ -1420,37 +1441,12 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		response.IsuStrategisOpd = append(
 			response.IsuStrategisOpd,
 			strategic.IsuStrategiOpdResponse{
-				NamaIsu: isu.NamaIsu,
+				NamaIsu: isu.IsuStrategis,
 			},
 		)
 	}
 
-	// =====================================================
-	// TUJUAN OPD
-	// =====================================================
-	tujuanOpds, err := service.tujuanOpdRepository.
-		FindTujuanOpdByTahunByStrategicArahKebijakan(
-			ctx,
-			tx,
-			kodeOpd,
-			tahun,
-			"RPJMD",
-		)
-	if err != nil {
-		return response, err
-	}
-
-	for _, tujuan := range tujuanOpds {
-
-		response.TujuanOpd = append(
-			response.TujuanOpd,
-			strategic.TujuanOpdResponse{
-				KodeOpd: tujuan.KodeOpd,
-				Tujuan:  tujuan.Tujuan,
-			},
-		)
-	}
-
+	
 	// =====================================================
 	// STRATEGI
 	// =====================================================
@@ -1599,9 +1595,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 }
 
 func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kodeOpd, tahun string) (strategic.StrategicArahKebijakanOpdAllResponse, error) {
-	startTime := time.Now()
-	serviceName := "PohonKinerjaOpdService.FindAllArah"
-
+	
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
@@ -1625,9 +1619,6 @@ func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kode
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
 	}
-
-	log.Printf("[%s] [END] [%s] totalResponseTime=%v, strategicsCount=%d",
-		time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime), len(response.TujuanOpd))
 
 	return response, nil
 }
@@ -1780,6 +1771,42 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 	row := 7
 
 		// =====================================================
+	// PERMASALAHAN OPD
+	// =====================================================
+
+	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "NO")
+	f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), headerStyle)
+	f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+	f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "PERMASALAHAN OPD")
+	f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("B%d", row), headerStyle)
+
+	row++
+
+	if len(response.PermasalahanOpd) > 0 {
+
+		for i, per := range response.PermasalahanOpd {
+
+			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), i+1)
+			f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), per.NamaPermasalahan)
+
+			f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
+			f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+			row++
+		}
+	} else {
+
+		f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "-")
+		f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
+
+		row++
+	}
+
+	row++
+
+	// =====================================================
 	// ISU STRATEGIS OPD
 	// =====================================================
 
@@ -1804,43 +1831,6 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 
 			row++
 		}
-	} else {
-
-		f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
-		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "-")
-		f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
-
-		row++
-	}
-
-	row++
-
-	// =====================================================
-	// TUJUAN OPD
-	// =====================================================
-
-	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "NO")
-	f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), headerStyle)
-	f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
-	f.SetCellValue(sheet, fmt.Sprintf("B%d", row), "TUJUAN OPD")
-	f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("B%d", row), headerStyle)
-
-	row++
-
-	if len(response.TujuanOpd) > 0 {
-
-		for i, tujuan := range response.TujuanOpd {
-
-			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), i+1)
-			f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
-			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.Tujuan)
-
-			f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
-			f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
-
-			row++
-		}
-
 	} else {
 
 		f.MergeCell(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row))
