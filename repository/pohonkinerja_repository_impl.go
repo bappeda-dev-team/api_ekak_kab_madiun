@@ -5506,3 +5506,54 @@ func (repo *PohonKinerjaRepositoryImpl) FindPokinPemdaByTahun(ctx context.Contex
 
 	return result, nil
 }
+
+func (repository *PohonKinerjaRepositoryImpl) FindAllChildPokins(ctx context.Context, tx *sql.Tx, parentId int) ([]domain.PohonKinerja, error) {
+	script := `
+		WITH RECURSIVE pohon AS (
+		SELECT id, parent, nama_pohon, tahun, level_pohon, jenis_pohon
+		FROM tb_pohon_kinerja
+		WHERE id = ?
+
+		UNION ALL
+
+		SELECT
+		p.id,
+		p.parent,
+		p.nama_pohon,
+		p.tahun,
+		p.level_pohon,
+		p.jenis_pohon
+		FROM tb_pohon_kinerja p
+		INNER JOIN pohon t
+		   ON p.parent = t.id
+		)
+		SELECT
+		  id, parent, nama_pohon, tahun, level_pohon, jenis_pohon
+		FROM pohon
+		ORDER BY id
+                `
+
+	rows, err := tx.QueryContext(ctx, script, parentId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var childPohons []domain.PohonKinerja
+	for rows.Next() {
+		var pohon domain.PohonKinerja
+		err := rows.Scan(
+			&pohon.Id,
+			&pohon.Parent,
+			&pohon.NamaPohon,
+			&pohon.Tahun,
+			&pohon.LevelPohon,
+			&pohon.JenisPohon)
+		if err != nil {
+			return nil, err
+		}
+		childPohons = append(childPohons, pohon)
+	}
+
+	return childPohons, nil
+}

@@ -9,6 +9,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 	"strconv"
+	"time"
 
 	"log"
 
@@ -3198,4 +3199,40 @@ func (service *PohonKinerjaAdminServiceImpl) ClonePokinPemda(ctx context.Context
 	}
 
 	return response, nil
+}
+
+func (service *PohonKinerjaAdminServiceImpl) CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak], error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	pokins, err := service.pohonKinerjaRepository.FindAllChildPokins(ctx, tx, tematikId)
+	if err != nil {
+		return pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{}, err
+	}
+
+	items := make([]pohonkinerja.PokinCetak, 0)
+	for _, pokin := range pokins {
+		items = append(items, pohonkinerja.PokinCetak{
+			Id:         pokin.Id,
+			ParentId:   pokin.Parent,
+			LevelPohon: pokin.LevelPohon,
+			JenisPohon: pokin.JenisPohon,
+			NamaPohon:  pokin.NamaPohon,
+		})
+	}
+	version, err := helper.HashJson(items)
+	if err != nil {
+		return pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{}, err
+	}
+	result := pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak]{
+		Nama:    "CETAK_POKIN_PEMDA",
+		Version: version,
+		Time:    time.Now(),
+		Item:    items,
+	}
+
+	return result, nil
 }

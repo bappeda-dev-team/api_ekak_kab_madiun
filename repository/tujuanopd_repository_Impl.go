@@ -748,6 +748,64 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(ctx context.Cont
 
 	return result, nil
 }
+func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahunByStrategicArahKebijakan(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error) {
+	scriptTujuan := `
+		SELECT
+			MIN(t.id) as id,
+			t.kode_opd,
+			t.tujuan,
+			MIN(t.tahun_awal) as tahun_awal,
+			MAX(t.tahun_akhir) as tahun_akhir
+		FROM tb_tujuan_opd t
+		WHERE t.kode_opd = ?
+			AND CAST(? AS SIGNED) BETWEEN CAST(t.tahun_awal AS SIGNED) AND CAST(t.tahun_akhir AS SIGNED)
+			AND t.jenis_periode = ?
+		GROUP BY
+			t.kode_opd,
+			t.tujuan
+		ORDER BY id ASC;
+	`
+
+	rows, err := tx.QueryContext(ctx,
+		scriptTujuan,
+		kodeOpd,
+		tahun,
+		jenisPeriode,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.TujuanOpd
+
+	for rows.Next() {
+		var tujuan domain.TujuanOpd
+
+		err := rows.Scan(
+			&tujuan.Id,
+			&tujuan.KodeOpd,
+			&tujuan.Tujuan,
+			&tujuan.TahunAwal,
+			&tujuan.TahunAkhir,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, tujuan)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return []domain.TujuanOpd{}, nil
+	}
+
+	return result, nil
+}
 
 // Perbaikan pada FindIndikatorByTujuanOpdId untuk menyertakan rumus_perhitungan dan sumber_data
 func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdId(ctx context.Context, tx *sql.Tx, tujuanOpdId int) ([]domain.Indikator, error) {

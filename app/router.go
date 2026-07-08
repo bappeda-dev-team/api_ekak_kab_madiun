@@ -207,9 +207,12 @@ func NewRouter(
 
 	// strategic arah kebijakan opd
 	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
+	router.GET("/export/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ExportExcel)
 
 	// strategic arah kebijakan pemda
 	router.GET("/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.FindAll)
+	router.GET("/cari/:kode_opd/:tahun", strategicArahKebijakanController.FindIsu)
+	router.GET("/export/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.ExportExcel)
 
 	//pohon kinerja admin
 	router.POST("/pohon_kinerja_admin/create", pohonKinerjaAdminController.Create)
@@ -238,6 +241,7 @@ func NewRouter(
 	router.GET("/pohon_kinerja/pemda/:kode_opd/:tahun", pohonKinerjaAdminController.FindPokinFromPemda)
 	router.GET("/pohon_kinerja/pilih_parent/:kode_opd/:tahun/:level_pohon", pohonKinerjaAdminController.FindPokinFromOpd)
 	router.GET("/pohon_kinerja_opd/pokinpemda_review/:id", pohonKinerjaOpdController.FindidPokinWithAllTema)
+	router.GET("/pohon_kinerja/cetak/:id", pohonKinerjaAdminController.CetakPokin)
 
 	// isustrategis - csf
 	router.GET("/isustrategis/csfs/:tahun", csfController.AllCsfsByTahun)
