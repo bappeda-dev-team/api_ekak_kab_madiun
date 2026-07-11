@@ -383,13 +383,18 @@ func NewRouter(
 	router.GET("/sasaran_pemda/detail/:id", sasaranPemdaController.FindById)
 	// router.GET("/sasaran_pemda/findall/:tahun", sasaranPemdaController.FindAll)
 	router.GET("/sasaran_pemda/findall/tahun_awal/:tahun_awal/tahun_akhir/:tahun_akhir/jenis_periode/:jenis_periode", sasaranPemdaController.FindAllWithPokin)
+
 	//renstra
-	// router.GET("/sasaran_pemda/rankhir/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaRankhirDual)
-	// router.GET("/sasaran_pemda/penetapan/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaPenetapanDual)
-	// router.POST("/sasaran_pemda/target/rankhir/create", sasaranPemdaController.CreateTargetRankhir)
-	// router.PUT("/sasaran_pemda/target/rankhir/update", sasaranPemdaController.UpdateTargetRankhir)
-	// router.POST("/sasaran_pemda/target/penetapan/create", sasaranPemdaController.CreateTargetPenetapan)
-	// router.PUT("/sasaran_pemda/target/penetapan/update", sasaranPemdaController.UpdateTargetPenetapan)
+	router.GET("/sasaran_pemda/rankhir/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaRankhirDual)
+	router.GET("/sasaran_pemda/penetapan/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaPenetapanDual)
+	router.POST("/sasaran_pemda/target/rankhir/create", sasaranPemdaController.CreateTargetRankhir)
+	router.PUT("/sasaran_pemda/target/rankhir/update", sasaranPemdaController.UpdateTargetRankhir)
+	router.POST("/sasaran_pemda/target/penetapan/create", sasaranPemdaController.CreateTargetPenetapan)
+	router.PUT("/sasaran_pemda/target/penetapan/update", sasaranPemdaController.UpdateTargetPenetapan)
+	router.GET("/sasaran_pemda/lock", sasaranPemdaController.FindAllLockSasaranPemda)
+	router.GET("/sasaran_pemda/lock/:tahun", sasaranPemdaController.IsSasaranPemdaLocked)
+	router.POST("/sasaran_pemda/lock/:tahun", sasaranPemdaController.LockSasaranPemda)
+	router.DELETE("/sasaran_pemda/lock/:tahun", sasaranPemdaController.UnlockSasaranPemda)
 
 	//permasalahan rekin
 	router.POST("/permasalahan_rekin/create", permasalahanRekinController.Create)

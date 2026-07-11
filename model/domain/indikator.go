@@ -41,10 +41,10 @@ type Indikator struct {
 	DefinisiOperasional sql.NullString
 	KodeIndikator       string
 }
-
 type IndikatorPemda struct {
 	Id                  int
 	TujuanPemdaId       int
+	SasaranPemdaId      int
 	KodeIndikator       string
 	Indikator           sql.NullString
 	Tahun               string

@@ -13,9 +13,8 @@ type SasaranPemda struct {
 	TahunAkhir    string
 	JenisPeriode  string
 	Periode       Periode
-	Indikator     []Indikator
+	Indikator     []IndikatorPemda
 }
-
 type SasaranPemdaWithPokin struct {
 	SubtematikId        int
 	JenisPohon          string
@@ -27,6 +26,6 @@ type SasaranPemdaWithPokin struct {
 	IdsasaranPemda      int
 	SasaranPemda        string
 	Keterangan          string
-	IndikatorSubtematik []Indikator
+	IndikatorSubtematik []IndikatorPemda
 	SasaranPemdaList    []SasaranPemda
 }

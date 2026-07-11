@@ -16,179 +16,251 @@ type SasaranPemdaControllerImpl struct {
 }
 
 func NewSasaranPemdaControllerImpl(sasaranPemdaService service.SasaranPemdaService) *SasaranPemdaControllerImpl {
-	return &SasaranPemdaControllerImpl{
-		sasaranPemdaService: sasaranPemdaService,
-	}
+	return &SasaranPemdaControllerImpl{sasaranPemdaService: sasaranPemdaService}
 }
 
-func (controller *SasaranPemdaControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// Decode request body
-	sasaranPemdaCreateRequest := sasaranpemda.SasaranPemdaCreateRequest{}
-	helper.ReadFromRequestBody(request, &sasaranPemdaCreateRequest)
-
-	// Panggil service create
-	sasaranPemdaResponse, err := controller.sasaranPemdaService.Create(request.Context(), sasaranPemdaCreateRequest)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
+// ── Helper private ───────────────────────────────────────────────
+func sasaranPemdaErr(err error) web.WebResponse {
+	code := http.StatusInternalServerError
+	status := "INTERNAL SERVER ERROR"
+	if helper.IsTargetValidationError(err) {
+		code = http.StatusBadRequest
+		status = "BAD REQUEST"
 	}
-
-	webResponse := web.WebResponse{
-		Code:   http.StatusCreated,
-		Status: "success create sasaran pemda",
-		Data:   sasaranPemdaResponse,
-	}
-	helper.WriteToResponseBody(writer, webResponse)
+	return web.WebResponse{Code: code, Status: status, Data: err.Error()}
 }
 
-func (controller *SasaranPemdaControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sasaranPemdaUpdateRequest := sasaranpemda.SasaranPemdaUpdateRequest{}
-	helper.ReadFromRequestBody(request, &sasaranPemdaUpdateRequest)
-
-	id := params.ByName("id")
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   "Invalid ID format",
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+// ── CRUD ─────────────────────────────────────────────────────────
+func (c *SasaranPemdaControllerImpl) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var req sasaranpemda.SasaranPemdaCreateRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
 		return
 	}
-	sasaranPemdaUpdateRequest.Id = idInt
-
-	// Panggil service update
-	sasaranPemdaResponse, err := controller.sasaranPemdaService.Update(request.Context(), sasaranPemdaUpdateRequest)
+	result, err := c.sasaranPemdaService.Create(r.Context(), req)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
 		return
 	}
-
-	webResponse := web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success update sasaran pemda",
-		Data:   sasaranPemdaResponse,
+	helper.WriteJSON(w, http.StatusCreated, "success create sasaran pemda", result)
+}
+func (c *SasaranPemdaControllerImpl) Update(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	var req sasaranpemda.SasaranPemdaUpdateRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
+		return
 	}
-	helper.WriteToResponseBody(writer, webResponse)
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		helper.WriteJSON(w, http.StatusBadRequest, "BAD REQUEST", "Invalid ID format")
+		return
+	}
+	req.Id = id
+	result, err := c.sasaranPemdaService.Update(r.Context(), req)
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "success update sasaran pemda", result)
+}
+func (c *SasaranPemdaControllerImpl) Delete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		helper.WriteJSON(w, http.StatusBadRequest, "BAD REQUEST", "Invalid ID format")
+		return
+	}
+	if err := c.sasaranPemdaService.Delete(r.Context(), id); err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "success delete sasaran pemda", nil)
+}
+func (c *SasaranPemdaControllerImpl) FindById(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		helper.WriteJSON(w, http.StatusBadRequest, "BAD REQUEST", "Invalid ID format")
+		return
+	}
+	result, err := c.sasaranPemdaService.FindById(r.Context(), id)
+	if err != nil {
+		helper.WriteJSON(w, http.StatusNotFound, "NOT FOUND", err.Error())
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}
+func (c *SasaranPemdaControllerImpl) FindAll(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindAll(r.Context(), params.ByName("tahun"))
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}
+func (c *SasaranPemdaControllerImpl) FindAllWithPokin(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindAllWithPokin(
+		r.Context(),
+		params.ByName("tahun_awal"),
+		params.ByName("tahun_akhir"),
+		params.ByName("jenis_periode"),
+	)
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
 }
 
-func (controller *SasaranPemdaControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sasaranPemdaId := params.ByName("id")
-	id, err := strconv.Atoi(sasaranPemdaId)
+// ── Dual ─────────────────────────────────────────────────────────
+func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDual(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindSasaranPemdaRankhirDual(
+		r.Context(), params.ByName("tahun"), params.ByName("jenis_periode"),
+	)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   "Invalid ID format",
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
 		return
 	}
-
-	err = controller.sasaranPemdaService.Delete(request.Context(), id)
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}
+func (c *SasaranPemdaControllerImpl) FindSasaranPemdaPenetapanDual(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindSasaranPemdaPenetapanDual(
+		r.Context(), params.ByName("tahun"), params.ByName("jenis_periode"),
+	)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
 		return
 	}
-
-	webResponse := web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success delete sasaran pemda",
-		Data:   nil,
-	}
-	helper.WriteToResponseBody(writer, webResponse)
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
 }
 
-func (controller *SasaranPemdaControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sasaranPemdaId := params.ByName("id")
-
-	id, err := strconv.Atoi(sasaranPemdaId)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   "Invalid ID format",
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+// ── Target Layer ─────────────────────────────────────────────────
+func (c *SasaranPemdaControllerImpl) CreateTargetRankhir(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var req sasaranpemda.LayerTargetBatchRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
 		return
 	}
-
-	sasaranPemdaResponse, err := controller.sasaranPemdaService.FindById(request.Context(), id)
+	result, err := c.sasaranPemdaService.CreateTargetSasaranLayer(r.Context(), "rankhir", req)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusNotFound,
-			Status: "NOT FOUND",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
 		return
 	}
-
-	webResponse := web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success get sasaran pemda by id",
-		Data:   sasaranPemdaResponse,
+	helper.WriteJSON(w, http.StatusCreated, "success create target sasaran pemda", result)
+}
+func (c *SasaranPemdaControllerImpl) CreateTargetPenetapan(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var req sasaranpemda.LayerTargetBatchRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
+		return
 	}
-	helper.WriteToResponseBody(writer, webResponse)
+	result, err := c.sasaranPemdaService.CreateTargetSasaranLayer(r.Context(), "penetapan", req)
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusCreated, "success create target sasaran pemda", result)
+}
+func (c *SasaranPemdaControllerImpl) UpdateTargetRankhir(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var req sasaranpemda.LayerTargetUpdateBatchRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
+		return
+	}
+	result, err := c.sasaranPemdaService.UpdateTargetSasaranLayer(r.Context(), "rankhir", req)
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "success update target sasaran pemda", result)
+}
+func (c *SasaranPemdaControllerImpl) UpdateTargetPenetapan(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var req sasaranpemda.LayerTargetUpdateBatchRequest
+	if err := helper.DecodeJSONBody(r, &req); err != nil {
+		helper.WriteBadRequest(w, err)
+		return
+	}
+	result, err := c.sasaranPemdaService.UpdateTargetSasaranLayer(r.Context(), "penetapan", req)
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "success update target sasaran pemda", result)
 }
 
-func (controller *SasaranPemdaControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	tahun := params.ByName("tahun")
-	sasaranPemdaResponses, err := controller.sasaranPemdaService.FindAll(request.Context(), tahun)
+// LockSasaranPemda godoc
+// @Summary      Lock Data Sasaran Pemda
+// @Description  Mengunci data sasaran pemda untuk tahun tertentu (jenis: sasaran_pemda). Setelah lock: create/update/delete sasaran diblokir, target penetapan tidak bisa diubah. Target rankhir masih boleh diubah.
+// @Tags         Sasaran Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan di-lock"  example("2025")
+// @Success      200  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/lock/{tahun} [post]
+func (c *SasaranPemdaControllerImpl) LockSasaranPemda(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.LockSasaranPemda(r.Context(), params.ByName("tahun"))
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
 		return
 	}
-
-	webResponse := web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success get sasaran pemda",
-		Data:   sasaranPemdaResponses,
-	}
-	helper.WriteToResponseBody(writer, webResponse)
+	helper.WriteJSON(w, http.StatusOK, "success lock sasaran pemda", result)
 }
 
-func (controller *SasaranPemdaControllerImpl) FindAllWithPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	tahunAwal := params.ByName("tahun_awal")
-	tahunAkhir := params.ByName("tahun_akhir")
-	jenisPeriode := params.ByName("jenis_periode")
-
-	sasaranPemdaResponses, err := controller.sasaranPemdaService.FindAllWithPokin(request.Context(), tahunAwal, tahunAkhir, jenisPeriode)
+// UnlockSasaranPemda godoc
+// @Summary      Unlock Data Sasaran Pemda
+// @Description  Membuka kunci data sasaran pemda untuk tahun tertentu.
+// @Tags         Sasaran Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan di-unlock"  example("2025")
+// @Success      200  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/lock/{tahun} [delete]
+func (c *SasaranPemdaControllerImpl) UnlockSasaranPemda(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.UnlockSasaranPemda(r.Context(), params.ByName("tahun"))
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
 		return
 	}
+	helper.WriteJSON(w, http.StatusOK, "success unlock sasaran pemda", result)
+}
 
-	webResponse := web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success get sasaran pemda with pokin",
-		Data:   sasaranPemdaResponses,
+// IsSasaranPemdaLocked godoc
+// @Summary      Cek Status Lock Sasaran Pemda
+// @Description  Mengecek apakah data sasaran pemda untuk tahun tertentu sedang terkunci.
+// @Tags         Sasaran Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang dicek"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=sasaranpemda.LockDataPemdaResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/lock/{tahun} [get]
+func (c *SasaranPemdaControllerImpl) IsSasaranPemdaLocked(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.IsSasaranPemdaLocked(r.Context(), params.ByName("tahun"))
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
 	}
-	helper.WriteToResponseBody(writer, webResponse)
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}
+
+// FindAllLockSasaranPemda godoc
+// @Summary      Daftar Semua Lock Sasaran Pemda
+// @Description  Mengambil seluruh daftar tahun yang sedang di-lock untuk modul sasaran pemda (jenis: sasaran_pemda).
+// @Tags         Sasaran Pemda Lock
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  web.WebResponse{data=[]sasaranpemda.LockDataPemdaResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/lock [get]
+func (c *SasaranPemdaControllerImpl) FindAllLockSasaranPemda(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindAllLockSasaranPemda(r.Context())
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
 }
