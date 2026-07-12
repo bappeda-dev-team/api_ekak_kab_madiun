@@ -1446,7 +1446,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		)
 	}
 
-	
+
 	// =====================================================
 	// STRATEGI
 	// =====================================================
@@ -1595,7 +1595,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 }
 
 func (service *PohonKinerjaOpdServiceImpl) FindAllArah(ctx context.Context, kodeOpd, tahun string) (strategic.StrategicArahKebijakanOpdAllResponse, error) {
-	
+
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return strategic.StrategicArahKebijakanOpdAllResponse{}, err
@@ -1880,7 +1880,7 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 
 	row++
 
-		// =====================================================
+	// =====================================================
 	// ISI DATA
 	// =====================================================
 
@@ -1956,7 +1956,7 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 				)
 			}
 		}
-				// =====================================
+		// =====================================
 		// MERGE TUJUAN
 		// =====================================
 
@@ -4344,4 +4344,95 @@ func buildFullChain(
 	}
 
 	return result
+}
+
+func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
+	ctx context.Context,
+	kodeOpd string,
+	tahun int,
+) (pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak], error) {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+
+	jenisPeriode := "RPJMD"
+	jenisIndikator := "renstra"
+
+	tahunStr := strconv.Itoa(tahun)
+
+	tujuanOpds, err := service.tujuanOpdRepository.FindAllByTahunForPokin(ctx, tx, kodeOpd, tahunStr, jenisPeriode, jenisIndikator)
+	if err != nil {
+		log.Printf("Error: TujuanOpd %s: %v", kodeOpd, err)
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+	tujuanResponses := make([]pohonkinerja.TujuanOpdResponse, 0)
+	for _, tujuan := range tujuanOpds {
+		indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0)
+		for _, indikator := range tujuan.Indikator {
+			targetResponses := make([]pohonkinerja.TargetTujuanResponse, 0)
+			for _, target := range indikator.Target {
+				targetResponses = append(targetResponses, pohonkinerja.TargetTujuanResponse{
+					Tahun:  target.Tahun,
+					Target: target.Target,
+					Satuan: target.Satuan,
+				})
+			}
+			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorTujuanResponse{
+				Indikator: indikator.Indikator,
+				Target:    targetResponses,
+			})
+		}
+		tujuanResponses = append(tujuanResponses, pohonkinerja.TujuanOpdResponse{
+			Id:        tujuan.Id,
+			KodeOpd:   tujuan.KodeOpd,
+			Tujuan:    tujuan.Tujuan,
+			Indikator: indikatorResponses,
+		})
+	}
+
+	pokins, err := service.pohonKinerjaOpdRepository.FindAllPokinOpdForCetak(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+
+	pokinResp := make([]pohonkinerja.PokinCetak, 0)
+	for _, pokin := range pokins {
+		pokinResp = append(pokinResp, pohonkinerja.PokinCetak{
+			Id:         pokin.Id,
+			ParentId:   pokin.Parent,
+			LevelPohon: pokin.LevelPohon,
+			JenisPohon: pokin.JenisPohon,
+			NamaPohon:  pokin.NamaPohon,
+		})
+	}
+
+	items := pohonkinerja.PokinOpdCetak{
+		Tahun:      tahun,
+		KodeOpd:    opd.KodeOpd,
+		NamaOpd:    opd.NamaOpd,
+		TujuanOpds: tujuanResponses,
+		Pokins:     pokinResp,
+	}
+
+	version, err := helper.HashJson(items)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+	namaCetak := fmt.Sprintf("CETAK_POKIN_OPD_%s_%d", kodeOpd, tahun)
+	result := pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{
+		Nama:    namaCetak,
+		Version: version,
+		Time:    time.Now(),
+		Item:    items,
+	}
+
+	return result, nil
 }

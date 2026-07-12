@@ -111,4 +111,5 @@ type PohonKinerjaRepository interface {
 	FindPokinOpdByParentIdsAndTahun(ctx context.Context, tx *sql.Tx, parentIds []int, tahun string) ([]domain.PohonKinerja, error)
 	FindPokinPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)
 	FindAllChildPokins(ctx context.Context, tx *sql.Tx, parentId int) ([]domain.PohonKinerja, error)
+	FindAllPokinOpdForCetak(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) ([]domain.PohonKinerja, error)
 }

@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/service"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -304,6 +305,7 @@ func (controller *PohonKinerjaOpdControllerImpl) ExportExcel(writer http.Respons
 		return
 	}
 }
+
 // func (controller *PohonKinerjaOpdControllerImpl) FindAllArahPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 // 	kodeOpd := params.ByName("kode_opd")
 // 	tahun := params.ByName("tahun")
@@ -883,4 +885,54 @@ func (controller *PohonKinerjaOpdControllerImpl) FindLeaderboardHiddenKodeOpds(w
 		Data:   response,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaOpdControllerImpl) Cetak(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	tahunParams := params.ByName("tahun")
+
+	tahun, err := strconv.Atoi(tahunParams)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   nil,
+			Error:  "Tahun tidak valid",
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	kodeOpd := params.ByName("kode_opd")
+	if kodeOpd == "" {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   nil,
+			Error:  "Kode opd harus terisi",
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+
+	}
+
+	pokinOpdCetak, err := controller.PohonKinerjaOpdService.CetakPokin(r.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: http.StatusText(http.StatusInternalServerError),
+			Data:   nil,
+			Error:  "Terjadi kesalahan",
+		}
+		log.Printf("[ERROR] Cetak PohonKinerjaOpdService.CetakPokin: %v", err)
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: http.StatusText(http.StatusOK),
+		Data:   pokinOpdCetak,
+	}
+
+	helper.WriteToResponseBodyWstatus(w, webResponse)
 }
