@@ -12,6 +12,7 @@ type SasaranPemdaService interface {
 	FindById(ctx context.Context, sasaranPemdaId int) (sasaranpemda.SasaranPemdaResponse, error)
 	FindAll(ctx context.Context, tahun string) ([]sasaranpemda.SasaranPemdaResponse, error)
 	FindAllWithPokin(ctx context.Context, tahunAwal, tahunAkhir, jenisPeriode string) ([]sasaranpemda.TematikResponse, error)
+	FindSasaranPemdaRanwal(ctx context.Context, tahun, jenisPeriode string) ([]sasaranpemda.SasaranPemdaResponse, error)
 	// Dual target
 	FindSasaranPemdaRankhirDual(ctx context.Context, tahun, jenisPeriode string) ([]sasaranpemda.SasaranPemdaRankhirDualResponse, error)
 	FindSasaranPemdaPenetapanDual(ctx context.Context, tahun, jenisPeriode string) ([]sasaranpemda.SasaranPemdaPenetapanDualResponse, error)

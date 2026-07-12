@@ -385,8 +385,9 @@ func NewRouter(
 	router.GET("/sasaran_pemda/findall/tahun_awal/:tahun_awal/tahun_akhir/:tahun_akhir/jenis_periode/:jenis_periode", sasaranPemdaController.FindAllWithPokin)
 
 	//renstra
-	router.GET("/sasaran_pemda/rankhir/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaRankhirDual)
-	router.GET("/sasaran_pemda/penetapan/:tahun/:jenis_periode", sasaranPemdaController.FindSasaranPemdaPenetapanDual)
+	router.GET("/sasaran_pemda/ranwal/:tahun", sasaranPemdaController.FindSasaranPemdaRanwal)
+	router.GET("/sasaran_pemda/rankhir/:tahun", sasaranPemdaController.FindSasaranPemdaRankhirDual)
+	router.GET("/sasaran_pemda/penetapan/:tahun", sasaranPemdaController.FindSasaranPemdaPenetapanDual)
 	router.POST("/sasaran_pemda/target/rankhir/create", sasaranPemdaController.CreateTargetRankhir)
 	router.PUT("/sasaran_pemda/target/rankhir/update", sasaranPemdaController.UpdateTargetRankhir)
 	router.POST("/sasaran_pemda/target/penetapan/create", sasaranPemdaController.CreateTargetPenetapan)

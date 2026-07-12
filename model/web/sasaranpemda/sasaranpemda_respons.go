@@ -67,13 +67,14 @@ type IndikatorSubtematikResponse struct {
 
 // ── Dual Response Rankhir ────────────────────────────────────────
 type IndikatorRankhirDualResponse struct {
-	Id               int              `json:"id"`
-	KodeIndikator    string           `json:"kode_indikator"`
-	Indikator        string           `json:"indikator"`
-	RumusPerhitungan string           `json:"rumus_perhitungan"`
-	SumberData       string           `json:"sumber_data"`
-	TargetRanwal     []TargetResponse `json:"target_ranwal"`
-	TargetRankhir    []TargetResponse `json:"target_rankhir"`
+	Id                  int              `json:"id"`
+	KodeIndikator       string           `json:"kode_indikator"`
+	Indikator           string           `json:"indikator"`
+	RumusPerhitungan    string           `json:"rumus_perhitungan"`
+	SumberData          string           `json:"sumber_data"`
+	DefinisiOperasional string           `json:"definisi_operasional"`
+	TargetRanwal        []TargetResponse `json:"target_ranwal"`
+	TargetRankhir       []TargetResponse `json:"target_rankhir"`
 }
 type SasaranPemdaRankhirDualResponse struct {
 	Id           int                            `json:"id"`
@@ -84,13 +85,14 @@ type SasaranPemdaRankhirDualResponse struct {
 
 // ── Dual Response Penetapan ──────────────────────────────────────
 type IndikatorPenetapanDualResponse struct {
-	Id               int              `json:"id"`
-	KodeIndikator    string           `json:"kode_indikator"`
-	Indikator        string           `json:"indikator"`
-	RumusPerhitungan string           `json:"rumus_perhitungan"`
-	SumberData       string           `json:"sumber_data"`
-	TargetRankhir    []TargetResponse `json:"target_rankhir"`
-	TargetPenetapan  []TargetResponse `json:"target_penetapan"`
+	Id                  int              `json:"id"`
+	KodeIndikator       string           `json:"kode_indikator"`
+	Indikator           string           `json:"indikator"`
+	RumusPerhitungan    string           `json:"rumus_perhitungan"`
+	SumberData          string           `json:"sumber_data"`
+	DefinisiOperasional string           `json:"definisi_operasional"`
+	TargetRankhir       []TargetResponse `json:"target_rankhir"`
+	TargetPenetapan     []TargetResponse `json:"target_penetapan"`
 }
 type SasaranPemdaPenetapanDualResponse struct {
 	Id           int                              `json:"id"`

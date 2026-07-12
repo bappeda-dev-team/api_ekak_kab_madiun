@@ -19,6 +19,7 @@ type SasaranPemdaRepository interface {
 	FindAllByTahun(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode, jenis string) ([]domain.SasaranPemda, error)
 	FindIndikatorByKode(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.IndikatorPemda, error)
 	FindTargetLayerById(ctx context.Context, tx *sql.Tx, id int) (domain.TargetPemda, error)
+	FindRanwalByTahun(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string) ([]domain.SasaranPemda, error)
 	// ── TARGET LAYER ─────────────────────────────────────────────
 	CreateTargetLayer(ctx context.Context, tx *sql.Tx, target domain.TargetPemda) (domain.TargetPemda, error)
 	UpdateTargetLayerById(ctx context.Context, tx *sql.Tx, id int, target, satuan string) (domain.TargetPemda, error)

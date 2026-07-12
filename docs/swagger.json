@@ -2688,6 +2688,183 @@
                 }
             }
         },
+        "/sasaran_pemda/penetapan/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: penetapan).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Penetapan"
+                ],
+                "summary": "Daftar Sasaran Pemda Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_pemda/rankhir/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: rankhir).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Rankhir"
+                ],
+                "summary": "Daftar Sasaran Pemda Rankhir",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_pemda/ranwal/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: renstra).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Ranwal"
+                ],
+                "summary": "Daftar Sasaran Pemda Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/trialtujuan_opd/penetapan/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -6511,6 +6688,34 @@
                 }
             }
         },
+        "sasaranpemda.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "id DB auto-increment",
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "description": "IND-SAS-PMD-YYYY-xxxxx",
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.TargetResponse"
+                    }
+                }
+            }
+        },
         "sasaranpemda.LockDataPemdaResponse": {
             "type": "object",
             "properties": {
@@ -6525,6 +6730,82 @@
                 },
                 "tahun": {
                     "type": "string"
+                }
+            }
+        },
+        "sasaranpemda.PeriodeResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranpemda.SasaranPemdaResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.IndikatorResponse"
+                    }
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "nama_subtema": {
+                    "type": "string"
+                },
+                "periode": {
+                    "$ref": "#/definitions/sasaranpemda.PeriodeResponse"
+                },
+                "sasaran_pemda": {
+                    "type": "string"
+                },
+                "subtema_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
+                    "type": "string"
+                },
+                "tujuan_pemda_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sasaranpemda.TargetDisplay": {
+            "type": "object"
+        },
+        "sasaranpemda.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "id DB auto-increment (0 = slot kosong)",
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/sasaranpemda.TargetDisplay"
                 }
             }
         },

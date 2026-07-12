@@ -438,15 +438,26 @@ func (s *SasaranPemdaServiceImpl) FindAll(ctx context.Context, tahun string) ([]
 	if err != nil {
 		return nil, err
 	}
+	if len(list) == 0 {
+		return []sasaranpemda.SasaranPemdaResponse{}, nil
+	}
+	// Batch load pohon kinerja — 1 query, bukan N
+	subtemaIds := make([]int, 0, len(list))
+	for _, sp := range list {
+		subtemaIds = append(subtemaIds, sp.SubtemaId)
+	}
+	pokinMap, err := s.PohonKinerjaRepository.FindByIds(ctx, tx, subtemaIds)
+	if err != nil {
+		return nil, fmt.Errorf("gagal batch load pohon kinerja: %v", err)
+	}
 	resp := make([]sasaranpemda.SasaranPemdaResponse, 0, len(list))
 	for _, sp := range list {
-		pokin, err := s.PohonKinerjaRepository.FindById(ctx, tx, sp.SubtemaId)
-		if err != nil {
-			return nil, fmt.Errorf("gagal ambil pohon kinerja: %v", err)
-		}
 		resp = append(resp, sasaranpemda.SasaranPemdaResponse{
-			Id: sp.Id, SubtemaId: sp.SubtemaId,
-			NamaSubtema: pokin.NamaPohon, SasaranPemda: sp.SasaranPemda,
+			Id:           sp.Id,
+			SubtemaId:    sp.SubtemaId,
+			NamaSubtema:  pokinMap[sp.SubtemaId].NamaPohon,
+			SasaranPemda: sp.SasaranPemda,
+			Indikator:    toIndikatorResponsesSasaran(sp.Indikator),
 		})
 	}
 	return resp, nil
@@ -543,6 +554,132 @@ func (s *SasaranPemdaServiceImpl) FindAllWithPokin(
 	return result, nil
 }
 
+// ranwal
+func hasRealTargetSasaran(t domain.TargetPemda) bool {
+	raw := strings.TrimSpace(t.Target)
+	return raw != "" && raw != "-"
+}
+func applyTargetOverrideSasaran(base, override []domain.SasaranPemda) []domain.SasaranPemda {
+	type key struct {
+		sasaranId     int
+		kodeIndikator string
+	}
+	lookup := make(map[key]domain.TargetPemda)
+	for _, sp := range override {
+		for _, ind := range sp.Indikator {
+			for _, tg := range ind.Target {
+				if hasRealTargetSasaran(tg) {
+					lookup[key{sp.Id, ind.KodeIndikator}] = tg
+					break
+				}
+			}
+		}
+	}
+	if len(lookup) == 0 {
+		return base
+	}
+	result := make([]domain.SasaranPemda, len(base))
+	for i, sp := range base {
+		newSP := sp
+		newSP.Indikator = make([]domain.IndikatorPemda, len(sp.Indikator))
+		for j, ind := range sp.Indikator {
+			newInd := ind
+			if tg, ok := lookup[key{sp.Id, ind.KodeIndikator}]; ok {
+				newInd.Target = []domain.TargetPemda{tg}
+			} else {
+				newInd.Target = make([]domain.TargetPemda, len(ind.Target))
+				copy(newInd.Target, ind.Target)
+			}
+			newSP.Indikator[j] = newInd
+		}
+		result[i] = newSP
+	}
+	return result
+}
+func (s *SasaranPemdaServiceImpl) loadLayerRenstra(
+	ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string,
+) ([]domain.SasaranPemda, error) {
+	return s.SasaranPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+}
+func (s *SasaranPemdaServiceImpl) loadLayerRanwal(
+	ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string,
+) ([]domain.SasaranPemda, error) {
+	base, err := s.loadLayerRenstra(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	ov, err := s.SasaranPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "ranwal")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return applyTargetOverrideSasaran(base, ov), nil
+}
+func (s *SasaranPemdaServiceImpl) buildSasaranPemdaListResponse(
+	ctx context.Context, tx *sql.Tx, list []domain.SasaranPemda,
+) ([]sasaranpemda.SasaranPemdaResponse, error) {
+	responses := make([]sasaranpemda.SasaranPemdaResponse, 0, len(list))
+	for _, sp := range list {
+		pokin, err := s.PohonKinerjaRepository.FindById(ctx, tx, sp.SubtemaId)
+		if err != nil {
+			return nil, fmt.Errorf("gagal ambil pohon kinerja: %v", err)
+		}
+		tujuan, err := s.TujuanPemdaRepository.FindById(ctx, tx, sp.TujuanPemdaId)
+		if err != nil {
+			return nil, fmt.Errorf("gagal ambil tujuan pemda: %v", err)
+		}
+		responses = append(responses, sasaranpemda.SasaranPemdaResponse{
+			Id: sp.Id, TujuanPemdaId: sp.TujuanPemdaId,
+			TujuanPemda: tujuan.TujuanPemda,
+			SubtemaId:   sp.SubtemaId, NamaSubtema: pokin.NamaPohon,
+			SasaranPemda: sp.SasaranPemda,
+			Periode: sasaranpemda.PeriodeResponse{
+				Id:           sp.PeriodeId,
+				TahunAwal:    sp.Periode.TahunAwal,
+				TahunAkhir:   sp.Periode.TahunAkhir,
+				JenisPeriode: sp.Periode.JenisPeriode,
+			},
+			Indikator: toIndikatorResponsesSasaran(sp.Indikator),
+		})
+	}
+	return responses, nil
+}
+
+func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRanwal(
+	ctx context.Context, tahun, jenisPeriode string,
+) ([]sasaranpemda.SasaranPemdaResponse, error) {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return nil, fmt.Errorf("format tahun tidak valid, contoh: 2025")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	list, err := s.SasaranPemdaRepository.FindRanwalByTahun(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]sasaranpemda.SasaranPemdaResponse, 0, len(list))
+	for _, sp := range list {
+		responses = append(responses, sasaranpemda.SasaranPemdaResponse{
+			Id:            sp.Id,
+			TujuanPemdaId: sp.TujuanPemdaId,
+			TujuanPemda:   sp.TujuanPemdaText,
+			SubtemaId:     sp.SubtemaId,
+			NamaSubtema:   sp.NamaSubtema,
+			SasaranPemda:  sp.SasaranPemda,
+			Periode: sasaranpemda.PeriodeResponse{
+				Id:           sp.PeriodeId,
+				TahunAwal:    sp.Periode.TahunAwal,
+				TahunAkhir:   sp.Periode.TahunAkhir,
+				JenisPeriode: sp.Periode.JenisPeriode,
+			},
+			Indikator: toIndikatorResponsesSasaran(sp.Indikator),
+		})
+	}
+	return responses, nil
+}
+
 // ── DUAL RANKHIR ─────────────────────────────────────────────────
 func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDual(
 	ctx context.Context, tahun, jenisPeriode string,
@@ -563,7 +700,6 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDual(
 	if err != nil {
 		return nil, err
 	}
-	// Key: kode_indikator (stabil lintas layer)
 	type dualKey struct {
 		sasaranId     int
 		kodeIndikator string
@@ -578,22 +714,26 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDual(
 	responses := make([]sasaranpemda.SasaranPemdaRankhirDualResponse, 0, len(baseList))
 	for _, sp := range baseList {
 		resp := sasaranpemda.SasaranPemdaRankhirDualResponse{
-			Id: sp.Id, SasaranPemda: sp.SasaranPemda,
+			Id:           sp.Id,
+			SasaranPemda: sp.SasaranPemda,
 			Periode: sasaranpemda.PeriodeResponse{
-				TahunAwal: sp.Periode.TahunAwal, TahunAkhir: sp.Periode.TahunAkhir,
+				TahunAwal:    sp.Periode.TahunAwal,
+				TahunAkhir:   sp.Periode.TahunAkhir,
 				JenisPeriode: sp.Periode.JenisPeriode,
 			},
+			Indikator: []sasaranpemda.IndikatorRankhirDualResponse{}, // [] bukan null
 		}
 		for _, ind := range sp.Indikator {
 			k := dualKey{sp.Id, ind.KodeIndikator}
 			resp.Indikator = append(resp.Indikator, sasaranpemda.IndikatorRankhirDualResponse{
-				Id:               ind.Id,
-				KodeIndikator:    ind.KodeIndikator,
-				Indikator:        ind.Indikator.String,
-				RumusPerhitungan: ind.RumusPerhitungan.String,
-				SumberData:       ind.SumberData.String,
-				TargetRanwal:     toTargetPemdaSlice(ind.Target),
-				TargetRankhir:    toTargetPemdaSlice(rankhirMap[k]),
+				Id:                  ind.Id,
+				KodeIndikator:       ind.KodeIndikator,
+				Indikator:           ind.Indikator.String,
+				RumusPerhitungan:    ind.RumusPerhitungan.String,
+				SumberData:          ind.SumberData.String,
+				DefinisiOperasional: ind.DefinisiOperasional.String,
+				TargetRanwal:        toTargetPemdaSlice(ind.Target),
+				TargetRankhir:       toTargetPemdaSlice(rankhirMap[k]),
 			})
 		}
 		responses = append(responses, resp)
@@ -635,22 +775,26 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDual(
 	responses := make([]sasaranpemda.SasaranPemdaPenetapanDualResponse, 0, len(rankhirList))
 	for _, sp := range rankhirList {
 		resp := sasaranpemda.SasaranPemdaPenetapanDualResponse{
-			Id: sp.Id, SasaranPemda: sp.SasaranPemda,
+			Id:           sp.Id,
+			SasaranPemda: sp.SasaranPemda,
 			Periode: sasaranpemda.PeriodeResponse{
-				TahunAwal: sp.Periode.TahunAwal, TahunAkhir: sp.Periode.TahunAkhir,
+				TahunAwal:    sp.Periode.TahunAwal,
+				TahunAkhir:   sp.Periode.TahunAkhir,
 				JenisPeriode: sp.Periode.JenisPeriode,
 			},
+			Indikator: []sasaranpemda.IndikatorPenetapanDualResponse{}, // [] bukan null
 		}
 		for _, ind := range sp.Indikator {
 			k := dualKey{sp.Id, ind.KodeIndikator}
 			resp.Indikator = append(resp.Indikator, sasaranpemda.IndikatorPenetapanDualResponse{
-				Id:               ind.Id,
-				KodeIndikator:    ind.KodeIndikator,
-				Indikator:        ind.Indikator.String,
-				RumusPerhitungan: ind.RumusPerhitungan.String,
-				SumberData:       ind.SumberData.String,
-				TargetRankhir:    toTargetPemdaSlice(ind.Target),
-				TargetPenetapan:  toTargetPemdaSlice(penetapanMap[k]),
+				Id:                  ind.Id,
+				KodeIndikator:       ind.KodeIndikator,
+				Indikator:           ind.Indikator.String,
+				RumusPerhitungan:    ind.RumusPerhitungan.String,
+				SumberData:          ind.SumberData.String,
+				DefinisiOperasional: ind.DefinisiOperasional.String,
+				TargetRankhir:       toTargetPemdaSlice(ind.Target),
+				TargetPenetapan:     toTargetPemdaSlice(penetapanMap[k]),
 			})
 		}
 		responses = append(responses, resp)

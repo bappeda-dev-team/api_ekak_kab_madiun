@@ -13,6 +13,8 @@ type SasaranPemdaController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllWithPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindSasaranPemdaRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
 	// Dual target
 	FindSasaranPemdaRankhirDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindSasaranPemdaPenetapanDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params)

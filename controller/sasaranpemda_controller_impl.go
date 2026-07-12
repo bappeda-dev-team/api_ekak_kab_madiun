@@ -110,10 +110,22 @@ func (c *SasaranPemdaControllerImpl) FindAllWithPokin(w http.ResponseWriter, r *
 	helper.WriteJSON(w, http.StatusOK, "OK", result)
 }
 
-// ── Dual ─────────────────────────────────────────────────────────
-func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDual(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	result, err := c.sasaranPemdaService.FindSasaranPemdaRankhirDual(
-		r.Context(), params.ByName("tahun"), params.ByName("jenis_periode"),
+// FindSasaranPemdaRanwal godoc
+// @Summary      Daftar Sasaran Pemda Renstra
+// @Description  Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: renstra).
+// @Tags         Sasaran Pemda Ranwal
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan diambil"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]sasaranpemda.SasaranPemdaResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/ranwal/{tahun} [get]
+func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRanwal(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindSasaranPemdaRanwal(
+		r.Context(),
+		params.ByName("tahun"),
+		"RPJMD",
 	)
 	if err != nil {
 		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
@@ -121,9 +133,44 @@ func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDual(w http.Response
 	}
 	helper.WriteJSON(w, http.StatusOK, "OK", result)
 }
+
+// ── Dual ─────────────────────────────────────────────────────────
+// FindSasaranPemdaRankhirDual godoc
+// @Summary      Daftar Sasaran Pemda Rankhir
+// @Description  Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: rankhir).
+// @Tags         Sasaran Pemda Rankhir
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan diambil"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]sasaranpemda.SasaranPemdaResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/rankhir/{tahun} [get]
+func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDual(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindSasaranPemdaRankhirDual(
+		r.Context(), params.ByName("tahun"), "RPJMD",
+	)
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}
+
+// FindSasaranPemdaPenetapanDual godoc
+// @Summary      Daftar Sasaran Pemda Penetapan
+// @Description  Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: penetapan).
+// @Tags         Sasaran Pemda Penetapan
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan diambil"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]sasaranpemda.SasaranPemdaResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/penetapan/{tahun} [get]
 func (c *SasaranPemdaControllerImpl) FindSasaranPemdaPenetapanDual(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	result, err := c.sasaranPemdaService.FindSasaranPemdaPenetapanDual(
-		r.Context(), params.ByName("tahun"), params.ByName("jenis_periode"),
+		r.Context(), params.ByName("tahun"), "RPJMD",
 	)
 	if err != nil {
 		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))

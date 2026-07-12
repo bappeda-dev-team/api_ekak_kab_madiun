@@ -1246,6 +1246,25 @@ definitions:
       target:
         type: string
     type: object
+  sasaranpemda.IndikatorResponse:
+    properties:
+      id:
+        description: id DB auto-increment
+        type: integer
+      indikator:
+        type: string
+      kode_indikator:
+        description: IND-SAS-PMD-YYYY-xxxxx
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/sasaranpemda.TargetResponse'
+        type: array
+    type: object
   sasaranpemda.LockDataPemdaResponse:
     properties:
       id:
@@ -1256,6 +1275,56 @@ definitions:
         type: boolean
       tahun:
         type: string
+    type: object
+  sasaranpemda.PeriodeResponse:
+    properties:
+      id:
+        type: integer
+      jenis_periode:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+    type: object
+  sasaranpemda.SasaranPemdaResponse:
+    properties:
+      id:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/sasaranpemda.IndikatorResponse'
+        type: array
+      jenis_pohon:
+        type: string
+      nama_subtema:
+        type: string
+      periode:
+        $ref: '#/definitions/sasaranpemda.PeriodeResponse'
+      sasaran_pemda:
+        type: string
+      subtema_id:
+        type: integer
+      tujuan_pemda:
+        type: string
+      tujuan_pemda_id:
+        type: integer
+    type: object
+  sasaranpemda.TargetDisplay:
+    type: object
+  sasaranpemda.TargetResponse:
+    properties:
+      id:
+        description: id DB auto-increment (0 = slot kosong)
+        type: integer
+      jenis:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        $ref: '#/definitions/sasaranpemda.TargetDisplay'
     type: object
   tujuanopd.IndikatorCreateRequest:
     properties:
@@ -3426,6 +3495,111 @@ paths:
       summary: Lock Data Sasaran Pemda
       tags:
       - Sasaran Pemda Lock
+  /sasaran_pemda/penetapan/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: 'Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: penetapan).'
+      parameters:
+      - description: Tahun yang akan diambil
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranpemda.SasaranPemdaResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Sasaran Pemda Penetapan
+      tags:
+      - Sasaran Pemda Penetapan
+  /sasaran_pemda/rankhir/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: 'Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: rankhir).'
+      parameters:
+      - description: Tahun yang akan diambil
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranpemda.SasaranPemdaResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Sasaran Pemda Rankhir
+      tags:
+      - Sasaran Pemda Rankhir
+  /sasaran_pemda/ranwal/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: 'Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: renstra).'
+      parameters:
+      - description: Tahun yang akan diambil
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranpemda.SasaranPemdaResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Sasaran Pemda Renstra
+      tags:
+      - Sasaran Pemda Ranwal
   /trialtujuan_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
