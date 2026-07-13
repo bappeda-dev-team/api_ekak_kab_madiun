@@ -5564,7 +5564,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindAllPokinOpdForCetak(ctx contex
 		WITH RECURSIVE pohon AS (
 		SELECT id, parent, nama_pohon, tahun, level_pohon, jenis_pohon
 		FROM tb_pohon_kinerja
-		WHERE kode_opd = ? AND tahun = ?
+		WHERE kode_opd = ? AND tahun = ? AND parent = 0
 
 		UNION ALL
 
