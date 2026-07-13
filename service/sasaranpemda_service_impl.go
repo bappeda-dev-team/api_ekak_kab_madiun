@@ -645,6 +645,34 @@ func (s *SasaranPemdaServiceImpl) buildSasaranPemdaListResponse(
 	return responses, nil
 }
 
+// emptyTargetSasaranResponse — slot placeholder untuk target yang belum ada data di DB
+func emptyTargetSasaranResponse(tahun, jenis string) sasaranpemda.TargetResponse {
+	return sasaranpemda.TargetResponse{
+		Id:     0,
+		Target: sasaranpemda.NewTargetDisplayFromString(""),
+		Satuan: "",
+		Tahun:  tahun,
+		Jenis:  jenis,
+	}
+}
+
+// singleTargetOrEmpty — ambil 1 target dari slice (yang punya data nyata),
+// atau kembalikan slot kosong jika tidak ada.
+func singleTargetOrEmpty(targets []domain.TargetPemda, tahun, jenis string) sasaranpemda.TargetResponse {
+	for _, t := range targets {
+		if hasRealTargetSasaran(t) {
+			return sasaranpemda.TargetResponse{
+				Id:     t.Id,
+				Target: sasaranpemda.NewTargetDisplayFromString(t.Target),
+				Satuan: t.Satuan,
+				Tahun:  t.Tahun,
+				Jenis:  t.Jenis,
+			}
+		}
+	}
+	return emptyTargetSasaranResponse(tahun, jenis)
+}
+
 func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRanwal(
 	ctx context.Context, tahun, jenisPeriode string,
 ) ([]sasaranpemda.SasaranPemdaResponse, error) {
@@ -662,6 +690,30 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRanwal(
 	}
 	responses := make([]sasaranpemda.SasaranPemdaResponse, 0, len(list))
 	for _, sp := range list {
+		// Bangun indikator dengan 1 slot target per indikator, placeholder jika tidak ada data
+		indikatorResponses := make([]sasaranpemda.IndikatorResponse, 0, len(sp.Indikator))
+		for _, ind := range sp.Indikator {
+			var targetResp []sasaranpemda.TargetResponse
+			if len(ind.Target) > 0 {
+				// Ada data → mapping normal
+				targetResp = toTargetPemdaSlice(ind.Target)
+			} else {
+				// Tidak ada data → 1 slot kosong
+				targetResp = []sasaranpemda.TargetResponse{emptyTargetSasaranResponse(tahun, "ranwal")}
+			}
+			indikatorResponses = append(indikatorResponses, sasaranpemda.IndikatorResponse{
+				Id:                  ind.Id,
+				KodeIndikator:       ind.KodeIndikator,
+				Indikator:           ind.Indikator.String,
+				RumusPerhitungan:    ind.RumusPerhitungan.String,
+				SumberData:          ind.SumberData.String,
+				DefinisiOperasional: ind.DefinisiOperasional.String,
+				Target:              targetResp,
+			})
+		}
+		sort.Slice(indikatorResponses, func(i, j int) bool {
+			return indikatorResponses[i].Id < indikatorResponses[j].Id
+		})
 		responses = append(responses, sasaranpemda.SasaranPemdaResponse{
 			Id:            sp.Id,
 			TujuanPemdaId: sp.TujuanPemdaId,
@@ -675,7 +727,7 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRanwal(
 				TahunAkhir:   sp.Periode.TahunAkhir,
 				JenisPeriode: sp.Periode.JenisPeriode,
 			},
-			Indikator: toIndikatorResponsesSasaran(sp.Indikator),
+			Indikator: indikatorResponses,
 		})
 	}
 	return responses, nil
@@ -693,10 +745,12 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDual(
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
+	// Base = renstra (metadata indikator)
 	baseList, err := s.SasaranPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "renstra")
 	if err != nil {
 		return nil, err
 	}
+	// Layer rankhir (hanya target)
 	rankhirList, err := s.SasaranPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
 	if err != nil {
 		return nil, err
@@ -705,6 +759,7 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDual(
 		sasaranId     int
 		kodeIndikator string
 	}
+	// Bangun map: kodeIndikator → target rankhir
 	rankhirMap := make(map[dualKey][]domain.TargetPemda)
 	for _, sp := range rankhirList {
 		for _, ind := range sp.Indikator {
@@ -722,10 +777,14 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDual(
 				TahunAkhir:   sp.Periode.TahunAkhir,
 				JenisPeriode: sp.Periode.JenisPeriode,
 			},
-			Indikator: []sasaranpemda.IndikatorRankhirDualResponse{}, // [] bukan null
+			Indikator: []sasaranpemda.IndikatorRankhirDualResponse{},
 		}
 		for _, ind := range sp.Indikator {
 			k := dualKey{sp.Id, ind.KodeIndikator}
+			// TargetRanwal = 1 slot dari renstra, placeholder jika tidak ada
+			ranwalSlot := singleTargetOrEmpty(ind.Target, tahun, "ranwal")
+			// TargetRankhir = 1 slot dari rankhirMap, placeholder jika tidak ada
+			rankhirSlot := singleTargetOrEmpty(rankhirMap[k], tahun, "rankhir")
 			resp.Indikator = append(resp.Indikator, sasaranpemda.IndikatorRankhirDualResponse{
 				Id:                  ind.Id,
 				KodeIndikator:       ind.KodeIndikator,
@@ -733,8 +792,8 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDual(
 				RumusPerhitungan:    ind.RumusPerhitungan.String,
 				SumberData:          ind.SumberData.String,
 				DefinisiOperasional: ind.DefinisiOperasional.String,
-				TargetRanwal:        toTargetPemdaSlice(ind.Target),
-				TargetRankhir:       toTargetPemdaSlice(rankhirMap[k]),
+				TargetRanwal:        []sasaranpemda.TargetResponse{ranwalSlot},
+				TargetRankhir:       []sasaranpemda.TargetResponse{rankhirSlot},
 			})
 		}
 		responses = append(responses, resp)
@@ -754,10 +813,12 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDual(
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
+	// Base = rankhir (1 slot target per indikator untuk tahun ini)
 	rankhirList, err := s.SasaranPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
 	if err != nil {
 		return nil, err
 	}
+	// Layer penetapan
 	penetapanList, err := s.SasaranPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "penetapan")
 	if err != nil {
 		return nil, err
@@ -773,8 +834,36 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDual(
 			penetapanMap[k] = append(penetapanMap[k], ind.Target...)
 		}
 	}
-	responses := make([]sasaranpemda.SasaranPemdaPenetapanDualResponse, 0, len(rankhirList))
-	for _, sp := range rankhirList {
+	// Untuk mendapatkan metadata indikator (nama, kode, dll) dari renstra jika rankhir tidak ada
+	renstraList, err := s.SasaranPemdaRepository.FindAllByTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	// Buat map metadata indikator dari renstra sebagai fallback
+	type indKey struct {
+		sasaranId     int
+		kodeIndikator string
+	}
+	renstraIndMap := make(map[indKey]domain.IndikatorPemda)
+	for _, sp := range renstraList {
+		for _, ind := range sp.Indikator {
+			renstraIndMap[indKey{sp.Id, ind.KodeIndikator}] = ind
+		}
+	}
+	// Merge: jika ada di rankhir pakai rankhir, jika tidak pakai renstra sebagai base
+	type sasaranIndikator struct {
+		sasaran    domain.SasaranPemda
+		indikators []domain.IndikatorPemda
+	}
+	// Gunakan rankhir sebagai base; jika kosong, fallback ke renstra
+	var baseList []domain.SasaranPemda
+	if len(rankhirList) > 0 {
+		baseList = rankhirList
+	} else {
+		baseList = renstraList
+	}
+	responses := make([]sasaranpemda.SasaranPemdaPenetapanDualResponse, 0, len(baseList))
+	for _, sp := range baseList {
 		resp := sasaranpemda.SasaranPemdaPenetapanDualResponse{
 			Id:           sp.Id,
 			SasaranPemda: sp.SasaranPemda,
@@ -783,10 +872,14 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDual(
 				TahunAkhir:   sp.Periode.TahunAkhir,
 				JenisPeriode: sp.Periode.JenisPeriode,
 			},
-			Indikator: []sasaranpemda.IndikatorPenetapanDualResponse{}, // [] bukan null
+			Indikator: []sasaranpemda.IndikatorPenetapanDualResponse{},
 		}
 		for _, ind := range sp.Indikator {
 			k := dualKey{sp.Id, ind.KodeIndikator}
+			// TargetRankhir = 1 slot dari data rankhir, placeholder jika tidak ada
+			rankhirSlot := singleTargetOrEmpty(ind.Target, tahun, "rankhir")
+			// TargetPenetapan = 1 slot dari penetapanMap, placeholder jika tidak ada
+			penetapanSlot := singleTargetOrEmpty(penetapanMap[k], tahun, "penetapan")
 			resp.Indikator = append(resp.Indikator, sasaranpemda.IndikatorPenetapanDualResponse{
 				Id:                  ind.Id,
 				KodeIndikator:       ind.KodeIndikator,
@@ -794,8 +887,8 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDual(
 				RumusPerhitungan:    ind.RumusPerhitungan.String,
 				SumberData:          ind.SumberData.String,
 				DefinisiOperasional: ind.DefinisiOperasional.String,
-				TargetRankhir:       toTargetPemdaSlice(ind.Target),
-				TargetPenetapan:     toTargetPemdaSlice(penetapanMap[k]),
+				TargetRankhir:       []sasaranpemda.TargetResponse{rankhirSlot},
+				TargetPenetapan:     []sasaranpemda.TargetResponse{penetapanSlot},
 			})
 		}
 		responses = append(responses, resp)
