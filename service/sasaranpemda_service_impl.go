@@ -153,18 +153,75 @@ func toIndikatorResponsesSasaran(inds []domain.IndikatorPemda) []sasaranpemda.In
 }
 
 // ── Lock Guard ───────────────────────────────────────────────────
+func isTahunInPeriodeSasaran(tahun, tahunAwal, tahunAkhir string) bool {
+	t, _ := strconv.Atoi(strings.TrimSpace(tahun))
+	ta, _ := strconv.Atoi(strings.TrimSpace(tahunAwal))
+	tb, _ := strconv.Atoi(strings.TrimSpace(tahunAkhir))
+	return t >= ta && t <= tb
+}
+
+// isPeriodeOverlapLockSasaran — cek apakah ada tahun lock yang masuk range periode.
+func (s *SasaranPemdaServiceImpl) isPeriodeOverlapLockSasaran(
+	ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir string,
+) (bool, string, error) {
+	locks, err := s.LockDataPemdaRepository.FindAllByJenis(ctx, tx, lockJenisSasaranPemda)
+	if err != nil {
+		return false, "", err
+	}
+	for _, lock := range locks {
+		if isTahunInPeriodeSasaran(lock.Tahun, tahunAwal, tahunAkhir) {
+			return true, lock.Tahun, nil
+		}
+	}
+	return false, "", nil
+}
+
+// assertSasaranNotLocked — blok create/delete sasaran jika periode overlap tahun lock.
 func (s *SasaranPemdaServiceImpl) assertSasaranNotLocked(
-	ctx context.Context, tx *sql.Tx, tahun string,
+	ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir string,
 ) error {
-	locked, err := s.LockDataPemdaRepository.IsLocked(ctx, tx, lockJenisSasaranPemda, tahun)
+	locked, tahun, err := s.isPeriodeOverlapLockSasaran(ctx, tx, tahunAwal, tahunAkhir)
 	if err != nil {
 		return err
 	}
 	if locked {
-		return fmt.Errorf("data sasaran pemda terkunci untuk tahun %s, modifikasi tidak diizinkan", tahun)
+		return fmt.Errorf(
+			"data sasaran pemda terkunci untuk tahun %s (periode %s-%s). Penghapusan tidak diizinkan",
+			tahun, tahunAwal, tahunAkhir,
+		)
 	}
 	return nil
 }
+
+// assertSasaranIndikatorRemovalNotLocked — saat lock overlap, indikator tidak boleh dihapus via update.
+func (s *SasaranPemdaServiceImpl) assertSasaranIndikatorRemovalNotLocked(
+	ctx context.Context, tx *sql.Tx,
+	tahunAwal, tahunAkhir string,
+	existing []domain.IndikatorPemda,
+	request []sasaranpemda.IndikatorUpdateRequest,
+) error {
+	locked, lockTahun, err := s.isPeriodeOverlapLockSasaran(ctx, tx, tahunAwal, tahunAkhir)
+	if err != nil || !locked {
+		return err
+	}
+	kept := make(map[int]bool, len(request))
+	for _, req := range request {
+		if req.IdIndikator > 0 {
+			kept[req.IdIndikator] = true
+		}
+	}
+	for _, ind := range existing {
+		if !kept[ind.Id] {
+			return fmt.Errorf(
+				"indikator id %d tidak dapat dihapus karena data sasaran pemda terkunci untuk tahun %s (periode %s-%s)",
+				ind.Id, lockTahun, tahunAwal, tahunAkhir,
+			)
+		}
+	}
+	return nil
+}
+
+// assertTargetLayerAllowed — saat tahun lock: hanya penetapan yang diblokir; renstra/ranwal/rankhir boleh.
 func (s *SasaranPemdaServiceImpl) assertTargetLayerAllowed(
 	ctx context.Context, tx *sql.Tx, tahun, targetJenis string,
 ) error {
@@ -176,7 +233,7 @@ func (s *SasaranPemdaServiceImpl) assertTargetLayerAllowed(
 		return nil
 	}
 	switch strings.TrimSpace(targetJenis) {
-	case "renstra", "rankhir":
+	case "renstra", "ranwal", "rankhir":
 		return nil
 	case "penetapan":
 		return fmt.Errorf("target jenis '%s' tahun %s tidak dapat diubah karena data sasaran pemda terkunci",
@@ -209,7 +266,7 @@ func (s *SasaranPemdaServiceImpl) Create(
 	if err != nil {
 		return sasaranpemda.SasaranPemdaResponse{}, fmt.Errorf("periode tidak ditemukan: %v", err)
 	}
-	if err := s.assertSasaranNotLocked(ctx, tx, periode.TahunAwal); err != nil {
+	if err := s.assertSasaranNotLocked(ctx, tx, periode.TahunAwal, periode.TahunAkhir); err != nil {
 		return sasaranpemda.SasaranPemdaResponse{}, err
 	}
 	tahunAwal, _ := strconv.Atoi(periode.TahunAwal)
@@ -290,7 +347,10 @@ func (s *SasaranPemdaServiceImpl) Update(
 	if err != nil {
 		return sasaranpemda.SasaranPemdaResponse{}, err
 	}
-	if err := s.assertSasaranNotLocked(ctx, tx, existing.Periode.TahunAwal); err != nil {
+	if err := s.assertSasaranIndikatorRemovalNotLocked(
+		ctx, tx, existing.Periode.TahunAwal, existing.Periode.TahunAkhir,
+		existing.Indikator, request.Indikator,
+	); err != nil {
 		return sasaranpemda.SasaranPemdaResponse{}, err
 	}
 	if !s.TujuanPemdaRepository.IsIdExists(ctx, tx, request.TujuanPemdaId) {
@@ -392,7 +452,7 @@ func (s *SasaranPemdaServiceImpl) Delete(ctx context.Context, id int) error {
 	if err != nil {
 		return err
 	}
-	if err := s.assertSasaranNotLocked(ctx, tx, existing.Periode.TahunAwal); err != nil {
+	if err := s.assertSasaranNotLocked(ctx, tx, existing.Periode.TahunAwal, existing.Periode.TahunAkhir); err != nil {
 		return err
 	}
 	return s.SasaranPemdaRepository.Delete(ctx, tx, id)

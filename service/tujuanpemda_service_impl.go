@@ -212,6 +212,9 @@ func (service *TujuanPemdaServiceImpl) Create(
 	}
 	tahunAwal, _ := strconv.Atoi(periode.TahunAwal)
 	tahunAkhir, _ := strconv.Atoi(periode.TahunAkhir)
+	if err = service.assertIndikatorNotLocked(ctx, tx, periode.TahunAwal, periode.TahunAkhir); err != nil {
+		return tujuanpemda.TujuanPemdaResponse{}, err
+	}
 	if err = validateTargetTahun(request.Indikator, tahunAwal, tahunAkhir); err != nil {
 		return tujuanpemda.TujuanPemdaResponse{}, err
 	}
@@ -314,6 +317,12 @@ func (service *TujuanPemdaServiceImpl) Update(
 	if err != nil {
 		return tujuanpemda.TujuanPemdaResponse{}, err
 	}
+	if err = service.assertIndikatorRemovalNotLocked(
+		ctx, tx, existing.TahunAwalPeriode, existing.TahunAkhirPeriode,
+		existing.IndikatorPemda, request.Indikator,
+	); err != nil {
+		return tujuanpemda.TujuanPemdaResponse{}, err
+	}
 	// Periode tidak di-update di endpoint ini — pakai data existing untuk validasi tahun target
 	// periode, err := service.PeriodeRepository.FindById(ctx, tx, request.PeriodeId)
 	// if err != nil {
@@ -412,6 +421,13 @@ func (service *TujuanPemdaServiceImpl) Delete(ctx context.Context, id int) error
 		return err
 	}
 	defer helper.CommitOrRollback(tx)
+	existing, err := service.TujuanPemdaRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if err := service.assertIndikatorNotLocked(ctx, tx, existing.TahunAwalPeriode, existing.TahunAkhirPeriode); err != nil {
+		return err
+	}
 	return service.TujuanPemdaRepository.Delete(ctx, tx, id)
 }
 
@@ -1174,6 +1190,9 @@ func (s *TujuanPemdaServiceImpl) CreateTargetPemdaLayer(
 		if tahun == "" {
 			return nil, fmt.Errorf("tahun tidak boleh kosong untuk kode_indikator %s", kode)
 		}
+		if err := s.assertTargetLayerAllowedWhenLocked(ctx, tx, tahun, jenis); err != nil {
+			return nil, err
+		}
 		// Indikator renstra harus sudah ada
 		_, err := s.TujuanPemdaRepository.FindIndikatorPemdaByKode(ctx, tx, kode)
 		if err == sql.ErrNoRows {
@@ -1251,6 +1270,9 @@ func (s *TujuanPemdaServiceImpl) UpdateTargetPemdaLayer(
 				"target id %d adalah jenis '%s', tidak bisa diupdate via endpoint '%s'",
 				item.Id, existing.Jenis, jenis,
 			)
+		}
+		if err := s.assertTargetLayerAllowedWhenLocked(ctx, tx, existing.Tahun, jenis); err != nil {
+			return nil, err
 		}
 		targetStr, err := helper.TargetToDBString(item.Target.Float64())
 		if err != nil {
@@ -1349,7 +1371,7 @@ func (s *TujuanPemdaServiceImpl) isPeriodeOverlapLock(
 	return false, "", nil
 }
 
-// assertIndikatorNotLocked — blok create/update/delete indikator & tujuan pemda
+// assertIndikatorNotLocked — blok create/delete tujuan pemda jika periode overlap tahun lock.
 func (s *TujuanPemdaServiceImpl) assertIndikatorNotLocked(
 	ctx context.Context, tx *sql.Tx, tahunAwal, tahunAkhir string,
 ) error {
@@ -1359,14 +1381,42 @@ func (s *TujuanPemdaServiceImpl) assertIndikatorNotLocked(
 	}
 	if locked {
 		return fmt.Errorf(
-			"data tujuan pemda terkunci untuk tahun %s (periode %s-%s). Indikator dan penghapusan tidak diizinkan",
+			"data tujuan pemda terkunci untuk tahun %s (periode %s-%s). Penghapusan tidak diizinkan",
 			tahun, tahunAwal, tahunAkhir,
 		)
 	}
 	return nil
 }
 
-// assertTargetLayerAllowedWhenLocked — cek izin ubah target per jenis layer
+// assertIndikatorRemovalNotLocked — saat lock overlap, indikator tidak boleh dihapus via update.
+func (s *TujuanPemdaServiceImpl) assertIndikatorRemovalNotLocked(
+	ctx context.Context, tx *sql.Tx,
+	tahunAwal, tahunAkhir string,
+	existing []domain.IndikatorPemda,
+	request []tujuanpemda.IndikatorUpdateRequest,
+) error {
+	locked, lockTahun, err := s.isPeriodeOverlapLock(ctx, tx, tahunAwal, tahunAkhir)
+	if err != nil || !locked {
+		return err
+	}
+	kept := make(map[int]bool, len(request))
+	for _, req := range request {
+		if req.IdIndikator > 0 {
+			kept[req.IdIndikator] = true
+		}
+	}
+	for _, ind := range existing {
+		if !kept[ind.Id] {
+			return fmt.Errorf(
+				"indikator id %d tidak dapat dihapus karena data tujuan pemda terkunci untuk tahun %s (periode %s-%s)",
+				ind.Id, lockTahun, tahunAwal, tahunAkhir,
+			)
+		}
+	}
+	return nil
+}
+
+// assertTargetLayerAllowedWhenLocked — saat tahun lock: hanya penetapan yang diblokir.
 func (s *TujuanPemdaServiceImpl) assertTargetLayerAllowedWhenLocked(
 	ctx context.Context, tx *sql.Tx, tahun, targetJenis string,
 ) error {
@@ -1375,12 +1425,12 @@ func (s *TujuanPemdaServiceImpl) assertTargetLayerAllowedWhenLocked(
 		return err
 	}
 	if !locked {
-		return nil // belum lock → semua jenis boleh
+		return nil
 	}
 	switch strings.TrimSpace(targetJenis) {
-	case "renstra", "rankhir":
-		return nil // ✅ boleh diubah
-	case "ranwal", "penetapan":
+	case "renstra", "ranwal", "rankhir":
+		return nil
+	case "penetapan":
 		return fmt.Errorf(
 			"target jenis '%s' tahun %s tidak dapat diubah karena data tujuan pemda terkunci",
 			targetJenis, tahun,
