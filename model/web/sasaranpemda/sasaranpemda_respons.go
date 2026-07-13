@@ -12,12 +12,13 @@ type SasaranPemdaResponse struct {
 	Indikator     []IndikatorResponse `json:"indikator"`
 }
 type IndikatorResponse struct {
-	Id               int              `json:"id"`             // id DB auto-increment
-	KodeIndikator    string           `json:"kode_indikator"` // IND-SAS-PMD-YYYY-xxxxx
-	Indikator        string           `json:"indikator"`
-	RumusPerhitungan string           `json:"rumus_perhitungan"`
-	SumberData       string           `json:"sumber_data"`
-	Target           []TargetResponse `json:"target"`
+	Id                  int              `json:"id"`             // id DB auto-increment
+	KodeIndikator       string           `json:"kode_indikator"` // IND-SAS-PMD-YYYY-xxxxx
+	Indikator           string           `json:"indikator"`
+	RumusPerhitungan    string           `json:"rumus_perhitungan"`
+	SumberData          string           `json:"sumber_data"`
+	DefinisiOperasional string           `json:"definisi_operasional"`
+	Target              []TargetResponse `json:"target"`
 }
 type TargetResponse struct {
 	Id     int           `json:"id"` // id DB auto-increment (0 = slot kosong)

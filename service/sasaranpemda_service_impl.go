@@ -139,12 +139,13 @@ func toIndikatorResponsesSasaran(inds []domain.IndikatorPemda) []sasaranpemda.In
 	resp := make([]sasaranpemda.IndikatorResponse, 0, len(inds))
 	for _, ind := range inds {
 		resp = append(resp, sasaranpemda.IndikatorResponse{
-			Id:               ind.Id,
-			KodeIndikator:    ind.KodeIndikator,
-			Indikator:        ind.Indikator.String,
-			RumusPerhitungan: ind.RumusPerhitungan.String,
-			SumberData:       ind.SumberData.String,
-			Target:           toTargetPemdaSlice(ind.Target),
+			Id:                  ind.Id,
+			KodeIndikator:       ind.KodeIndikator,
+			Indikator:           ind.Indikator.String,
+			RumusPerhitungan:    ind.RumusPerhitungan.String,
+			SumberData:          ind.SumberData.String,
+			DefinisiOperasional: ind.DefinisiOperasional.String,
+			Target:              toTargetPemdaSlice(ind.Target),
 		})
 	}
 	sort.Slice(resp, func(i, j int) bool { return resp[i].Id < resp[j].Id })
