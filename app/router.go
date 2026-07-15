@@ -543,6 +543,7 @@ func NewRouter(
 	router.GET("/pohon_kinerja_opd/control_pokin_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ControlPokinOpd)
 	router.GET("/user/cek_admin_opd", userController.CekAdminOpd)
 	router.GET("/pohon_kinerja_opd/leaderboard_pokin_opd/:tahun", pohonKinerjaOpdController.LeaderboardPokinOpd)
+	router.GET("/pohon_kinerja_opd/cetak/:kode_opd/:tahun", pohonKinerjaOpdController.Cetak)
 
 	//bidang urusan terpilih opd
 	router.POST("/bidang_urusan_opd/create", bidangUrusanController.CreateOPD)

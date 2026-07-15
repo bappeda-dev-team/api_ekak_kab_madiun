@@ -32,4 +32,5 @@ type PohonKinerjaOpdService interface {
 	UpdateParentClone(ctx context.Context, req pohonkinerja.PohonKinerjaUpdateParentRequest) (pohonkinerja.PohonKinerjaUpdateParentCloneResponse, error)
 	UpsertLeaderboardHidden(ctx context.Context, req pohonkinerja.LeaderboardHiddenUpsertRequest) error
 	FindLeaderboardHiddenKodeOpds(ctx context.Context, tahun string) ([]string, error)
+	CetakPokin(ctx context.Context, kodeOpd string, tahun int) (pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak], error)
 }
