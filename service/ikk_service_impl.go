@@ -412,6 +412,7 @@ func (service *IkkServiceImpl) FindAllByIdPokin(ctx context.Context, pokinId int
 					ID:     t.ID,
 					Target: t.Target,
 					Satuan: t.Satuan,
+					Tahun: t.Tahun,
 				})
 			}
 
@@ -500,6 +501,7 @@ func (service *IkkServiceImpl) FindAllByLevelPohon(
 					ID:     t.ID,
 					Target: t.Target,
 					Satuan: t.Satuan,
+					Tahun: t.Tahun,
 				})
 			}
 
