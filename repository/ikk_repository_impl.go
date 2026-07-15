@@ -87,7 +87,7 @@ func (repository *IkkRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, ikk
 				indikatorID,
 				target.Target,
 				target.Satuan,
-				ikk.Tahun,
+				target.Tahun,
 			)
 			if err != nil {
 				return ikk, err
@@ -203,7 +203,7 @@ func (repository *IkkRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, ikk
 				indikatorID,
 				target.Target,
 				target.Satuan,
-				ikk.Tahun,
+				target.Tahun,
 			)
 			if err != nil {
 				return domain.Ikk{}, err
@@ -320,7 +320,8 @@ func (repository *IkkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, i
 				id,
 				id_indikator,
 				target,
-				satuan
+				satuan,
+				tahun
 			FROM tb_target_ikk
 			WHERE id_indikator IN (` + placeholders + `)
 		`
@@ -352,6 +353,7 @@ func (repository *IkkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, i
 				&idIndikator,
 				&target.Target,
 				&target.Satuan,
+				&target.Tahun,
 			)
 			if err != nil {
 				return domain.Ikk{}, err
@@ -572,7 +574,7 @@ func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 		placeholders = makePlaceholders(len(indikatorIDs))
 
 		queryTarget := `
-			SELECT id, id_indikator, target, satuan
+			SELECT id, id_indikator, target, satuan, tahun
 			FROM tb_target_ikk
 			WHERE id_indikator IN (` + placeholders + `)
 		`
@@ -599,6 +601,7 @@ func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 				&idInd,
 				&t.Target,
 				&t.Satuan,
+				&t.Tahun,
 			)
 			if err != nil {
 				return nil, err
@@ -733,7 +736,7 @@ func (repository *IkkRepositoryImpl) FindAllByIdPokin(ctx context.Context, tx *s
 		placeholders = makePlaceholders(len(indikatorIDs))
 
 		queryTarget := `
-			SELECT id, id_indikator, target, satuan
+			SELECT id, id_indikator, target, satuan, tahun
 			FROM tb_target_ikk
 			WHERE id_indikator IN (` + placeholders + `)
 		`
@@ -760,6 +763,7 @@ func (repository *IkkRepositoryImpl) FindAllByIdPokin(ctx context.Context, tx *s
 				&idInd,
 				&t.Target,
 				&t.Satuan,
+				&t.Tahun,
 			)
 			if err != nil {
 				return nil, err
@@ -1034,7 +1038,7 @@ func (repository *IkkRepositoryImpl) FindAllByJenisAndKodeOpd(ctx context.Contex
 		placeholders = makePlaceholders(len(indikatorIDs))
 
 		queryTarget := `
-			SELECT id, id_indikator, target, satuan
+			SELECT id, id_indikator, target, satuan, tahun
 			FROM tb_target_ikk
 			WHERE id_indikator IN (` + placeholders + `)
 		`
@@ -1061,6 +1065,7 @@ func (repository *IkkRepositoryImpl) FindAllByJenisAndKodeOpd(ctx context.Contex
 				&idInd,
 				&t.Target,
 				&t.Satuan,
+				&t.Tahun,
 			)
 			if err != nil {
 				return nil, err

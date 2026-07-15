@@ -18,6 +18,7 @@ type TargetResponse struct {
 	ID      int    `json:"id"`
 	Target  string `json:"target"`
 	Satuan  string `json:"satuan"`
+	Tahun   int    `json:"tahun"`
 }
 
 type IndikatorResponse struct {
