@@ -128,10 +128,13 @@ func toTargetPemdaSlice(targets []domain.TargetPemda) []sasaranpemda.TargetRespo
 			Satuan: t.Satuan, Tahun: t.Tahun, Jenis: t.Jenis,
 		})
 	}
-	sort.Slice(resp, func(i, j int) bool {
+	sort.SliceStable(resp, func(i, j int) bool {
 		ti, _ := strconv.Atoi(resp[i].Tahun)
 		tj, _ := strconv.Atoi(resp[j].Tahun)
-		return ti < tj
+		if ti != tj {
+			return ti < tj
+		}
+		return resp[i].Id < resp[j].Id
 	})
 	return resp
 }
@@ -148,7 +151,7 @@ func toIndikatorResponsesSasaran(inds []domain.IndikatorPemda) []sasaranpemda.In
 			Target:              toTargetPemdaSlice(ind.Target),
 		})
 	}
-	sort.Slice(resp, func(i, j int) bool { return resp[i].Id < resp[j].Id })
+	sort.SliceStable(resp, func(i, j int) bool { return resp[i].Id < resp[j].Id })
 	return resp
 }
 
@@ -521,6 +524,12 @@ func (s *SasaranPemdaServiceImpl) FindAll(ctx context.Context, tahun string) ([]
 			Indikator:    toIndikatorResponsesSasaran(sp.Indikator),
 		})
 	}
+	sort.SliceStable(resp, func(i, j int) bool {
+		if resp[i].SubtemaId != resp[j].SubtemaId {
+			return resp[i].SubtemaId < resp[j].SubtemaId
+		}
+		return resp[i].Id < resp[j].Id
+	})
 	return resp, nil
 }
 func (s *SasaranPemdaServiceImpl) FindAllWithPokin(
@@ -595,23 +604,34 @@ func (s *SasaranPemdaServiceImpl) FindAllWithPokin(
 								Satuan: t.Satuan, Tahun: yStr,
 							})
 						} else {
-							indResp.Target = append(indResp.Target, sasaranpemda.TargetResponse{
-								Id:     0,
-								Target: sasaranpemda.NewTargetDisplayFromString(""),
-								Satuan: "", Tahun: yStr,
-							})
+							indResp.Target = append(indResp.Target, emptyTargetSasaranResponse(yStr, "renstra"))
 						}
 					}
 					sasaranResp.Indikator = append(sasaranResp.Indikator, indResp)
 				}
+				sort.SliceStable(sasaranResp.Indikator, func(i, j int) bool {
+					return sasaranResp.Indikator[i].Id < sasaranResp.Indikator[j].Id
+				})
 				subResp.SasaranPemda = append(subResp.SasaranPemda, sasaranResp)
 			}
+			sort.SliceStable(subResp.SasaranPemda, func(i, j int) bool {
+				return subResp.SasaranPemda[i].IdSasaranPemda < subResp.SasaranPemda[j].IdSasaranPemda
+			})
 			tematikResp.Subtematik = append(tematikResp.Subtematik, subResp)
 		}
+		sort.SliceStable(tematikResp.Subtematik, func(i, j int) bool {
+			if tematikResp.Subtematik[i].LevelPohon != tematikResp.Subtematik[j].LevelPohon {
+				return tematikResp.Subtematik[i].LevelPohon < tematikResp.Subtematik[j].LevelPohon
+			}
+			return tematikResp.Subtematik[i].SubtematikId < tematikResp.Subtematik[j].SubtematikId
+		})
 		if len(tematikResp.Subtematik) > 0 {
 			result = append(result, tematikResp)
 		}
 	}
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].TematikId < result[j].TematikId
+	})
 	return result, nil
 }
 

@@ -413,6 +413,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAll(
 	}
 	defer rows.Close()
 	sasaranMap := make(map[int]*domain.SasaranPemda)
+	orderedIds := make([]int, 0)
 	indMap := make(map[string]*domain.IndikatorPemda) // key: "spId:indId"
 	for rows.Next() {
 		var (
@@ -432,6 +433,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAll(
 			return nil, err
 		}
 		if _, exists := sasaranMap[id]; !exists {
+			orderedIds = append(orderedIds, id)
 			sasaranMap[id] = &domain.SasaranPemda{
 				Id: id, SubtemaId: subtemaId, SasaranPemda: sasaranText,
 				PeriodeId: periodeId,
@@ -480,11 +482,20 @@ func (r *SasaranPemdaRepositoryImpl) FindAll(
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	result := make([]domain.SasaranPemda, 0, len(sasaranMap))
-	for _, sp := range sasaranMap {
+	result := make([]domain.SasaranPemda, 0, len(orderedIds))
+	for _, id := range orderedIds {
+		sp := sasaranMap[id]
+		sort.Slice(sp.Indikator, func(i, j int) bool {
+			return sp.Indikator[i].Id < sp.Indikator[j].Id
+		})
 		result = append(result, *sp)
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].Id < result[j].Id })
+	sort.SliceStable(result, func(i, j int) bool {
+		if result[i].SubtemaId != result[j].SubtemaId {
+			return result[i].SubtemaId < result[j].SubtemaId
+		}
+		return result[i].Id < result[j].Id
+	})
 	return result, nil
 }
 
@@ -663,6 +674,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAllWithPokin(
 	}
 	defer rows.Close()
 	tematikMap := make(map[int]*domain.PohonKinerjaWithSasaran)
+	orderedTematikIds := make([]int, 0)
 	for rows.Next() {
 		var (
 			subtematikId                              int
@@ -692,6 +704,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAllWithPokin(
 			return nil, err
 		}
 		if _, exists := tematikMap[tematikId]; !exists {
+			orderedTematikIds = append(orderedTematikIds, tematikId)
 			tematikMap[tematikId] = &domain.PohonKinerjaWithSasaran{
 				TematikId: tematikId, NamaTematik: namaTematik, Tahun: pohonTahun,
 				Subtematik: []domain.SubtematikWithSasaran{},
@@ -776,10 +789,31 @@ func (r *SasaranPemdaRepositoryImpl) FindAllWithPokin(
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	result := make([]domain.PohonKinerjaWithSasaran, 0, len(tematikMap))
-	for _, t := range tematikMap {
+	result := make([]domain.PohonKinerjaWithSasaran, 0, len(orderedTematikIds))
+	for _, tematikId := range orderedTematikIds {
+		t := tematikMap[tematikId]
+		sort.SliceStable(t.Subtematik, func(i, j int) bool {
+			if t.Subtematik[i].LevelPohon != t.Subtematik[j].LevelPohon {
+				return t.Subtematik[i].LevelPohon < t.Subtematik[j].LevelPohon
+			}
+			return t.Subtematik[i].SubtematikId < t.Subtematik[j].SubtematikId
+		})
+		for si := range t.Subtematik {
+			sort.SliceStable(t.Subtematik[si].SasaranPemdaList, func(i, j int) bool {
+				return t.Subtematik[si].SasaranPemdaList[i].Id < t.Subtematik[si].SasaranPemdaList[j].Id
+			})
+			for sai := range t.Subtematik[si].SasaranPemdaList {
+				sort.SliceStable(t.Subtematik[si].SasaranPemdaList[sai].Indikator, func(i, j int) bool {
+					return t.Subtematik[si].SasaranPemdaList[sai].Indikator[i].Id <
+						t.Subtematik[si].SasaranPemdaList[sai].Indikator[j].Id
+				})
+			}
+		}
 		result = append(result, *t)
 	}
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].TematikId < result[j].TematikId
+	})
 	return result, nil
 }
 
