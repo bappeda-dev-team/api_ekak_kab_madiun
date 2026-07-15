@@ -43,7 +43,7 @@ type PohonKinerjaOpdServiceImpl struct {
 	sasaranOpdRepository      repository.SasaranOpdRepository
 	ikkService                IkkService
 	IkkRepository             repository.IkkRepository
-	isuStrategisMasalah		  internal.IsustrategicClient
+	isuStrategisMasalah       internal.IsustrategicClient
 }
 
 func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, pegawaiRepository repository.PegawaiRepository, tujuanOpdRepository repository.TujuanOpdRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, reviewRepository repository.ReviewRepository, DB *sql.DB, validate *validator.Validate,
@@ -67,7 +67,7 @@ func NewPohonKinerjaOpdServiceImpl(pohonKinerjaOpdRepository repository.PohonKin
 		sasaranOpdRepository:      sasaranOpdRepository,
 		ikkService:                ikkService,
 		IkkRepository:             IkkRepository,
-		isuStrategisMasalah:	   isuStrategisMasalah,
+		isuStrategisMasalah:       isuStrategisMasalah,
 	}
 }
 
@@ -1446,7 +1446,6 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		)
 	}
 
-
 	// =====================================================
 	// STRATEGI
 	// =====================================================
@@ -1770,7 +1769,7 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 
 	row := 7
 
-		// =====================================================
+	// =====================================================
 	// PERMASALAHAN OPD
 	// =====================================================
 
@@ -4402,15 +4401,63 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 	if err != nil {
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
+	pokinIds := make([]int, 0, len(pokins))
+	for _, pokin := range pokins {
+		pokinIds = append(pokinIds, pokin.Id)
+	}
+	// cari crosscutting
+	crosscuttings, err := service.crosscuttingOpdRepository.FindCrosscuttingByPohonIdsFrom(ctx, tx, pokinIds)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+	crosscutMap := make(map[int][]domain.Crosscutting)
+	for _, cross := range crosscuttings {
+		crosscutMap[cross.CrosscuttingFrom] = append(
+			crosscutMap[cross.CrosscuttingFrom],
+			cross,
+		)
+	}
 
 	pokinResp := make([]pohonkinerja.PokinCetak, 0)
 	for _, pokin := range pokins {
+		var pokinMetadata pohonkinerja.PokinMetadata
+
+		if crosscut, ok := crosscutMap[pokin.Id]; ok {
+			crosscuttingPokins := make([]pohonkinerja.CrossCuttingPokin, 0)
+			for _, cr := range crosscut {
+				if cr.Status == "crosscutting_disetujui" || cr.Status == "crosscutting_disetujui_existing" {
+					pokinPenerima, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, cr.CrosscuttingTo)
+					if err != nil {
+						return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+					}
+					namaPohonPenerima := pokinPenerima.NamaPohon
+
+					if cr.Status == "crosscutting_disetujui" {
+						namaPohonPenerima = pokin.NamaPohon
+					}
+
+					crosscuttingPokins = append(crosscuttingPokins,
+						pohonkinerja.CrossCuttingPokin{
+							IsCrossCuttingDiterima: true,
+							NamaPohonPenerima:      namaPohonPenerima,
+							NamaOpdPenerima:        cr.OpdPengirim,
+							KeteranganCrosscutting: cr.Keterangan,
+							StatusCrosscutting:     cr.Status,
+						})
+				}
+			}
+			pokinMetadata = pohonkinerja.PokinMetadata{
+				IsCrosscutting:     true,
+				CrosscuttingPokins: crosscuttingPokins,
+			}
+		}
 		pokinResp = append(pokinResp, pohonkinerja.PokinCetak{
 			Id:         pokin.Id,
 			ParentId:   pokin.Parent,
 			LevelPohon: pokin.LevelPohon,
 			JenisPohon: pokin.JenisPohon,
 			NamaPohon:  pokin.NamaPohon,
+			Metadata:   pokinMetadata,
 		})
 	}
 

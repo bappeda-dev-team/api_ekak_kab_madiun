@@ -587,6 +587,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsFrom(
         SELECT
             c.id,
             c.crosscutting_from,
+            c.crosscutting_to,
             c.keterangan_crosscutting,
             c.kode_opd,
             opd.nama_opd,
@@ -608,6 +609,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsFrom(
 		err := rows.Scan(
 			&crosscutting.Id,
 			&crosscutting.CrosscuttingFrom, // from pokin id yang dicari
+			&crosscutting.CrosscuttingTo,
 			&crosscutting.Keterangan,
 			&crosscutting.KodeOpd,
 			&crosscutting.OpdPengirim,
