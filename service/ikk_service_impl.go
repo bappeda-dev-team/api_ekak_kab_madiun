@@ -49,6 +49,7 @@ func (service *IkkServiceImpl) Create(ctx context.Context, request ikk.IkkReques
 			targets = append(targets, domain.TargetIkk{
 				Target:  targetReq.Target,
 				Satuan:  targetReq.Satuan,
+				Tahun :  targetReq.Tahun,
 			})
 		}
 
@@ -84,6 +85,7 @@ func (service *IkkServiceImpl) Create(ctx context.Context, request ikk.IkkReques
 				ID:      target.ID,
 				Target:  target.Target,
 				Satuan:  target.Satuan,
+				Tahun :  target.Tahun,
 			})
 		}
 
@@ -138,6 +140,7 @@ func (service *IkkServiceImpl) Update(
 			targets = append(targets, domain.TargetIkk{
 				Target: tReq.Target,
 				Satuan: tReq.Satuan,
+				Tahun : tReq.Tahun,
 			})
 		}
 
@@ -174,6 +177,7 @@ func (service *IkkServiceImpl) Update(
 				ID:      t.ID,
 				Target:  t.Target,
 				Satuan:  t.Satuan,
+				Tahun :  t.Tahun,
 			})
 		}
 
@@ -237,6 +241,7 @@ func (service *IkkServiceImpl) FindById(ctx context.Context, id int) (ikk.IkkRes
 				ID:      t.ID,
 				Target:  t.Target,
 				Satuan:  t.Satuan,
+				Tahun:  t.Tahun,
 			})
 		}
 

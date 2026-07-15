@@ -87,7 +87,7 @@ func (repository *IkkRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, ikk
 				indikatorID,
 				target.Target,
 				target.Satuan,
-				ikk.Tahun,
+				target.Tahun,
 			)
 			if err != nil {
 				return ikk, err
@@ -203,7 +203,7 @@ func (repository *IkkRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, ikk
 				indikatorID,
 				target.Target,
 				target.Satuan,
-				ikk.Tahun,
+				target.Tahun,
 			)
 			if err != nil {
 				return domain.Ikk{}, err
@@ -320,7 +320,8 @@ func (repository *IkkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, i
 				id,
 				id_indikator,
 				target,
-				satuan
+				satuan,
+				tahun
 			FROM tb_target_ikk
 			WHERE id_indikator IN (` + placeholders + `)
 		`
@@ -352,6 +353,7 @@ func (repository *IkkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, i
 				&idIndikator,
 				&target.Target,
 				&target.Satuan,
+				&target.Tahun,
 			)
 			if err != nil {
 				return domain.Ikk{}, err

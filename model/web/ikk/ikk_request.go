@@ -19,6 +19,7 @@ type TargetRequest struct {
 	ID     int    `json:"id"`
 	Target string `json:"target"`
 	Satuan string `json:"satuan"`
+	Tahun  int    `json:"tahun"`
 }
 
 type IkkTerpilihCreateRequest struct {
