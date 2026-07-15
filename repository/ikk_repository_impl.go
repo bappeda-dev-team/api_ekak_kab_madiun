@@ -574,7 +574,7 @@ func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 		placeholders = makePlaceholders(len(indikatorIDs))
 
 		queryTarget := `
-			SELECT id, id_indikator, target, satuan
+			SELECT id, id_indikator, target, satuan, tahun
 			FROM tb_target_ikk
 			WHERE id_indikator IN (` + placeholders + `)
 		`
@@ -601,6 +601,7 @@ func (repository *IkkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ko
 				&idInd,
 				&t.Target,
 				&t.Satuan,
+				&t.Tahun,
 			)
 			if err != nil {
 				return nil, err

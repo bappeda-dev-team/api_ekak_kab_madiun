@@ -353,6 +353,7 @@ func (service *IkkServiceImpl) FindAll(ctx context.Context, kodeOpd string) (ikk
 					ID:     t.ID,
 					Target: t.Target,
 					Satuan: t.Satuan,
+					Tahun: t.Tahun,
 				})
 			}
 
