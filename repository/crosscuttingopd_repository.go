@@ -21,4 +21,5 @@ type CrosscuttingOpdRepository interface {
 	FindOPDCrosscuttingFrom(ctx context.Context, tx *sql.Tx, crosscuttingTo int) (string, error)
 	// DeleteCrosscuttingExisting(ctx context.Context, tx *sql.Tx, crosscuttingId int) error
 	FindCrosscuttingByPohonIdsFrom(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.Crosscutting, error)
+	FindCrosscuttingByPohonIdsTo(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.Crosscutting, error)
 }
