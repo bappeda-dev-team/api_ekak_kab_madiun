@@ -1,0 +1,1 @@
+ALTER TABLE tb_indikator_matrix_pemda ADD COLUMN iku_active BOOLEAN NOT NULL DEFAULT TRUE;

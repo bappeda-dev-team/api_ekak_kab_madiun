@@ -131,10 +131,11 @@ func InitializeServer() *http.Server {
 	tujuanPemdaRepositoryImpl := repository.NewTujuanPemdaRepositoryImpl()
 	visiPemdaRepositoryImpl := repository.NewVisiPemdaRepositoryImpl()
 	misiPemdaRepositoryImpl := repository.NewMisiPemdaRepositoryImpl()
-	tujuanPemdaServiceImpl := service.NewTujuanPemdaServiceImpl(tujuanPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, visiPemdaRepositoryImpl, misiPemdaRepositoryImpl, db)
+	lockDataPemdaRepositoryImpl := repository.NewLockDataPemdaRepositoryImpl()
+	tujuanPemdaServiceImpl := service.NewTujuanPemdaServiceImpl(tujuanPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, visiPemdaRepositoryImpl, misiPemdaRepositoryImpl, lockDataPemdaRepositoryImpl, db, validate)
 	tujuanPemdaControllerImpl := controller.NewTujuanPemdaControllerImpl(tujuanPemdaServiceImpl)
 	sasaranPemdaRepositoryImpl := repository.NewSasaranPemdaRepositoryImpl()
-	sasaranPemdaServiceImpl := service.NewSasaranPemdaServiceImpl(sasaranPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, tujuanPemdaRepositoryImpl, db)
+	sasaranPemdaServiceImpl := service.NewSasaranPemdaServiceImpl(sasaranPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, tujuanPemdaRepositoryImpl, lockDataPemdaRepositoryImpl, db, validate)
 	sasaranPemdaControllerImpl := controller.NewSasaranPemdaControllerImpl(sasaranPemdaServiceImpl)
 	permasalahanRekinServiceImpl := service.NewPermasalahanRekinServiceImpl(permasalahanRekinRepositoryImpl, db)
 	permasalahanRekinControllerImpl := controller.NewPermasalahanRekinControllerImpl(permasalahanRekinServiceImpl)
@@ -290,3 +291,5 @@ var jabatanPegawaiSet = wire.NewSet(repository.NewJabatanPegawaiRepositoryImpl, 
 var cloneRecordSet = wire.NewSet(repository.NewCloneRecordRepositoryImpl, wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)))
 
 var lockDataRepository = wire.NewSet(repository.NewLockDataRepositoryImpl, wire.Bind(new(repository.LockDataRepository), new(*repository.LockDataRepositoryImpl)))
+
+var lockDataPemdaRepository = wire.NewSet(repository.NewLockDataPemdaRepositoryImpl, wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)))

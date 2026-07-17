@@ -9,7 +9,7 @@ type SubKegiatanService interface {
 	Create(ctx context.Context, request subkegiatan.SubKegiatanCreateRequest) (subkegiatan.SubKegiatanResponse, error)
 	Update(ctx context.Context, request subkegiatan.SubKegiatanUpdateRequest) (subkegiatan.SubKegiatanResponse, error)
 	FindById(ctx context.Context, subKegiatanId string) (subkegiatan.SubKegiatanResponse, error)
-	FindAll(ctx context.Context) ([]subkegiatan.SubKegiatanResponse, error)
+	FindAll(ctx context.Context, filter subkegiatan.SubKegiatanFindAllFilter) (subkegiatan.SubKegiatanPaginatedResponse, error)
 	Delete(ctx context.Context, subKegiatanId string) error
 	FindSubKegiatanKAK(ctx context.Context, kodeSubKegiatan string, kode string, tahun string) (subkegiatan.SubKegiatanKAKResponse, error)
 }

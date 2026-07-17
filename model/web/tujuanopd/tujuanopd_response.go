@@ -39,6 +39,7 @@ type TargetResponse struct {
 	Tahun           string `json:"tahun"`
 	TargetIndikator string `json:"target"`
 	SatuanIndikator string `json:"satuan"`
+	Jenis           string `json:"jenis"`
 }
 
 type PeriodeResponse struct {
