@@ -2868,6 +2868,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/sub_kegiatan/findall": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sub kegiatan dengan paginasi, filter LIKE, dan info next/previous page.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sub Kegiatan"
+                ],
+                "summary": "Daftar Sub Kegiatan (Paginasi)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Nomor halaman (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 10,
+                        "description": "Jumlah data per halaman (default: 10, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"01.01\"",
+                        "description": "Filter kode sub kegiatan (LIKE %...%)",
+                        "name": "kode_subkegiatan",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"pendidikan\"",
+                        "description": "Filter nama sub kegiatan (LIKE %...%)",
+                        "name": "nama_sub_kegiatan",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/subkegiatan.SubKegiatanPaginatedResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/trialtujuan_opd/penetapan/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -6694,6 +6770,9 @@ const docTemplate = `{
         "sasaranpemda.IndikatorResponse": {
             "type": "object",
             "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
                 "id": {
                     "description": "id DB auto-increment",
                     "type": "integer"
@@ -6809,6 +6888,173 @@ const docTemplate = `{
                 },
                 "target": {
                     "$ref": "#/definitions/sasaranpemda.TargetDisplay"
+                }
+            }
+        },
+        "subkegiatan.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "id_indikator": {
+                    "type": "string"
+                },
+                "nama_indikator": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.TargetResponse"
+                    }
+                }
+            }
+        },
+        "subkegiatan.IndikatorSubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "sub_kegiatan_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "subkegiatan.PaguSubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "pagu_anggaran": {
+                    "type": "integer"
+                },
+                "sub_kegiatan_id": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "subkegiatan.SubKegiatanPaginatedResponse": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "has_previous": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.SubKegiatanResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "next_page": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "previous_page": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 250
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 25
+                }
+            }
+        },
+        "subkegiatan.SubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.IndikatorResponse"
+                    }
+                },
+                "indikator_subkegiatan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.IndikatorSubKegiatanResponse"
+                    }
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "nama_sub_kegiatan": {
+                    "type": "string"
+                },
+                "pagu": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.PaguSubKegiatanResponse"
+                    }
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subkegiatanterpilih_id": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "subkegiatan.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id_target": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
                 }
             }
         },
@@ -7609,6 +7855,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "web.ActionButton": {
+            "type": "object",
+            "properties": {
+                "jenis_usulan": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "url": {
                     "type": "string"
                 }
             }

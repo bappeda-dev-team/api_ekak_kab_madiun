@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -219,54 +220,134 @@ func (service *SubKegiatanServiceImpl) FindById(ctx context.Context, subKegiatan
 	return helper.ToSubKegiatanResponse(subKegiatan), nil
 }
 
-func (service *SubKegiatanServiceImpl) FindAll(ctx context.Context) ([]subkegiatan.SubKegiatanResponse, error) {
+func normalizeSubKegiatanFindAllFilter(filter subkegiatan.SubKegiatanFindAllFilter) subkegiatan.SubKegiatanFindAllFilter {
+	filter.KodeSubKegiatan = strings.TrimSpace(filter.KodeSubKegiatan)
+	filter.NamaSubKegiatan = strings.TrimSpace(filter.NamaSubKegiatan)
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.Limit < 1 {
+		filter.Limit = 10
+	}
+	if filter.Limit > 100 {
+		filter.Limit = 100
+	}
+	return filter
+}
+
+func attachIndikatorTargets(
+	subKegiatans []domain.SubKegiatan,
+	indikators []domain.Indikator,
+	targets []domain.Target,
+) {
+	targetByIndikator := make(map[string][]domain.Target)
+	for _, target := range targets {
+		targetByIndikator[target.IndikatorId] = append(targetByIndikator[target.IndikatorId], target)
+	}
+	indikatorBySubKegiatan := make(map[string][]domain.Indikator)
+	for _, indikator := range indikators {
+		indikator.Target = targetByIndikator[indikator.Id]
+		if indikator.Target == nil {
+			indikator.Target = []domain.Target{}
+		}
+		indikatorBySubKegiatan[indikator.SubKegiatanId] = append(indikatorBySubKegiatan[indikator.SubKegiatanId], indikator)
+	}
+	for i := range subKegiatans {
+		inds := indikatorBySubKegiatan[subKegiatans[i].Id]
+		if inds == nil {
+			inds = []domain.Indikator{}
+		}
+		subKegiatans[i].Indikator = inds
+	}
+}
+
+func (service *SubKegiatanServiceImpl) FindAll(
+	ctx context.Context, filter subkegiatan.SubKegiatanFindAllFilter,
+) (subkegiatan.SubKegiatanPaginatedResponse, error) {
+	filter = normalizeSubKegiatanFindAllFilter(filter)
+	offset := (filter.Page - 1) * filter.Limit
+
 	tx, err := service.DB.Begin()
 	if err != nil {
 		log.Println("Gagal memulai transaksi:", err)
-		return []subkegiatan.SubKegiatanResponse{}, err
+		return subkegiatan.SubKegiatanPaginatedResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
 
-	// Ambil data SubKegiatan
-	subKegiatans, err := service.subKegiatanRepository.FindAll(ctx, tx)
+	total, err := service.subKegiatanRepository.CountAll(ctx, tx, filter.KodeSubKegiatan, filter.NamaSubKegiatan)
+	if err != nil {
+		log.Println("Gagal menghitung data sub kegiatan:", err)
+		return subkegiatan.SubKegiatanPaginatedResponse{}, err
+	}
+
+	if total == 0 {
+		return subkegiatan.SubKegiatanPaginatedResponse{
+			Items:      []subkegiatan.SubKegiatanResponse{},
+			Page:       filter.Page,
+			Limit:      filter.Limit,
+			Total:      0,
+			TotalPages: 0,
+		}, nil
+	}
+
+	subKegiatans, err := service.subKegiatanRepository.FindAll(
+		ctx, tx, filter.KodeSubKegiatan, filter.NamaSubKegiatan, filter.Limit, offset,
+	)
 	if err != nil {
 		log.Println("Gagal mencari data sub kegiatan:", err)
-		return []subkegiatan.SubKegiatanResponse{}, err
+		return subkegiatan.SubKegiatanPaginatedResponse{}, err
 	}
 
-	// Untuk setiap SubKegiatan, ambil data Indikator dan Target
-	for i, subKegiatan := range subKegiatans {
-		// Ambil Indikator
-		indikators, err := service.subKegiatanRepository.FindIndikatorBySubKegiatanId(ctx, tx, subKegiatan.Id)
-		if err != nil {
-			// Jika tidak ada indikator, lanjutkan dengan array kosong
-			if err == sql.ErrNoRows {
-				subKegiatans[i].Indikator = []domain.Indikator{}
-				continue
-			}
-			log.Printf("Gagal mengambil indikator untuk subkegiatan %s: %v", subKegiatan.Id, err)
-			return []subkegiatan.SubKegiatanResponse{}, err
-		}
-
-		// Untuk setiap Indikator, ambil Target
-		for j, indikator := range indikators {
-			targets, err := service.subKegiatanRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
-			if err != nil {
-				// Jika tidak ada target, lanjutkan dengan array kosong
-				if err == sql.ErrNoRows {
-					indikators[j].Target = []domain.Target{}
-					continue
-				}
-				log.Printf("Gagal mengambil target untuk indikator %s: %v", indikator.Id, err)
-				return []subkegiatan.SubKegiatanResponse{}, err
-			}
-			indikators[j].Target = targets
-		}
-
-		subKegiatans[i].Indikator = indikators
+	subKegiatanIds := make([]string, 0, len(subKegiatans))
+	for _, sp := range subKegiatans {
+		subKegiatanIds = append(subKegiatanIds, sp.Id)
 	}
 
-	return helper.ToSubKegiatanResponses(subKegiatans), nil
+	indikators, err := service.subKegiatanRepository.FindIndikatorsBySubKegiatanIds(ctx, tx, subKegiatanIds)
+	if err != nil {
+		log.Println("Gagal batch load indikator sub kegiatan:", err)
+		return subkegiatan.SubKegiatanPaginatedResponse{}, err
+	}
+
+	indikatorIds := make([]string, 0, len(indikators))
+	for _, ind := range indikators {
+		indikatorIds = append(indikatorIds, ind.Id)
+	}
+
+	targets, err := service.subKegiatanRepository.FindTargetsByIndikatorIds(ctx, tx, indikatorIds)
+	if err != nil {
+		log.Println("Gagal batch load target sub kegiatan:", err)
+		return subkegiatan.SubKegiatanPaginatedResponse{}, err
+	}
+
+	attachIndikatorTargets(subKegiatans, indikators, targets)
+
+	totalPages := total / filter.Limit
+	if total%filter.Limit != 0 {
+		totalPages++
+	}
+
+	hasPrevious := filter.Page > 1 && totalPages > 0
+	hasNext := filter.Page < totalPages
+	previousPage, nextPage := 0, 0
+	if hasPrevious {
+		previousPage = filter.Page - 1
+	}
+	if hasNext {
+		nextPage = filter.Page + 1
+	}
+
+	return subkegiatan.SubKegiatanPaginatedResponse{
+		Items:        helper.ToSubKegiatanResponses(subKegiatans),
+		Page:         filter.Page,
+		Limit:        filter.Limit,
+		Total:        total,
+		TotalPages:   totalPages,
+		HasNext:      hasNext,
+		HasPrevious:  hasPrevious,
+		NextPage:     nextPage,
+		PreviousPage: previousPage,
+	}, nil
 }
 
 func (service *SubKegiatanServiceImpl) Delete(ctx context.Context, subKegiatanId string) error {

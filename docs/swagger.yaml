@@ -1248,6 +1248,8 @@ definitions:
     type: object
   sasaranpemda.IndikatorResponse:
     properties:
+      definisi_operasional:
+        type: string
       id:
         description: id DB auto-increment
         type: integer
@@ -1325,6 +1327,118 @@ definitions:
         type: string
       target:
         $ref: '#/definitions/sasaranpemda.TargetDisplay'
+    type: object
+  subkegiatan.IndikatorResponse:
+    properties:
+      id_indikator:
+        type: string
+      nama_indikator:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/subkegiatan.TargetResponse'
+        type: array
+    type: object
+  subkegiatan.IndikatorSubKegiatanResponse:
+    properties:
+      id:
+        type: string
+      indikator:
+        type: string
+      sub_kegiatan_id:
+        type: string
+    type: object
+  subkegiatan.PaguSubKegiatanResponse:
+    properties:
+      id:
+        type: string
+      jenis:
+        type: string
+      pagu_anggaran:
+        type: integer
+      sub_kegiatan_id:
+        type: string
+      tahun:
+        type: string
+    type: object
+  subkegiatan.SubKegiatanPaginatedResponse:
+    properties:
+      has_next:
+        example: true
+        type: boolean
+      has_previous:
+        example: false
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/subkegiatan.SubKegiatanResponse'
+        type: array
+      limit:
+        example: 10
+        type: integer
+      next_page:
+        example: 2
+        type: integer
+      page:
+        example: 1
+        type: integer
+      previous_page:
+        example: 0
+        type: integer
+      total:
+        example: 250
+        type: integer
+      total_pages:
+        example: 25
+        type: integer
+    type: object
+  subkegiatan.SubKegiatanResponse:
+    properties:
+      action:
+        items:
+          $ref: '#/definitions/web.ActionButton'
+        type: array
+      id:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/subkegiatan.IndikatorResponse'
+        type: array
+      indikator_subkegiatan:
+        items:
+          $ref: '#/definitions/subkegiatan.IndikatorSubKegiatanResponse'
+        type: array
+      kode_opd:
+        type: string
+      kode_subkegiatan:
+        type: string
+      nama_opd:
+        type: string
+      nama_sub_kegiatan:
+        type: string
+      pagu:
+        items:
+          $ref: '#/definitions/subkegiatan.PaguSubKegiatanResponse'
+        type: array
+      rekin_id:
+        type: string
+      status:
+        type: string
+      subkegiatanterpilih_id:
+        type: string
+      tahun:
+        type: string
+    type: object
+  subkegiatan.TargetResponse:
+    properties:
+      id_target:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      target:
+        type: string
     type: object
   tujuanopd.IndikatorCreateRequest:
     properties:
@@ -1849,6 +1963,17 @@ definitions:
       password:
         type: string
       username:
+        type: string
+    type: object
+  web.ActionButton:
+    properties:
+      jenis_usulan:
+        type: string
+      method:
+        type: string
+      name:
+        type: string
+      url:
         type: string
     type: object
   web.WebResponse:
@@ -3600,6 +3725,54 @@ paths:
       summary: Daftar Sasaran Pemda Renstra
       tags:
       - Sasaran Pemda Ranwal
+  /sub_kegiatan/findall:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil daftar sub kegiatan dengan paginasi, filter LIKE, dan
+        info next/previous page.
+      parameters:
+      - description: 'Nomor halaman (default: 1)'
+        example: 1
+        in: query
+        name: page
+        type: integer
+      - description: 'Jumlah data per halaman (default: 10, max: 100)'
+        example: 10
+        in: query
+        name: limit
+        type: integer
+      - description: Filter kode sub kegiatan (LIKE %...%)
+        example: '"01.01"'
+        in: query
+        name: kode_subkegiatan
+        type: string
+      - description: Filter nama sub kegiatan (LIKE %...%)
+        example: '"pendidikan"'
+        in: query
+        name: nama_sub_kegiatan
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/subkegiatan.SubKegiatanPaginatedResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Sub Kegiatan (Paginasi)
+      tags:
+      - Sub Kegiatan
   /trialtujuan_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
