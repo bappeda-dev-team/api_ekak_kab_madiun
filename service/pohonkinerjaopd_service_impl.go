@@ -4405,7 +4405,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 	for _, pokin := range pokins {
 		pokinIds = append(pokinIds, pokin.Id)
 	}
-	// cari crosscutting
+	// cari crosscutting (dari pemberi)
 	crosscuttings, err := service.crosscuttingOpdRepository.FindCrosscuttingByPohonIdsFrom(ctx, tx, pokinIds)
 	if err != nil {
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
@@ -4417,11 +4417,24 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 			cross,
 		)
 	}
+	// cari crosscutting (dari pemberi)
+	crosscuttingsTo, err := service.crosscuttingOpdRepository.FindCrosscuttingByPohonIdsTo(ctx, tx, pokinIds)
+	if err != nil {
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+	crosscutMapTo := make(map[int][]domain.Crosscutting)
+	for _, cross := range crosscuttingsTo {
+		crosscutMapTo[cross.CrosscuttingTo] = append(
+			crosscutMapTo[cross.CrosscuttingTo],
+			cross,
+		)
+	}
 
 	pokinResp := make([]pohonkinerja.PokinCetak, 0)
 	for _, pokin := range pokins {
 		var pokinMetadata pohonkinerja.PokinMetadata
 
+		// target refactor
 		if crosscut, ok := crosscutMap[pokin.Id]; ok {
 			crosscuttingPokins := make([]pohonkinerja.CrossCuttingPokin, 0)
 			for _, cr := range crosscut {
@@ -4451,15 +4464,46 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 				CrosscuttingPokins: crosscuttingPokins,
 			}
 		}
+		namaPokin := pokin.NamaPohon
+		if crosscut, ok := crosscutMapTo[pokin.Id]; ok {
+			crosscuttingPokins := make([]pohonkinerja.CrossCuttingPokin, 0)
+			for _, cr := range crosscut {
+				if cr.Status == "crosscutting_disetujui" || cr.Status == "crosscutting_disetujui_existing" {
+					pokinPemberi, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, cr.CrosscuttingFrom)
+					if err != nil {
+						return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+					}
+					namaPohonPemberi := pokinPemberi.NamaPohon
+
+					if cr.Status == "crosscutting_disetujui" {
+						namaPokin = namaPohonPemberi
+					}
+
+					crosscuttingPokins = append(crosscuttingPokins,
+						pohonkinerja.CrossCuttingPokin{
+							IsCrossCuttingDiterima: true,
+							NamaPohonPenerima:      namaPohonPemberi,
+							NamaOpdPenerima:        cr.OpdPengirim,
+							KeteranganCrosscutting: cr.Keterangan,
+							StatusCrosscutting:     cr.Status,
+						})
+				}
+			}
+			pokinMetadata = pohonkinerja.PokinMetadata{
+				IsCrosscutting:     true,
+				CrosscuttingPokins: crosscuttingPokins,
+			}
+		}
 		pokinResp = append(pokinResp, pohonkinerja.PokinCetak{
 			Id:         pokin.Id,
 			ParentId:   pokin.Parent,
 			LevelPohon: pokin.LevelPohon,
 			JenisPohon: pokin.JenisPohon,
-			NamaPohon:  pokin.NamaPohon,
+			NamaPohon:  namaPokin,
 			Metadata:   pokinMetadata,
 		})
 	}
+	// end target refactor
 
 	items := pohonkinerja.PokinOpdCetak{
 		Tahun:      tahun,
