@@ -65,6 +65,10 @@ func NewRouter(
 	indikatorController controller.IndikatorController,
 	ikkController controller.IkkController,
 	ikdController controller.IkdController,
+	isuGlobalController controller.IsuGlobalController,
+	isuKlhsController controller.IsuKlhsController,
+	isuNasionalController controller.IsuNasionalController,
+	isuRegionalController controller.IsuRegionalController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -509,6 +513,26 @@ func NewRouter(
 	router.DELETE("/ikk/delete/:id", ikkController.Delete)
 	router.POST("/ikk/select_ikk/create", ikkController.PilihIkk)
 	router.DELETE("/ikk/select_ikk/delete/:id", ikkController.DeletePilihanIkk)
+
+	//Master Isu KLHS 
+	router.POST("/isu-klhs/create", isuKlhsController.Create)
+	router.PUT("/isu-klhs/update/:id", isuKlhsController.Update)
+	router.DELETE("/isu-klhs/delete/:id", isuKlhsController.Delete)
+	
+	//Master Isu Global 
+	router.POST("/isu-global/create", isuGlobalController.Create)
+	router.PUT("/isu-global/update/:id", isuGlobalController.Update)
+	router.DELETE("/isu-global/delete/:id", isuGlobalController.Delete)
+	
+	//Master Isu Nasional 
+	router.POST("/isu-nasional/create", isuNasionalController.Create)
+	router.PUT("/isu-nasional/update/:id", isuNasionalController.Update)
+	router.DELETE("/isu-nasional/delete/:id", isuNasionalController.Delete)
+	
+	//Master Isu Regional 
+	router.POST("/isu-regional/create", isuRegionalController.Create)
+	router.PUT("/isu-regional/update/:id", isuRegionalController.Update)
+	router.DELETE("/isu-regional/delete/:id", isuRegionalController.Delete)
 
 	// IKD
 	router.GET("/ikd/findall/:kode_opd/:tahun/:jenis_periode", ikdController.FindAll)
