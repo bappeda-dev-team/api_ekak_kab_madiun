@@ -161,3 +161,108 @@ func (repository *IsuGlobalRepositoryImpl) FindAllById(ctx context.Context, tx *
 
 	return item, nil
 }
+
+func (repository *IsuGlobalRepositoryImpl) FindSelectionByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.BidangUrusanSelection, error) {
+
+	query := `SELECT
+				bu.kode_bidang_urusan,
+				COALESCE(bu.nama_bidang_urusan, '') AS nama_bidang_urusan,
+				od.kode_opd,
+				COALESCE(od.nama_opd, '') AS nama_opd
+			FROM tb_bidang_urusan bu
+			CROSS JOIN tb_operasional_daerah od
+			WHERE od.kode_opd = ?`
+
+	rows, err := tx.QueryContext(ctx, query, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	selections := make([]domain.BidangUrusanSelection, 0)
+
+	for rows.Next() {
+		var selection domain.BidangUrusanSelection
+
+		err := rows.Scan(
+			&selection.KodeBidangUrusan,
+			&selection.NamaBidangUrusan,
+			&selection.KodeOpd,
+			&selection.NamaOpd,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		selections = append(selections, selection)
+	}
+
+	return selections, nil
+}
+
+func (repository *IsuGlobalRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.IsuGlobal, error) {
+
+	query := `
+		SELECT isu.id, 
+			   isu.kode_opd, 
+			   od.nama_opd,
+			   isu.kode_bidang_urusan, 
+			   bu.nama_bidang_urusan, 
+			   isu.isu_global, 
+			   isu.tahun, 
+		FROM tb_isu_global isu
+		LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = isu.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+		ON bu.kode_bidang_urusan = isu.kode_bidang_urusan
+	`
+
+	args := make([]interface{}, 0)
+
+	if kodeOpd != "" {
+		query += " WHERE isu.kode_opd = ?"
+		args = append(args, kodeOpd)
+	}
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	isuMap := make(map[int]*domain.IsuGlobal)
+	isuIDs := make([]int, 0)
+
+	for rows.Next() {
+		var item domain.IsuGlobal
+
+		err := rows.Scan(
+			&item.ID,
+			&item.KodeOpd,
+			&item.NamaOpd,
+			&item.KodeBidangUrusan,
+			&item.NamaBidangUrusan,
+			&item.Isu,
+			&item.Tahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		copyItem := item
+		isuMap[item.ID] = &copyItem
+		isuIDs = append(isuIDs, item.ID)
+	}
+
+	if len(isuIDs) == 0 {
+		return []domain.IsuGlobal{}, nil
+	}
+
+	result := make([]domain.IsuGlobal, 0, len(isuMap))
+	for _, v := range isuMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
+}

@@ -118,3 +118,59 @@ func (service *IsuNasionalServiceImpl) Delete(ctx context.Context, id int) error
 
 	return service.IsuNasionalRepository.Delete(ctx, tx, id)
 }
+
+func (service *IsuNasionalServiceImpl) FindAll(ctx context.Context, kodeOpd string) (isunasional.IsuNasionalMasterResponse, error) {
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return isunasional.IsuNasionalMasterResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Ambil selection bidang urusan
+	selections, err := service.IsuNasionalRepository.FindSelectionByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return isunasional.IsuNasionalMasterResponse{}, err
+	}
+
+	// Ambil data IKK
+	isus, err := service.IsuNasionalRepository.FindAll(ctx, tx, kodeOpd)
+	if err != nil {
+		return isunasional.IsuNasionalMasterResponse{}, err
+	}
+
+	// Mapping selection
+	selectionResponses := make([]isunasional.BidangUrusanSelectionResponse, 0)
+
+	for _, selection := range selections {
+		selectionResponses = append(selectionResponses,
+			isunasional.BidangUrusanSelectionResponse{
+				KodeBidangUrusan: selection.KodeBidangUrusan,
+				NamaBidangUrusan: selection.NamaBidangUrusan,
+				KodeOpd:          selection.KodeOpd,
+				NamaOpd:          selection.NamaOpd,
+			},
+		)
+	}
+
+	// Mapping IKK
+	isuResponses := make([]isunasional.IsuNasionalFullResponse, 0)
+
+	for _, isuData := range isus {
+
+		isuResponses = append(isuResponses, isunasional.IsuNasionalFullResponse{
+			ID:               isuData.ID,
+			KodeOpd:          isuData.KodeOpd,
+			NamaOpd:          isuData.NamaOpd,
+			KodeBidangUrusan: isuData.KodeBidangUrusan,
+			NamaBidangUrusan: isuData.NamaBidangUrusan,
+			Isu:              isuData.Isu,
+			Tahun:            isuData.Tahun,
+		})
+	}
+
+	return isunasional.IsuNasionalMasterResponse{
+		BidangUrusanSelections: selectionResponses,
+		Isus:                   isuResponses,
+	}, nil
+}

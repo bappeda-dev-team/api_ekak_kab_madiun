@@ -9,4 +9,5 @@ type IsuNasionalService interface {
 	Create(ctx context.Context, request isunasional.IsuNasionalRequest) (isunasional.IsuNasionalResponse, error)
 	Update(ctx context.Context, request isunasional.IsuNasionalUpdateRequest) (isunasional.IsuNasionalResponse, error)
 	Delete(ctx context.Context, id int) error
+	FindAll(ctx context.Context, kodeOpd string) (isunasional.IsuNasionalMasterResponse, error)
 }
