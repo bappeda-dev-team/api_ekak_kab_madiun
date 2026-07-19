@@ -6,4 +6,5 @@ type RencanaAksi struct {
 	KodeOpd          string
 	Urutan           int
 	NamaRencanaAksi  string
+	Pelaksanaan      []PelaksanaanRencanaAksi
 }

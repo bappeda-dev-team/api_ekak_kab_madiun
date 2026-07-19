@@ -259,6 +259,7 @@ func NewRouter(
 	router.DELETE("/pegawai/delete/:id", pegawaiController.Delete)
 	router.GET("/pegawai/findall", pegawaiController.FindAll)
 	router.POST("/pegawai/tambahJabatan", pegawaiController.TambahJabatanPegawai)
+	router.GET("/pegawai_by_level/:kode_opd/:level", pegawaiController.PegawaiOpdByLevel)
 
 	//lembaga
 	router.POST("/lembaga/create", lembagaController.Create)
