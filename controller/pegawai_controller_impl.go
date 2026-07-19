@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/pegawai"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -155,4 +156,37 @@ func (controller *PegawaiControllerImpl) TambahJabatanPegawai(writer http.Respon
 		Data:   pegawaiResponse,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PegawaiControllerImpl) PegawaiOpdByLevel(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	levelPar := params.ByName("level")
+	level, err := strconv.Atoi(levelPar)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+
+	}
+	pegawaiResponses, err := controller.PegawaiService.FindByKodeOpdLevel(r.Context(), kodeOpd, level)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   pegawaiResponses,
+	}
+	helper.WriteToResponseBody(w, webResponse)
 }

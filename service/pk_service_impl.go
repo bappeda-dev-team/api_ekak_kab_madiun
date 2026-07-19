@@ -1215,6 +1215,12 @@ func (service *PkServiceImpl) FindPkPenetapan(
 		log.Printf("Error find indikator pk penetapan: %v", err)
 		return nil, err
 	}
+	renaksiRekins, err := service.pkRepository.RenaksiPkByIdRekins(ctx, tx, idRekins)
+	if err != nil {
+		log.Printf("Error find renaksi pk penetapan: %v", err)
+		return nil, err
+	}
+
 	result := make([]pkopd.PkAsn, 0, len(pks))
 	for _, pk := range pks {
 		indikatorSelected := indikatorRekins[pk.IdRekinPemilikPk]
@@ -1238,6 +1244,28 @@ func (service *PkServiceImpl) FindPkPenetapan(
 					Targets:     targets,
 				})
 		}
+		// renaksi pk
+		renaksiSelected := renaksiRekins[pk.IdRekinPemilikPk]
+		pelaksanaans := make([]pkopd.RenaksiItem, 0, len(renaksiSelected))
+		for _, ren := range renaksiSelected {
+			bobots := make([]pkopd.BobotBulanan, 0, len(ren.Pelaksanaan))
+			for _, bl := range ren.Pelaksanaan {
+				bobots = append(bobots,
+					pkopd.BobotBulanan{
+						Bulan: bl.Bulan,
+						Bobot: bl.Bobot,
+					})
+			}
+			pelaksanaans = append(pelaksanaans,
+				pkopd.RenaksiItem{
+					Id:               ren.Id,
+					RencanaKinerjaId: ren.RencanaKinerjaId,
+					NamaRencanaAksi:  ren.NamaRencanaAksi,
+					Urutan:           ren.Urutan,
+					KodeOpd:          ren.KodeOpd,
+					Pelaksanaan:      bobots,
+				})
+		}
 		result = append(result, pkopd.PkAsn{
 			Id:               pk.Id,
 			KodeOpd:          pk.KodeOpd,
@@ -1251,6 +1279,7 @@ func (service *PkServiceImpl) FindPkPenetapan(
 			Tahun:            pk.Tahun,
 			Keterangan:       pk.Keterangan,
 			Indikators:       indikatorPks,
+			Renaksis:         pelaksanaans,
 		})
 	}
 	return result, nil
