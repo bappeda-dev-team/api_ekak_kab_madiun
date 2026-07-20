@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS tb_lock_data_pemda;

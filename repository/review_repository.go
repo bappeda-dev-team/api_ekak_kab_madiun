@@ -16,4 +16,5 @@ type ReviewRepository interface {
 	FindAllReviewByTematik(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.ReviewTematik, error)
 	FindAllReviewOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.ReviewOpd, error)
 	FindByPokinIdBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.ReviewWithNama, error)
+	CountReviewByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]int, error)
 }

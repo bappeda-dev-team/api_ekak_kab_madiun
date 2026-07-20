@@ -386,9 +386,11 @@ func (repository *PohonKinerjaRepositoryImpl) FindAll(ctx context.Context, tx *s
         AND tahun = ?
         AND level_pohon >= 4
         AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
-        ORDER BY 
-            level_pohon ASC, 
-            id ASC
+      ORDER BY 
+		level_pohon ASC,
+		COALESCE(parent, 0) ASC,
+		CASE WHEN jenis_pohon IN ('Strategic Pemda', 'Tactical Pemda', 'Operational Pemda', 'Operasional Pemda') THEN 0 ELSE 1 END ASC,
+		id ASC
         LIMIT 10000`
 
 	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
@@ -444,116 +446,376 @@ func (repository *PohonKinerjaRepositoryImpl) FindStrategicNoParent(ctx context.
 	return result, nil
 }
 
+//POKIN LAMA
+// func (repository *PohonKinerjaRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id int) error {
+// 	// Temukan semua ID anak pohon secara rekursif
+// 	scriptFindChildren := `
+//         WITH RECURSIVE child_tree AS (
+//             SELECT id, parent, clone_from, level_pohon
+//             FROM tb_pohon_kinerja
+//             WHERE id = ?
+
+//             UNION ALL
+
+//             SELECT t.id, t.parent, t.clone_from, t.level_pohon
+//             FROM tb_pohon_kinerja t
+//             JOIN child_tree ct ON t.parent = ct.id
+//         )
+//         SELECT id, clone_from FROM child_tree
+//     `
+
+// 	rows, err := tx.QueryContext(ctx, scriptFindChildren, id)
+// 	if err != nil {
+// 		return fmt.Errorf("gagal mencari turunan pohon: %v", err)
+// 	}
+// 	defer rows.Close()
+
+// 	// Kumpulkan semua ID anak pohon dan clone_from
+// 	var nodeIds []string
+// 	cloneFromMap := make(map[string]int) // map[nodeId]cloneFromId
+// 	for rows.Next() {
+// 		var nodeId string
+// 		var cloneFrom sql.NullInt64
+// 		if err := rows.Scan(&nodeId, &cloneFrom); err != nil {
+// 			return fmt.Errorf("gagal membaca ID turunan pohon: %v", err)
+// 		}
+// 		nodeIds = append(nodeIds, nodeId)
+// 		if cloneFrom.Valid {
+// 			cloneFromMap[nodeId] = int(cloneFrom.Int64)
+// 		}
+// 	}
+
+// 	// Update status untuk semua node asli yang di-clone
+// 	for _, cloneFromId := range cloneFromMap {
+// 		scriptUpdateStatus := `
+//             UPDATE tb_pohon_kinerja
+//             SET status = 'menunggu_disetujui'
+//             WHERE id = ?
+//         `
+// 		if _, err := tx.ExecContext(ctx, scriptUpdateStatus, cloneFromId); err != nil {
+// 			return fmt.Errorf("gagal mengupdate status node asli ID %d: %v", cloneFromId, err)
+// 		}
+// 	}
+
+// 	// Proses penghapusan untuk setiap node
+// 	for _, nodeId := range nodeIds {
+// 		// 1. Hapus target
+// 		scriptDeleteTarget := `
+//             DELETE FROM tb_target
+//             WHERE indikator_id IN (
+//                 SELECT id FROM tb_indikator
+//                 WHERE pokin_id = ?
+//             )`
+// 		if _, err := tx.ExecContext(ctx, scriptDeleteTarget, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus target: %v", err)
+// 		}
+
+// 		// 2. Hapus indikator
+// 		scriptDeleteIndikator := "DELETE FROM tb_indikator WHERE pokin_id = ?"
+// 		if _, err := tx.ExecContext(ctx, scriptDeleteIndikator, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus indikator: %v", err)
+// 		}
+
+// 		// 3. Hapus pelaksana
+// 		scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
+// 		if _, err := tx.ExecContext(ctx, scriptDeletePelaksana, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus pelaksana: %v", err)
+// 		}
+
+// 		// 4. Tangani crosscutting
+// 		// Hapus crosscutting yang menunggu/ditolak
+// 		scriptDeletePendingCrosscutting := `
+//             DELETE FROM tb_crosscutting
+//             WHERE crosscutting_from = ?
+//             AND status IN ('menunggu_disetujui', 'ditolak')`
+// 		if _, err := tx.ExecContext(ctx, scriptDeletePendingCrosscutting, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus crosscutting pending: %v", err)
+// 		}
+
+// 		// Update status crosscutting yang disetujui
+// 		scriptUpdateCrosscuttingStatus := `
+//             UPDATE tb_crosscutting
+//             SET status = 'crosscutting_ditolak',
+//                 crosscutting_to = 0
+//             WHERE crosscutting_to = ?
+//             AND status = 'crosscutting_disetujui'`
+// 		if _, err := tx.ExecContext(ctx, scriptUpdateCrosscuttingStatus, nodeId); err != nil {
+// 			return fmt.Errorf("gagal mengupdate status crosscutting: %v", err)
+// 		}
+
+// 		// 5. Hapus pohon kinerja
+// 		scriptDeletePokin := "DELETE FROM tb_pohon_kinerja WHERE id = ?"
+// 		if _, err := tx.ExecContext(ctx, scriptDeletePokin, nodeId); err != nil {
+// 			return fmt.Errorf("gagal menghapus pohon kinerja: %v", err)
+// 		}
+
+// 		// Hapus tagging sebelum menghapus pohon kinerja
+// 		scriptDeleteTagging := fmt.Sprintf("DELETE FROM tb_tagging_pokin WHERE id_pokin IN (%s)", placeholders(len(nodeIds)))
+// 		_, err = tx.ExecContext(ctx, scriptDeleteTagging, convertToInterface(nodeIds)...)
+// 		if err != nil {
+// 			return fmt.Errorf("gagal menghapus tagging: %v", err)
+// 		}
+// 	}
+
+// 	return nil
+// }
+//END POKIN LAMA DELETE
+
+// DELETE POKIN TRIAL
 func (repository *PohonKinerjaRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id int) error {
-	// Temukan semua ID anak pohon secara rekursif
-	scriptFindChildren := `
-        WITH RECURSIVE child_tree AS (
-            SELECT id, parent, clone_from, level_pohon
-            FROM tb_pohon_kinerja
-            WHERE id = ?
-
-            UNION ALL
-
-            SELECT t.id, t.parent, t.clone_from, t.level_pohon
-            FROM tb_pohon_kinerja t
-            JOIN child_tree ct ON t.parent = ct.id
-        )
-        SELECT id, clone_from FROM child_tree
-    `
-
-	rows, err := tx.QueryContext(ctx, scriptFindChildren, id)
+	// 1. Kumpulkan semua ID subtree (akar + seluruh turunan via parent)
+	nodeIds, cloneFromMap, err := repository.collectSubtreeIds(ctx, tx, id)
 	if err != nil {
-		return fmt.Errorf("gagal mencari turunan pohon: %v", err)
+		return err
+	}
+	// 2. Update status node asli yang di-clone → kembali ke 'menunggu_disetujui'
+	for _, cloneFromId := range cloneFromMap {
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE tb_pohon_kinerja SET status = 'menunggu_disetujui' WHERE id = ?`,
+			cloneFromId,
+		); err != nil {
+			return fmt.Errorf("gagal update status clone_from id=%d: %w", cloneFromId, err)
+		}
+	}
+	// 3. Handle crosscutting per node, kumpulkan pohon yg lahir dari crosscutting_disetujui
+	//    dan hanya punya 1 referensi → perlu ikut dihapus
+	var crosscuttingDerivedIds []int
+	for _, nodeIdStr := range nodeIds {
+		nodeId, _ := strconv.Atoi(nodeIdStr)
+		derived, err := repository.processCrosscuttingForDelete(ctx, tx, nodeId)
+		if err != nil {
+			return fmt.Errorf("gagal proses crosscutting node id=%d: %w", nodeId, err)
+		}
+		crosscuttingDerivedIds = append(crosscuttingDerivedIds, derived...)
+	}
+	// 4. Hapus semua data pendukung + pohon kinerja utama (subtree)
+	for _, nodeIdStr := range nodeIds {
+		if err := repository.deletePokinAndDependencies(ctx, tx, nodeIdStr); err != nil {
+			return err
+		}
+	}
+	// 5. Rekursif hapus pohon yg lahir dari crosscutting_disetujui (single ref)
+	//    Buat set nodeIds yang sudah dihapus supaya tidak double-process
+	deletedSet := make(map[int]bool, len(nodeIds))
+	for _, s := range nodeIds {
+		if idInt, err := strconv.Atoi(s); err == nil {
+			deletedSet[idInt] = true
+		}
+	}
+	for _, derivedId := range crosscuttingDerivedIds {
+		if deletedSet[derivedId] {
+			continue
+		}
+		deletedSet[derivedId] = true
+		if err := repository.Delete(ctx, tx, derivedId); err != nil {
+			return fmt.Errorf("gagal hapus pohon crosscutting derived id=%d: %w", derivedId, err)
+		}
+	}
+	return nil
+}
+
+//ENDING
+
+// ─────────────────────────────────────────────────────────
+// collectSubtreeIds — CTE rekursif ambil seluruh turunan
+// ─────────────────────────────────────────────────────────
+func (repository *PohonKinerjaRepositoryImpl) collectSubtreeIds(
+	ctx context.Context, tx *sql.Tx, id int,
+) (nodeIds []string, cloneFromMap map[string]int, err error) {
+	rows, err := tx.QueryContext(ctx, `
+		WITH RECURSIVE child_tree AS (
+			SELECT id, clone_from
+			FROM tb_pohon_kinerja
+			WHERE id = ?
+			UNION ALL
+			SELECT t.id, t.clone_from
+			FROM tb_pohon_kinerja t
+			JOIN child_tree ct ON t.parent = ct.id
+		)
+		SELECT id, clone_from FROM child_tree
+	`, id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gagal mencari turunan pohon: %w", err)
 	}
 	defer rows.Close()
-
-	// Kumpulkan semua ID anak pohon dan clone_from
-	var nodeIds []string
-	cloneFromMap := make(map[string]int) // map[nodeId]cloneFromId
+	cloneFromMap = make(map[string]int)
 	for rows.Next() {
 		var nodeId string
 		var cloneFrom sql.NullInt64
 		if err := rows.Scan(&nodeId, &cloneFrom); err != nil {
-			return fmt.Errorf("gagal membaca ID turunan pohon: %v", err)
+			return nil, nil, fmt.Errorf("gagal scan turunan pohon: %w", err)
 		}
 		nodeIds = append(nodeIds, nodeId)
-		if cloneFrom.Valid {
+		if cloneFrom.Valid && cloneFrom.Int64 > 0 {
 			cloneFromMap[nodeId] = int(cloneFrom.Int64)
 		}
 	}
+	return nodeIds, cloneFromMap, rows.Err()
+}
 
-	// Update status untuk semua node asli yang di-clone
-	for _, cloneFromId := range cloneFromMap {
-		scriptUpdateStatus := `
-            UPDATE tb_pohon_kinerja 
-            SET status = 'menunggu_disetujui'
-            WHERE id = ?
-        `
-		if _, err := tx.ExecContext(ctx, scriptUpdateStatus, cloneFromId); err != nil {
-			return fmt.Errorf("gagal mengupdate status node asli ID %d: %v", cloneFromId, err)
+// ─────────────────────────────────────────────────────────
+// processCrosscuttingForDelete — handle semua relasi crosscutting
+// untuk satu nodeId sebelum pohon dihapus.
+// Returns: slice crosscutting_to yang pohonnya perlu ikut dihapus.
+// ─────────────────────────────────────────────────────────
+func (repository *PohonKinerjaRepositoryImpl) processCrosscuttingForDelete(
+	ctx context.Context, tx *sql.Tx, nodeId int,
+) ([]int, error) {
+	// ── A. Outgoing crosscutting: node ini sebagai crosscutting_from ──
+	rows, err := tx.QueryContext(ctx, `
+		SELECT id, COALESCE(crosscutting_to, 0), status
+		FROM tb_crosscutting
+		WHERE crosscutting_from = ?
+	`, nodeId)
+	if err != nil {
+		return nil, fmt.Errorf("gagal query outgoing crosscutting nodeId=%d: %w", nodeId, err)
+	}
+	type ccRow struct {
+		Id             int
+		CrosscuttingTo int
+		Status         string
+	}
+	var outgoing []ccRow
+	for rows.Next() {
+		var r ccRow
+		if err := rows.Scan(&r.Id, &r.CrosscuttingTo, &r.Status); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("gagal scan crosscutting: %w", err)
+		}
+		outgoing = append(outgoing, r)
+	}
+	rows.Close()
+	var toDeletePokinIds []int
+	for _, cc := range outgoing {
+		switch cc.Status {
+		case "crosscutting_menunggu", "crosscutting_ditolak":
+			// Hapus crosscutting row saja; pohon tujuan belum terbentuk
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM tb_crosscutting WHERE id = ?`, cc.Id,
+			); err != nil {
+				return nil, fmt.Errorf("gagal hapus crosscutting id=%d: %w", cc.Id, err)
+			}
+		case "crosscutting_disetujui":
+			// Hitung berapa banyak crosscutting yang menuju pohon yang sama
+			var countRef int
+			if err := tx.QueryRowContext(ctx,
+				`SELECT COUNT(*) FROM tb_crosscutting
+				 WHERE crosscutting_to = ? AND status = 'crosscutting_disetujui'`,
+				cc.CrosscuttingTo,
+			).Scan(&countRef); err != nil {
+				return nil, fmt.Errorf("gagal count ref crosscutting_to=%d: %w", cc.CrosscuttingTo, err)
+			}
+			// Hapus crosscutting row terlebih dahulu
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM tb_crosscutting WHERE id = ?`, cc.Id,
+			); err != nil {
+				return nil, fmt.Errorf("gagal hapus crosscutting id=%d: %w", cc.Id, err)
+			}
+			if cc.CrosscuttingTo > 0 && countRef == 1 {
+				// Satu-satunya crosscutting ke pohon ini → pohon ikut dihapus
+				toDeletePokinIds = append(toDeletePokinIds, cc.CrosscuttingTo)
+			}
+			// countRef > 1 → hanya crosscutting row dihapus; pohon tetap (masih dipakai lain)
+		case "crosscutting_disetujui_existing":
+			// Pohon existing TIDAK boleh dihapus; hanya putus tautan crosscutting
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM tb_crosscutting WHERE id = ?`, cc.Id,
+			); err != nil {
+				return nil, fmt.Errorf("gagal hapus crosscutting existing id=%d: %w", cc.Id, err)
+			}
+			// Fix status pohon existing (legacy repair — repo terpisah di crosscuttingopd_repository_impl)
+			if cc.CrosscuttingTo > 0 {
+				if err := repository.fixPokinStatusAfterExistingUnlink(ctx, tx, cc.CrosscuttingTo); err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
-
-	// Proses penghapusan untuk setiap node
-	for _, nodeId := range nodeIds {
-		// 1. Hapus target
-		scriptDeleteTarget := `
-            DELETE FROM tb_target 
-            WHERE indikator_id IN (
-                SELECT id FROM tb_indikator 
-                WHERE pokin_id = ?
-            )`
-		if _, err := tx.ExecContext(ctx, scriptDeleteTarget, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus target: %v", err)
-		}
-
-		// 2. Hapus indikator
-		scriptDeleteIndikator := "DELETE FROM tb_indikator WHERE pokin_id = ?"
-		if _, err := tx.ExecContext(ctx, scriptDeleteIndikator, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus indikator: %v", err)
-		}
-
-		// 3. Hapus pelaksana
-		scriptDeletePelaksana := "DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?"
-		if _, err := tx.ExecContext(ctx, scriptDeletePelaksana, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus pelaksana: %v", err)
-		}
-
-		// 4. Tangani crosscutting
-		// Hapus crosscutting yang menunggu/ditolak
-		scriptDeletePendingCrosscutting := `
-            DELETE FROM tb_crosscutting 
-            WHERE crosscutting_from = ?
-            AND status IN ('menunggu_disetujui', 'ditolak')`
-		if _, err := tx.ExecContext(ctx, scriptDeletePendingCrosscutting, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus crosscutting pending: %v", err)
-		}
-
-		// Update status crosscutting yang disetujui
-		scriptUpdateCrosscuttingStatus := `
-            UPDATE tb_crosscutting 
-            SET status = 'crosscutting_ditolak', 
-                crosscutting_to = 0 
-            WHERE crosscutting_to = ?
-            AND status = 'crosscutting_disetujui'`
-		if _, err := tx.ExecContext(ctx, scriptUpdateCrosscuttingStatus, nodeId); err != nil {
-			return fmt.Errorf("gagal mengupdate status crosscutting: %v", err)
-		}
-
-		// 5. Hapus pohon kinerja
-		scriptDeletePokin := "DELETE FROM tb_pohon_kinerja WHERE id = ?"
-		if _, err := tx.ExecContext(ctx, scriptDeletePokin, nodeId); err != nil {
-			return fmt.Errorf("gagal menghapus pohon kinerja: %v", err)
-		}
-
-		// Hapus tagging sebelum menghapus pohon kinerja
-		scriptDeleteTagging := fmt.Sprintf("DELETE FROM tb_tagging_pokin WHERE id_pokin IN (%s)", placeholders(len(nodeIds)))
-		_, err = tx.ExecContext(ctx, scriptDeleteTagging, convertToInterface(nodeIds)...)
-		if err != nil {
-			return fmt.Errorf("gagal menghapus tagging: %v", err)
-		}
+	// ── B. Incoming crosscutting: node ini sebagai crosscutting_to ──
+	// (OPD lain yang crosscutting KE node ini)
+	if _, err := tx.ExecContext(ctx, `
+    UPDATE tb_crosscutting
+    SET crosscutting_to = 0, status = 'crosscutting_menunggu'
+    WHERE crosscutting_to = ?
+	`, nodeId); err != nil {
+		return nil, fmt.Errorf("gagal reset incoming crosscutting ke node=%d: %w", nodeId, err)
 	}
+	return toDeletePokinIds, nil
+}
 
+// ─────────────────────────────────────────────────────────
+// deletePokinAndDependencies — hapus satu node + data pendukungnya
+// (indikator, target, pelaksana, tagging, pohon kinerja)
+// CATATAN: crosscutting sudah dihandle di processCrosscuttingForDelete
+// ─────────────────────────────────────────────────────────
+func (repository *PohonKinerjaRepositoryImpl) deletePokinAndDependencies(
+	ctx context.Context, tx *sql.Tx, nodeId string,
+) error {
+	// 1. Hapus target
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM tb_target
+		WHERE indikator_id IN (SELECT id FROM tb_indikator WHERE pokin_id = ?)
+	`, nodeId); err != nil {
+		return fmt.Errorf("gagal hapus target node=%s: %w", nodeId, err)
+	}
+	// 2. Hapus indikator
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_indikator WHERE pokin_id = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus indikator node=%s: %w", nodeId, err)
+	}
+	// 3. Hapus pelaksana
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_pelaksana_pokin WHERE pohon_kinerja_id = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus pelaksana node=%s: %w", nodeId, err)
+	}
+	// 4. Hapus tagging
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_tagging_pokin WHERE id_pokin = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus tagging node=%s: %w", nodeId, err)
+	}
+	// 5. Hapus pohon kinerja
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tb_pohon_kinerja WHERE id = ?`, nodeId,
+	); err != nil {
+		return fmt.Errorf("gagal hapus pohon kinerja node=%s: %w", nodeId, err)
+	}
+	return nil
+}
+
+// ─────────────────────────────────────────────────────────
+// fixPokinStatusAfterExistingUnlink (private)
+// Dipanggil saat crosscutting_disetujui_existing diputus;
+// kembalikan status pohon existing sesuai jenis_pohon.
+// (Logic ini juga tersedia di CrosscuttingOpdRepositoryImpl sebagai legacy repair)
+// ─────────────────────────────────────────────────────────
+func (repository *PohonKinerjaRepositoryImpl) fixPokinStatusAfterExistingUnlink(
+	ctx context.Context, tx *sql.Tx, pokinId int,
+) error {
+	var jenisPohon string
+	err := tx.QueryRowContext(ctx,
+		`SELECT jenis_pohon FROM tb_pohon_kinerja WHERE id = ?`, pokinId,
+	).Scan(&jenisPohon)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil // pohon tidak ada, skip
+		}
+		return fmt.Errorf("fixPokinStatus gagal ambil jenis_pohon id=%d: %w", pokinId, err)
+	}
+	var newStatus string
+	switch jenisPohon {
+	case "Strategic Pemda", "Tactical Pemda", "Operational Pemda":
+		newStatus = "pokin dari pemda"
+	default:
+		newStatus = "" // string kosong untuk non-Pemda
+	}
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE tb_pohon_kinerja SET status = ? WHERE id = ?`, newStatus, pokinId,
+	); err != nil {
+		return fmt.Errorf("fixPokinStatus gagal update id=%d: %w", pokinId, err)
+	}
 	return nil
 }
 
@@ -1388,9 +1650,10 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminByIdHierarki(ctx con
             UNION ALL
             
             -- Recursive case: ambil semua child nodes
-            SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
+          SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
             FROM tb_pohon_kinerja pk
             INNER JOIN pohon_hierarki ph ON pk.parent = ph.id
+            WHERE pk.level_pohon <= 6
         )
         SELECT 
             ph.id,
@@ -1816,7 +2079,10 @@ func (repository *PohonKinerjaRepositoryImpl) InsertClonedTarget(ctx context.Con
 }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.Context, tx *sql.Tx, jenisPohon string, levelPohon int, tahun string, kodeOpd string, status string) ([]domain.PohonKinerja, error) {
-	script := "SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active FROM tb_pohon_kinerja WHERE 1=1"
+	script := `
+SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active
+FROM tb_pohon_kinerja
+WHERE 1=1`
 	parameters := []interface{}{}
 	if jenisPohon != "" {
 		script += " AND jenis_pohon = ?"
@@ -1838,14 +2104,24 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.
 		script += " AND status = ?"
 		parameters = append(parameters, status)
 	}
-	script += " ORDER BY nama_pohon asc"
-
+	// Hierarki yang akarnya langsung bertaut ke parent -100 tidak ditampilkan
+	// (akar + seluruh turunan).
+	script += `
+	AND id NOT IN (
+		WITH RECURSIVE excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT p.id FROM tb_pohon_kinerja p
+			INNER JOIN excluded_tree et ON p.parent = et.id
+		)
+		SELECT id FROM excluded_tree
+	)`
+	script += " ORDER BY nama_pohon ASC"
 	rows, err := tx.QueryContext(ctx, script, parameters...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
 	var pokins []domain.PohonKinerja
 	for rows.Next() {
 		var pokin domain.PohonKinerja
@@ -1855,8 +2131,51 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.
 		}
 		pokins = append(pokins, pokin)
 	}
-	return pokins, nil
+	return pokins, rows.Err()
 }
+
+// func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.Context, tx *sql.Tx, jenisPohon string, levelPohon int, tahun string, kodeOpd string, status string) ([]domain.PohonKinerja, error) {
+// 	script := "SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active FROM tb_pohon_kinerja WHERE 1=1"
+// 	parameters := []interface{}{}
+// 	if jenisPohon != "" {
+// 		script += " AND jenis_pohon = ?"
+// 		parameters = append(parameters, jenisPohon)
+// 	}
+// 	if levelPohon != 0 {
+// 		script += " AND level_pohon = ?"
+// 		parameters = append(parameters, levelPohon)
+// 	}
+// 	if kodeOpd != "" {
+// 		script += " AND kode_opd = ?"
+// 		parameters = append(parameters, kodeOpd)
+// 	}
+// 	if tahun != "" {
+// 		script += " AND tahun = ?"
+// 		parameters = append(parameters, tahun)
+// 	}
+// 	if status != "" {
+// 		script += " AND status = ?"
+// 		parameters = append(parameters, status)
+// 	}
+// 	script += " ORDER BY nama_pohon asc"
+
+// 	rows, err := tx.QueryContext(ctx, script, parameters...)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var pokins []domain.PohonKinerja
+// 	for rows.Next() {
+// 		var pokin domain.PohonKinerja
+// 		err := rows.Scan(&pokin.Id, &pokin.NamaPohon, &pokin.JenisPohon, &pokin.LevelPohon, &pokin.KodeOpd, &pokin.Tahun, &pokin.Keterangan, &pokin.Status, &pokin.IsActive)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		pokins = append(pokins, pokin)
+// 	}
+// 	return pokins, nil
+// }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.PohonKinerja, error) {
 	script := `
@@ -1883,6 +2202,15 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByPelaksana(ctx context.C
         WHERE 
             p.nip = ?  -- ✅ FILTER BERDASARKAN NIP
             AND pk.tahun = ?
+			AND pk.id NOT IN (
+				WITH RECURSIVE excluded_tree AS (
+					SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+					UNION ALL
+					SELECT child.id FROM tb_pohon_kinerja child
+					INNER JOIN excluded_tree et ON child.parent = et.id
+				)
+				SELECT id FROM excluded_tree
+			)
         ORDER BY 
             pk.level_pohon, pk.id, pk.created_at ASC
     `
@@ -2905,199 +3233,154 @@ func (repository *PohonKinerjaRepositoryImpl) IsExistsByTahun(ctx context.Contex
 // 	return nil
 // }
 
-// clone pokin opd baru
+// clone pokin opd baru Insya allah fix
 func (repository *PohonKinerjaRepositoryImpl) ClonePokinOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, sourceTahun string, targetTahun string) error {
-	const parentPlaceholderPemda = -100
-	const statusPokinPemda = "pokin dari pemda"
-	// 1. ID valid: status kosong, parent = 0 atau parent status kosong/NULL, atau parent "pokin dari pemda"
-	scriptValidIds := `
-	  SELECT p1.id 
-	  FROM tb_pohon_kinerja p1
-	  LEFT JOIN tb_pohon_kinerja p2 ON p1.parent = p2.id 
-	  WHERE p1.kode_opd = ? 
-	  AND p1.tahun = ?
-	  AND p1.status = ''
-	  AND (
-	    p1.parent = 0 
-	    OR (p2.status = '' OR p2.status IS NULL)
-	    OR p2.status = 'pokin dari pemda'
-	  )
-	`
-	validRows, err := tx.QueryContext(ctx, scriptValidIds, kodeOpd, sourceTahun)
+	// Step 1: Ambil ID + parent dari pohon NON-Pemda, urut level asc agar parent selalu lebih dulu
+	type pokinRow struct {
+		id     int
+		parent int
+	}
+	validRows, err := tx.QueryContext(ctx, `
+        SELECT id, COALESCE(parent, 0)
+        FROM tb_pohon_kinerja
+        WHERE kode_opd = ?
+          AND tahun = ?
+          AND jenis_pohon NOT IN ('Strategic Pemda', 'Tactical Pemda', 'Operational Pemda')
+          AND status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak',
+                             'crosscutting_menunggu', 'crosscutting_ditolak')
+        ORDER BY level_pohon ASC, id ASC
+    `, kodeOpd, sourceTahun)
 	if err != nil {
 		return err
 	}
-	defer validRows.Close()
-	var validIds []int
+	var valid []pokinRow
 	for validRows.Next() {
-		var id int
-		if err := validRows.Scan(&id); err != nil {
+		var r pokinRow
+		if err := validRows.Scan(&r.id, &r.parent); err != nil {
+			validRows.Close()
 			return err
 		}
-		validIds = append(validIds, id)
+		valid = append(valid, r)
 	}
-	// 2. Clone Pohon Kinerja yang valid
-	for _, validId := range validIds {
-		scriptPokin := `
-	  INSERT INTO tb_pohon_kinerja (
-		  nama_pohon, parent, jenis_pohon, level_pohon, 
-		  kode_opd, keterangan, keterangan_crosscutting, 
-		  tahun, status, is_active, keterangan_tahun_clone
-	  )
-	  SELECT 
-		  nama_pohon, parent, jenis_pohon, level_pohon,
-		  kode_opd, keterangan, keterangan_crosscutting,
-		  ?, '', is_active, ?
-	  FROM tb_pohon_kinerja
-	  WHERE id = ?
-	`
-		_, err := tx.ExecContext(ctx, scriptPokin, targetTahun, sourceTahun, validId)
+	validRows.Close()
+	// Step 2: INSERT satu per satu, ambil LastInsertId langsung → idMapping akurat tanpa kolom tambahan
+	idMapping := make(map[int]int) // old_id → new_id
+
+	for _, r := range valid {
+		result, err := tx.ExecContext(ctx, `
+        INSERT INTO tb_pohon_kinerja (
+            nama_pohon,
+            parent,
+            jenis_pohon,
+            level_pohon,
+            kode_opd,
+            keterangan,
+            keterangan_crosscutting,
+            tahun,
+            status,
+            is_active,
+            keterangan_tahun_clone,
+            keterangan_clone_dari
+        )
+        SELECT
+            nama_pohon,
+            0,
+            jenis_pohon,
+            level_pohon,
+            kode_opd,
+            keterangan,
+            keterangan_crosscutting,
+            ?,
+            '',
+            is_active,
+            ?,
+            id
+        FROM tb_pohon_kinerja
+        WHERE id = ?
+    `, targetTahun, sourceTahun, r.id)
+
+		if err != nil {
+			return err
+		}
+
+		newId, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+
+		idMapping[r.id] = int(newId)
+	}
+	// Step 3: Update parent berdasarkan idMapping
+	// - old parent ada di idMapping → pakai ID baru
+	// - old parent tidak ada di idMapping (Pemda / tidak di-clone) → -100
+	// - old parent = 0 → biarkan 0 (root strategic)
+	for _, r := range valid {
+		newId := idMapping[r.id]
+		if r.parent == 0 {
+			continue // root, parent tetap 0
+		}
+		if newParent, exists := idMapping[r.parent]; exists {
+			_, err = tx.ExecContext(ctx, `UPDATE tb_pohon_kinerja SET parent = ? WHERE id = ?`, newParent, newId)
+		} else {
+			// parent Pemda atau tidak ikut clone → terlepas, parent = -100
+			_, err = tx.ExecContext(ctx, `UPDATE tb_pohon_kinerja SET parent = -100 WHERE id = ?`, newId)
+		}
 		if err != nil {
 			return err
 		}
 	}
-	// 3. Mapping ID lama -> baru
-	scriptMapping := `
-	  SELECT 
-		  src.id as old_id,
-		  dst.id as new_id
-	  FROM tb_pohon_kinerja src
-	  JOIN tb_pohon_kinerja dst ON 
-		  src.nama_pohon = dst.nama_pohon AND
-		  src.kode_opd = dst.kode_opd AND
-		  src.level_pohon = dst.level_pohon
-	  WHERE src.tahun = ? AND dst.tahun = ? 
-	  AND src.kode_opd = ?
-	`
-	rows, err := tx.QueryContext(ctx, scriptMapping, sourceTahun, targetTahun, kodeOpd)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	idMapping := make(map[int]int)
-	for rows.Next() {
-		var oldId, newId int
-		if err := rows.Scan(&oldId, &newId); err != nil {
-			return err
-		}
-		idMapping[oldId] = newId
-	}
-	// 4. Update parent: mapping biasa, atau -100 jika parent sumber "pokin dari pemda" (tidak diklon)
-	scriptUpdateParent := `
-		  UPDATE tb_pohon_kinerja 
-		  SET parent = ?
-		  WHERE id = ? AND tahun = ?
-	  `
-	oldPokin := `SELECT parent FROM tb_pohon_kinerja WHERE id = ? AND tahun = ?`
-	parentStatusQuery := `SELECT COALESCE(status, '') FROM tb_pohon_kinerja WHERE id = ? AND tahun = ?`
-	for oldId, newId := range idMapping {
-		var oldParent int
-		err := tx.QueryRowContext(ctx, oldPokin, oldId, sourceTahun).Scan(&oldParent)
-		if err != nil {
-			continue
-		}
-		if oldParent == 0 {
-			continue
-		}
-		if newParent, exists := idMapping[oldParent]; exists {
-			_, err = tx.ExecContext(ctx, scriptUpdateParent, newParent, newId, targetTahun)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		var parentStatus string
-		err = tx.QueryRowContext(ctx, parentStatusQuery, oldParent, sourceTahun).Scan(&parentStatus)
-		if err != nil {
-			continue
-		}
-		if parentStatus == statusPokinPemda {
-			_, err = tx.ExecContext(ctx, scriptUpdateParent, parentPlaceholderPemda, newId, targetTahun)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	// 5. Clone indikator
-	for oldId, newId := range idMapping {
-		scriptIndikator := `
-			INSERT INTO tb_indikator (
-				id, pokin_id, indikator, tahun
-			)
-			SELECT 
-				CONCAT('IND-', UUID_SHORT()), 
-				?, 
-				indikator,
-				''
-			FROM tb_indikator
-			WHERE pokin_id = ?
-		`
-		_, err := tx.ExecContext(ctx, scriptIndikator, newId, oldId)
+	// Step 4: Clone indikator & target
+	for _, r := range valid {
+		newId := idMapping[r.id]
+		// Insert indikator
+		_, err := tx.ExecContext(ctx, `
+            INSERT INTO tb_indikator (id, pokin_id, indikator, tahun)
+            SELECT CONCAT('IND-', UUID_SHORT()), ?, indikator, ''
+            FROM tb_indikator WHERE pokin_id = ?
+        `, newId, r.id)
 		if err != nil {
 			return err
 		}
-		scriptIndikatorMapping := `
-            SELECT 
-                src.id as old_indikator_id,
-                dst.id as new_indikator_id
+		// Mapping indikator lama → baru (by teks indikator, cukup aman karena scope 1 pohon)
+		indRows, err := tx.QueryContext(ctx, `
+            SELECT src.id, dst.id
             FROM tb_indikator src
-            JOIN tb_indikator dst ON 
-                src.indikator = dst.indikator AND
-                dst.pokin_id = ?
+            JOIN tb_indikator dst ON src.indikator = dst.indikator AND dst.pokin_id = ?
             WHERE src.pokin_id = ?
-        `
-		indikatorRows, err := tx.QueryContext(ctx, scriptIndikatorMapping, newId, oldId)
+        `, newId, r.id)
 		if err != nil {
 			return err
 		}
-		indikatorMapping := make(map[string]string)
-		for indikatorRows.Next() {
-			var oldIndikatorId, newIndikatorId string
-			if err := indikatorRows.Scan(&oldIndikatorId, &newIndikatorId); err != nil {
-				indikatorRows.Close()
+		indMapping := make(map[string]string)
+		for indRows.Next() {
+			var o, n string
+			if err := indRows.Scan(&o, &n); err != nil {
+				indRows.Close()
 				return err
 			}
-			indikatorMapping[oldIndikatorId] = newIndikatorId
+			indMapping[o] = n
 		}
-		indikatorRows.Close()
-		for oldIndikatorId, newIndikatorId := range indikatorMapping {
-			scriptTarget := `
-				INSERT INTO tb_target (
-					id, indikator_id, target, satuan, tahun
-				)
-				SELECT 
-					CONCAT('TRG-', UUID_SHORT()), 
-					?, 
-					target, 
-					satuan,
-					? 
-				FROM tb_target
-				WHERE indikator_id = ?
-			`
-			_, err := tx.ExecContext(ctx, scriptTarget, newIndikatorId, targetTahun, oldIndikatorId)
+		indRows.Close()
+		// Insert target
+		for oldInd, newInd := range indMapping {
+			_, err := tx.ExecContext(ctx, `
+                INSERT INTO tb_target (id, indikator_id, target, satuan, tahun)
+                SELECT CONCAT('TRG-', UUID_SHORT()), ?, target, satuan, ?
+                FROM tb_target WHERE indikator_id = ?
+            `, newInd, targetTahun, oldInd)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	// Clone tagging
-	for oldId, newId := range idMapping {
-		scriptTagging := `
-		INSERT INTO tb_tagging_pokin (
-			id_pokin,
-			nama_tagging,
-			keterangan_tagging,
-			clone_from
-		)
-		SELECT 
-			?,
-			nama_tagging,
-			keterangan_tagging,
-			id
-		FROM tb_tagging_pokin
-		WHERE id_pokin = ?
-	`
-		_, err := tx.ExecContext(ctx, scriptTagging, newId, oldId)
+	// Step 5: Clone tagging
+	for _, r := range valid {
+		newId := idMapping[r.id]
+		_, err := tx.ExecContext(ctx, `
+            INSERT INTO tb_tagging_pokin (id_pokin, nama_tagging, keterangan_tagging, clone_from)
+            SELECT ?, nama_tagging, keterangan_tagging, id
+            FROM tb_tagging_pokin WHERE id_pokin = ?
+        `, newId, r.id)
 		if err != nil {
 			return fmt.Errorf("gagal mengkloning tagging: %v", err)
 		}
@@ -4063,7 +4346,14 @@ type ControlPokinLevel struct {
 
 func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) (map[int]ControlPokinLevel, error) {
 	query := `
-		WITH RECURSIVE valid_pokin AS (
+		WITH RECURSIVE 
+		excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT child.id FROM tb_pohon_kinerja child
+			INNER JOIN excluded_tree et ON child.parent = et.id
+		),
+		valid_pokin AS (
 			-- ✅ BASE CASE: Strategic (level 4) dengan parent = 0 atau parent level 0-3
 			SELECT
 				pk.id,
@@ -4084,7 +4374,7 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 					AND p2.level_pohon BETWEEN 0 AND 3
 				)
 			)
-
+			AND pk.id NOT IN (SELECT id FROM excluded_tree)
 			UNION ALL
 
 			-- ✅ RECURSIVE: Level 5+ harus punya parent valid dengan tahun yang sama
@@ -4099,6 +4389,7 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 			AND child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND child.id NOT IN (SELECT id FROM excluded_tree)
 			-- ✅ PENTING: Parent harus tahun yang sama
 			AND child.tahun = vp.tahun
 		),
@@ -4193,6 +4484,12 @@ func (repository *PohonKinerjaRepositoryImpl) ControlPokinOpdByLevel(ctx context
 func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]LeaderboardTematikNode, error) {
 	query := `
 		WITH RECURSIVE
+		excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT child.id FROM tb_pohon_kinerja child
+			INNER JOIN excluded_tree et ON child.parent = et.id
+		),
 		valid_pokin AS (
 			SELECT
 				pk.id,
@@ -4215,6 +4512,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx c
 					WHERE level_pohon BETWEEN 0 AND 3
 				)
 			)
+			AND pk.id NOT IN (SELECT id FROM excluded_tree) 
 			UNION ALL
 			SELECT
 				child.id,
@@ -4230,6 +4528,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx c
 			WHERE child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND child.id NOT IN (SELECT id FROM excluded_tree)
 			AND child.kode_opd = vp.kode_opd
 			AND child.tahun = vp.tahun
 		),
@@ -4251,7 +4550,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindControlPokinTematikNodes(ctx c
 				)
 			)
 			AND vp.clone_from > 0
-			AND vp.level_pohon = 4
+			AND vp.level_pohon IN (4,5,6)
 			UNION ALL
 			SELECT
 				tt.kode_opd,
@@ -4319,6 +4618,12 @@ type LeaderboardTematikNode struct {
 func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardOpdData, error) {
 	query := `
 	WITH RECURSIVE 
+	excluded_tree AS (
+    SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+    UNION ALL
+    SELECT child.id FROM tb_pohon_kinerja child
+    INNER JOIN excluded_tree et ON child.parent = et.id
+	),
 	valid_pokin AS (
 		SELECT 
 			pk.id,
@@ -4340,6 +4645,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 				WHERE level_pohon BETWEEN 0 AND 3
 			)
 		)
+		AND pk.id NOT IN (SELECT id FROM excluded_tree)
 
 		UNION ALL
 		
@@ -4357,6 +4663,7 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 		WHERE child.tahun = ?
 		AND child.level_pohon > 4
 		AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+		AND child.id NOT IN (SELECT id FROM excluded_tree)
 		AND child.kode_opd = vp.kode_opd
 		AND child.tahun = vp.tahun
 	),
@@ -4515,6 +4822,12 @@ func (repository *PohonKinerjaRepositoryImpl) LeaderboardPokinOpd(ctx context.Co
 func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx context.Context, tx *sql.Tx, tahun string) ([]LeaderboardTematikNode, error) {
 	query := `
 		WITH RECURSIVE
+		excluded_tree AS (
+			SELECT id FROM tb_pohon_kinerja WHERE parent = -100
+			UNION ALL
+			SELECT child.id FROM tb_pohon_kinerja child
+			INNER JOIN excluded_tree et ON child.parent = et.id
+		),
 		valid_pokin AS (
 			SELECT
 				pk.id,
@@ -4529,6 +4842,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx co
 			WHERE pk.tahun = ?
 			AND pk.level_pohon = 4
 			AND pk.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			AND pk.id NOT IN (SELECT id FROM excluded_tree)
 			AND (
 				pk.parent = 0
 				OR pk.parent IN (
@@ -4551,6 +4865,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindLeaderboardTematikNodes(ctx co
 			WHERE child.tahun = ?
 			AND child.level_pohon > 4
 			AND child.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
+			 AND child.id NOT IN (SELECT id FROM excluded_tree)
 			AND child.kode_opd = vp.kode_opd
 			AND child.tahun = vp.tahun
 		),
@@ -5073,37 +5388,23 @@ func (repository *PohonKinerjaRepositoryImpl) FindTaggingByPokinIdsBatch(ctx con
 // }
 
 func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx context.Context, tx *sql.Tx, cloneFromIds []int) (map[int]*domain.PohonKinerja, error) {
+	result := make(map[int]*domain.PohonKinerja)
 	if len(cloneFromIds) == 0 {
-		return make(map[int]*domain.PohonKinerja), nil
+		return result, nil
 	}
-
-	// Batasi maksimal 50 IDs untuk performa
-	if len(cloneFromIds) > 50 {
-		cloneFromIds = cloneFromIds[:50]
-	}
-
-	placeholders := make([]string, len(cloneFromIds))
-	args := make([]interface{}, len(cloneFromIds))
-	for i, id := range cloneFromIds {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-
-	// Query optimized dengan CTE yang lebih efisien
-	script := fmt.Sprintf(`
+	const chunkSize = 80
+	queryTemplate := `
 		WITH RECURSIVE tematik_tree AS (
 			SELECT 
 				id,
 				parent,
 				nama_pohon,
 				level_pohon,
-				id as original_id,
-				0 as depth
+				id AS original_id,
+				0 AS depth
 			FROM tb_pohon_kinerja
 			WHERE id IN (%s)
-			
 			UNION ALL
-			
 			SELECT 
 				p.id,
 				p.parent,
@@ -5118,7 +5419,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx co
 		)
 		SELECT 
 			original_id,
-			id as tematik_id,
+			id AS tematik_id,
 			nama_pohon
 		FROM (
 			SELECT 
@@ -5126,32 +5427,46 @@ func (repository *PohonKinerjaRepositoryImpl) FindTematikByCloneFromBatch(ctx co
 				id,
 				nama_pohon,
 				level_pohon,
-				ROW_NUMBER() OVER (PARTITION BY original_id ORDER BY depth ASC) as rn
+				ROW_NUMBER() OVER (PARTITION BY original_id ORDER BY depth ASC) AS rn
 			FROM tematik_tree
 			WHERE level_pohon = 0
 		) ranked
-		WHERE rn = 1
-	`, strings.Join(placeholders, ","))
-
-	rows, err := tx.QueryContext(ctx, script, args...)
-	if err != nil {
-		return make(map[int]*domain.PohonKinerja), nil // Return empty map pada error
-	}
-	defer rows.Close()
-
-	result := make(map[int]*domain.PohonKinerja, len(cloneFromIds))
-	for rows.Next() {
-		var originalId, tematikId int
-		var namaPohon string
-		if err := rows.Scan(&originalId, &tematikId, &namaPohon); err != nil {
-			continue
+		WHERE rn = 1`
+	for start := 0; start < len(cloneFromIds); start += chunkSize {
+		end := start + chunkSize
+		if end > len(cloneFromIds) {
+			end = len(cloneFromIds)
 		}
-		result[originalId] = &domain.PohonKinerja{
-			Id:        tematikId,
-			NamaPohon: namaPohon,
+		chunk := cloneFromIds[start:end]
+		placeholders := make([]string, len(chunk))
+		args := make([]interface{}, len(chunk))
+		for i, id := range chunk {
+			placeholders[i] = "?"
+			args[i] = id
+		}
+		script := fmt.Sprintf(queryTemplate, strings.Join(placeholders, ","))
+		rows, err := tx.QueryContext(ctx, script, args...)
+		if err != nil {
+			return nil, fmt.Errorf("FindTematikByCloneFromBatch chunk [%d:%d]: %w", start, end, err)
+		}
+		func() {
+			defer rows.Close()
+			for rows.Next() {
+				var originalId, tematikId int
+				var namaPohon string
+				if scanErr := rows.Scan(&originalId, &tematikId, &namaPohon); scanErr != nil {
+					continue
+				}
+				result[originalId] = &domain.PohonKinerja{
+					Id:        tematikId,
+					NamaPohon: namaPohon,
+				}
+			}
+		}()
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("FindTematikByCloneFromBatch rows: %w", err)
 		}
 	}
-
 	return result, nil
 }
 
@@ -5334,35 +5649,35 @@ func (repository *PohonKinerjaRepositoryImpl) CheckIfSourceAlreadyCloned(
 }
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByParentClonePokinOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, levelPohon *int) ([]domain.PohonKinerja, error) {
-	const parentPlaceholder = -100
+	// Hanya pohon dengan parent = -100 (anak gantung Pemda untuk skenario clone)
 	script := `
-		SELECT 
-			id,
-			COALESCE(nama_pohon, '') AS nama_pohon,
-			COALESCE(parent, 0) AS parent,
-			COALESCE(jenis_pohon, '') AS jenis_pohon,
-			COALESCE(level_pohon, 0) AS level_pohon,
-			COALESCE(kode_opd, '') AS kode_opd,
-			COALESCE(keterangan, '') AS keterangan,
-			COALESCE(keterangan_crosscutting, '') AS keterangan_crosscutting,
-			COALESCE(tahun, '') AS tahun,
-			COALESCE(status, '') AS status,
-			COALESCE(is_active, 0) AS is_active,
-			COALESCE(clone_from, 0) AS clone_from,
-			COALESCE(keterangan_tahun_clone, '') AS keterangan_tahun_clone
-		FROM tb_pohon_kinerja
-		WHERE kode_opd = ?
-		  AND tahun = ?
-		  AND parent = ?
-		  AND status = ''
-		  AND jenis_pohon IN ('Strategic', 'Tactical', 'Operational', 'Operational N')
+		SELECT
+		p.id,
+		COALESCE(p.nama_pohon, '') AS nama_pohon,
+		COALESCE(p.parent, 0) AS parent,
+		COALESCE(p.jenis_pohon, '') AS jenis_pohon,
+		COALESCE(p.level_pohon, 0) AS level_pohon,
+		COALESCE(p.kode_opd, '') AS kode_opd,
+		COALESCE(p.keterangan, '') AS keterangan,
+		COALESCE(p.keterangan_crosscutting, '') AS keterangan_crosscutting,
+		COALESCE(p.tahun, '') AS tahun,
+		COALESCE(p.status, '') AS status,
+		COALESCE(p.is_active, 0) AS is_active,
+		COALESCE(p.clone_from, 0) AS clone_from,
+		COALESCE(p.keterangan_tahun_clone, '') AS keterangan_tahun_clone
+	FROM tb_pohon_kinerja p
+	WHERE p.kode_opd = ?
+	AND p.tahun = ?
+	AND p.parent = -100
+	AND p.level_pohon >= 4
+	AND p.status NOT IN ('menunggu_disetujui', 'tarik pokin opd', 'disetujui', 'ditolak', 'crosscutting_menunggu', 'crosscutting_ditolak')
 	`
-	args := []interface{}{kodeOpd, tahun, parentPlaceholder}
+	args := []interface{}{kodeOpd, tahun}
 	if levelPohon != nil {
-		script += ` AND level_pohon = ?`
+		script += ` AND p.level_pohon = ?`
 		args = append(args, *levelPohon)
 	}
-	script += ` ORDER BY level_pohon ASC, id ASC`
+	script += ` ORDER BY p.level_pohon ASC, p.id ASC`
 	rows, err := tx.QueryContext(ctx, script, args...)
 	if err != nil {
 		return nil, err
@@ -5392,6 +5707,46 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinByParentClonePokinOpd(ctx
 		list = append(list, p)
 	}
 	return list, nil
+}
+
+func (r *PohonKinerjaRepositoryImpl) FindChildPokinsUpToLevel(ctx context.Context, tx *sql.Tx, parentId int64, maxLevel int) ([]domain.PohonKinerja, error) {
+	SQL := `SELECT id, parent, nama_pohon, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, COALESCE(clone_from, 0), is_active
+            FROM tb_pohon_kinerja 
+            WHERE parent = ?`
+	args := []interface{}{parentId}
+	if maxLevel > 0 {
+		SQL += ` AND level_pohon <= ?`
+		args = append(args, maxLevel)
+	}
+	rows, err := tx.QueryContext(ctx, SQL, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var pokins []domain.PohonKinerja
+	for rows.Next() {
+		var pokin domain.PohonKinerja
+		err := rows.Scan(
+			&pokin.Id,
+			&pokin.Parent,
+			&pokin.NamaPohon,
+			&pokin.JenisPohon,
+			&pokin.LevelPohon,
+			&pokin.KodeOpd,
+			&pokin.Keterangan,
+			&pokin.Tahun,
+			&pokin.Status,
+			&pokin.CloneFrom,
+			&pokin.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result[kodeOpd] = append(result[kodeOpd], parentPokin)
+	}
+
+	return result, nil
 }
 
 func (repo *PohonKinerjaRepositoryImpl) FindParentPokinByTahunGrupByKodeOpd(ctx context.Context, tx *sql.Tx, tahun string) (map[string][]int, error) {

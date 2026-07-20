@@ -29,4 +29,5 @@ type TujuanOpdController interface {
 	FindTujuanOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	CreateTujuanRenjaPenetapanIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateTujuanRenjaPenetapanIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	TujuanOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
