@@ -210,7 +210,7 @@ func (repository *IsuKlhsRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 			   isu.kode_bidang_urusan, 
 			   bu.nama_bidang_urusan, 
 			   isu.isu_klhs, 
-			   isu.tahun, 
+			   isu.tahun
 		FROM tb_isu_klhs isu
 		LEFT JOIN tb_operasional_daerah od
 		ON od.kode_opd = isu.kode_opd
