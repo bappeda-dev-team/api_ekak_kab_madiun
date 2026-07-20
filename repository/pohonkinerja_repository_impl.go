@@ -5749,6 +5749,39 @@ func (r *PohonKinerjaRepositoryImpl) FindChildPokinsUpToLevel(ctx context.Contex
 	return result, nil
 }
 
+func (repo *PohonKinerjaRepositoryImpl) FindParentPokinByTahunGrupByKodeOpd(ctx context.Context, tx *sql.Tx, tahun string) (map[string][]int, error) {
+	if tahun == "" {
+		return nil, fmt.Errorf("tahun tidak ditemukan")
+	}
+
+	query := `SELECT ph.parent, ph.kode_opd
+                  FROM tb_pohon_kinerja ph
+                  WHERE ph.tahun = ? AND ph.kode_opd != ''`
+
+	rows, err := tx.QueryContext(ctx, query, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]int)
+	for rows.Next() {
+		var parentPokin int
+		var kodeOpd string
+		err := rows.Scan(
+			&parentPokin,
+			&kodeOpd,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result[kodeOpd] = append(result[kodeOpd], parentPokin)
+	}
+
+	return result, nil
+}
+
 func (repo *PohonKinerjaRepositoryImpl) FindPokinOpdByParentIdsAndTahun(ctx context.Context, tx *sql.Tx, parentIds []int, tahun string) ([]domain.PohonKinerja, error) {
 	const op = "pohonkinerja_repository.FindPokinByParentIdsAndTahun"
 
