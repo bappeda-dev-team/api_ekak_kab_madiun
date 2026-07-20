@@ -92,7 +92,7 @@ func (repository *IsuRegionalRepositoryImpl) FindById(ctx context.Context, tx *s
 			kode_opd,
 			isu_regional,
 			tahun
-		FROM tb_isu_global
+		FROM tb_isu_regional
 		WHERE id = ?
 	`
 

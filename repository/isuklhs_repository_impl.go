@@ -92,7 +92,7 @@ func (repository *IsuKlhsRepositoryImpl) FindById(ctx context.Context, tx *sql.T
 			kode_opd,
 			isu_klhs,
 			tahun
-		FROM tb_isu_global
+		FROM tb_isu_klhs
 		WHERE id = ?
 	`
 
