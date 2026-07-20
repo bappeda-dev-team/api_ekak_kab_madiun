@@ -22,4 +22,15 @@ type CrosscuttingOpdRepository interface {
 	// DeleteCrosscuttingExisting(ctx context.Context, tx *sql.Tx, crosscuttingId int) error
 	FindCrosscuttingByPohonIdsFrom(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.Crosscutting, error)
 	FindCrosscuttingByPohonIdsTo(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.Crosscutting, error)
+	FindCrosscuttingByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Crosscutting, error)
+	FindCrosscuttingFromByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.Crosscutting, error)
+
+	//crosscutting legacy untuk delete
+	FixPokinStatusAfterExistingUnlink(ctx context.Context, tx *sql.Tx, pokinId int) error
+	FixPokinStatusAfterExistingDelete(ctx context.Context, tx *sql.Tx, pokinId int) error
+
+	// Plan A: jika ref tunggal → hapus pohon kinerja + child
+	DeleteCrosscuttingDiterima(ctx context.Context, tx *sql.Tx, crosscuttingId int) error
+	// Plan B: jika ref tunggal → hanya lepas tautan, pohon kinerja tidak dihapus
+	UnlinkCrosscuttingDiterima(ctx context.Context, tx *sql.Tx, crosscuttingId int) error
 }

@@ -591,6 +591,19 @@ func (controller *PohonKinerjaAdminControllerImpl) TolakCrosscutting(writer http
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// docs swagger pokin admin
+// @Summary      Pilih Parent
+// @Description  Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.
+// @Tags         Pohon Kinerja Opd
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd    path     string  true  "Kode OPD"
+// @Param        tahun       path     string  true  "Tahun"
+// @Param        level_pohon path     string  true  "Level Pohon"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.PohonKinerjaAdminResponseData}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router      /pohon_kinerja/pilih_parent/{kode_opd}/{tahun}/{level_pohon} [get]
 func (controller *PohonKinerjaAdminControllerImpl) FindPokinFromOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")

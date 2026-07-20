@@ -1,21 +1,21 @@
 package domain
 
 type SasaranPemda struct {
-	Id            int
-	TujuanPemdaId int
-	SubtemaId     int
-	IsActive      bool
-	NamaSubtema   string
-	SasaranPemda  string
-	JenisPohon    string
-	PeriodeId     int
-	TahunAwal     string
-	TahunAkhir    string
-	JenisPeriode  string
-	Periode       Periode
-	Indikator     []Indikator
+	Id              int
+	TujuanPemdaId   int
+	SubtemaId       int
+	IsActive        bool
+	TujuanPemdaText string
+	NamaSubtema     string
+	SasaranPemda    string
+	JenisPohon      string
+	PeriodeId       int
+	TahunAwal       string
+	TahunAkhir      string
+	JenisPeriode    string
+	Periode         Periode
+	Indikator       []IndikatorPemda
 }
-
 type SasaranPemdaWithPokin struct {
 	SubtematikId        int
 	JenisPohon          string
@@ -27,6 +27,6 @@ type SasaranPemdaWithPokin struct {
 	IdsasaranPemda      int
 	SasaranPemda        string
 	Keterangan          string
-	IndikatorSubtematik []Indikator
+	IndikatorSubtematik []IndikatorPemda
 	SasaranPemdaList    []SasaranPemda
 }

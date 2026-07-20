@@ -19,6 +19,8 @@ type TujuanPemda struct {
 	Visi              string
 	IdMisi            int
 	Misi              string
+	//ini yg dipakai indikator
+	IndikatorPemda []IndikatorPemda
 }
 
 type TujuanPemdaWithPokin struct {

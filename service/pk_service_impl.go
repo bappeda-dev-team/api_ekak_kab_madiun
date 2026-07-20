@@ -72,7 +72,7 @@ func (service *PkServiceImpl) FindByKodeOpdTahun(ctx context.Context, kodeOpd st
 	// end check opd
 
 	// all pegawai in opd
-	pegawais, err := service.pegawaiService.FindAll(ctx, kodeOpd)
+	pegawais, err := service.pegawaiService.FindAll(ctx, kodeOpd, "")
 	if err != nil {
 		log.Printf("[ERROR] Find Pegawai kodeOpd: %v", err)
 		return pkopd.PkOpdResponse{}, fmt.Errorf("terjadi kesalahan sistem")
