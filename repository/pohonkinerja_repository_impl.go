@@ -5743,10 +5743,10 @@ func (r *PohonKinerjaRepositoryImpl) FindChildPokinsUpToLevel(ctx context.Contex
 			return nil, err
 		}
 
-		result[kodeOpd] = append(result[kodeOpd], parentPokin)
+		pokins = append(pokins, pokin)
 	}
 
-	return result, nil
+	return pokins, nil
 }
 
 func (repo *PohonKinerjaRepositoryImpl) FindParentPokinByTahunGrupByKodeOpd(ctx context.Context, tx *sql.Tx, tahun string) (map[string][]int, error) {

@@ -1220,9 +1220,6 @@ func (service *TujuanOpdServiceImpl) TujuanOpdPenetapan(ctx context.Context, kod
 		return nil, err
 	}
 
-	const lockJenisTujuanOpd = "tujuan_opd"
-
-
 	isLocked, err := service.LockDataRepository.IsLocked(ctx, tx, lockJenisTujuanOpd, kodeOpd, tahun)
 	if err != nil {
 		return nil, err
@@ -1312,6 +1309,8 @@ func buildTujuanOpdPenetapanFromDB(
 	}
 	return result
 }
+
+const lockJenisTujuanOpd = "tujuan_opd"
 
 func (service *TujuanOpdServiceImpl) LockTujuanOpd(ctx context.Context, kodeOpd, tahun string) error {
 	tx, err := service.DB.Begin()
@@ -1474,7 +1473,13 @@ func (s *TujuanOpdServiceImpl) getIndikatorWithFallback(
 
 	indikatorBaru, err := s.TujuanOpdRepository.
 		FindIndikatorTargetsRenstraByTujuanIds(ctx, tx, tujuanIds)
+	if err != nil {
+		return nil, err
+	}
 	indikatorLama, err := s.TujuanOpdRepository.
 		FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
+	if err != nil {
+		return nil, err
+	}
 	return mergeIndikator(indikatorBaru, indikatorLama), nil
 }
