@@ -9,3 +9,12 @@ type Target struct {
 	CloneFrom   string
 	Jenis       string
 }
+
+type TargetPemda struct {
+	Id            int
+	KodeIndikator string
+	Target        string
+	Satuan        string
+	Tahun         string
+	Jenis         string
+}

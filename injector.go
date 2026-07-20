@@ -471,6 +471,16 @@ var indikatorSet = wire.NewSet(
 	wire.Bind(new(controller.IndikatorController), new(*controller.IndikatorControllerImpl)),
 )
 
+var lockDataRepository = wire.NewSet(
+	repository.NewLockDataRepositoryImpl,
+	wire.Bind(new(repository.LockDataRepository), new(*repository.LockDataRepositoryImpl)),
+)
+
+var lockDataPemdaRepository = wire.NewSet(
+	repository.NewLockDataPemdaRepositoryImpl,
+	wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -529,6 +539,8 @@ func InitializeServer() *http.Server {
 		cloneRecordSet,
 		programPrioritasPusatSet,
 		indikatorSet,
+		lockDataRepository,
+		lockDataPemdaRepository,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

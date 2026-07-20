@@ -362,3 +362,33 @@ func (repository *ReviewRepositoryImpl) FindByPokinIdBatch(ctx context.Context, 
 
 	return reviews, nil
 }
+
+func (r *ReviewRepositoryImpl) CountReviewByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]int, error) {
+	if len(pokinIds) == 0 {
+		return map[int]int{}, nil
+	}
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	q := fmt.Sprintf(
+		`SELECT id_pohon_kinerja, COUNT(*) FROM tb_review WHERE id_pohon_kinerja IN (%s) GROUP BY id_pohon_kinerja`,
+		strings.Join(placeholders, ","),
+	)
+	rows, err := tx.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make(map[int]int, len(pokinIds))
+	for rows.Next() {
+		var id, count int
+		if err := rows.Scan(&id, &count); err != nil {
+			return nil, err
+		}
+		result[id] = count
+	}
+	return result, rows.Err()
+}
