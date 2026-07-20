@@ -519,21 +519,25 @@ func NewRouter(
 	router.POST("/isu-klhs/create", isuKlhsController.Create)
 	router.PUT("/isu-klhs/update/:id", isuKlhsController.Update)
 	router.DELETE("/isu-klhs/delete/:id", isuKlhsController.Delete)
+	router.GET("/isu-klhs/findall/:kode_opd", isuKlhsController.FindAll)
 	
 	//Master Isu Global 
 	router.POST("/isu-global/create", isuGlobalController.Create)
 	router.PUT("/isu-global/update/:id", isuGlobalController.Update)
 	router.DELETE("/isu-global/delete/:id", isuGlobalController.Delete)
+	router.GET("/isu-global/findall/:kode_opd", isuGlobalController.FindAll)
 	
 	//Master Isu Nasional 
 	router.POST("/isu-nasional/create", isuNasionalController.Create)
 	router.PUT("/isu-nasional/update/:id", isuNasionalController.Update)
 	router.DELETE("/isu-nasional/delete/:id", isuNasionalController.Delete)
+	router.GET("/isu-nasional/findall/:kode_opd", isuNasionalController.FindAll)
 	
 	//Master Isu Regional 
 	router.POST("/isu-regional/create", isuRegionalController.Create)
 	router.PUT("/isu-regional/update/:id", isuRegionalController.Update)
 	router.DELETE("/isu-regional/delete/:id", isuRegionalController.Delete)
+	router.GET("/isu-regional/findall/:kode_opd", isuRegionalController.FindAll)
 
 	// IKD
 	router.GET("/ikd/findall/:kode_opd/:tahun/:jenis_periode", ikdController.FindAll)

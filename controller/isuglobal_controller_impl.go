@@ -118,3 +118,25 @@ func (controller *IsuGlobalControllerImpl) Delete(writer http.ResponseWriter, re
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *IsuGlobalControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+
+	kodeOpd := params.ByName("kode_opd")
+
+	bidangUrusanResponses, err := controller.IsuGlobalService.FindAll(request.Context(), kodeOpd)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   bidangUrusanResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
