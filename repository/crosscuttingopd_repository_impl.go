@@ -1055,6 +1055,10 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsFrom(
 	// Build IN clause
 	placeholders := make([]string, len(pokinIds))
 	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
 
 	script := fmt.Sprintf(`
         SELECT
@@ -1104,6 +1108,10 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsTo(ct
 	// Build IN clause
 	placeholders := make([]string, len(pokinIds))
 	args := make([]any, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
 
 	script := fmt.Sprintf(`
         SELECT

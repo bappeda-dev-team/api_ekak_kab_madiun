@@ -2274,7 +2274,7 @@ func buildTacticalOnly(
 		Tagging:             taggingMap[tactical.Id],
 		Pelaksana:           pelaksanaMap[tactical.Id],
 		Indikator:           indikatorMap[tactical.Id],
-		Ikk:         ikkMap[tactical.Id],
+		Ikk:                 ikkMap[tactical.Id],
 		Review:              reviewPokin,
 		CountReview:         countReview,
 		Crosscutting:        crosscuttingMap[tactical.Id],
@@ -2336,7 +2336,7 @@ func buildOperationalOnly(
 		Tagging:             taggingMap[operational.Id],
 		Pelaksana:           pelaksanaMap[operational.Id],
 		Indikator:           indikatorMap[operational.Id],
-		Ikk:         ikkMap[operational.Id],
+		Ikk:                 ikkMap[operational.Id],
 		Review:              reviewPokin,
 		CountReview:         countReview,
 		Crosscutting:        crosscuttingMap[operational.Id],
@@ -2383,7 +2383,7 @@ func buildOperationalNOnly(
 		Tagging:             taggingMap[operationalN.Id],
 		Pelaksana:           pelaksanaMap[operationalN.Id],
 		Indikator:           indikatorMap[operationalN.Id],
-		Ikk:         ikkMap[operationalN.Id],
+		Ikk:                 ikkMap[operationalN.Id],
 		Review:              reviewPokin,
 		CountReview:         countReview,
 		Crosscutting:        crosscuttingMap[operationalN.Id],
@@ -4502,12 +4502,14 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 
 	tx, err := service.DB.Begin()
 	if err != nil {
+		log.Printf("[ERROR] error init db: %v", err)
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
 	defer helper.CommitOrRollback(tx)
 
 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
 	if err != nil {
+		log.Printf("[ERROR] error Find OPD: %v", err)
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
 
@@ -4548,6 +4550,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 
 	pokins, err := service.pohonKinerjaOpdRepository.FindAllPokinOpdForCetak(ctx, tx, kodeOpd, tahun)
 	if err != nil {
+		log.Printf("[ERROR] error Find Pokin OPD For Cetak: %v", err)
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
 	pokinIds := make([]int, 0, len(pokins))
@@ -4557,6 +4560,8 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 	// cari crosscutting (dari pemberi)
 	crosscuttings, err := service.crosscuttingOpdRepository.FindCrosscuttingByPohonIdsFrom(ctx, tx, pokinIds)
 	if err != nil {
+		log.Printf("[ERROR] error Find CrossCutting From: %v", err)
+		log.Printf("[DATA] pokinIds: %v", pokinIds)
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
 	crosscutMap := make(map[int][]domain.Crosscutting)
@@ -4569,6 +4574,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 	// cari crosscutting (dari pemberi)
 	crosscuttingsTo, err := service.crosscuttingOpdRepository.FindCrosscuttingByPohonIdsTo(ctx, tx, pokinIds)
 	if err != nil {
+		log.Printf("[ERROR] error Find CrossCutting To: %v", err)
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
 	crosscutMapTo := make(map[int][]domain.Crosscutting)
@@ -4590,6 +4596,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 				if cr.Status == "crosscutting_disetujui" || cr.Status == "crosscutting_disetujui_existing" {
 					pokinPenerima, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, cr.CrosscuttingTo)
 					if err != nil {
+						log.Printf("[ERROR] error Find Pokin Crosscutting From: %v", err)
 						return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 					}
 					namaPohonPenerima := pokinPenerima.NamaPohon
@@ -4620,6 +4627,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 				if cr.Status == "crosscutting_disetujui" || cr.Status == "crosscutting_disetujui_existing" {
 					pokinPemberi, err := service.pohonKinerjaOpdRepository.FindById(ctx, tx, cr.CrosscuttingFrom)
 					if err != nil {
+						log.Printf("[ERROR] error Find Pokin Crosscutting To: %v", err)
 						return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 					}
 					namaPohonPemberi := pokinPemberi.NamaPohon
@@ -4664,6 +4672,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 
 	version, err := helper.HashJson(items)
 	if err != nil {
+		log.Printf("[ERROR] error Generate Hash: %v", err)
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
 	namaCetak := fmt.Sprintf("CETAK_POKIN_OPD_%s_%d", kodeOpd, tahun)
