@@ -1049,7 +1049,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingFromByPokinIdsB
 
 func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsFrom(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.Crosscutting, error) {
 	if len(pokinIds) == 0 {
-		return nil, errors.New("Pohon id tidak boleh kosong")
+		return make([]domain.Crosscutting, 0), nil
 	}
 
 	// Build IN clause
@@ -1102,7 +1102,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsFrom(
 
 func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingByPohonIdsTo(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.Crosscutting, error) {
 	if len(pokinIds) == 0 {
-		return nil, errors.New("Pohon id tidak boleh kosong")
+		return make([]domain.Crosscutting, 0), nil
 	}
 
 	// Build IN clause
