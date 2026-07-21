@@ -34,6 +34,8 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		{"/pk/penetapan", "^/pk/penetapan$"},
 		{"/pohon_kinerja/cetak/", "^/pohon_kinerja/cetak/[^/]+$"},
 		{"/pohon_kinerja_opd/cetak/", "^/pohon_kinerja_opd/cetak/[^/]+$"},
+		{"/tujuan_pemda/penetapan", "^/tujuan_pemda/penetapan$"},
+		{"/sasaran_pemda/penetapan", "^/sasaran_pemda/penetapan$"},
 	}
 
 	currentPath := request.URL.Path
