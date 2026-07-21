@@ -1223,6 +1223,7 @@ func (service *PkServiceImpl) FindPkPenetapan(
 
 	result := make([]pkopd.PkAsn, 0, len(pks))
 	for _, pk := range pks {
+		var anggaranPk int
 		indikatorSelected := indikatorRekins[pk.IdRekinPemilikPk]
 		indikatorPks := make([]pkopd.IndikatorPk, 0, len(indikatorSelected))
 		for _, ind := range indikatorSelected {
@@ -1252,6 +1253,7 @@ func (service *PkServiceImpl) FindPkPenetapan(
 			for _, bl := range ren.Pelaksanaan {
 				bobots = append(bobots,
 					pkopd.BobotBulanan{
+						Id:    bl.Id,
 						Bulan: bl.Bulan,
 						Bobot: bl.Bobot,
 					})
@@ -1262,9 +1264,11 @@ func (service *PkServiceImpl) FindPkPenetapan(
 					RencanaKinerjaId: ren.RencanaKinerjaId,
 					NamaRencanaAksi:  ren.NamaRencanaAksi,
 					Urutan:           ren.Urutan,
+					Anggaran:         ren.Anggaran,
 					KodeOpd:          ren.KodeOpd,
 					Pelaksanaan:      bobots,
 				})
+			anggaranPk = anggaranPk + ren.Anggaran
 		}
 		result = append(result, pkopd.PkAsn{
 			Id:               pk.Id,
@@ -1276,6 +1280,7 @@ func (service *PkServiceImpl) FindPkPenetapan(
 			SasaranOpdId:     pk.SasaranOpdId,
 			IdRekinPemilikPk: pk.IdRekinPemilikPk,
 			RekinPemilikPk:   pk.RekinPemilikPk,
+			AnggaranPk:       anggaranPk,
 			Tahun:            pk.Tahun,
 			Keterangan:       pk.Keterangan,
 			Indikators:       indikatorPks,

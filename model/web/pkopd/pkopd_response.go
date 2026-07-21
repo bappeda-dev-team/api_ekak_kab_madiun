@@ -65,6 +65,7 @@ type PkAsn struct {
 	IdRekinPemilikPk string        `json:"id_rekin_pemilik_pk"`
 	SasaranOpdId     int64         `json:"id_sasaran_opd"`
 	RekinPemilikPk   string        `json:"rekin_pemilik_pk"`
+	AnggaranPk       int           `json:"anggaran_pk"`
 	Tahun            int           `json:"tahun"`
 	Keterangan       string        `json:"keterangan"`
 	Indikators       []IndikatorPk `json:"indikators"`
@@ -76,13 +77,15 @@ type RenaksiItem struct {
 	RencanaKinerjaId string         `json:"rekin_id"`
 	KodeOpd          string         `json:"kode_opd,omitempty"`
 	Urutan           int            `json:"urutan"`
+	Anggaran         int            `json:"anggaran"`
 	NamaRencanaAksi  string         `json:"nama_rencana_aksi"`
 	Pelaksanaan      []BobotBulanan `json:"pelaksanaan"`
 }
 
 type BobotBulanan struct {
-	Bulan int `json:"bulan"`
-	Bobot int `json:"bobot"`
+	Id    string `json:"id_pelaksanaan"`
+	Bulan int    `json:"bulan"`
+	Bobot int    `json:"bobot"`
 }
 
 type AtasanCandidate struct {

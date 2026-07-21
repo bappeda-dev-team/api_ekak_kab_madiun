@@ -759,10 +759,12 @@ func (repository *PkRepositoryImpl) RenaksiPkByIdRekins(
            ra.kode_opd,
            ra.urutan,
            ra.nama_rencana_aksi,
+	   rb.anggaran,
 	   ren.id,
            ren.bulan,
            ren.bobot
         FROM tb_rencana_aksi ra
+	LEFT JOIN tb_rincian_belanja rb ON ra.id = rb.renaksi_id
 	LEFT JOIN tb_pelaksanaan_rencana_aksi ren ON ra.id = ren.rencana_aksi_id
         WHERE ra.rencana_kinerja_id IN (?) ORDER BY ra.id
     	`
@@ -782,7 +784,7 @@ func (repository *PkRepositoryImpl) RenaksiPkByIdRekins(
 		var rencanaAksi domain.RencanaAksi
 		//var pelaksanaan []domain.PelaksanaanRencanaAksi
 		var pelaksanaanIdNS sql.NullString
-		var bulanNI, bobotNI sql.NullInt64
+		var bulanNI, bobotNI, anggaranNI sql.NullInt64
 
 		if err := rows.Scan(
 			&rencanaAksi.Id,
@@ -790,6 +792,7 @@ func (repository *PkRepositoryImpl) RenaksiPkByIdRekins(
 			&rencanaAksi.KodeOpd,
 			&rencanaAksi.Urutan,
 			&rencanaAksi.NamaRencanaAksi,
+			&anggaranNI,
 			&pelaksanaanIdNS,
 			&bulanNI,
 			&bobotNI,
@@ -799,6 +802,10 @@ func (repository *PkRepositoryImpl) RenaksiPkByIdRekins(
 
 		rekinId := rencanaAksi.RencanaKinerjaId
 		renaksiId := rencanaAksi.Id
+
+		if anggaranNI.Valid {
+			rencanaAksi.Anggaran = int(anggaranNI.Int64)
+		}
 
 		// init rekinMap
 		if rekinMap[rekinId] == nil {
