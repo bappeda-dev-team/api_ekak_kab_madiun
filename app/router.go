@@ -69,6 +69,7 @@ func NewRouter(
 	isuKlhsController controller.IsuKlhsController,
 	isuNasionalController controller.IsuNasionalController,
 	isuRegionalController controller.IsuRegionalController,
+	ppdController controller.PpdController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -538,6 +539,12 @@ func NewRouter(
 	router.POST("/ikk/select_ikk/create", ikkController.PilihIkk)
 	router.DELETE("/ikk/select_ikk/delete/:id", ikkController.DeletePilihanIkk)
 
+	//Master Potensi Perangkat Daerah
+	router.POST("/ppd/create", ppdController.Create)
+	router.PUT("/ppd/update/:id", ppdController.Update)
+	router.DELETE("/ppd/delete/:id", ppdController.Delete)
+	router.GET("/ppd/findall/:kode_opd", ppdController.FindAll)
+	
 	//Master Isu KLHS 
 	router.POST("/isu-klhs/create", isuKlhsController.Create)
 	router.PUT("/isu-klhs/update/:id", isuKlhsController.Update)
