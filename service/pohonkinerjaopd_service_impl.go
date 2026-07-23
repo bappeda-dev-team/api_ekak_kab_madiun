@@ -4590,6 +4590,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 		var pokinMetadata pohonkinerja.PokinMetadata
 
 		// target refactor
+		// crosscut to -> pov pemberi
 		if crosscut, ok := crosscutMap[pokin.Id]; ok {
 			crosscuttingPokins := make([]pohonkinerja.CrossCuttingPokin, 0)
 			for _, cr := range crosscut {
@@ -4608,6 +4609,9 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 					crosscuttingPokins = append(crosscuttingPokins,
 						pohonkinerja.CrossCuttingPokin{
 							IsCrossCuttingDiterima: true,
+							NamaPohonPemberi:       pokin.NamaPohon,
+							NamaOpdPemberi:         opd.NamaOpd,
+							// penerima
 							NamaPohonPenerima:      namaPohonPenerima,
 							NamaOpdPenerima:        cr.OpdPengirim,
 							KeteranganCrosscutting: cr.Keterangan,
@@ -4620,7 +4624,6 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 				CrosscuttingPokins: crosscuttingPokins,
 			}
 		}
-		namaPokin := pokin.NamaPohon
 		if crosscut, ok := crosscutMapTo[pokin.Id]; ok {
 			crosscuttingPokins := make([]pohonkinerja.CrossCuttingPokin, 0)
 			for _, cr := range crosscut {
@@ -4632,14 +4635,13 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 					}
 					namaPohonPemberi := pokinPemberi.NamaPohon
 
-					if cr.Status == "crosscutting_disetujui" {
-						namaPokin = namaPohonPemberi
-					}
-
 					crosscuttingPokins = append(crosscuttingPokins,
 						pohonkinerja.CrossCuttingPokin{
 							IsCrossCuttingDiterima: true,
-							NamaPohonPenerima:      namaPohonPemberi,
+							NamaPohonPemberi:       namaPohonPemberi,
+							NamaOpdPemberi:         pokinPemberi.NamaOpd,
+							// penerima
+							NamaPohonPenerima:      pokin.NamaPohon,
 							NamaOpdPenerima:        cr.OpdPengirim,
 							KeteranganCrosscutting: cr.Keterangan,
 							StatusCrosscutting:     cr.Status,
@@ -4656,7 +4658,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 			ParentId:   pokin.Parent,
 			LevelPohon: pokin.LevelPohon,
 			JenisPohon: pokin.JenisPohon,
-			NamaPohon:  namaPokin,
+			NamaPohon:  pokin.NamaPohon,
 			Metadata:   pokinMetadata,
 		})
 	}

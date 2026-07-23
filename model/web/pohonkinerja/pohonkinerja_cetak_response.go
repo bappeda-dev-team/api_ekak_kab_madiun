@@ -34,6 +34,8 @@ type PokinMetadata struct {
 
 type CrossCuttingPokin struct {
 	IsCrossCuttingDiterima bool   `json:"is_crosscutting_diterima"`
+	NamaPohonPemberi       string `json:"nama_pohon_pemberi"`
+	NamaOpdPemberi         string `json:"nama_opd_pemberi"`
 	NamaPohonPenerima      string `json:"nama_pohon_penerima"`
 	NamaOpdPenerima        string `json:"nama_opd_penerima"`
 	KeteranganCrosscutting string `json:"keterangan_crosscutting"`
