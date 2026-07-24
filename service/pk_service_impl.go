@@ -1220,6 +1220,25 @@ func (service *PkServiceImpl) FindPkPenetapan(
 		log.Printf("Error find renaksi pk penetapan: %v", err)
 		return nil, err
 	}
+	// cari rekin bawahan jika level pokin == 5 atau role level 2
+	pkBawahans, err := service.pkRepository.FindBawahansByKodeOpdTahunIdRekinAtasans(ctx, tx, kodeOpd, tahun, idRekins)
+	if err != nil {
+		return nil, err
+	}
+	rekinRenjas := make([]string, 0)
+	for _, pk := range pks {
+		pkBs := pkBawahans[pk.IdRekinPemilikPk]
+		for _, pkb := range pkBs {
+			rekinRenjas = append(rekinRenjas, pkb.IdRekinPemilikPk)
+		}
+
+	}
+	renjas, err := service.pkRepository.FindSubkegiatanByKodeOpdTahunRekinIds(ctx, tx,
+		kodeOpd, tahun, rekinRenjas)
+	if err != nil {
+		log.Printf("Error find renja pk penetapan: %v", err)
+		return nil, err
+	}
 
 	result := make([]pkopd.PkAsn, 0, len(pks))
 	for _, pk := range pks {
@@ -1270,6 +1289,31 @@ func (service *PkServiceImpl) FindPkPenetapan(
 				})
 			anggaranPk = anggaranPk + ren.Anggaran
 		}
+		renjaItems := make([]pkopd.RenjaItem, 0)
+		uniqueSubkegiatan := make(map[string]struct{})
+		for _, pkb := range pkBawahans[pk.IdRekinPemilikPk] {
+			itemRenja := renjas[pkb.IdRekinPemilikPk]
+			if itemRenja.KodeSubkegiatan == "" {
+				continue
+			}
+
+			if _, exists := uniqueSubkegiatan[itemRenja.KodeSubkegiatan]; exists {
+				continue
+			}
+
+			uniqueSubkegiatan[itemRenja.KodeSubkegiatan] = struct{}{}
+
+			renjaItems = append(renjaItems, pkopd.RenjaItem{
+				RekinId:         pk.IdRekinPemilikPk,
+				KodeProgram:     itemRenja.KodeProgram,
+				NamaProgram:     itemRenja.NamaProgram,
+				KodeKegiatan:    itemRenja.KodeKegiatan,
+				NamaKegiatan:    itemRenja.NamaKegiatan,
+				KodeSubkegiatan: itemRenja.KodeSubkegiatan,
+				NamaSubkegiatan: itemRenja.NamaSubkegiatan,
+			})
+		}
+
 		result = append(result, pkopd.PkAsn{
 			Id:               pk.Id,
 			KodeOpd:          pk.KodeOpd,
@@ -1285,6 +1329,7 @@ func (service *PkServiceImpl) FindPkPenetapan(
 			Keterangan:       pk.Keterangan,
 			Indikators:       indikatorPks,
 			Renaksis:         pelaksanaans,
+			Renjas:           renjaItems,
 		})
 	}
 	return result, nil

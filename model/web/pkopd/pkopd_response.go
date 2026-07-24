@@ -70,6 +70,17 @@ type PkAsn struct {
 	Keterangan       string        `json:"keterangan"`
 	Indikators       []IndikatorPk `json:"indikators"`
 	Renaksis         []RenaksiItem `json:"renaksi"`
+	Renjas           []RenjaItem   `json:"renja"`
+}
+
+type RenjaItem struct {
+	RekinId         string `json:"rekin_id"`
+	KodeProgram     string `json:"kode_program"`
+	NamaProgram     string `json:"nama_program"`
+	KodeKegiatan    string `json:"kode_kegiatan"`
+	NamaKegiatan    string `json:"nama_kegiatan"`
+	KodeSubkegiatan string `json:"kode_subkegiatan"`
+	NamaSubkegiatan string `json:"nama_subkegiatan"`
 }
 
 type RenaksiItem struct {

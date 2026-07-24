@@ -838,3 +838,89 @@ func (repository *PkRepositoryImpl) RenaksiPkByIdRekins(
 
 	return result, nil
 }
+
+func (repo *PkRepositoryImpl) FindBawahansByKodeOpdTahunIdRekinAtasans(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	tahun int,
+	idRekinAtasans []string,
+) (map[string][]domain.PkOpd, error) {
+	const op = "pk_repository.RenaksiPkByIdRekins"
+
+	if len(idRekinAtasans) == 0 {
+		return map[string][]domain.PkOpd{}, nil
+	}
+
+	placeholders := make([]string, len(idRekinAtasans))
+	args := make([]any, 0, len(idRekinAtasans)+2)
+
+	for i, id := range idRekinAtasans {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+
+	script := fmt.Sprintf(`
+	SELECT pk.id,
+		pk.kode_opd,
+		pk.nama_opd,
+		pk.level_pk,
+		pk.nama_atasan,
+		pk.nip_atasan,
+		pk.id_rekin_atasan,
+		pk.rekin_atasan,
+		pk.nip_pemilik_pk,
+		pk.nama_pemilik_pk,
+		pk.id_rekin_pemilik_pk,
+		pk.rekin_pemilik_pk,
+		pk.tahun,
+		pk.keterangan
+	FROM pk_opd pk
+	WHERE pk.kode_opd = ? AND pk.tahun = ? AND pk.id_rekin_atasan IN (%s)
+	ORDER BY pk.id`, strings.Join(placeholders, ","))
+
+	finalArgs := make([]any, 0, len(args)+2)
+	finalArgs = append(finalArgs, kodeOpd, tahun)
+	finalArgs = append(finalArgs, args...)
+
+	rows, err := tx.QueryContext(ctx, script, finalArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make(map[string][]domain.PkOpd)
+
+	for rows.Next() {
+		var pkOpd domain.PkOpd
+
+		err := rows.Scan(
+			&pkOpd.Id,
+			&pkOpd.KodeOpd,
+			&pkOpd.NamaOpd,
+			&pkOpd.LevelPk,
+			&pkOpd.NamaAtasan,
+			&pkOpd.NipAtasan,
+			&pkOpd.IdRekinAtasan,
+			&pkOpd.RekinAtasan,
+			&pkOpd.NipPemilikPk,
+			&pkOpd.NamaPemilikPk,
+			&pkOpd.IdRekinPemilikPk,
+			&pkOpd.RekinPemilikPk,
+			&pkOpd.Tahun,
+			&pkOpd.Keterangan,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan pk_opd failed: %w", err)
+		}
+		results[pkOpd.IdRekinAtasan] = append(
+			results[pkOpd.IdRekinAtasan],
+			pkOpd)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
