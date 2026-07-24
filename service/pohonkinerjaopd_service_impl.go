@@ -4557,11 +4557,37 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 	for _, pokin := range pokins {
 		pokinIds = append(pokinIds, pokin.Id)
 	}
+	// indikator target pokin
+	indikators, err := service.pohonKinerjaOpdRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
+	if err != nil {
+		log.Printf("[ERROR] error Find Indikator Pokins: %v", err)
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+	indikatorIds := make([]string, 0)
+	for _, indPokins := range indikators {
+		for _, ind := range indPokins {
+			indikatorIds = append(
+				indikatorIds,
+				ind.Id,
+			)
+		}
+	}
+	targets, err := service.pohonKinerjaOpdRepository.FindTargetByIndikatorIdsBatch(ctx, tx, indikatorIds)
+	if err != nil {
+		log.Printf("[ERROR] error Find Target Indikator Pokins: %v", err)
+		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
+	}
+	// mutate indikators add target to each
+	for _, inds := range indikators {
+		for i := range inds {
+			inds[i].Target = targets[inds[i].Id]
+		}
+
+	}
 	// cari crosscutting (dari pemberi)
 	crosscuttings, err := service.crosscuttingOpdRepository.FindCrosscuttingByPohonIdsFrom(ctx, tx, pokinIds)
 	if err != nil {
 		log.Printf("[ERROR] error Find CrossCutting From: %v", err)
-		log.Printf("[DATA] pokinIds: %v", pokinIds)
 		return pohonkinerja.CetakResponse[pohonkinerja.PokinOpdCetak]{}, err
 	}
 	crosscutMap := make(map[int][]domain.Crosscutting)
@@ -4652,6 +4678,29 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 				IsCrosscutting:     true,
 				CrosscuttingPokins: crosscuttingPokins,
 			}
+		}
+
+		if indikator, ok := indikators[pokin.Id]; ok {
+			indikatorPokins := make([]pohonkinerja.IndikatorPokinCetak, 0)
+			for _, ind := range indikator {
+				targetInd := make([]pohonkinerja.TargetIndikatorPokinCetak, 0)
+				for _, tar := range ind.Target {
+					targetInd = append(
+						targetInd,
+						pohonkinerja.TargetIndikatorPokinCetak{
+							Target: tar.Target,
+							Satuan: tar.Satuan,
+							Tahun:  tar.Tahun,
+						})
+				}
+				indikatorPokins = append(
+					indikatorPokins,
+					pohonkinerja.IndikatorPokinCetak{
+						NamaIndikator: ind.Indikator,
+						Targets:       targetInd,
+					})
+			}
+			pokinMetadata.IndikatorPokins = indikatorPokins
 		}
 		pokinResp = append(pokinResp, pohonkinerja.PokinCetak{
 			Id:         pokin.Id,

@@ -27,8 +27,9 @@ type PokinOpdCetak struct {
 }
 
 type PokinMetadata struct {
-	IsCrosscutting     bool                `json:"is_crosscutting"`
-	CrosscuttingPokins []CrossCuttingPokin `json:"crosscutting_pokins"`
+	IsCrosscutting     bool                  `json:"is_crosscutting"`
+	CrosscuttingPokins []CrossCuttingPokin   `json:"crosscutting_pokins"`
+	IndikatorPokins    []IndikatorPokinCetak `json:"indikator_pokins"`
 	// metadata lain...
 }
 
@@ -40,4 +41,15 @@ type CrossCuttingPokin struct {
 	NamaOpdPenerima        string `json:"nama_opd_penerima"`
 	KeteranganCrosscutting string `json:"keterangan_crosscutting"`
 	StatusCrosscutting     string `json:"status_crosscutting"`
+}
+
+type IndikatorPokinCetak struct {
+	NamaIndikator string                      `json:"nama_indikator"`
+	Targets       []TargetIndikatorPokinCetak `json:"targets"`
+}
+
+type TargetIndikatorPokinCetak struct {
+	Target string `json:"target"`
+	Satuan string `json:"satuan"`
+	Tahun  string `json:"tahun"`
 }
