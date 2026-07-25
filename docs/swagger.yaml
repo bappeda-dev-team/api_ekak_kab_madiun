@@ -1480,6 +1480,26 @@ definitions:
       sumber_jenis:
         type: string
       target:
+        description: Diisi untuk renstra / ranwal (single-slot)
+        items:
+          $ref: '#/definitions/tujuanopd.TargetResponse'
+        type: array
+      target_penetapan:
+        description: 'Dual-slot penetapan: target_rankhir + target_penetapan'
+        items:
+          $ref: '#/definitions/tujuanopd.TargetResponse'
+        type: array
+      target_rankhir:
+        items:
+          $ref: '#/definitions/tujuanopd.TargetResponse'
+        type: array
+      target_ranwal:
+        description: 'Dual-slot rankhir: target_ranwal + target_rankhir'
+        items:
+          $ref: '#/definitions/tujuanopd.TargetResponse'
+        type: array
+      target_renstra:
+        description: Legacy compare field
         items:
           $ref: '#/definitions/tujuanopd.TargetResponse'
         type: array
@@ -1506,6 +1526,49 @@ definitions:
         items:
           $ref: '#/definitions/tujuanopd.TargetUpdateRequest'
         type: array
+    type: object
+  tujuanopd.LayerTargetBatchRequest:
+    properties:
+      targets:
+        items:
+          $ref: '#/definitions/tujuanopd.LayerTargetItemRequest'
+        type: array
+    type: object
+  tujuanopd.LayerTargetItemRequest:
+    properties:
+      kode_indikator:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    required:
+    - kode_indikator
+    - satuan
+    - tahun
+    - target
+    type: object
+  tujuanopd.LayerTargetUpdateBatchRequest:
+    properties:
+      targets:
+        items:
+          $ref: '#/definitions/tujuanopd.LayerTargetUpdateItemRequest'
+        type: array
+    type: object
+  tujuanopd.LayerTargetUpdateItemRequest:
+    properties:
+      id:
+        type: string
+      satuan:
+        type: string
+      target:
+        type: string
+    required:
+    - id
+    - satuan
+    - target
     type: object
   tujuanopd.TargetCreateRequest:
     properties:
@@ -3890,6 +3953,123 @@ paths:
       summary: Tujuan Opd Renja Penetapan
       tags:
       - Tujuan Opd Renja Penetapan
+  /tujuan_opd/penetapan/target/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target baru untuk penetapan. Indikator harus sudah ada
+        di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).
+      parameters:
+      - description: Batch targets
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.LayerTargetBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Target Penetapan Tujuan OPD
+      tags:
+      - Tujuan Opd Layer Target
+  /tujuan_opd/penetapan/target/delete/{kode_indikator}/{tahun}:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus target penetapan berdasarkan kode_indikator dan tahun.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      - description: Tahun target
+        example: '"2026"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Target Penetapan Tujuan OPD
+      tags:
+      - Tujuan Opd Penetapan Target
+  /tujuan_opd/penetapan/target/update:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui target penetapan berdasarkan ID target. Hanya target
+        dan satuan yang diubah.
+      parameters:
+      - description: Batch update targets (wajib ada id)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.LayerTargetUpdateBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Penetapan Tujuan OPD
+      tags:
+      - Tujuan Opd Penetapan Target
   /tujuan_opd/rankhir/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -3931,6 +4111,123 @@ paths:
       summary: Tujuan Opd Renja Rankhir
       tags:
       - Tujuan Opd Renja Rankhir
+  /tujuan_opd/rankhir/target/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target baru untuk rankhir. Indikator harus sudah ada di
+        renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).
+      parameters:
+      - description: Batch targets
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.LayerTargetBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Target Rankhir Tujuan OPD
+      tags:
+      - Tujuan Opd Rankhir Target
+  /tujuan_opd/rankhir/target/delete/{kode_indikator}/{tahun}:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus target rankhir berdasarkan kode_indikator dan tahun.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      - description: Tahun target
+        example: '"2026"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Target Rankhir Tujuan OPD
+      tags:
+      - Tujuan Opd Rankhir Target
+  /tujuan_opd/rankhir/target/update:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui target rankhir berdasarkan ID target. Hanya target
+        dan satuan yang diubah.
+      parameters:
+      - description: Batch update targets (wajib ada id)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tujuanopd.LayerTargetUpdateBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.TargetResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Rankhir Tujuan OPD
+      tags:
+      - Tujuan Opd Rankhir Target
   /tujuan_opd/ranwal/{kode_opd}/{tahun}:
     get:
       consumes:
