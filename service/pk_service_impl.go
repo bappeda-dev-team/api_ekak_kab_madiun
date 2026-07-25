@@ -1332,11 +1332,11 @@ func (service *PkServiceImpl) FindPkPenetapan(
 					continue
 				}
 
-				if _, exists := uniqueSubkegiatan[itemRenja.KodeSubkegiatan]; exists {
+				if _, exists := uniqueSubkegiatan[itemRenja.KodeProgram]; exists {
 					continue
 				}
 
-				uniqueSubkegiatan[itemRenja.KodeSubkegiatan] = struct{}{}
+				uniqueSubkegiatan[itemRenja.KodeProgram] = struct{}{}
 
 				renjaItems = append(renjaItems, pkopd.RenjaItem{
 					RekinId:         pkb.IdRekinPemilikPk,
