@@ -22,4 +22,7 @@ type PkRepository interface {
 	IndikatorTargetPkByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) (map[string][]domain.Indikator, error)
 	RenaksiPkByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) (map[string][]domain.RencanaAksi, error)
 	FindBawahansByKodeOpdTahunIdRekinAtasans(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, idRekinAtasans []string) (map[string][]domain.PkOpd, error)
+	// PAGU PENETAPAN
+	PaguProgramByKodeOpdTahunKodePrograms(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, kodePrograms []string) (map[string]int64, error)
+	PaguKegiatanByKodeOpdTahunKodeKegiatans(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, kodeKegiatans []string) (map[string]int64, error)
 }

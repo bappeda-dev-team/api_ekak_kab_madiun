@@ -609,6 +609,7 @@ func NewRouter(
 	router.POST("/pk_opd/kunci_pk", pkController.KunciPK)
 	router.POST("/pk_opd/buka_kunci_pk", pkController.BukaKunciPK)
 	router.GET("/pk/penetapan", pkController.PkPenetapan)
+	router.GET("/pk/penetapan/renja", pkController.PkPenetapanRenja)
 
 	//clone rekin
 	router.POST("/rencana_kinerja/clone/:rekin_id/:tahun_tujuan", rencanaKinerjaController.CloneRencanaKinerja)

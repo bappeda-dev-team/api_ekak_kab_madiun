@@ -89,3 +89,11 @@ func IsTargetValidationError(err error) bool {
 	return strings.Contains(msg, MsgTargetFormatInvalid) ||
 		strings.Contains(msg, "nilai target tidak valid")
 }
+
+type BusinessError struct {
+	Message string
+}
+
+func (e *BusinessError) Error() string {
+	return e.Message
+}

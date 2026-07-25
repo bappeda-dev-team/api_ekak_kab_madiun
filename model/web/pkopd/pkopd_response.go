@@ -70,17 +70,30 @@ type PkAsn struct {
 	Keterangan       string        `json:"keterangan"`
 	Indikators       []IndikatorPk `json:"indikators"`
 	Renaksis         []RenaksiItem `json:"renaksi"`
-	Renjas           []RenjaItem   `json:"renja"`
+}
+
+type PkRenjaAsn struct {
+	Nama    string      `json:"nama_pegawai"`
+	Nip     string      `json:"nip"`
+	KodeOpd string      `json:"kode_opd"`
+	Tahun   int         `json:"tahun"`
+	Renjas  []RenjaItem `json:"renja_items"`
 }
 
 type RenjaItem struct {
-	RekinId         string `json:"rekin_id"`
-	KodeProgram     string `json:"kode_program"`
-	NamaProgram     string `json:"nama_program"`
-	KodeKegiatan    string `json:"kode_kegiatan"`
-	NamaKegiatan    string `json:"nama_kegiatan"`
+	RekinId string `json:"rekin_id"`
+
+	KodeProgram string `json:"kode_program"`
+	NamaProgram string `json:"nama_program"`
+	PaguProgram int64  `json:"pagu_program"`
+
+	KodeKegiatan string `json:"kode_kegiatan"`
+	NamaKegiatan string `json:"nama_kegiatan"`
+	PaguKegiatan int64  `json:"pagu_kegiatan"`
+
 	KodeSubkegiatan string `json:"kode_subkegiatan"`
 	NamaSubkegiatan string `json:"nama_subkegiatan"`
+	PaguSubkegiatan int64  `json:"pagu_subkegiatan"`
 }
 
 type RenaksiItem struct {

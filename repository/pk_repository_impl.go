@@ -924,3 +924,120 @@ func (repo *PkRepositoryImpl) FindBawahansByKodeOpdTahunIdRekinAtasans(
 
 	return results, nil
 }
+
+func (repository *PkRepositoryImpl) PaguProgramByKodeOpdTahunKodePrograms(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, kodePrograms []string) (map[string]int64, error) {
+	const op = "pk_repository.PaguProgramByKodeOpdTahunKodePrograms"
+
+	paguProgramMap := make(map[string]int64)
+	if len(kodePrograms) == 0 {
+		return paguProgramMap, nil
+	}
+
+	placeholders := make([]string, len(kodePrograms))
+	args := make([]any, 0, len(kodePrograms)+2)
+
+	for i, id := range kodePrograms {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+
+	script := fmt.Sprintf(`
+	SELECT
+    	SUBSTRING_INDEX(tp.kode_subkegiatan, '.', 3) AS kode_program,
+        SUM(tp.pagu) AS pagu_program
+	FROM tb_pagu tp
+        WHERE tp.kode_opd = ?
+ 	AND tp.tahun = ?
+ 	AND tp.jenis = 'penetapan'
+	AND SUBSTRING_INDEX(tp.kode_subkegiatan, '.', 3) IN (%s)
+	GROUP BY SUBSTRING_INDEX(tp.kode_subkegiatan, '.', 3)
+	`, strings.Join(placeholders, ","))
+	finalArgs := make([]any, 0, len(args)+2)
+	finalArgs = append(finalArgs, kodeOpd, tahun)
+	finalArgs = append(finalArgs, args...)
+
+	rows, err := tx.QueryContext(ctx, script, finalArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var kodeProgram string
+		var paguProgramNi sql.NullInt64
+		var paguProgram int64
+		err := rows.Scan(
+			&kodeProgram,
+			&paguProgramNi,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if paguProgramNi.Valid {
+			paguProgram = paguProgramNi.Int64
+		}
+		paguProgramMap[kodeProgram] = paguProgram
+
+	}
+
+	return paguProgramMap, nil
+}
+
+func (repository *PkRepositoryImpl) PaguKegiatanByKodeOpdTahunKodeKegiatans(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, kodeKegiatans []string) (map[string]int64, error) {
+	const op = "pk_repository.PaguKegiatanByKodeOpdTahunKodeKegiatans"
+
+	paguKegiatanMap := make(map[string]int64)
+	if len(kodeKegiatans) == 0 {
+		return paguKegiatanMap, nil
+	}
+
+	placeholders := make([]string, len(kodeKegiatans))
+	args := make([]any, 0, len(kodeKegiatans)+2)
+
+	for i, id := range kodeKegiatans {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+
+	script := fmt.Sprintf(`
+	SELECT
+    	SUBSTRING_INDEX(tp.kode_subkegiatan, '.', 5) AS kode_kegiatan,
+        SUM(tp.pagu) AS pagu_kegiatan
+	FROM tb_pagu tp
+        WHERE tp.kode_opd = ?
+ 	AND tp.tahun = ?
+ 	AND tp.jenis = 'penetapan'
+	AND SUBSTRING_INDEX(tp.kode_subkegiatan, '.', 5) IN (%s)
+	GROUP BY SUBSTRING_INDEX(tp.kode_subkegiatan, '.', 5)
+	`, strings.Join(placeholders, ","))
+
+	finalArgs := make([]any, 0, len(args)+2)
+	finalArgs = append(finalArgs, kodeOpd, tahun)
+	finalArgs = append(finalArgs, args...)
+
+	rows, err := tx.QueryContext(ctx, script, finalArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var kodeKegiatan string
+		var paguKegiatanNi sql.NullInt64
+		var paguKegiatan int64
+		err := rows.Scan(
+			&kodeKegiatan,
+			&paguKegiatanNi,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if paguKegiatanNi.Valid {
+			paguKegiatan = paguKegiatanNi.Int64
+		}
+		paguKegiatanMap[kodeKegiatan] = paguKegiatan
+
+	}
+
+	return paguKegiatanMap, nil
+}

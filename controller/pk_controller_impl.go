@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"ekak_kabupaten_madiun/helper"
@@ -206,6 +207,26 @@ func (controller *PkControllerImpl) PkPenetapan(w http.ResponseWriter, r *http.R
 
 	response, err := controller.pkOpdService.FindPkPenetapan(r.Context(), idPegawai, kodeOpd, tahun)
 	if err != nil {
+		var businessErr *helper.BusinessError
+		if errors.As(err, &businessErr) {
+			webResponse := web.WebResponse{
+				Code:   http.StatusUnprocessableEntity,
+				Status: http.StatusText(http.StatusUnprocessableEntity),
+				Data: struct {
+					IdPegawai string `json:"id_pegawai"`
+					KodeOpd   string `json:"kode_opd"`
+					Tahun     int    `json:"tahun"`
+				}{
+
+					IdPegawai: idPegawai,
+					KodeOpd:   kodeOpd,
+					Tahun:     tahun,
+				},
+				Error: err.Error(),
+			}
+			helper.WriteToResponseBodyWstatus(w, webResponse)
+			return
+		}
 		webResponse := web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: http.StatusText(http.StatusInternalServerError),
@@ -223,4 +244,87 @@ func (controller *PkControllerImpl) PkPenetapan(w http.ResponseWriter, r *http.R
 	}
 
 	helper.WriteToResponseBodyWstatus(w, webResponse)
+}
+
+func (controller *PkControllerImpl) PkPenetapanRenja(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	req := r.URL.Query()
+	idPegawai := req.Get("id_pegawai")
+	kodeOpd := req.Get("kode_opd")
+	tahunStr := req.Get("tahun")
+
+	if idPegawai == "" {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   nil,
+			Error:  "id_pegawai harus terisi",
+		}
+		helper.WriteToResponseBodyWstatus(w, webResponse)
+		return
+
+	}
+
+	if kodeOpd == "" {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   nil,
+			Error:  "kode_opd harus terisi",
+		}
+		helper.WriteToResponseBodyWstatus(w, webResponse)
+		return
+	}
+
+	tahun, err := strconv.Atoi(tahunStr)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   nil,
+			Error:  "tahun tidak valid",
+		}
+		helper.WriteToResponseBodyWstatus(w, webResponse)
+		return
+	}
+
+	response, err := controller.pkOpdService.FindPkPenetapanRenja(r.Context(), idPegawai, kodeOpd, tahun)
+	if err != nil {
+		var businessErr *helper.BusinessError
+		if errors.As(err, &businessErr) {
+			webResponse := web.WebResponse{
+				Code:   http.StatusUnprocessableEntity,
+				Status: http.StatusText(http.StatusUnprocessableEntity),
+				Data: struct {
+					IdPegawai string `json:"id_pegawai"`
+					KodeOpd   string `json:"kode_opd"`
+					Tahun     int    `json:"tahun"`
+				}{
+
+					IdPegawai: idPegawai,
+					KodeOpd:   kodeOpd,
+					Tahun:     tahun,
+				},
+				Error: err.Error(),
+			}
+			helper.WriteToResponseBodyWstatus(w, webResponse)
+			return
+		}
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: http.StatusText(http.StatusInternalServerError),
+			Data:   nil,
+			Error:  "PK Penetapan Renja TIDAK DAPAT DIAKSES",
+		}
+		helper.WriteToResponseBodyWstatus(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: http.StatusText(http.StatusOK),
+		Data:   response,
+	}
+
+	helper.WriteToResponseBodyWstatus(w, webResponse)
+
 }
