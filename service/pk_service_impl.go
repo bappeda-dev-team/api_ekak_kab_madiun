@@ -1206,6 +1206,21 @@ func (service *PkServiceImpl) FindPkPenetapan(
 		log.Printf("Error find pk pegawai penetapan: %v", err)
 		return nil, err
 	}
+	// validate data pks
+	levels := make(map[int]struct{})
+	for _, pk := range pks {
+		levels[pk.LevelPk] = struct{}{}
+	}
+
+	if len(levels) != 1 {
+		return nil, fmt.Errorf("pegawai %s memiliki PK pada lebih dari satu level", idPegawai)
+	}
+
+	var levelPk int
+	for level := range levels {
+		levelPk = level
+	}
+	// end validate
 	idRekins := make([]string, 0, len(pks))
 	for _, pk := range pks {
 		idRekins = append(idRekins, pk.IdRekinPemilikPk)
@@ -1225,13 +1240,30 @@ func (service *PkServiceImpl) FindPkPenetapan(
 	if err != nil {
 		return nil, err
 	}
+	rekinSet := make(map[string]struct{})
 	rekinRenjas := make([]string, 0)
-	for _, pk := range pks {
-		pkBs := pkBawahans[pk.IdRekinPemilikPk]
-		for _, pkb := range pkBs {
-			rekinRenjas = append(rekinRenjas, pkb.IdRekinPemilikPk)
+
+	log.Printf("LEVEL PK: %d", levelPk)
+	switch levelPk {
+	case 4, 5:
+		for _, pk := range pks {
+			for _, pkb := range pkBawahans[pk.IdRekinPemilikPk] {
+				if _, ok := rekinSet[pkb.IdRekinPemilikPk]; ok {
+					continue
+				}
+				rekinSet[pkb.IdRekinPemilikPk] = struct{}{}
+				rekinRenjas = append(rekinRenjas, pkb.IdRekinPemilikPk)
+			}
 		}
 
+	case 6:
+		for _, pk := range pks {
+			if _, ok := rekinSet[pk.IdRekinPemilikPk]; ok {
+				continue
+			}
+			rekinSet[pk.IdRekinPemilikPk] = struct{}{}
+			rekinRenjas = append(rekinRenjas, pk.IdRekinPemilikPk)
+		}
 	}
 	renjas, err := service.pkRepository.FindSubkegiatanByKodeOpdTahunRekinIds(ctx, tx,
 		kodeOpd, tahun, rekinRenjas)
@@ -1291,27 +1323,45 @@ func (service *PkServiceImpl) FindPkPenetapan(
 		}
 		renjaItems := make([]pkopd.RenjaItem, 0)
 		uniqueSubkegiatan := make(map[string]struct{})
-		for _, pkb := range pkBawahans[pk.IdRekinPemilikPk] {
-			itemRenja := renjas[pkb.IdRekinPemilikPk]
-			if itemRenja.KodeSubkegiatan == "" {
-				continue
+
+		switch levelPk {
+		case 4, 5:
+			for _, pkb := range pkBawahans[pk.IdRekinPemilikPk] {
+				itemRenja := renjas[pkb.IdRekinPemilikPk]
+				if itemRenja.KodeSubkegiatan == "" {
+					continue
+				}
+
+				if _, exists := uniqueSubkegiatan[itemRenja.KodeSubkegiatan]; exists {
+					continue
+				}
+
+				uniqueSubkegiatan[itemRenja.KodeSubkegiatan] = struct{}{}
+
+				renjaItems = append(renjaItems, pkopd.RenjaItem{
+					RekinId:         pkb.IdRekinPemilikPk,
+					KodeProgram:     itemRenja.KodeProgram,
+					NamaProgram:     itemRenja.NamaProgram,
+					KodeKegiatan:    itemRenja.KodeKegiatan,
+					NamaKegiatan:    itemRenja.NamaKegiatan,
+					KodeSubkegiatan: itemRenja.KodeSubkegiatan,
+					NamaSubkegiatan: itemRenja.NamaSubkegiatan,
+				})
 			}
 
-			if _, exists := uniqueSubkegiatan[itemRenja.KodeSubkegiatan]; exists {
-				continue
+		case 6:
+			itemRenja := renjas[pk.IdRekinPemilikPk]
+			if itemRenja.KodeSubkegiatan != "" {
+				renjaItems = append(renjaItems, pkopd.RenjaItem{
+					RekinId:         pk.IdRekinPemilikPk,
+					KodeProgram:     itemRenja.KodeProgram,
+					NamaProgram:     itemRenja.NamaProgram,
+					KodeKegiatan:    itemRenja.KodeKegiatan,
+					NamaKegiatan:    itemRenja.NamaKegiatan,
+					KodeSubkegiatan: itemRenja.KodeSubkegiatan,
+					NamaSubkegiatan: itemRenja.NamaSubkegiatan,
+				})
 			}
-
-			uniqueSubkegiatan[itemRenja.KodeSubkegiatan] = struct{}{}
-
-			renjaItems = append(renjaItems, pkopd.RenjaItem{
-				RekinId:         pk.IdRekinPemilikPk,
-				KodeProgram:     itemRenja.KodeProgram,
-				NamaProgram:     itemRenja.NamaProgram,
-				KodeKegiatan:    itemRenja.KodeKegiatan,
-				NamaKegiatan:    itemRenja.NamaKegiatan,
-				KodeSubkegiatan: itemRenja.KodeSubkegiatan,
-				NamaSubkegiatan: itemRenja.NamaSubkegiatan,
-			})
 		}
 
 		result = append(result, pkopd.PkAsn{
