@@ -1394,6 +1394,7 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 	kodeKegiatans := make([]string, 0)
 	kodePrograms := make([]string, 0)
 	for _, renja := range renjas {
+		// untuk pagu
 		kodeSubkegiatans = append(
 			kodeSubkegiatans,
 			renja.KodeSubkegiatan)
@@ -1403,6 +1404,11 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 		kodePrograms = append(
 			kodePrograms,
 			renja.KodeProgram)
+	}
+	indikatorPerKode, err := service.pkRepository.IndikatorRenjaByKodeOpdTahun(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		log.Printf("Error find indikator renja pk penetapan: %v", err)
+		return nil, err
 	}
 	paguPerSubkegiatan, err := service.pkRepository.FindPaguPkByKodeSubkegiatans(ctx, tx, kodeSubkegiatans)
 	if err != nil {
@@ -1444,17 +1450,20 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 					IdRekinPemilikPk: pk.IdRekinPemilikPk,
 					LevelPk:          pk.LevelPk,
 
-					KodeProgram: itemRenja.KodeProgram,
-					NamaProgram: itemRenja.NamaProgram,
-					PaguProgram: paguPerProgram[itemRenja.KodeProgram],
+					KodeProgram:       itemRenja.KodeProgram,
+					NamaProgram:       itemRenja.NamaProgram,
+					PaguProgram:       paguPerProgram[itemRenja.KodeProgram],
+					IndikatorPrograms: toWebIndikatorRenjas(indikatorPerKode[itemRenja.KodeProgram]),
 
-					KodeKegiatan: itemRenja.KodeKegiatan,
-					NamaKegiatan: itemRenja.NamaKegiatan,
-					PaguKegiatan: paguPerKegiatan[itemRenja.KodeKegiatan],
+					KodeKegiatan:       itemRenja.KodeKegiatan,
+					NamaKegiatan:       itemRenja.NamaKegiatan,
+					PaguKegiatan:       paguPerKegiatan[itemRenja.KodeKegiatan],
+					IndikatorKegiatans: toWebIndikatorRenjas(indikatorPerKode[itemRenja.KodeKegiatan]),
 
-					KodeSubkegiatan: itemRenja.KodeSubkegiatan,
-					NamaSubkegiatan: itemRenja.NamaSubkegiatan,
-					PaguSubkegiatan: paguPerSubkegiatan[itemRenja.KodeSubkegiatan],
+					KodeSubkegiatan:       itemRenja.KodeSubkegiatan,
+					NamaSubkegiatan:       itemRenja.NamaSubkegiatan,
+					PaguSubkegiatan:       paguPerSubkegiatan[itemRenja.KodeSubkegiatan],
+					IndikatorSubkegiatans: toWebIndikatorRenjas(indikatorPerKode[itemRenja.KodeSubkegiatan]),
 				})
 			}
 
@@ -1475,20 +1484,51 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 				IdRekinPemilikPk: pk.IdRekinPemilikPk,
 				LevelPk:          pk.LevelPk,
 
-				KodeProgram: itemRenja.KodeProgram,
-				NamaProgram: itemRenja.NamaProgram,
-				PaguProgram: paguPerProgram[itemRenja.KodeProgram],
+				KodeProgram:       itemRenja.KodeProgram,
+				NamaProgram:       itemRenja.NamaProgram,
+				PaguProgram:       paguPerProgram[itemRenja.KodeProgram],
+				IndikatorPrograms: toWebIndikatorRenjas(indikatorPerKode[itemRenja.KodeProgram]),
 
-				KodeKegiatan: itemRenja.KodeKegiatan,
-				NamaKegiatan: itemRenja.NamaKegiatan,
-				PaguKegiatan: paguPerKegiatan[itemRenja.KodeKegiatan],
+				KodeKegiatan:       itemRenja.KodeKegiatan,
+				NamaKegiatan:       itemRenja.NamaKegiatan,
+				PaguKegiatan:       paguPerKegiatan[itemRenja.KodeKegiatan],
+				IndikatorKegiatans: toWebIndikatorRenjas(indikatorPerKode[itemRenja.KodeKegiatan]),
 
-				KodeSubkegiatan: itemRenja.KodeSubkegiatan,
-				NamaSubkegiatan: itemRenja.NamaSubkegiatan,
-				PaguSubkegiatan: paguPerSubkegiatan[itemRenja.KodeSubkegiatan],
+				KodeSubkegiatan:       itemRenja.KodeSubkegiatan,
+				NamaSubkegiatan:       itemRenja.NamaSubkegiatan,
+				PaguSubkegiatan:       paguPerSubkegiatan[itemRenja.KodeSubkegiatan],
+				IndikatorSubkegiatans: toWebIndikatorRenjas(indikatorPerKode[itemRenja.KodeSubkegiatan]),
 			})
 		}
 	}
 
 	return renjaItems, nil
+}
+
+func toWebIndikatorRenjas(
+	indikators []domain.IndikatorRenja,
+) []pkopd.IndikatorRenja {
+
+	result := make([]pkopd.IndikatorRenja, 0, len(indikators))
+
+	for _, ind := range indikators {
+		targets := make([]pkopd.TargetRenja, 0, len(ind.Targets))
+
+		for _, tar := range ind.Targets {
+			targets = append(targets, pkopd.TargetRenja{
+				Id:     tar.Id,
+				Target: tar.Target,
+				Satuan: tar.Satuan,
+				Tahun:  tar.Tahun,
+			})
+		}
+
+		result = append(result, pkopd.IndikatorRenja{
+			Id:        ind.Id,
+			Indikator: ind.Indikator,
+			Targets:   targets,
+		})
+	}
+
+	return result
 }

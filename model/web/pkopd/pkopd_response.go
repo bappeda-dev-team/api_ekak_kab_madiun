@@ -78,17 +78,33 @@ type RenjaItem struct {
 	IdRekinPemilikPk string `json:"id_rekin_pemilik_pk"`
 	LevelPk          int    `json:"level_pk"`
 
-	KodeProgram string `json:"kode_program"`
-	NamaProgram string `json:"nama_program"`
-	PaguProgram int64  `json:"pagu_program"`
+	KodeProgram       string           `json:"kode_program"`
+	NamaProgram       string           `json:"nama_program"`
+	PaguProgram       int64            `json:"pagu_program"`
+	IndikatorPrograms []IndikatorRenja `json:"indikator_programs"`
 
-	KodeKegiatan string `json:"kode_kegiatan"`
-	NamaKegiatan string `json:"nama_kegiatan"`
-	PaguKegiatan int64  `json:"pagu_kegiatan"`
+	KodeKegiatan       string           `json:"kode_kegiatan"`
+	NamaKegiatan       string           `json:"nama_kegiatan"`
+	PaguKegiatan       int64            `json:"pagu_kegiatan"`
+	IndikatorKegiatans []IndikatorRenja `json:"indikator_kegiatans"`
 
-	KodeSubkegiatan string `json:"kode_subkegiatan"`
-	NamaSubkegiatan string `json:"nama_subkegiatan"`
-	PaguSubkegiatan int64  `json:"pagu_subkegiatan"`
+	KodeSubkegiatan       string           `json:"kode_subkegiatan"`
+	NamaSubkegiatan       string           `json:"nama_subkegiatan"`
+	PaguSubkegiatan       int64            `json:"pagu_subkegiatan"`
+	IndikatorSubkegiatans []IndikatorRenja `json:"indikator_subkegiatans"`
+}
+
+type IndikatorRenja struct {
+	Id        string        `json:"id"`
+	Indikator string        `json:"indikator"`
+	Targets   []TargetRenja `json:"targets"`
+}
+
+type TargetRenja struct {
+	Id     string `json:"id"`
+	Target string `json:"target"`
+	Satuan string `json:"satuan"`
+	Tahun  int    `json:"tahun"`
 }
 
 type RenaksiItem struct {

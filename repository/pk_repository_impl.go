@@ -1038,6 +1038,93 @@ func (repository *PkRepositoryImpl) PaguKegiatanByKodeOpdTahunKodeKegiatans(ctx 
 		paguKegiatanMap[kodeKegiatan] = paguKegiatan
 
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	return paguKegiatanMap, nil
+}
+
+func (repository *PkRepositoryImpl) IndikatorRenjaByKodeOpdTahun(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	tahun int,
+) (map[string][]domain.IndikatorRenja, error) {
+
+	const op = "pk_repository.IndikatorRenjaByKodeOpdTahun"
+
+	script := `
+	SELECT
+	tm.kode_indikator,
+    	tm.kode,
+        tm.indikator,
+	tg.id,
+	tg.target,
+	tg.satuan
+	FROM tb_indikator_matrix tm
+	LEFT JOIN tb_target tg ON tg.indikator_id = tm.kode_indikator AND tg.tahun = ?
+        WHERE tm.kode_opd = ?
+ 	AND tm.tahun = ?
+ 	AND tm.jenis = 'penetapan'
+	`
+	rows, err := tx.QueryContext(ctx, script, tahun, kodeOpd, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	indikatorRenjas := make(map[string][]domain.IndikatorRenja)
+	indikatorMap := make(map[string]*domain.IndikatorRenja)
+	for rows.Next() {
+		var (
+			indikatorId                    string
+			kode                           string
+			indikator                      string
+			idTargetNs, targetNs, satuanNs sql.NullString
+		)
+
+		err := rows.Scan(
+			&indikatorId,
+			&kode,
+			&indikator,
+			&idTargetNs,
+			&targetNs,
+			&satuanNs,
+		)
+		if err != nil {
+			return nil, err
+		}
+		ind, exists := indikatorMap[indikatorId]
+		if !exists {
+			ind = &domain.IndikatorRenja{
+				Id:        indikatorId,
+				Kode:      kode,
+				Indikator: indikator,
+				Targets:   make([]domain.TargetRenja, 0),
+			}
+			indikatorMap[indikatorId] = ind
+		}
+
+		if idTargetNs.Valid {
+			ind.Targets = append(ind.Targets, domain.TargetRenja{
+				Id:          idTargetNs.String,
+				IndikatorId: ind.Id,
+				Target:      targetNs.String,
+				Satuan:      satuanNs.String,
+				Tahun:       tahun,
+			})
+		}
+	}
+	for _, ind := range indikatorMap {
+		indikatorRenjas[ind.Kode] = append(
+			indikatorRenjas[ind.Kode],
+			*ind,
+		)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return indikatorRenjas, nil
 }

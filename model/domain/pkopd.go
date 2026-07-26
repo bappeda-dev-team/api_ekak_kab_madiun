@@ -52,3 +52,18 @@ type KunciPK struct {
 	StatusPk    string // terkunci, terbuka, revisi
 	PkTerkunci  bool   // true, false, false
 }
+
+type IndikatorRenja struct {
+	Id        string
+	Kode      string
+	Indikator string
+	Targets   []TargetRenja
+}
+
+type TargetRenja struct {
+	Id          string
+	IndikatorId string
+	Target      string
+	Satuan      string
+	Tahun       int
+}

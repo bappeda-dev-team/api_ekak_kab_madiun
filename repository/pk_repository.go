@@ -25,4 +25,6 @@ type PkRepository interface {
 	// PAGU PENETAPAN
 	PaguProgramByKodeOpdTahunKodePrograms(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, kodePrograms []string) (map[string]int64, error)
 	PaguKegiatanByKodeOpdTahunKodeKegiatans(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, kodeKegiatans []string) (map[string]int64, error)
+	// INDIKATOR TARGET PENETAPAN
+	IndikatorRenjaByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string][]domain.IndikatorRenja, error)
 }
