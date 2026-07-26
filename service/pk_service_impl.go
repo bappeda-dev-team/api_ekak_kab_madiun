@@ -1314,18 +1314,18 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 	idPegawai string,
 	kodeOpd string,
 	tahun int,
-) (pkopd.PkRenjaAsn, error) {
+) ([]pkopd.RenjaItem, error) {
 	log.Printf("[INFO] FIND PK PENETAPAN RENJA BY IDPEGAWAI KODE OPD TAHUN")
 	tx, err := service.DB.Begin()
 	if err != nil {
 		log.Printf("Error starting transaction: %v", err)
-		return pkopd.PkRenjaAsn{}, err
+		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
 	pks, err := service.pkRepository.FindPkPegawaiPenetapan(ctx, tx, idPegawai, kodeOpd, tahun)
 	if err != nil {
 		log.Printf("Error find pk pegawai penetapan: %v", err)
-		return pkopd.PkRenjaAsn{}, err
+		return nil, err
 	}
 	// validate data pks
 	levels := make(map[int]struct{})
@@ -1334,13 +1334,13 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 	}
 
 	if len(levels) == 0 {
-		return pkopd.PkRenjaAsn{}, &helper.BusinessError{
+		return nil, &helper.BusinessError{
 			Message: "pegawai tidak memiliki PK terkunci",
 		}
 	}
 
 	if len(levels) != 1 {
-		return pkopd.PkRenjaAsn{}, &helper.BusinessError{
+		return nil, &helper.BusinessError{
 			Message: "pegawai memiliki PK pada lebih dari satu level",
 		}
 	}
@@ -1358,7 +1358,7 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 	pkBawahans, err := service.pkRepository.FindBawahansByKodeOpdTahunIdRekinAtasans(ctx, tx, kodeOpd, tahun, idRekins)
 	if err != nil {
 		log.Printf("Error find pk bawahans: %v", err)
-		return pkopd.PkRenjaAsn{}, err
+		return nil, err
 	}
 	rekinSet := make(map[string]struct{})
 	rekinRenjas := make([]string, 0)
@@ -1388,7 +1388,7 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 		kodeOpd, tahun, rekinRenjas)
 	if err != nil {
 		log.Printf("Error find renja pk penetapan: %v", err)
-		return pkopd.PkRenjaAsn{}, err
+		return nil, err
 	}
 	kodeSubkegiatans := make([]string, 0)
 	kodeKegiatans := make([]string, 0)
@@ -1407,17 +1407,17 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 	paguPerSubkegiatan, err := service.pkRepository.FindPaguPkByKodeSubkegiatans(ctx, tx, kodeSubkegiatans)
 	if err != nil {
 		log.Printf("Error find pagu renja pk penetapan: %v", err)
-		return pkopd.PkRenjaAsn{}, err
+		return nil, err
 	}
 	paguPerKegiatan, err := service.pkRepository.PaguKegiatanByKodeOpdTahunKodeKegiatans(ctx, tx, kodeOpd, tahun, kodeKegiatans)
 	if err != nil {
 		log.Printf("Error find pagu renja kegiatan penetapan: %v", err)
-		return pkopd.PkRenjaAsn{}, err
+		return nil, err
 	}
 	paguPerProgram, err := service.pkRepository.PaguProgramByKodeOpdTahunKodePrograms(ctx, tx, kodeOpd, tahun, kodePrograms)
 	if err != nil {
 		log.Printf("Error find pagu renja program penetapan: %v", err)
-		return pkopd.PkRenjaAsn{}, err
+		return nil, err
 	}
 
 	renjaItems := make([]pkopd.RenjaItem, 0)
@@ -1482,11 +1482,5 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 		}
 	}
 
-	return pkopd.PkRenjaAsn{
-		Nama:    pks[0].NamaPemilikPk,
-		Nip:     pks[0].NipPemilikPk,
-		KodeOpd: kodeOpd,
-		Tahun:   tahun,
-		Renjas:  renjaItems,
-	}, nil
+	return renjaItems, nil
 }
