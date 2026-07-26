@@ -1439,7 +1439,11 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 				uniqueSubkegiatan[itemRenja.KodeProgram] = struct{}{}
 
 				renjaItems = append(renjaItems, pkopd.RenjaItem{
-					RekinId:     pkb.IdRekinPemilikPk,
+					NamaPemilikPk:    pk.NamaPemilikPk,
+					NipPemilikPk:     pk.NipPemilikPk,
+					IdRekinPemilikPk: pk.IdRekinPemilikPk,
+					LevelPk:          pk.LevelPk,
+
 					KodeProgram: itemRenja.KodeProgram,
 					NamaProgram: itemRenja.NamaProgram,
 					PaguProgram: paguPerProgram[itemRenja.KodeProgram],
@@ -1466,7 +1470,11 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 
 			uniqueSubkegiatan[itemRenja.KodeSubkegiatan] = struct{}{}
 			renjaItems = append(renjaItems, pkopd.RenjaItem{
-				RekinId:     pk.IdRekinPemilikPk,
+				NamaPemilikPk:    pk.NamaPemilikPk,
+				NipPemilikPk:     pk.NipPemilikPk,
+				IdRekinPemilikPk: pk.IdRekinPemilikPk,
+				LevelPk:          pk.LevelPk,
+
 				KodeProgram: itemRenja.KodeProgram,
 				NamaProgram: itemRenja.NamaProgram,
 				PaguProgram: paguPerProgram[itemRenja.KodeProgram],

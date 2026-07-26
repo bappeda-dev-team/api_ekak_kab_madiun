@@ -72,16 +72,11 @@ type PkAsn struct {
 	Renaksis         []RenaksiItem `json:"renaksi"`
 }
 
-type PkRenjaAsn struct {
-	Nama    string      `json:"nama_pegawai"`
-	Nip     string      `json:"nip"`
-	KodeOpd string      `json:"kode_opd"`
-	Tahun   int         `json:"tahun"`
-	Renjas  []RenjaItem `json:"renja_items"`
-}
-
 type RenjaItem struct {
-	RekinId string `json:"rekin_id"`
+	NamaPemilikPk    string `json:"nama_pemilik_pk"`
+	NipPemilikPk     string `json:"nip_pemilik_pk"`
+	IdRekinPemilikPk string `json:"id_rekin_pemilik_pk"`
+	LevelPk          int    `json:"level_pk"`
 
 	KodeProgram string `json:"kode_program"`
 	NamaProgram string `json:"nama_program"`
