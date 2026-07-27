@@ -254,3 +254,18 @@ func (s *PegawaiServiceImpl) FindRolePegawais(ctx context.Context, pegawaiIds []
 
 	return pegawais, nil
 }
+
+func (service *PegawaiServiceImpl) FindByKodeOpdLevel(ctx context.Context, kodeOpd string, level int) ([]pegawai.PegawaiResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return []pegawai.PegawaiResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	pegawais, err := service.pegawaiRepository.FindByKodeOpdLevel(ctx, tx, kodeOpd, level)
+	if err != nil {
+		return []pegawai.PegawaiResponse{}, err
+	}
+
+	return helper.ToPegawaiResponses(pegawais), nil
+}

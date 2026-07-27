@@ -7,6 +7,7 @@ type Crosscutting struct {
 	Keterangan       string
 	KodeOpd          string
 	Status           string
+	NamaPohonAsal    string
 	OpdPengirim      string
 	Tahun            string
 	CreatedAt        string

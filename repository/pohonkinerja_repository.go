@@ -51,6 +51,7 @@ type PohonKinerjaRepository interface {
 	InsertClonedPelaksana(ctx context.Context, tx *sql.Tx, newId string, pokinId int64, pelaksana domain.PelaksanaPokin) error
 	FindListOpdAllTematik(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)
 	ValidateParentLevelTarikStrategiOpd(ctx context.Context, tx *sql.Tx, parentId int, childLevel int) error
+	FindChildPokinsUpToLevel(ctx context.Context, tx *sql.Tx, parentId int64, maxLevel int) ([]domain.PohonKinerja, error)
 
 	ValidatePokinId(ctx context.Context, tx *sql.Tx, pokinId int) error
 	ValidatePokinLevel(ctx context.Context, tx *sql.Tx, pokinId int, expectedLevel int, purpose string) error

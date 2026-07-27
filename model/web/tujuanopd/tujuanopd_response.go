@@ -16,6 +16,8 @@ type TujuanOpdResponse struct {
 	JenisPeriode     string              `json:"jenis_periode,omitempty"`
 	Periode          PeriodeResponse     `json:"-"`
 	Indikator        []IndikatorResponse `json:"indikator"`
+	// IsLocked         bool                `json:"is_locked"`
+	JenisPenetapan string `json:"jenis_penetapan"`
 }
 
 type IndikatorResponse struct {
@@ -27,6 +29,7 @@ type IndikatorResponse struct {
 	SumberData          string           `json:"sumber_data"`
 	Jenis               string           `json:"jenis"`
 	DefinisiOperasional string           `json:"definisi_operasional"`
+	SumberJenis         string           `json:"sumber_jenis,omitempty"`
 	Target              []TargetResponse `json:"target"`
 }
 
@@ -36,6 +39,7 @@ type TargetResponse struct {
 	Tahun           string `json:"tahun"`
 	TargetIndikator string `json:"target"`
 	SatuanIndikator string `json:"satuan"`
+	Jenis           string `json:"jenis"`
 }
 
 type PeriodeResponse struct {
@@ -46,13 +50,14 @@ type PeriodeResponse struct {
 }
 
 type TujuanOpdwithBidangUrusanResponse struct {
-	KodeUrusan       string              `json:"kode_urusan"`
-	Urusan           string              `json:"urusan"`
-	KodeBidangUrusan string              `json:"kode_bidang_urusan"`
-	NamaBidangUrusan string              `json:"nama_bidang_urusan"`
-	KodeOpd          string              `json:"kode_opd"`
-	NamaOpd          string              `json:"nama_opd"`
-	TujuanOpd        []TujuanOpdResponse `json:"tujuan_opd"`
+	KodeUrusan       string `json:"kode_urusan"`
+	Urusan           string `json:"urusan"`
+	KodeBidangUrusan string `json:"kode_bidang_urusan"`
+	NamaBidangUrusan string `json:"nama_bidang_urusan"`
+	KodeOpd          string `json:"kode_opd"`
+	NamaOpd          string `json:"nama_opd"`
+	// IsLock           bool                `json:"is_lock"`
+	TujuanOpd []TujuanOpdResponse `json:"tujuan_opd"`
 }
 
 func (t TujuanOpdResponse) MarshalJSON() ([]byte, error) {
@@ -72,4 +77,15 @@ func (t TujuanOpdResponse) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(out)
+}
+
+type TujuanOpdPenetapanResponse struct {
+	KodeUrusan       string              `json:"kode_urusan"`
+	Urusan           string              `json:"urusan"`
+	KodeBidangUrusan string              `json:"kode_bidang_urusan"`
+	NamaBidangUrusan string              `json:"nama_bidang_urusan"`
+	KodeOpd          string              `json:"kode_opd"`
+	NamaOpd          string              `json:"nama_opd"`
+	IsLock           bool                `json:"is_lock"`
+	TujuanOpd        []TujuanOpdResponse `json:"tujuan_opd"`
 }

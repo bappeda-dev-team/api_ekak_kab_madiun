@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type SubKegiatanRepositoryImpl struct {
@@ -13,6 +14,30 @@ type SubKegiatanRepositoryImpl struct {
 
 func NewSubKegiatanRepositoryImpl() *SubKegiatanRepositoryImpl {
 	return &SubKegiatanRepositoryImpl{}
+}
+
+func buildSubKegiatanFindWhere(kodeSubKegiatan, namaSubKegiatan string) (string, []interface{}) {
+	clauses := make([]string, 0, 2)
+	args := make([]interface{}, 0, 2)
+	if k := strings.TrimSpace(kodeSubKegiatan); k != "" {
+		clauses = append(clauses, "kode_subkegiatan LIKE ?")
+		args = append(args, "%"+k+"%")
+	}
+	if n := strings.TrimSpace(namaSubKegiatan); n != "" {
+		clauses = append(clauses, "nama_subkegiatan LIKE ?")
+		args = append(args, "%"+n+"%")
+	}
+	if len(clauses) == 0 {
+		return "", args
+	}
+	return " WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func inClausePlaceholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return strings.TrimRight(strings.Repeat("?,", n), ",")
 }
 
 func (repository *SubKegiatanRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, subKegiatan domain.SubKegiatan) (domain.SubKegiatan, error) {
@@ -128,29 +153,116 @@ func (repository *SubKegiatanRepositoryImpl) Update(ctx context.Context, tx *sql
 	return subKegiatan, nil
 }
 
-func (repository *SubKegiatanRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx) ([]domain.SubKegiatan, error) {
-	script := `SELECT id, kode_subkegiatan, nama_subkegiatan, created_at FROM tb_subkegiatan ORDER BY kode_subkegiatan ASC`
+func (repository *SubKegiatanRepositoryImpl) CountAll(
+	ctx context.Context, tx *sql.Tx, kodeSubKegiatan, namaSubKegiatan string,
+) (int, error) {
+	where, args := buildSubKegiatanFindWhere(kodeSubKegiatan, namaSubKegiatan)
+	query := "SELECT COUNT(*) FROM tb_subkegiatan" + where
+	var total int
+	if err := tx.QueryRowContext(ctx, query, args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
 
-	rows, err := tx.QueryContext(ctx, script)
+func (repository *SubKegiatanRepositoryImpl) FindAll(
+	ctx context.Context, tx *sql.Tx, kodeSubKegiatan, namaSubKegiatan string, limit, offset int,
+) ([]domain.SubKegiatan, error) {
+	where, args := buildSubKegiatanFindWhere(kodeSubKegiatan, namaSubKegiatan)
+	query := `SELECT id, kode_subkegiatan, nama_subkegiatan, created_at
+		FROM tb_subkegiatan` + where + `
+		ORDER BY kode_subkegiatan ASC
+		LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	subKegiatans := make([]domain.SubKegiatan, 0) // Bisa tambahkan kapasitas awal jika ada perkiraan jumlah data
+	subKegiatans := make([]domain.SubKegiatan, 0)
 	for rows.Next() {
 		var subKegiatan domain.SubKegiatan
-		if err := rows.Scan(&subKegiatan.Id, &subKegiatan.KodeSubKegiatan, &subKegiatan.NamaSubKegiatan, &subKegiatan.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&subKegiatan.Id,
+			&subKegiatan.KodeSubKegiatan,
+			&subKegiatan.NamaSubKegiatan,
+			&subKegiatan.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		subKegiatans = append(subKegiatans, subKegiatan)
 	}
+	return subKegiatans, rows.Err()
+}
 
-	if err := rows.Err(); err != nil {
+func (repository *SubKegiatanRepositoryImpl) FindIndikatorsBySubKegiatanIds(
+	ctx context.Context, tx *sql.Tx, subKegiatanIds []string,
+) ([]domain.Indikator, error) {
+	if len(subKegiatanIds) == 0 {
+		return []domain.Indikator{}, nil
+	}
+	query := fmt.Sprintf(
+		`SELECT id, subkegiatan_id, indikator
+		 FROM tb_indikator
+		 WHERE subkegiatan_id IN (%s)
+		 ORDER BY subkegiatan_id, id`,
+		inClausePlaceholders(len(subKegiatanIds)),
+	)
+	args := make([]interface{}, len(subKegiatanIds))
+	for i, id := range subKegiatanIds {
+		args[i] = id
+	}
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return subKegiatans, nil
+	indikators := make([]domain.Indikator, 0)
+	for rows.Next() {
+		var indikator domain.Indikator
+		if err := rows.Scan(&indikator.Id, &indikator.SubKegiatanId, &indikator.Indikator); err != nil {
+			return nil, err
+		}
+		indikators = append(indikators, indikator)
+	}
+	return indikators, rows.Err()
+}
+
+func (repository *SubKegiatanRepositoryImpl) FindTargetsByIndikatorIds(
+	ctx context.Context, tx *sql.Tx, indikatorIds []string,
+) ([]domain.Target, error) {
+	if len(indikatorIds) == 0 {
+		return []domain.Target{}, nil
+	}
+	query := fmt.Sprintf(
+		`SELECT id, indikator_id, target, satuan
+		 FROM tb_target
+		 WHERE indikator_id IN (%s)
+		 ORDER BY indikator_id, id`,
+		inClausePlaceholders(len(indikatorIds)),
+	)
+	args := make([]interface{}, len(indikatorIds))
+	for i, id := range indikatorIds {
+		args[i] = id
+	}
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	targets := make([]domain.Target, 0)
+	for rows.Next() {
+		var target domain.Target
+		if err := rows.Scan(&target.Id, &target.IndikatorId, &target.Target, &target.Satuan); err != nil {
+			return nil, err
+		}
+		targets = append(targets, target)
+	}
+	return targets, rows.Err()
 }
 
 func (repository *SubKegiatanRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, subKegiatanId string) (domain.SubKegiatan, error) {

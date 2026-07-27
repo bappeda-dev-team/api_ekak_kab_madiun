@@ -740,3 +740,94 @@ func (repository *PkRepositoryImpl) IndikatorTargetPkByIdRekins(
 
 	return result, nil
 }
+
+func (repository *PkRepositoryImpl) RenaksiPkByIdRekins(
+	ctx context.Context,
+	tx *sql.Tx,
+	idRekins []string,
+) (map[string][]domain.RencanaAksi, error) {
+	const op = "pk_repository.RenaksiPkByIdRekins"
+
+	if len(idRekins) == 0 {
+		return map[string][]domain.RencanaAksi{}, nil
+	}
+
+	baseQuery := `
+        SELECT DISTINCT
+           ra.id,
+           ra.rencana_kinerja_id,
+           ra.kode_opd,
+           ra.urutan,
+           ra.nama_rencana_aksi,
+	   ren.id,
+           ren.bulan,
+           ren.bobot
+        FROM tb_rencana_aksi ra
+	LEFT JOIN tb_pelaksanaan_rencana_aksi ren ON ra.id = ren.rencana_aksi_id
+        WHERE ra.rencana_kinerja_id IN (?) ORDER BY ra.id
+    	`
+
+	query, args := helper.BuildInQueryString(baseQuery, idRekins)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// rekinId -> indikatorId -> indikator
+	rekinMap := make(map[string]map[string]*domain.RencanaAksi)
+
+	for rows.Next() {
+		var rencanaAksi domain.RencanaAksi
+		//var pelaksanaan []domain.PelaksanaanRencanaAksi
+		var pelaksanaanIdNS sql.NullString
+		var bulanNI, bobotNI sql.NullInt64
+
+		if err := rows.Scan(
+			&rencanaAksi.Id,
+			&rencanaAksi.RencanaKinerjaId,
+			&rencanaAksi.KodeOpd,
+			&rencanaAksi.Urutan,
+			&rencanaAksi.NamaRencanaAksi,
+			&pelaksanaanIdNS,
+			&bulanNI,
+			&bobotNI,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		rekinId := rencanaAksi.RencanaKinerjaId
+		renaksiId := rencanaAksi.Id
+
+		// init rekinMap
+		if rekinMap[rekinId] == nil {
+			rekinMap[rekinId] = make(map[string]*domain.RencanaAksi)
+		}
+
+		if rekinMap[rekinId][renaksiId] == nil {
+			rekinMap[rekinId][renaksiId] = &rencanaAksi
+		}
+		if pelaksanaanIdNS.Valid {
+			rekinMap[rekinId][renaksiId].Pelaksanaan = append(
+				rekinMap[rekinId][renaksiId].Pelaksanaan,
+				domain.PelaksanaanRencanaAksi{
+					Id:            pelaksanaanIdNS.String,
+					RencanaAksiId: rencanaAksi.Id,
+					Bobot:         int(bobotNI.Int64),
+					Bulan:         int(bulanNI.Int64),
+				})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+	result := make(map[string][]domain.RencanaAksi)
+	for rekinId, renaksiMap := range rekinMap {
+		for _, renaksi := range renaksiMap {
+			result[rekinId] = append(result[rekinId], *renaksi)
+		}
+	}
+
+	return result, nil
+}

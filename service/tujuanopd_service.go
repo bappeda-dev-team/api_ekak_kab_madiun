@@ -20,4 +20,7 @@ type TujuanOpdService interface {
 	CreateTujuanRenjaIndikator(ctx context.Context, tujuanOpdId int, jenis string, requests []tujuanopd.IndikatorCreateRequest) ([]tujuanopd.IndikatorResponse, error)
 	UpdateTujuanRenjaIndikator(ctx context.Context, kodeIndikator string, jenis string, request tujuanopd.IndikatorUpdateRequest) (tujuanopd.IndikatorResponse, error)
 	DeleteTujuanRenjaIndikator(ctx context.Context, kodeIndikator string) error
+	TujuanOpdPenetapan(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]tujuanopd.TujuanOpdPenetapanResponse, error)
+	LockTujuanOpd(ctx context.Context, kodeOpd, tahun string) error
+	UnlockTujuanOpd(ctx context.Context, kodeOpd, tahun string) error
 }

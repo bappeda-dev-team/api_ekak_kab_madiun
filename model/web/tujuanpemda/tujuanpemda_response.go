@@ -15,18 +15,22 @@ type TujuanPemdaResponse struct {
 	Indikator   []IndikatorResponse `json:"indikator"`
 }
 type IndikatorResponse struct {
-	Id               string           `json:"id"`
-	Indikator        string           `json:"indikator"`
-	RumusPerhitungan string           `json:"rumus_perhitungan"`
-	SumberData       string           `json:"sumber_data"`
-	Target           []TargetResponse `json:"target"`
+	Id                  int              `json:"id"`
+	KodeIndikator       string           `json:"kode_indikator"`
+	Indikator           string           `json:"indikator"`
+	RumusPerhitungan    string           `json:"rumus_perhitungan"`
+	SumberData          string           `json:"sumber_data"`
+	DefinisiOperasional string           `json:"definisi_operasional"`
+	Jenis               string           `json:"jenis"`
+	Target              []TargetResponse `json:"target"`
 }
 
 type TargetResponse struct {
-	Id     string `json:"id"`
-	Target string `json:"target"`
-	Satuan string `json:"satuan"`
-	Tahun  string `json:"tahun"`
+	Id     int           `json:"id"`
+	Jenis  string        `json:"jenis"`
+	Target TargetDisplay `json:"target"`
+	Satuan string        `json:"satuan"`
+	Tahun  string        `json:"tahun"`
 }
 
 type PeriodeResponse struct {
@@ -80,4 +84,59 @@ type PokinTargetResponse struct {
 	Target string `json:"target"`
 	Satuan string `json:"satuan"`
 	Tahun  string `json:"tahun"`
+}
+
+// tujuan pemda dua target
+type TargetDualResponse struct {
+	Id     int           `json:"id"`
+	Target TargetDisplay `json:"target"`
+	Satuan string        `json:"satuan"`
+	Tahun  string        `json:"tahun"`
+}
+type IndikatorRankhirDualResponse struct {
+	Id                  int                  `json:"id"`
+	KodeIndikator       string               `json:"kode_indikator"`
+	Indikator           string               `json:"indikator"`
+	RumusPerhitungan    string               `json:"rumus_perhitungan"`
+	SumberData          string               `json:"sumber_data"`
+	DefinisiOperasional string               `json:"definisi_operasional"`
+	Jenis               string               `json:"jenis"`
+	TargetRanwal        []TargetDualResponse `json:"target_ranwal"`
+	TargetRankhir       []TargetDualResponse `json:"target_rankhir"`
+}
+type TujuanPemdaRankhirDualResponse struct {
+	Id          int                            `json:"id"`
+	IdVisi      int                            `json:"id_visi,omitempty"`
+	Visi        string                         `json:"visi,omitempty"`
+	IdMisi      int                            `json:"id_misi,omitempty"`
+	Misi        string                         `json:"misi,omitempty"`
+	TujuanPemda string                         `json:"tujuan_pemda"`
+	TematikId   int                            `json:"tematik_id,omitempty"`
+	NamaTematik string                         `json:"nama_tematik,omitempty"`
+	Periode     PeriodeResponse                `json:"periode"`
+	Indikator   []IndikatorRankhirDualResponse `json:"indikator"`
+}
+type IndikatorPenetapanDualResponse struct {
+	Id                  int                  `json:"id"`
+	KodeIndikator       string               `json:"kode_indikator"`
+	Indikator           string               `json:"indikator"`
+	RumusPerhitungan    string               `json:"rumus_perhitungan"`
+	SumberData          string               `json:"sumber_data"`
+	DefinisiOperasional string               `json:"definisi_operasional"`
+	Jenis               string               `json:"jenis"`
+	TargetRankhir       []TargetDualResponse `json:"target_rankhir"`
+	TargetPenetapan     []TargetDualResponse `json:"target_penetapan"`
+}
+type TujuanPemdaPenetapanDualResponse struct {
+	Id          int                              `json:"id"`
+	IdVisi      int                              `json:"id_visi,omitempty"`
+	Visi        string                           `json:"visi,omitempty"`
+	IdMisi      int                              `json:"id_misi,omitempty"`
+	Misi        string                           `json:"misi,omitempty"`
+	TujuanPemda string                           `json:"tujuan_pemda"`
+	TematikId   int                              `json:"tematik_id,omitempty"`
+	NamaTematik string                           `json:"nama_tematik,omitempty"`
+	IsLock      bool                             `json:"is_lock"`
+	Periode     PeriodeResponse                  `json:"periode"`
+	Indikator   []IndikatorPenetapanDualResponse `json:"indikator"`
 }

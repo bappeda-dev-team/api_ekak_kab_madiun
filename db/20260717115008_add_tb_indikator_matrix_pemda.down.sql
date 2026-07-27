@@ -1,0 +1,1 @@
+ALTER TABLE tb_indikator_matrix_pemda DROP COLUMN iku_active;

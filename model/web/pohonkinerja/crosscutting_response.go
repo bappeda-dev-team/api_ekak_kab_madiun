@@ -48,3 +48,12 @@ type CrosscuttingFromResponse struct {
 	KodeOpd string `json:"kode_opd"`
 	NamaOpd string `json:"nama_opd"`
 }
+
+type CrosscuttingPokinResponse struct {
+	IdCrosscutting         int    `json:"id_crosscutting"`
+	KeteranganCrosscutting string `json:"keterangan_crosscutting"`
+	NamaPohonAsal          string `json:"nama_pohon_asal"`
+	KodeOpdAsal            string `json:"kode_opd_asal"`
+	NamaOpdAsal            string `json:"nama_opd_asal,omitempty"`
+	Status                 string `json:"status"`
+}

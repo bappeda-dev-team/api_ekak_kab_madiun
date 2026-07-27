@@ -7,10 +7,12 @@ import (
 	"ekak_kabupaten_madiun/app"
 	"ekak_kabupaten_madiun/controller"
 	"ekak_kabupaten_madiun/dataseeder"
+	"ekak_kabupaten_madiun/internal"
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/wire"
@@ -471,6 +473,95 @@ var indikatorSet = wire.NewSet(
 	wire.Bind(new(controller.IndikatorController), new(*controller.IndikatorControllerImpl)),
 )
 
+var lockDataRepository = wire.NewSet(
+	repository.NewLockDataRepositoryImpl,
+	wire.Bind(new(repository.LockDataRepository), new(*repository.LockDataRepositoryImpl)),
+)
+
+var lockDataPemdaRepository = wire.NewSet(
+	repository.NewLockDataPemdaRepositoryImpl,
+	wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)),
+)
+
+var ikkSet = wire.NewSet(
+	repository.NewIkkRepositoryImpl,
+	wire.Bind(new(repository.IkkRepository), new(*repository.IkkRepositoryImpl)),
+	service.NewIkkServiceImpl,
+	wire.Bind(new(service.IkkService), new(*service.IkkServiceImpl)),
+	controller.NewIkkControllerImpl,
+	wire.Bind(new(controller.IkkController), new(*controller.IkkControllerImpl)),
+)
+
+var ikdSet = wire.NewSet(
+	repository.NewIkdRepositoryImpl,
+	wire.Bind(new(repository.IkdRepository), new(*repository.IkdRepositoryImpl)),
+	service.NewIkdServiceImpl,
+	wire.Bind(new(service.IkdService), new(*service.IkdServiceImpl)),
+	controller.NewIkdControllerImpl,
+	wire.Bind(new(controller.IkdController), new(*controller.IkdControllerImpl)),
+)
+
+var isuRegionalSet = wire.NewSet(
+	repository.NewIsuRegionalRepositoryImpl,
+	wire.Bind(new(repository.IsuRegionalRepository), new(*repository.IsuRegionalRepositoryImpl)),
+	service.NewIsuRegionalServiceImpl,
+	wire.Bind(new(service.IsuRegionalService), new(*service.IsuRegionalServiceImpl)),
+	controller.NewIsuRegionalControllerImpl,
+	wire.Bind(new(controller.IsuRegionalController), new(*controller.IsuRegionalControllerImpl)),
+)
+
+var isuNasionalSet = wire.NewSet(
+	repository.NewIsuNasionalRepositoryImpl,
+	wire.Bind(new(repository.IsuNasionalRepository), new(*repository.IsuNasionalRepositoryImpl)),
+	service.NewIsuNasionalServiceImpl,
+	wire.Bind(new(service.IsuNasionalService), new(*service.IsuNasionalServiceImpl)),
+	controller.NewIsuNasionalControllerImpl,
+	wire.Bind(new(controller.IsuNasionalController), new(*controller.IsuNasionalControllerImpl)),
+)
+
+var isuGlobalSet = wire.NewSet(
+	repository.NewIsuGlobalRepositoryImpl,
+	wire.Bind(new(repository.IsuGlobalRepository), new(*repository.IsuGlobalRepositoryImpl)),
+	service.NewIsuGlobalServiceImpl,
+	wire.Bind(new(service.IsuGlobalService), new(*service.IsuGlobalServiceImpl)),
+	controller.NewIsuGlobalControllerImpl,
+	wire.Bind(new(controller.IsuGlobalController), new(*controller.IsuGlobalControllerImpl)),
+)
+
+var isuKlhsSet = wire.NewSet(
+	repository.NewIsuKlhsRepositoryImpl,
+	wire.Bind(new(repository.IsuKlhsRepository), new(*repository.IsuKlhsRepositoryImpl)),
+	service.NewIsuKlhsServiceImpl,
+	wire.Bind(new(service.IsuKlhsService), new(*service.IsuKlhsServiceImpl)),
+	controller.NewIsuKlhsControllerImpl,
+	wire.Bind(new(controller.IsuKlhsController), new(*controller.IsuKlhsControllerImpl)),
+)
+
+var strategicArahPemdaSet = wire.NewSet(
+	service.NewStrategicArahKebijakanPemdaServiceImpl,
+	wire.Bind(new(service.StrategicArahKebijakanPemdaService), new(*service.StrategicArahKebijakanPemdaServiceImpl)),
+	controller.NewStrategicArahKebijakanPemdaControllerImpl,
+	wire.Bind(new(controller.SrategicArahKebijakanPemdaController), new(*controller.StrategicArahKebijakanPemdaControllerImpl)),
+)
+
+var isuStrategicClientSet = wire.NewSet(
+	internal.NewIsuStrategicClient,
+	wire.Bind(
+		new(internal.IsustrategicClient),
+		new(*internal.IsustrategicClientImpl),
+	),
+)
+
+func ProvideHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: 30 * time.Second,
+	}
+}
+
+var httpClientSet = wire.NewSet(
+	ProvideHTTPClient,
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -529,6 +620,17 @@ func InitializeServer() *http.Server {
 		cloneRecordSet,
 		programPrioritasPusatSet,
 		indikatorSet,
+		lockDataRepository,
+		lockDataPemdaRepository,
+		ikkSet,
+		ikdSet,
+		isuRegionalSet,
+		isuNasionalSet,
+		isuGlobalSet,
+		isuKlhsSet,
+		strategicArahPemdaSet,
+		isuStrategicClientSet,
+		httpClientSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,

@@ -15,4 +15,22 @@ type TujuanPemdaController interface {
 	UpdatePeriode(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllWithPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindPokinWithPeriode(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllWithPokinRenstra(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	FindTujuanPemdaRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindTujuanPemdaRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindTujuanPemdaPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpsertTargetPemdaLayer(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindTujuanPemdaRankhirDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindTujuanPemdaPenetapanDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CreateTargetRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CreateTargetPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpdateTargetRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpdateTargetPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	//lock
+	LockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UnlockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	IsTujuanPemdaLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllLockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

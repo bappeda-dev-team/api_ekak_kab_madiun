@@ -46,9 +46,9 @@ func main() {
 	flag.Parse()
 	// Load environment variables
 	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 	// Cek flag seeder
 	if *runSeeder {
 		log.Println("Menjalankan database seeder...")

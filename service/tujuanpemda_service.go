@@ -13,5 +13,23 @@ type TujuanPemdaService interface {
 	FindAll(ctx context.Context, tahun string, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
 	UpdatePeriode(ctx context.Context, request tujuanpemda.TujuanPemdaUpdateRequest) (tujuanpemda.TujuanPemdaResponse, error)
 	FindAllWithPokin(ctx context.Context, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]tujuanpemda.TujuanPemdaWithPokinResponse, error)
+	FindAllWithPokinRenstra(ctx context.Context, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]tujuanpemda.TujuanPemdaWithPokinResponse, error)
 	FindPokinWithPeriode(ctx context.Context, pokinId int, jenisPeriode string) (tujuanpemda.PokinWithPeriodeResponse, error)
+
+	FindTujuanPemdaRanwal(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
+	FindTujuanPemdaRankhir(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
+	FindTujuanPemdaPenetapan(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
+	UpsertTargetPemdaLayer(ctx context.Context, jenis string, request tujuanpemda.LayerTargetBatchRequest) ([]tujuanpemda.TargetResponse, error)
+	CreateTargetPemdaLayer(ctx context.Context, jenis string, request tujuanpemda.LayerTargetBatchRequest) ([]tujuanpemda.TargetResponse, error)
+	UpdateTargetPemdaLayer(ctx context.Context, jenis string, request tujuanpemda.LayerTargetUpdateBatchRequest) ([]tujuanpemda.TargetResponse, error)
+
+	// Opsi B — tampilkan 2 jenis target sekaligus (tanpa fallback)
+	FindTujuanPemdaRankhirDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaRankhirDualResponse, error)
+	FindTujuanPemdaPenetapanDual(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaPenetapanDualResponse, error)
+
+	//lock pemda
+	LockTujuanPemda(ctx context.Context, tahun string) error
+	UnlockTujuanPemda(ctx context.Context, tahun string) error
+	IsTujuanPemdaLocked(ctx context.Context, tahun string) (bool, error)
+	FindAllLockTujuanPemda(ctx context.Context) ([]tujuanpemda.LockDataPemdaResponse, error)
 }

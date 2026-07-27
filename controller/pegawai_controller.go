@@ -13,4 +13,5 @@ type PegawaiController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	TambahJabatanPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	PegawaiOpdByLevel(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }
