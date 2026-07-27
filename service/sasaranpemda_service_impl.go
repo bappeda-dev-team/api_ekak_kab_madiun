@@ -584,12 +584,13 @@ func (s *SasaranPemdaServiceImpl) FindAllWithPokin(
 				tAkhir, _ := strconv.Atoi(tahunAkhir)
 				for _, ind := range sasaran.Indikator {
 					indResp := sasaranpemda.IndikatorSubtematikResponse{
-						Id:               ind.Id,
-						KodeIndikator:    ind.KodeIndikator,
-						Indikator:        ind.Indikator,
-						RumusPerhitungan: ind.RumusPerhitungan.String,
-						SumberData:       ind.SumberData.String,
-						Target:           []sasaranpemda.TargetResponse{},
+						Id:                  ind.Id,
+						KodeIndikator:       ind.KodeIndikator,
+						Indikator:           ind.Indikator,
+						DefinisiOperasional: ind.DefinisiOperasional.String,
+						RumusPerhitungan:    ind.RumusPerhitungan.String,
+						SumberData:          ind.SumberData.String,
+						Target:              []sasaranpemda.TargetResponse{},
 					}
 					existingTarget := make(map[string]domain.TargetDetail)
 					for _, t := range ind.Target {
