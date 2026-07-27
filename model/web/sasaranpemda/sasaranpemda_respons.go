@@ -58,12 +58,13 @@ type SasaranPemdaWithPokinResponse struct {
 	Indikator      []IndikatorSubtematikResponse `json:"indikator"`
 }
 type IndikatorSubtematikResponse struct {
-	Id               int              `json:"id"`
-	KodeIndikator    string           `json:"kode_indikator"`
-	Indikator        string           `json:"indikator"`
-	RumusPerhitungan string           `json:"rumus_perhitungan"`
-	SumberData       string           `json:"sumber_data"`
-	Target           []TargetResponse `json:"target"`
+	Id                  int              `json:"id"`
+	KodeIndikator       string           `json:"kode_indikator"`
+	Indikator           string           `json:"indikator"`
+	RumusPerhitungan    string           `json:"rumus_perhitungan"`
+	DefinisiOperasional string           `json:"definisi_operasional"`
+	SumberData          string           `json:"sumber_data"`
+	Target              []TargetResponse `json:"target"`
 }
 
 // ── Dual Response Rankhir ────────────────────────────────────────
