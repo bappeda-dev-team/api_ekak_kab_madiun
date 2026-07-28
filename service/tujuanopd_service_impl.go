@@ -1476,10 +1476,10 @@ func (s *TujuanOpdServiceImpl) getIndikatorWithFallback(
 	if err != nil {
 		return nil, err
 	}
-	indikatorLama, err := s.TujuanOpdRepository.
-		FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
-	if err != nil {
-		return nil, err
-	}
-	return mergeIndikator(indikatorBaru, indikatorLama), nil
+	// indikatorLama, err := s.TujuanOpdRepository.
+	// 	FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	return indikatorBaru, nil
 }
