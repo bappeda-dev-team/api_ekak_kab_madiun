@@ -107,9 +107,9 @@ func (r *SasaranPemdaRepositoryImpl) Update(
 			// UPDATE indikator existing — id tetap, kode_indikator tidak boleh berubah
 			_, err = tx.ExecContext(ctx,
 				`UPDATE tb_indikator_matrix_pemda
-				 SET indikator=?, rumus_perhitungan=?, sumber_data=?, definisi_operasional=?
+				 SET indikator=?, definisi_operasional=?, rumus_perhitungan=?, sumber_data=?, definisi_operasional=?
 				 WHERE id=? AND sasaran_pemda_id=?`,
-				ind.Indikator, ind.RumusPerhitungan, ind.SumberData, ind.DefinisiOperasional,
+				ind.Indikator, ind.DefinisiOperasional, ind.RumusPerhitungan, ind.SumberData, ind.DefinisiOperasional,
 				ind.Id, sp.Id,
 			)
 			if err != nil {
