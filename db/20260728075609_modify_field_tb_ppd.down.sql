@@ -1,0 +1,1 @@
+ALTER TABLE tb_ppd MODIFY COLUMN potensi VARCHAR(255);
