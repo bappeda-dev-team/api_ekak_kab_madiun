@@ -422,6 +422,7 @@ func (service *TujuanOpdServiceImpl) FindAll(ctx context.Context, kodeOpd string
 			indikatorResponse := tujuanopd.IndikatorResponse{
 				Id:                  indikator.Id,
 				IdTujuanOpd:         tujuan.Id,
+				KodeIndikator:       indikator.KodeIndikator,
 				NamaIndikator:       indikator.Indikator,
 				DefinisiOperasional: indikator.DefinisiOperasional.String,
 				RumusPerhitungan:    indikator.RumusPerhitungan.String,
