@@ -12,6 +12,7 @@ type IsuNasionalRepository interface {
 	Delete(ctx context.Context, tx *sql.Tx, id int) error
 	FindById(ctx context.Context, tx *sql.Tx, id int) (domain.IsuNasional, error)
 	FindAllById(ctx context.Context, tx *sql.Tx, id int) (domain.IsuNasional, error)
+	FindByIds(ctx context.Context, tx *sql.Tx, ids []int) ([]domain.IsuNasional, error)
 	FindSelectionByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.BidangUrusanSelection, error)
 	FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.IsuNasional, error)
 }

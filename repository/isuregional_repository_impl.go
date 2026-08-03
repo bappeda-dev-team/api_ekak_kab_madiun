@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 type IsuRegionalRepositoryImpl struct {
@@ -160,6 +162,67 @@ func (repository *IsuRegionalRepositoryImpl) FindAllById(ctx context.Context, tx
 	}
 
 	return item, nil
+}
+
+func (repository *IsuRegionalRepositoryImpl) FindByIds(ctx context.Context, tx *sql.Tx, ids []int) ([]domain.IsuRegional, error) {
+
+	if len(ids) == 0 {
+		return []domain.IsuRegional{}, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			kode_bidang_urusan,
+			kode_opd,
+			isu_regional,
+			tahun
+		FROM tb_isu_regional
+		WHERE id IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := []domain.IsuRegional{}
+
+	for rows.Next() {
+		var result domain.IsuRegional
+
+		err := rows.Scan(
+			&result.ID,
+			&result.KodeBidangUrusan,
+			&result.KodeOpd,
+			&result.Isu,
+			&result.Tahun,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, result)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(results) == 0 {
+		return []domain.IsuRegional{}, nil
+	}
+
+	return results, nil
 }
 
 func (repository *IsuRegionalRepositoryImpl) FindSelectionByKodeOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.BidangUrusanSelection, error) {

@@ -10,4 +10,5 @@ type IsuRegionalService interface {
 	Update(ctx context.Context, request isuregional.IsuRegionalUpdateRequest) (isuregional.IsuRegionalResponse, error)
 	Delete(ctx context.Context, id int) error
 	FindAll(ctx context.Context, kodeOpd string) (isuregional.IsuRegionalMasterResponse, error)
+	FindByIds(ctx context.Context, request isuregional.FindByIdsRequest) ([]isuregional.IsuRegionalResponse, error)
 }
