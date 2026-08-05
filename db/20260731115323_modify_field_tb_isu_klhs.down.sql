@@ -1,0 +1,1 @@
+ALTER TABLE tb_isu_klhs MODIFY COLUMN isu_klhs VARCHAR(255);

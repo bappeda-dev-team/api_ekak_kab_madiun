@@ -1,0 +1,1 @@
+ALTER TABLE tb_isu_nasional MODIFY COLUMN isu_nasional VARCHAR(255);

@@ -140,3 +140,32 @@ func (controller *IsuNasionalControllerImpl) FindAll(writer http.ResponseWriter,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *IsuNasionalControllerImpl) FindByIds(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+
+	findRequest := isunasional.FindByIdsRequest{}
+	helper.ReadFromRequestBody(request, &findRequest)
+
+	response, err := controller.IsuNasionalService.FindByIds(request.Context(), findRequest)
+	if err != nil {
+
+		statusCode := http.StatusBadRequest
+
+		webResponse := web.WebResponse{
+			Code:   statusCode,
+			Status: http.StatusText(statusCode),
+			Data:   err.Error(),
+		}
+
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: http.StatusText(http.StatusOK),
+		Data:   response,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

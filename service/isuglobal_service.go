@@ -10,4 +10,5 @@ type IsuGlobalService interface {
 	Update(ctx context.Context, request isuglobal.IsuGlobalUpdateRequest) (isuglobal.IsuGlobalResponse, error)
 	Delete(ctx context.Context, id int) error
 	FindAll(ctx context.Context, kodeOpd string) (isuglobal.IsuGlobalMasterResponse, error)
+	FindByIds(ctx context.Context, request isuglobal.FindByIdsRequest) ([]isuglobal.IsuGlobalResponse, error)
 }

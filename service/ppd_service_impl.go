@@ -174,3 +174,36 @@ func (service *PpdServiceImpl) FindAll(ctx context.Context, kodeOpd string) (ppd
 		Ppds:                   isuResponses,
 	}, nil
 }
+
+func (service *PpdServiceImpl) FindByIds(ctx context.Context, request ppd.FindByIdsRequest) ([]ppd.PpdResponse, error) {
+
+	err := service.Validate.Struct(request)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	results, err := service.PpdRepository.FindByIds(ctx, tx, request.Ids)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]ppd.PpdResponse, 0, len(results))
+
+	for _, result := range results {
+		responses = append(responses, ppd.PpdResponse{
+			ID:               result.ID,
+			KodeBidangUrusan: result.KodeBidangUrusan,
+			KodeOpd:          result.KodeOpd,
+			Potensi:          result.Potensi,
+			Tahun:            result.Tahun,
+		})
+	}
+
+	return responses, nil
+}

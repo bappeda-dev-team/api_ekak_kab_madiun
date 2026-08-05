@@ -14,3 +14,7 @@ type PpdUpdateRequest struct {
 	Potensi          string `json:"potensi" validate:"required"`
 	Tahun            int    `json:"tahun" validate:"required"`
 }
+
+type FindByIdsRequest struct {
+	Ids []int `validate:"required,min=1" json:"ids"`
+}

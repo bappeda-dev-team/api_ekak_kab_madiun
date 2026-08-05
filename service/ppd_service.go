@@ -10,4 +10,5 @@ type PpdService interface {
 	Update(ctx context.Context, request ppd.PpdUpdateRequest) (ppd.PpdResponse, error)
 	Delete(ctx context.Context, id int) error
 	FindAll(ctx context.Context, kodeOpd string) (ppd.PpdMasterResponse, error)
+	FindByIds(ctx context.Context, request ppd.FindByIdsRequest) ([]ppd.PpdResponse, error)
 }

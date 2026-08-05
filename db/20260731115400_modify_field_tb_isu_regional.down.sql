@@ -1,0 +1,1 @@
+ALTER TABLE tb_isu_regional MODIFY COLUMN isu_regional VARCHAR(255);
