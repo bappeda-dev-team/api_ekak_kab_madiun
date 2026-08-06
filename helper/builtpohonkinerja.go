@@ -499,6 +499,230 @@ func BuildSubTematikResponseLimited(pohonMap map[int]map[int][]domain.PohonKiner
 	return subTematikResp
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// OPD View helpers – hierarki baru yang menggabungkan pohon pemda (level 0-4)
+// dengan pohon OPD (level 4-6) melalui field clone_from pada strategic pemda.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// OpdStrategicLookupKey membentuk key lookup strategic OPD dari id strategic pemda + kode_opd.
+func OpdStrategicLookupKey(strategicPemdaId int, kodeOpd string) string {
+	return fmt.Sprintf("%d|%s", strategicPemdaId, kodeOpd)
+}
+
+// resolveOpdStrategic mencari strategic OPD dari map lookup berdasarkan strategic pemda.
+func resolveOpdStrategic(sp domain.PohonKinerja, cloneToOpdStrategic map[string]domain.PohonKinerja) (domain.PohonKinerja, bool) {
+	candidates := []string{
+		OpdStrategicLookupKey(sp.Id, sp.KodeOpd),
+		OpdStrategicLookupKey(sp.Id, ""),
+	}
+	if sp.CloneFrom != 0 {
+		candidates = append(candidates,
+			OpdStrategicLookupKey(sp.CloneFrom, sp.KodeOpd),
+			OpdStrategicLookupKey(sp.CloneFrom, ""),
+		)
+	}
+	for _, key := range candidates {
+		if opd, ok := cloneToOpdStrategic[key]; ok {
+			return opd, true
+		}
+	}
+	return domain.PohonKinerja{}, false
+}
+
+// buildOpdGroupsForParent mengelompokkan strategic pemda (level 4) yang merupakan
+// anak langsung dari parentId berdasarkan kode_opd, lalu me-resolve setiap node
+// ke strategic OPD asalnya (via cloneToOpdStrategic) dan membangun StrategicResponse
+// menggunakan pohon OPD. Hasilnya adalah slice []OpdGroupResponse sebagai []interface{}.
+func buildOpdGroupsForParent(
+	pohonMapPemda map[int]map[int][]domain.PohonKinerja,
+	pohonMapOpd map[int]map[int][]domain.PohonKinerja,
+	cloneToOpdStrategic map[string]domain.PohonKinerja,
+	opdNamaMap map[string]string,
+	parentId int,
+) []interface{} {
+	strategicPemda, ok := pohonMapPemda[4][parentId]
+	if !ok || len(strategicPemda) == 0 {
+		return nil
+	}
+
+	// Pertahankan urutan kode_opd sesuai kemunculan pertama
+	type kodeOpdEntry struct {
+		kodeOpd  string
+		strategics []domain.PohonKinerja
+	}
+	order := []string{}
+	groupMap := map[string][]domain.PohonKinerja{}
+
+	for _, sp := range strategicPemda {
+		if _, exists := groupMap[sp.KodeOpd]; !exists {
+			order = append(order, sp.KodeOpd)
+		}
+		groupMap[sp.KodeOpd] = append(groupMap[sp.KodeOpd], sp)
+	}
+
+	var childs []interface{}
+	for _, kodeOpd := range order {
+		strategics := groupMap[kodeOpd]
+
+		var strategicChilds []interface{}
+		for _, sp := range strategics {
+			opdStrategic, found := resolveOpdStrategic(sp, cloneToOpdStrategic)
+			if !found {
+				continue
+			}
+			strategicResp := BuildStrategicResponse(pohonMapOpd, opdStrategic)
+			strategicChilds = append(strategicChilds, strategicResp)
+		}
+
+		if len(strategicChilds) == 0 {
+			continue
+		}
+
+		displayKode := kodeOpd
+		if displayKode == "" {
+			if opd, ok := resolveOpdStrategic(strategics[0], cloneToOpdStrategic); ok {
+				displayKode = opd.KodeOpd
+			}
+		}
+
+		childs = append(childs, pohonkinerja.OpdGroupResponse{
+			KodeOpd: displayKode,
+			NamaOpd: opdNamaMap[displayKode],
+			Childs:  strategicChilds,
+		})
+	}
+	return childs
+}
+
+// buildSubTematikOpdViewChilds membangun childs untuk sebuah node subtematik (atau
+// node tematik) dalam OPD View: sub-level (SubSubTematik, dst) ditampilkan rekursif,
+// sedangkan strategic pemda di-resolve ke OPD Group.
+func buildSubTematikOpdViewChilds(
+	pohonMapPemda map[int]map[int][]domain.PohonKinerja,
+	pohonMapOpd map[int]map[int][]domain.PohonKinerja,
+	cloneToOpdStrategic map[string]domain.PohonKinerja,
+	opdNamaMap map[string]string,
+	nodeId int,
+	currentLevel int, // level dari node saat ini (1=subtematik, 2=subsubtematik, 3=supersubtematik)
+) []interface{} {
+	var childs []interface{}
+
+	// OPD Groups dari strategic pemda yang langsung di bawah node ini
+	opdGroups := buildOpdGroupsForParent(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, nodeId)
+	childs = append(childs, opdGroups...)
+
+	// Sub-level berikutnya (mis. subsubtematik di bawah subtematik)
+	nextLevel := currentLevel + 1
+	if nextLevel <= 3 {
+		if subNodes, ok := pohonMapPemda[nextLevel][nodeId]; ok {
+			sort.Slice(subNodes, func(i, j int) bool { return subNodes[i].Id < subNodes[j].Id })
+			for _, sub := range subNodes {
+				subChilds := buildSubTematikOpdViewChilds(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, sub.Id, nextLevel)
+
+				switch nextLevel {
+				case 2:
+					resp := pohonkinerja.SubSubTematikResponse{
+						Id:          sub.Id,
+						Parent:      sub.Parent,
+						Tema:        sub.NamaPohon,
+						JenisPohon:  sub.JenisPohon,
+						LevelPohon:  sub.LevelPohon,
+						Keterangan:  sub.Keterangan,
+						CountReview: sub.CountReview,
+						IsActive:    sub.IsActive,
+						Indikators:  ConvertToIndikatorResponses(sub.Indikator),
+						TaggingPokin: ConvertToTaggingResponses(sub.TaggingPokin),
+						Child:       subChilds,
+					}
+					childs = append(childs, resp)
+				case 3:
+					resp := pohonkinerja.SuperSubTematikResponse{
+						Id:          sub.Id,
+						Parent:      sub.Parent,
+						Tema:        sub.NamaPohon,
+						JenisPohon:  sub.JenisPohon,
+						LevelPohon:  sub.LevelPohon,
+						Keterangan:  sub.Keterangan,
+						CountReview: sub.CountReview,
+						IsActive:    sub.IsActive,
+						Indikators:  ConvertToIndikatorResponses(sub.Indikator),
+						TaggingPokin: ConvertToTaggingResponses(sub.TaggingPokin),
+						Childs:      subChilds,
+					}
+					childs = append(childs, resp)
+				}
+			}
+		}
+	}
+
+	return childs
+}
+
+// BuildTematikOpdViewResponse membangun TematikResponse untuk endpoint OPD View.
+// Perbedaan dari BuildTematikResponse biasa:
+//   - Strategic pemda (level 4) di-resolve ke strategic OPD via clone_from
+//   - Strategic dengan kode_opd sama di bawah parent yang sama dikelompokkan menjadi OpdGroupResponse
+//   - Tactical & operational diambil dari pohon OPD (pohonMapOpd), bukan pohon pemda
+func BuildTematikOpdViewResponse(
+	pohonMapPemda map[int]map[int][]domain.PohonKinerja,
+	pohonMapOpd map[int]map[int][]domain.PohonKinerja,
+	cloneToOpdStrategic map[string]domain.PohonKinerja,
+	opdNamaMap map[string]string,
+	tematik domain.PohonKinerja,
+) pohonkinerja.TematikResponse {
+	var childs []interface{}
+
+	// OPD Groups dari strategic pemda langsung di bawah tematik
+	opdGroups := buildOpdGroupsForParent(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tematik.Id)
+	childs = append(childs, opdGroups...)
+
+	// Subtematik (level 1) di bawah tematik
+	if subTematiks, ok := pohonMapPemda[1][tematik.Id]; ok {
+		sort.Slice(subTematiks, func(i, j int) bool { return subTematiks[i].Id < subTematiks[j].Id })
+		for _, st := range subTematiks {
+			subChilds := buildSubTematikOpdViewChilds(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, st.Id, 1)
+
+			subResp := pohonkinerja.SubtematikResponse{
+				Id:           st.Id,
+				Parent:       st.Parent,
+				Tema:         st.NamaPohon,
+				JenisPohon:   st.JenisPohon,
+				LevelPohon:   st.LevelPohon,
+				Keterangan:   st.Keterangan,
+				CountReview:  st.CountReview,
+				IsActive:     st.IsActive,
+				Indikators:   ConvertToIndikatorResponses(st.Indikator),
+				TaggingPokin: ConvertToTaggingResponses(st.TaggingPokin),
+				Child:        subChilds,
+			}
+			childs = append(childs, subResp)
+		}
+	}
+
+	var uniqueIndikators []pohonkinerja.IndikatorResponse
+	seen := make(map[string]bool)
+	for _, ind := range tematik.Indikator {
+		if !seen[ind.Id] {
+			seen[ind.Id] = true
+			uniqueIndikators = append(uniqueIndikators, ConvertToIndikatorResponse(ind))
+		}
+	}
+
+	return pohonkinerja.TematikResponse{
+		Id:           tematik.Id,
+		Parent:       nil,
+		Tema:         tematik.NamaPohon,
+		JenisPohon:   tematik.JenisPohon,
+		LevelPohon:   tematik.LevelPohon,
+		Keterangan:   tematik.Keterangan,
+		CountReview:  tematik.CountReview,
+		IsActive:     tematik.IsActive,
+		Indikators:   uniqueIndikators,
+		TaggingPokin: ConvertToTaggingResponses(tematik.TaggingPokin),
+		Child:        childs,
+	}
+}
+
 func ConvertToPelaksanaResponses(pelaksanas []domain.PelaksanaPokin) []pohonkinerja.PelaksanaOpdResponse {
 	var responses []pohonkinerja.PelaksanaOpdResponse
 	for _, p := range pelaksanas {

@@ -227,6 +227,9 @@ func NewRouter(
 	router.GET("/pohon_kinerja/pilih_parent/:kode_opd/:tahun/:level_pohon", pohonKinerjaAdminController.FindPokinFromOpd)
 	router.GET("/pohon_kinerja_opd/pokinpemda_review/:id", pohonKinerjaOpdController.FindidPokinWithAllTema)
 
+	//report tematik
+	router.GET("/listOpdTematik/:idPokin", pohonKinerjaAdminController.FindPokinAdminByIdHierarkiOpdView)
+
 	// isustrategis - csf
 	router.GET("/isustrategis/csfs/:tahun", csfController.FindByTahun)
 	router.GET("/isustrategis/csf/detail/:id", csfController.FindById)
@@ -575,6 +578,14 @@ func NewRouter(
 
 	//tujuan opd penetapan
 	router.GET("/tujuan_opd/penetapan/:kode_opd/:tahun", tujuanOpdController.TujuanOpdPenetapan)
+
+	// tujuan opd layer target CRUD (target-only, indikator dari renstra)
+	router.POST("/tujuan_opd/rankhir/target/create", tujuanOpdController.CreateTargetRankhirOpdLayer)
+	router.PUT("/tujuan_opd/rankhir/target/update", tujuanOpdController.UpdateTargetRankhirOpdLayer)
+	router.DELETE("/tujuan_opd/rankhir/target/delete/:kode_indikator/:tahun", tujuanOpdController.DeleteTargetRankhirOpdLayer)
+	router.POST("/tujuan_opd/penetapan/target/create", tujuanOpdController.CreateTargetPenetapanOpd)
+	router.PUT("/tujuan_opd/penetapan/target/update", tujuanOpdController.UpdateTargetPenetapanOpd)
+	router.DELETE("/tujuan_opd/penetapan/target/delete/:kode_indikator/:tahun", tujuanOpdController.DeleteTargetPenetapanOpd)
 
 	//tujuan pemda lock
 	router.GET("/tujuan_pemda/lock", tujuanPemdaController.FindAllLockTujuanPemda)

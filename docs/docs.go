@@ -420,6 +420,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/listOpdTematik/{idPokin}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan pohon kinerja admin berdasarkan ID pokin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pohon Kinerja Admin"
+                ],
+                "summary": "Find Pokin Admin By Id Hierarki Opd View",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Pokin",
+                        "name": "idPokin",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.TematikResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -3067,6 +3122,195 @@ const docTemplate = `{
                 }
             }
         },
+        "/tujuan_opd/penetapan/target/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target baru untuk penetapan. Indikator harus sudah ada di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Layer Target"
+                ],
+                "summary": "Create Target Penetapan Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/penetapan/target/delete/{kode_indikator}/{tahun}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus target penetapan berdasarkan kode_indikator dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Penetapan Target"
+                ],
+                "summary": "Delete Target Penetapan Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2026\"",
+                        "description": "Tahun target",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/penetapan/target/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui target penetapan berdasarkan ID target. Hanya target dan satuan yang diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Penetapan Target"
+                ],
+                "summary": "Update Target Penetapan Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch update targets (wajib ada id)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetUpdateBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tujuan_opd/penetapan/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -3127,6 +3371,195 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/rankhir/target/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target baru untuk rankhir. Indikator harus sudah ada di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Rankhir Target"
+                ],
+                "summary": "Create Target Rankhir Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/rankhir/target/delete/{kode_indikator}/{tahun}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus target rankhir berdasarkan kode_indikator dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Rankhir Target"
+                ],
+                "summary": "Delete Target Rankhir Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2026\"",
+                        "description": "Tahun target",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/rankhir/target/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui target rankhir berdasarkan ID target. Hanya target dan satuan yang diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Rankhir Target"
+                ],
+                "summary": "Update Target Rankhir Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch update targets (wajib ada id)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetUpdateBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -5874,6 +6307,53 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.TematikResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "description": "SubTematiks []SubtematikResponse ` + "`" + `json:\"childs,omitempty\"` + "`" + `\nStrategics  []StrategicResponse  ` + "`" + `json:\"strategics,omitempty\"` + "`" + `",
+                    "type": "array",
+                    "items": {}
+                },
+                "id": {
+                    "description": "CSF         CSFApiResponse      ` + "`" + `json:\"csf\"` + "`" + `",
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                },
+                "tema": {
+                    "type": "string"
+                }
+            }
+        },
         "pohonkinerja.TujuanOpdResponse": {
             "type": "object",
             "properties": {
@@ -7118,6 +7598,34 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target": {
+                    "description": "Diisi untuk renstra / ranwal (single-slot)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_penetapan": {
+                    "description": "Dual-slot penetapan: target_rankhir + target_penetapan",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_ranwal": {
+                    "description": "Dual-slot rankhir: target_ranwal + target_rankhir",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_renstra": {
+                    "description": "Legacy compare field",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/tujuanopd.TargetResponse"
@@ -7157,6 +7665,70 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/tujuanopd.TargetUpdateRequest"
                     }
+                }
+            }
+        },
+        "tujuanopd.LayerTargetBatchRequest": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.LayerTargetItemRequest"
+                    }
+                }
+            }
+        },
+        "tujuanopd.LayerTargetItemRequest": {
+            "type": "object",
+            "required": [
+                "kode_indikator",
+                "satuan",
+                "tahun",
+                "target"
+            ],
+            "properties": {
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanopd.LayerTargetUpdateBatchRequest": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.LayerTargetUpdateItemRequest"
+                    }
+                }
+            }
+        },
+        "tujuanopd.LayerTargetUpdateItemRequest": {
+            "type": "object",
+            "required": [
+                "id",
+                "satuan",
+                "target"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
                 }
             }
         },

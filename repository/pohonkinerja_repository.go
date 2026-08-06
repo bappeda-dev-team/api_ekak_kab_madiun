@@ -107,4 +107,12 @@ type PohonKinerjaRepository interface {
 	FindPelaksanaPokinBatchForCascading(ctx context.Context, tx *sql.Tx, pohonKinerjaIds []int) ([]domain.PelaksanaPokin, error)
 
 	CheckIfSourceAlreadyCloned(ctx context.Context, tx *sql.Tx, sourceId int, tahunTarget string) (bool, error)
+
+	// OPD View: hierarki baru yang menggabungkan pohon pemda + pohon OPD via clone_from
+	FindPokinHierarkiPemdaToStrategic(ctx context.Context, tx *sql.Tx, idPokin int) ([]domain.PohonKinerja, error)
+	FindStrategicOpdByIdsBatch(ctx context.Context, tx *sql.Tx, ids []int) ([]domain.PohonKinerja, error)
+	// FindOpdStrategicByPemdaCloneFromBatch mencari strategic OPD (parent=0, level=4)
+	// yang clone_from-nya = id pohon kinerja pemda asli.
+	FindOpdStrategicByPemdaCloneFromBatch(ctx context.Context, tx *sql.Tx, pemdaSourceIds []int) (map[int][]domain.PohonKinerja, error)
+	FindOpdStrategicRootsByIdsBatch(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.PohonKinerja, error)
 }
