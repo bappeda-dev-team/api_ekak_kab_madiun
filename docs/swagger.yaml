@@ -652,6 +652,40 @@ definitions:
       target:
         type: string
     type: object
+  pohonkinerja.TematikResponse:
+    properties:
+      childs:
+        description: |-
+          SubTematiks []SubtematikResponse `json:"childs,omitempty"`
+          Strategics  []StrategicResponse  `json:"strategics,omitempty"`
+        items: {}
+        type: array
+      id:
+        description: CSF         CSFApiResponse      `json:"csf"`
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/pohonkinerja.IndikatorResponse'
+        type: array
+      is_active:
+        type: boolean
+      jenis_pohon:
+        type: string
+      jumlah_review:
+        type: integer
+      keterangan:
+        type: string
+      level_pohon:
+        type: integer
+      parent:
+        type: integer
+      tagging:
+        items:
+          $ref: '#/definitions/pohonkinerja.TaggingResponse'
+        type: array
+      tema:
+        type: string
+    type: object
   pohonkinerja.TujuanOpdResponse:
     properties:
       id:
@@ -2303,6 +2337,38 @@ paths:
       summary: Upsert Leaderboard Rekin Hidden
       tags:
       - Leaderboard Rekin Hidden
+  /listOpdTematik/{idPokin}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan pohon kinerja admin berdasarkan ID pokin.
+      parameters:
+      - description: ID Pokin
+        in: path
+        name: idPokin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.TematikResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find Pokin Admin By Id Hierarki Opd View
+      tags:
+      - Pohon Kinerja Admin
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:

@@ -417,6 +417,61 @@
                 }
             }
         },
+        "/listOpdTematik/{idPokin}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan pohon kinerja admin berdasarkan ID pokin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pohon Kinerja Admin"
+                ],
+                "summary": "Find Pokin Admin By Id Hierarki Opd View",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Pokin",
+                        "name": "idPokin",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.TematikResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -6245,6 +6300,53 @@
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.TematikResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "description": "SubTematiks []SubtematikResponse `json:\"childs,omitempty\"`\nStrategics  []StrategicResponse  `json:\"strategics,omitempty\"`",
+                    "type": "array",
+                    "items": {}
+                },
+                "id": {
+                    "description": "CSF         CSFApiResponse      `json:\"csf\"`",
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                },
+                "tema": {
                     "type": "string"
                 }
             }
