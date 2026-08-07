@@ -3444,3 +3444,257 @@ func (service *PohonKinerjaAdminServiceImpl) CetakPokinByTematik(ctx context.Con
 
 	return result, nil
 }
+
+// FindPokinAdminByIdHierarkiOpdView membangun hierarki tematik dengan perspektif OPD:
+//   - Hierarki pemda berhenti pada level strategic pemda (level 4).
+//   - Strategic pemda.clone_from = id pohon kinerja pemda asli.
+//   - Strategic OPD dicari via WHERE clone_from = id pemda asli (bukan WHERE id = clone_from).
+//   - Strategic pemda dengan kode_opd yang sama di bawah parent subtematik yang sama
+//     dikelompokkan menjadi satu OpdGroupResponse.
+//   - Turunan tactical & operational diambil dari pohon kinerja OPD.
+func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarkiOpdView(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.TematikResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// ── 1. Validasi node adalah tematik (level 0) ──
+	pokin, err := service.pohonKinerjaRepository.FindPokinAdminById(ctx, tx, idPokin)
+	if err != nil {
+		return pohonkinerja.TematikResponse{}, err
+	}
+	if pokin.LevelPohon != 0 {
+		return pohonkinerja.TematikResponse{}, fmt.Errorf("id yang diberikan bukan merupakan level tematik (level 0)")
+	}
+
+	// ── 2. Ambil hierarki pemda (level 0-4) termasuk clone_from ──
+	pemdaPokins, err := service.pohonKinerjaRepository.FindPokinHierarkiPemdaToStrategic(ctx, tx, idPokin)
+	if err != nil {
+		return pohonkinerja.TematikResponse{}, err
+	}
+
+	// ── 3. Kumpulkan id strategic pemda (level 4) yang sudah disetujui ──
+	// Alur utama (CloneStrategiFromPemda): OPD.clone_from = id strategic pemda
+	strategicPemdaIdSet := make(map[int]struct{})
+	strategicPemdaIds := make([]int, 0)
+	for _, p := range pemdaPokins {
+		if p.LevelPohon == 4 && p.Status == "disetujui" {
+			if _, seen := strategicPemdaIdSet[p.Id]; !seen {
+				strategicPemdaIdSet[p.Id] = struct{}{}
+				strategicPemdaIds = append(strategicPemdaIds, p.Id)
+			}
+		}
+	}
+
+	// ── 4. Cari strategic OPD yang clone_from = id strategic pemda ──
+	opdStrategicByPemdaSource, err := service.pohonKinerjaRepository.FindOpdStrategicByPemdaCloneFromBatch(ctx, tx, strategicPemdaIds)
+	if err != nil {
+		return pohonkinerja.TematikResponse{}, err
+	}
+
+	cloneToOpdStrategic := make(map[string]domain.PohonKinerja) // key: strategicPemdaId|kodeOpd
+	opdRootIdSet := make(map[int]struct{})
+	opdRootIds := make([]int, 0)
+
+	addOpdRoot := func(strategicPemdaId int, opd domain.PohonKinerja) {
+		keys := []string{
+			helper.OpdStrategicLookupKey(strategicPemdaId, opd.KodeOpd),
+			helper.OpdStrategicLookupKey(strategicPemdaId, ""),
+		}
+		for _, key := range keys {
+			if _, exists := cloneToOpdStrategic[key]; exists {
+				continue
+			}
+			cloneToOpdStrategic[key] = opd
+		}
+		if _, seen := opdRootIdSet[opd.Id]; !seen {
+			opdRootIdSet[opd.Id] = struct{}{}
+			opdRootIds = append(opdRootIds, opd.Id)
+		}
+	}
+
+	for strategicPemdaId, opdNodes := range opdStrategicByPemdaSource {
+		for _, opd := range opdNodes {
+			addOpdRoot(strategicPemdaId, opd)
+		}
+	}
+
+	// Fallback: clone_from pemda = id OPD langsung (alur tarik OPD → pemda)
+	var fallbackDirectOpdIds []int
+	for _, p := range pemdaPokins {
+		if p.LevelPohon == 4 && p.Status == "disetujui" && p.CloneFrom != 0 {
+			if len(opdStrategicByPemdaSource[p.Id]) == 0 {
+				fallbackDirectOpdIds = append(fallbackDirectOpdIds, p.CloneFrom)
+			}
+		}
+	}
+	if len(fallbackDirectOpdIds) > 0 {
+		directOpdRoots, directErr := service.pohonKinerjaRepository.FindOpdStrategicRootsByIdsBatch(ctx, tx, fallbackDirectOpdIds)
+		if directErr == nil {
+			for _, p := range pemdaPokins {
+				if p.LevelPohon != 4 || p.Status != "disetujui" || p.CloneFrom == 0 {
+					continue
+				}
+				if len(opdStrategicByPemdaSource[p.Id]) > 0 {
+					continue
+				}
+				if opd, ok := directOpdRoots[p.CloneFrom]; ok {
+					addOpdRoot(p.Id, opd)
+					addOpdRoot(p.CloneFrom, opd)
+				}
+			}
+		}
+	}
+
+	// ── 5. Ambil hierarki OPD lengkap (tactical + operational) dari root strategic OPD ──
+	opdPokins, err := service.pohonKinerjaRepository.FindStrategicOpdByIdsBatch(ctx, tx, opdRootIds)
+	if err != nil {
+		return pohonkinerja.TematikResponse{}, err
+	}
+
+	// ── 6. Kumpulkan semua IDs & kode_opd untuk batch query ──
+	allPemdaIds := make([]int, 0, len(pemdaPokins))
+	allOpdIds := make([]int, 0, len(opdPokins))
+	kodeOpdSet := make(map[string]struct{})
+
+	for _, p := range pemdaPokins {
+		allPemdaIds = append(allPemdaIds, p.Id)
+		if p.KodeOpd != "" {
+			kodeOpdSet[p.KodeOpd] = struct{}{}
+		}
+	}
+	for _, p := range opdPokins {
+		allOpdIds = append(allOpdIds, p.Id)
+		if p.KodeOpd != "" {
+			kodeOpdSet[p.KodeOpd] = struct{}{}
+		}
+	}
+	allIds := append(allPemdaIds, allOpdIds...)
+
+	// ── 6. Batch: review count ──
+	reviewCounts, err := service.reviewRepository.CountReviewByPokinIdsBatch(ctx, tx, allIds)
+	if err != nil {
+		reviewCounts = map[int]int{}
+	}
+
+	// ── 7. Batch: tagging ──
+	taggingMap, err := service.pohonKinerjaRepository.FindTaggingByPokinIdsBatch(ctx, tx, allIds)
+	if err != nil {
+		taggingMap = map[int][]domain.TaggingPokin{}
+	}
+
+	// ── 8. Batch: pelaksana OPD ──
+	pelaksanaMap, err := service.pohonKinerjaRepository.FindPelaksanaPokinBatch(ctx, tx, allOpdIds)
+	if err != nil {
+		pelaksanaMap = map[int][]domain.PelaksanaPokin{}
+	}
+
+	// ── 9. Batch: nama pegawai ──
+	nipSet := make(map[string]struct{})
+	for _, pelaksanas := range pelaksanaMap {
+		for _, p := range pelaksanas {
+			if p.PegawaiId != "" {
+				nipSet[p.PegawaiId] = struct{}{}
+			}
+		}
+	}
+	pegawaiNamaMap := make(map[string]string)
+	for nip := range nipSet {
+		pegawai, pegErr := service.pegawaiRepository.FindById(ctx, tx, nip)
+		if pegErr == nil {
+			pegawaiNamaMap[nip] = pegawai.NamaPegawai
+		}
+	}
+
+	// ── 10. Batch: nama OPD ──
+	opdNamaMap := make(map[string]string)
+	for kode := range kodeOpdSet {
+		opd, opdErr := service.opdRepository.FindByKodeOpd(ctx, tx, kode)
+		if opdErr == nil {
+			opdNamaMap[kode] = opd.NamaOpd
+		}
+	}
+
+	// ── 11. Batch: program unggulan ──
+	kodeProgSet := make(map[string]struct{})
+	for _, taggings := range taggingMap {
+		for _, t := range taggings {
+			for _, k := range t.KeteranganTaggingProgram {
+				if k.KodeProgramUnggulan != "" {
+					kodeProgSet[k.KodeProgramUnggulan] = struct{}{}
+				}
+			}
+		}
+	}
+	kodeProgramList := make([]string, 0, len(kodeProgSet))
+	for k := range kodeProgSet {
+		kodeProgramList = append(kodeProgramList, k)
+	}
+	programUnggulanMap := make(map[string]*domain.ProgramUnggulan)
+	if len(kodeProgramList) > 0 {
+		programUnggulanMap, _ = service.programUnggulanRepository.FindProgramUnggulanByKodesBatch(ctx, tx, kodeProgramList)
+	}
+
+	// helper: terapkan data batch ke sebuah node
+	applyBatchOpdView := func(p *domain.PohonKinerja, withPelaksana bool) {
+		p.CountReview = reviewCounts[p.Id]
+		p.NamaOpd = opdNamaMap[p.KodeOpd]
+		if withPelaksana {
+			if pl, ok := pelaksanaMap[p.Id]; ok {
+				for i := range pl {
+					pl[i].NamaPegawai = pegawaiNamaMap[pl[i].PegawaiId]
+				}
+				p.Pelaksana = pl
+			}
+		}
+		if tags, ok := taggingMap[p.Id]; ok {
+			for i := range tags {
+				for j := range tags[i].KeteranganTaggingProgram {
+					kode := tags[i].KeteranganTaggingProgram[j].KodeProgramUnggulan
+					if pu, ok := programUnggulanMap[kode]; ok && pu.KeteranganProgramUnggulan != nil {
+						tags[i].KeteranganTaggingProgram[j].RencanaImplementasi = pu.KeteranganProgramUnggulan
+					}
+				}
+			}
+			p.TaggingPokin = tags
+		}
+	}
+
+	// ── 12. Terapkan batch ke node pemda (level 0-4, tanpa pelaksana OPD) ──
+	for i := range pemdaPokins {
+		applyBatchOpdView(&pemdaPokins[i], false)
+	}
+
+	// ── 13. Terapkan batch ke node OPD (level 4-6, dengan pelaksana) ──
+	for i := range opdPokins {
+		applyBatchOpdView(&opdPokins[i], true)
+	}
+
+	// ── 14. Bangun pohonMap pemda (level → parentId → nodes) ──
+	pohonMapPemda := make(map[int]map[int][]domain.PohonKinerja)
+	for _, p := range pemdaPokins {
+		if pohonMapPemda[p.LevelPohon] == nil {
+			pohonMapPemda[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
+		}
+		pohonMapPemda[p.LevelPohon][p.Parent] = append(pohonMapPemda[p.LevelPohon][p.Parent], p)
+	}
+
+	// ── 15. Bangun pohonMap OPD (level → parentId → nodes) ──
+	pohonMapOpd := make(map[int]map[int][]domain.PohonKinerja)
+	for _, p := range opdPokins {
+		if pohonMapOpd[p.LevelPohon] == nil {
+			pohonMapOpd[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
+		}
+		pohonMapOpd[p.LevelPohon][p.Parent] = append(pohonMapOpd[p.LevelPohon][p.Parent], p)
+	}
+
+	// ── 16. Bangun response hierarki ──
+	tematikNodes, ok := pohonMapPemda[0][0]
+	if !ok || len(tematikNodes) == 0 {
+		return pohonkinerja.TematikResponse{}, nil
+	}
+
+	tematikNode := tematikNodes[0]
+	return helper.BuildTematikOpdViewResponse(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tematikNode), nil
+}

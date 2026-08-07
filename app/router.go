@@ -545,29 +545,29 @@ func NewRouter(
 	router.DELETE("/ppd/delete/:id", ppdController.Delete)
 	router.GET("/ppd/findall/:kode_opd", ppdController.FindAll)
 	router.POST("/ppd/find-by-ids", ppdController.FindByIds)
-	
-	//Master Isu KLHS 
+
+	//Master Isu KLHS
 	router.POST("/isu-klhs/create", isuKlhsController.Create)
 	router.PUT("/isu-klhs/update/:id", isuKlhsController.Update)
 	router.DELETE("/isu-klhs/delete/:id", isuKlhsController.Delete)
 	router.GET("/isu-klhs/findall/:kode_opd", isuKlhsController.FindAll)
 	router.POST("/isu-klhs/find-by-ids", isuKlhsController.FindByIds)
-	
-	//Master Isu Global 
+
+	//Master Isu Global
 	router.POST("/isu-global/create", isuGlobalController.Create)
 	router.PUT("/isu-global/update/:id", isuGlobalController.Update)
 	router.DELETE("/isu-global/delete/:id", isuGlobalController.Delete)
 	router.GET("/isu-global/findall/:kode_opd", isuGlobalController.FindAll)
 	router.POST("/isu-global/find-by-ids", isuGlobalController.FindByIds)
-	
-	//Master Isu Nasional 
+
+	//Master Isu Nasional
 	router.POST("/isu-nasional/create", isuNasionalController.Create)
 	router.PUT("/isu-nasional/update/:id", isuNasionalController.Update)
 	router.DELETE("/isu-nasional/delete/:id", isuNasionalController.Delete)
 	router.GET("/isu-nasional/findall/:kode_opd", isuNasionalController.FindAll)
 	router.POST("/isu-nasional/find-by-ids", isuNasionalController.FindByIds)
-	
-	//Master Isu Regional 
+
+	//Master Isu Regional
 	router.POST("/isu-regional/create", isuRegionalController.Create)
 	router.PUT("/isu-regional/update/:id", isuRegionalController.Update)
 	router.DELETE("/isu-regional/delete/:id", isuRegionalController.Delete)
@@ -690,6 +690,9 @@ func NewRouter(
 	router.GET("/tujuan_pemda/lock/:tahun", tujuanPemdaController.IsTujuanPemdaLocked)
 	router.POST("/tujuan_pemda/lock/:tahun", tujuanPemdaController.LockTujuanPemda)
 	router.DELETE("/tujuan_pemda/lock/:tahun", tujuanPemdaController.UnlockTujuanPemda)
+
+	// report tematik (opd in tematik)
+	router.GET("/listOpdTematik/:idPokin", pohonKinerjaAdminController.FindPokinAdminByIdHierarkiOpdView)
 
 	return router
 }
