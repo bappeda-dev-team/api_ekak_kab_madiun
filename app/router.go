@@ -70,6 +70,7 @@ func NewRouter(
 	isuNasionalController controller.IsuNasionalController,
 	isuRegionalController controller.IsuRegionalController,
 	ppdController controller.PpdController,
+	nspkController controller.NspkController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -545,6 +546,12 @@ func NewRouter(
 	router.DELETE("/ppd/delete/:id", ppdController.Delete)
 	router.GET("/ppd/findall/:kode_opd", ppdController.FindAll)
 	router.POST("/ppd/find-by-ids", ppdController.FindByIds)
+	
+	//Master NSPK
+	router.POST("/nspk/create", nspkController.Create)
+	router.PUT("/nspk/update/:id", nspkController.Update)
+	router.DELETE("/nspk/delete/:id", nspkController.Delete)
+	router.GET("/nspk/findall/:kode_opd", nspkController.FindAll)
 
 	//Master Isu KLHS
 	router.POST("/isu-klhs/create", isuKlhsController.Create)

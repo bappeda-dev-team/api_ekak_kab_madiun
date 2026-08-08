@@ -6,7 +6,7 @@ type NspkRequest struct {
 	Tahun   int    `json:"tahun" validate:"required"`
 }
 
-type PpdUpdateRequest struct {
+type NspkUpdateRequest struct {
 	ID      int    `json:"id"`
 	KodeOpd string `json:"kode_opd" validate:"required"`
 	Nspk    string `json:"nspk" validate:"required"`
