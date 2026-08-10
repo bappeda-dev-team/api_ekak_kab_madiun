@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 )
 
 type IsustrategicClientImpl struct {
@@ -13,9 +14,10 @@ type IsustrategicClientImpl struct {
 }
 
 func NewIsuStrategicClient(httpClient *http.Client) *IsustrategicClientImpl {
+	isuStrategisHost := os.Getenv("ISU_STRATEGIS_HOST")
 	return &IsustrategicClientImpl{
 		BaseClient: newBaseClient(
-			"https://isu-strategis-dev.zeabur.app",
+			isuStrategisHost,
 			"",
 			httpClient,
 		),
@@ -28,8 +30,7 @@ func (c *IsustrategicClientImpl) GetDataIsuStrategic(ctx context.Context, kodeOp
 	if err != nil {
 		return nil, err
 	}
-
-	log.Printf("isu strategis di panggil")
+	log.Printf("HOST: %s", url)
 
 	// log.Printf("url:%s ", url)
 
@@ -37,7 +38,7 @@ func (c *IsustrategicClientImpl) GetDataIsuStrategic(ctx context.Context, kodeOp
 	if sessionID != "" {
 		req.Header.Set("X-Session-Id", sessionID)
 	} else {
-		log.Printf("Session Id ditemukan, mungkin akan 401")
+		log.Printf("Session Id tidak ditemukan, mungkin akan 401")
 	}
 
 	resp, err := c.httpClient.Do(req)
