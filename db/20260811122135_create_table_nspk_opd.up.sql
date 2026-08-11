@@ -1,0 +1,10 @@
+CREATE TABLE tb_nspk_opd (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_nspk INT(50) DEFAULT 0,
+    id_tujuan_opd INT(50) DEFAULT 0,
+    id_sasaran_opd INT(50) DEFAULT 0,
+    kode_opd VARCHAR(255) DEFAULT'',
+    tahun INT(50) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
