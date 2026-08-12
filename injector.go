@@ -552,6 +552,32 @@ var isuStrategicClientSet = wire.NewSet(
 	),
 )
 
+var penetapanClientSet = wire.NewSet(
+	internal.NewPenetapanClient,
+	wire.Bind(
+		new(internal.PenetapanClient),
+		new(*internal.PenetapanClientImpl),
+	),
+)
+
+var ppdSet = wire.NewSet(
+	repository.NewPpdRepositoryImpl,
+	wire.Bind(
+		new(repository.PpdRepository),
+		new(*repository.PpdRepositoryImpl),
+	),
+	service.NewPpdServiceImpl,
+	wire.Bind(
+		new(service.PpdService),
+		new(*service.PpdServiceImpl),
+	),
+	controller.NewPpdControllerImpl,
+	wire.Bind(
+		new(controller.PpdController),
+		new(*controller.PpdControllerImpl),
+	),
+)
+
 func ProvideHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 30 * time.Second,
@@ -630,6 +656,8 @@ func InitializeServer() *http.Server {
 		isuKlhsSet,
 		strategicArahPemdaSet,
 		isuStrategicClientSet,
+		penetapanClientSet,
+		ppdSet,
 		httpClientSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),

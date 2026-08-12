@@ -14,12 +14,13 @@ import (
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
-	"net/http"
-	"time"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/google/wire"
+	"net/http"
+	"time"
+)
 
+import (
 	_ "ekak_kabupaten_madiun/docs"
 )
 
@@ -177,7 +178,8 @@ func InitializeServer() *http.Server {
 	dataMasterControllerImpl := controller.NewDataMasterControllerImpl(dataMasterServiceImpl)
 	pkRepositoryImpl := repository.NewPkRepositoryImpl()
 	strukturOrganisasiRepositoryImpl := repository.NewStrukturOrganisasiRepositoryImpl()
-	pkServiceImpl := service.NewPkServiceImpl(pkRepositoryImpl, pegawaiServiceImpl, rencanaKinerjaServiceImpl, opdServiceImpl, strukturOrganisasiRepositoryImpl, validate, db)
+	penetapanClientImpl := internal.NewPenetapanClient(httpClient)
+	pkServiceImpl := service.NewPkServiceImpl(pkRepositoryImpl, pegawaiServiceImpl, rencanaKinerjaServiceImpl, opdServiceImpl, strukturOrganisasiRepositoryImpl, penetapanClientImpl, validate, db)
 	pkControllerImpl := controller.NewPkControllerImpl(pkServiceImpl)
 	strategicArahKebijakanPemdaServiceImpl := service.NewStrategicArahKebijakanPemdaServiceImpl(opdRepositoryImpl, csfRepository, db, tujuanPemdaRepositoryImpl, sasaranPemdaRepositoryImpl)
 	strategicArahKebijakanPemdaControllerImpl := controller.NewStrategicArahKebijakanPemdaControllerImpl(strategicArahKebijakanPemdaServiceImpl, isustrategicClientImpl)
@@ -194,15 +196,15 @@ func InitializeServer() *http.Server {
 	isuKlhsRepositoryImpl := repository.NewIsuKlhsRepositoryImpl()
 	isuKlhsServiceImpl := service.NewIsuKlhsServiceImpl(isuKlhsRepositoryImpl, db, validate)
 	isuKlhsControllerImpl := controller.NewIsuKlhsControllerImpl(isuKlhsServiceImpl)
-	ppdRepositoryImpl := repository.NewPpdRepositoryImpl()
-	ppdServiceImpl := service.NewPpdServiceImpl(ppdRepositoryImpl, db, validate)
-	ppdControllerImpl := controller.NewPpdControllerImpl(ppdServiceImpl)
 	isuNasionalRepositoryImpl := repository.NewIsuNasionalRepositoryImpl()
 	isuNasionalServiceImpl := service.NewIsuNasionalServiceImpl(isuNasionalRepositoryImpl, db, validate)
 	isuNasionalControllerImpl := controller.NewIsuNasionalControllerImpl(isuNasionalServiceImpl)
 	isuRegionalRepositoryImpl := repository.NewIsuRegionalRepositoryImpl()
 	isuRegionalServiceImpl := service.NewIsuRegionalServiceImpl(isuRegionalRepositoryImpl, db, validate)
 	isuRegionalControllerImpl := controller.NewIsuRegionalControllerImpl(isuRegionalServiceImpl)
+	ppdRepositoryImpl := repository.NewPpdRepositoryImpl()
+	ppdServiceImpl := service.NewPpdServiceImpl(ppdRepositoryImpl, db, validate)
+	ppdControllerImpl := controller.NewPpdControllerImpl(ppdServiceImpl)
 	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl)
 	authMiddleware := middleware.NewAuthMiddleware(router)
 	server := NewServer(authMiddleware)
@@ -352,6 +354,24 @@ var strategicArahPemdaSet = wire.NewSet(service.NewStrategicArahKebijakanPemdaSe
 var isuStrategicClientSet = wire.NewSet(internal.NewIsuStrategicClient, wire.Bind(
 	new(internal.IsustrategicClient),
 	new(*internal.IsustrategicClientImpl),
+),
+)
+
+var penetapanClientSet = wire.NewSet(internal.NewPenetapanClient, wire.Bind(
+	new(internal.PenetapanClient),
+	new(*internal.PenetapanClientImpl),
+),
+)
+
+var ppdSet = wire.NewSet(repository.NewPpdRepositoryImpl, wire.Bind(
+	new(repository.PpdRepository),
+	new(*repository.PpdRepositoryImpl),
+), service.NewPpdServiceImpl, wire.Bind(
+	new(service.PpdService),
+	new(*service.PpdServiceImpl),
+), controller.NewPpdControllerImpl, wire.Bind(
+	new(controller.PpdController),
+	new(*controller.PpdControllerImpl),
 ),
 )
 

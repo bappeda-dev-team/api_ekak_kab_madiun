@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/internal"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pegawai"
@@ -26,6 +27,7 @@ type PkServiceImpl struct {
 	rekinService                 RencanaKinerjaService
 	opdService                   OpdService
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository
+	penetapanClient              internal.PenetapanClient
 	Validate                     *validator.Validate
 	DB                           *sql.DB
 }
@@ -36,6 +38,7 @@ func NewPkServiceImpl(
 	rekinService RencanaKinerjaService,
 	opdService OpdService,
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository,
+	penetapanClient internal.PenetapanClient,
 	validate *validator.Validate,
 	DB *sql.DB,
 ) *PkServiceImpl {
@@ -45,6 +48,7 @@ func NewPkServiceImpl(
 		rekinService:                 rekinService,
 		opdService:                   opdService,
 		strukturOrganisasiRepository: strukturOrganisasiRepository,
+		penetapanClient:              penetapanClient,
 		Validate:                     validate,
 		DB:                           DB,
 	}
@@ -782,11 +786,21 @@ func (service *PkServiceImpl) KunciPK(
 		return pkopd.KunciPKResponse{}, err
 	}
 	// TODO -> Sync to penetapan service
-	// go func() {
-	// 	if err := service.penetapanClient.SyncPK(context.Background()); err != nil {
-	// 		log.Printf("[ERROR]PenetapanClient - sync penetapan gagal: %v", err)
-	// 	}
-	// }()
+	if err := service.penetapanClient.SyncPenetapanPkPegawai(context.Background(), kunciPK.IdPegawai, kunciPK.KodeOpd, kunciPK.Tahun); err != nil {
+		log.Printf("sync penetapan gagal: %v", err)
+
+		// Compensation: batalkan hasil KunciPK
+		if _, bukaErr := service.BukaKunciPK(ctx, pkopd.KunciPkRequest{
+			IdPegawai: kunciPK.IdPegawai,
+			KodeOpd:   kunciPK.KodeOpd,
+			Tahun:     kunciPK.Tahun,
+		}); bukaErr != nil {
+			log.Printf("gagal membatalkan KunciPK: %v", bukaErr)
+		}
+
+		return pkopd.KunciPKResponse{}, fmt.Errorf("sync ke penetapan gagal: %w", err)
+	}
+	log.Print("sync penetapan berhasil")
 
 	return pkopd.KunciPKResponse{
 		IdKunci:    idKunci,
