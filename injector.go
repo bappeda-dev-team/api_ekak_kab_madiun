@@ -578,6 +578,43 @@ var ppdSet = wire.NewSet(
 	),
 )
 
+var nspkSet = wire.NewSet(
+	repository.NewNspkRepositoryImpl,
+	wire.Bind(
+		new(repository.NspkRepository),
+		new(*repository.NspkRepositoryImpl),
+	),
+	service.NewNspkServiceImpl,
+	wire.Bind(
+		new(service.NspkService),
+		new(*service.NspkServiceImpl),
+	),
+	controller.NewNspkControllerImpl,
+	wire.Bind(
+		new(controller.NspkController),
+		new(*controller.NspkControllerImpl),
+	),
+)
+
+var nspkOpdSet = wire.NewSet(
+	repository.NewNspkOpdRepositoryImpl,
+	wire.Bind(
+		new(repository.NspkOpdRepository),
+		new(*repository.NspkOpdRepositoryImpl),
+	),
+	service.NewNspkOpdServiceImpl,
+	wire.Bind(
+		new(service.NspkOpdService),
+		new(*service.NspkOpdServiceImpl),
+	),
+	controller.NewNspkOpdControllerImpl,
+	wire.Bind(
+		new(controller.NspkOpdController),
+		new(*controller.NspkOpdControllerImpl),
+	),
+)
+
+
 func ProvideHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 30 * time.Second,
@@ -658,6 +695,8 @@ func InitializeServer() *http.Server {
 		isuStrategicClientSet,
 		penetapanClientSet,
 		ppdSet,
+		nspkSet,
+		nspkOpdSet,
 		httpClientSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),

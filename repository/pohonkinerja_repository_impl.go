@@ -5964,3 +5964,479 @@ func (repository *PohonKinerjaRepositoryImpl) FindAllPokinOpdForCetak(ctx contex
 
 	return childPohons, nil
 }
+
+// FindPokinHierarkiPemdaToStrategic mengambil hierarki pohon pemda dari tematik (level 0)
+// turun sampai strategic pemda (level 4) saja, termasuk field clone_from.
+func (repository *PohonKinerjaRepositoryImpl) FindPokinHierarkiPemdaToStrategic(ctx context.Context, tx *sql.Tx, idPokin int) ([]domain.PohonKinerja, error) {
+	script := `
+        WITH RECURSIVE pohon_hierarki AS (
+            SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, is_active
+            FROM tb_pohon_kinerja
+            WHERE id = ?
+
+            UNION ALL
+
+            SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active
+            FROM tb_pohon_kinerja pk
+            INNER JOIN pohon_hierarki ph ON pk.parent = ph.id
+            WHERE pk.level_pohon <= 4
+        )
+        SELECT
+            ph.id,
+            ph.nama_pohon,
+            ph.parent,
+            ph.jenis_pohon,
+            ph.level_pohon,
+            ph.kode_opd,
+            ph.keterangan,
+            ph.tahun,
+            ph.status,
+            ph.is_active,
+            COALESCE(pk.clone_from, 0) AS clone_from,
+            i.id                       AS indikator_id,
+            i.indikator                AS nama_indikator,
+            COALESCE(i.created_at, '') AS indikator_created_at,
+            t.id                       AS target_id,
+            t.target                   AS target_value,
+            t.satuan                   AS target_satuan
+        FROM pohon_hierarki ph
+        INNER JOIN tb_pohon_kinerja pk ON pk.id = ph.id
+        LEFT JOIN tb_indikator i ON ph.id = i.pokin_id
+        LEFT JOIN tb_target   t ON i.id  = t.indikator_id
+        ORDER BY ph.level_pohon, ph.id, i.created_at, i.id, t.id
+    `
+
+	rows, err := tx.QueryContext(ctx, script, idPokin)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	pokinMap := make(map[int]domain.PohonKinerja)
+	processedIndikatorsPemdaStr := make(map[string]bool)
+
+	for rows.Next() {
+		var (
+			pokinId, parent, levelPohon                                    int
+			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin, status string
+			isActive                                                       bool
+			cloneFrom                                                      int
+			indikatorId, namaIndikator                                     sql.NullString
+			indikatorCreatedAt                                             sql.NullString
+			targetId, targetValue, targetSatuan                            sql.NullString
+		)
+
+		if scanErr := rows.Scan(
+			&pokinId, &namaPohon, &parent, &jenisPohon, &levelPohon,
+			&kodeOpd, &keterangan, &tahunPokin, &status, &isActive, &cloneFrom,
+			&indikatorId, &namaIndikator, &indikatorCreatedAt,
+			&targetId, &targetValue, &targetSatuan,
+		); scanErr != nil {
+			return nil, scanErr
+		}
+
+		pokin, exists := pokinMap[pokinId]
+		if !exists {
+			pokin = domain.PohonKinerja{
+				Id:         pokinId,
+				NamaPohon:  namaPohon,
+				Parent:     parent,
+				JenisPohon: jenisPohon,
+				LevelPohon: levelPohon,
+				KodeOpd:    kodeOpd,
+				Keterangan: keterangan,
+				Tahun:      tahunPokin,
+				Status:     status,
+				IsActive:   isActive,
+				CloneFrom:  cloneFrom,
+			}
+		} else if pokin.CloneFrom == 0 && cloneFrom != 0 {
+			pokin.CloneFrom = cloneFrom
+		}
+
+		if indikatorId.Valid && namaIndikator.Valid {
+			rowKey := fmt.Sprintf("%s_%d", indikatorId.String, pokinId)
+			if !processedIndikatorsPemdaStr[rowKey] {
+				processedIndikatorsPemdaStr[rowKey] = true
+
+				var createdAt time.Time
+				if indikatorCreatedAt.Valid && indikatorCreatedAt.String != "" {
+					if parsed, parseErr := time.Parse("2006-01-02 15:04:05", indikatorCreatedAt.String); parseErr == nil {
+						createdAt = parsed
+					}
+				}
+
+				indikator := domain.Indikator{
+					Id:        indikatorId.String,
+					PokinId:   fmt.Sprint(pokinId),
+					Indikator: namaIndikator.String,
+					Tahun:     tahunPokin,
+					CreatedAt: createdAt,
+				}
+
+				if targetId.Valid && targetValue.Valid && targetSatuan.Valid {
+					indikator.Target = append(indikator.Target, domain.Target{
+						Id:          targetId.String,
+						IndikatorId: indikatorId.String,
+						Target:      targetValue.String,
+						Satuan:      targetSatuan.String,
+						Tahun:       tahunPokin,
+					})
+				}
+
+				pokin.Indikator = append(pokin.Indikator, indikator)
+			}
+		}
+
+		pokinMap[pokinId] = pokin
+	}
+
+	// Patch clone_from langsung dari tabel asli jika masih 0 setelah scan JOIN
+	var idsNeedCloneFromPatch []int
+	for id, p := range pokinMap {
+		if p.CloneFrom == 0 {
+			idsNeedCloneFromPatch = append(idsNeedCloneFromPatch, id)
+		}
+	}
+	if len(idsNeedCloneFromPatch) > 0 {
+		cloneFromMap, patchErr := repository.findCloneFromByPokinIds(ctx, tx, idsNeedCloneFromPatch)
+		if patchErr == nil {
+			for id, cloneFrom := range cloneFromMap {
+				if cloneFrom == 0 {
+					continue
+				}
+				p := pokinMap[id]
+				p.CloneFrom = cloneFrom
+				pokinMap[id] = p
+			}
+		}
+	}
+
+	var result []domain.PohonKinerja
+	for _, pokin := range pokinMap {
+		sort.Slice(pokin.Indikator, func(i, j int) bool {
+			return pokin.Indikator[i].CreatedAt.Before(pokin.Indikator[j].CreatedAt)
+		})
+		result = append(result, pokin)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].LevelPohon == result[j].LevelPohon {
+			return result[i].Id < result[j].Id
+		}
+		return result[i].LevelPohon < result[j].LevelPohon
+	})
+
+	return result, nil
+}
+
+// FindOpdStrategicByPemdaCloneFromBatch mencari strategic OPD yang clone_from-nya = id strategic pemda
+// (alur CloneStrategiFromPemda: OPD.clone_from = id strategic pemda).
+func (repository *PohonKinerjaRepositoryImpl) FindOpdStrategicByPemdaCloneFromBatch(ctx context.Context, tx *sql.Tx, pemdaSourceIds []int) (map[int][]domain.PohonKinerja, error) {
+	result := make(map[int][]domain.PohonKinerja)
+	if len(pemdaSourceIds) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, len(pemdaSourceIds))
+	args := make([]interface{}, len(pemdaSourceIds))
+	for i, id := range pemdaSourceIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT id, parent, nama_pohon, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, COALESCE(clone_from, 0), is_active
+		FROM tb_pohon_kinerja
+		WHERE clone_from IN (%s)
+		  AND level_pohon = 4
+		  AND status IN ('disetujui', 'pokin dari pemda')
+		ORDER BY clone_from, id`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pokin domain.PohonKinerja
+		if err := rows.Scan(
+			&pokin.Id,
+			&pokin.Parent,
+			&pokin.NamaPohon,
+			&pokin.JenisPohon,
+			&pokin.LevelPohon,
+			&pokin.KodeOpd,
+			&pokin.Keterangan,
+			&pokin.Tahun,
+			&pokin.Status,
+			&pokin.CloneFrom,
+			&pokin.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		result[pokin.CloneFrom] = append(result[pokin.CloneFrom], pokin)
+	}
+	return result, nil
+}
+
+// FindOpdStrategicRootsByIdsBatch mengambil node strategic OPD langsung by id
+// (fallback untuk alur tarik OPD di mana clone_from pemda = id OPD langsung).
+func (repository *PohonKinerjaRepositoryImpl) FindOpdStrategicRootsByIdsBatch(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.PohonKinerja, error) {
+	result := make(map[int]domain.PohonKinerja)
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT id, parent, nama_pohon, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, COALESCE(clone_from, 0), is_active
+		FROM tb_pohon_kinerja
+		WHERE id IN (%s)
+		  AND level_pohon = 4`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pokin domain.PohonKinerja
+		if err := rows.Scan(
+			&pokin.Id,
+			&pokin.Parent,
+			&pokin.NamaPohon,
+			&pokin.JenisPohon,
+			&pokin.LevelPohon,
+			&pokin.KodeOpd,
+			&pokin.Keterangan,
+			&pokin.Tahun,
+			&pokin.Status,
+			&pokin.CloneFrom,
+			&pokin.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		result[pokin.Id] = pokin
+	}
+	return result, nil
+}
+
+// FindStrategicOpdByIdsBatch mengambil sekumpulan strategic OPD berdasarkan daftar ID
+// beserta seluruh turunannya (tactical level 5, operational level 6) termasuk
+// indikator, target, dan pelaksana. Digunakan untuk membangun OPD View setelah
+// me-resolve clone_from dari strategic pemda.
+func (repository *PohonKinerjaRepositoryImpl) FindStrategicOpdByIdsBatch(ctx context.Context, tx *sql.Tx, ids []int) ([]domain.PohonKinerja, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+        WITH RECURSIVE opd_hierarki AS (
+            SELECT id, nama_pohon, parent, jenis_pohon, level_pohon, kode_opd, keterangan, tahun, status, is_active, COALESCE(clone_from, 0) AS clone_from
+            FROM tb_pohon_kinerja
+            WHERE id IN (%s)
+
+            UNION ALL
+
+            SELECT pk.id, pk.nama_pohon, pk.parent, pk.jenis_pohon, pk.level_pohon, pk.kode_opd, pk.keterangan, pk.tahun, pk.status, pk.is_active, COALESCE(pk.clone_from, 0) AS clone_from
+            FROM tb_pohon_kinerja pk
+            INNER JOIN opd_hierarki oh ON pk.parent = oh.id
+            WHERE pk.level_pohon <= 6
+        )
+        SELECT
+            oh.id,
+            oh.nama_pohon,
+            oh.parent,
+            oh.jenis_pohon,
+            oh.level_pohon,
+            oh.kode_opd,
+            oh.keterangan,
+            oh.tahun,
+            oh.status,
+            oh.is_active,
+            oh.clone_from,
+            i.id                       AS indikator_id,
+            i.indikator                AS nama_indikator,
+            COALESCE(i.created_at, '') AS indikator_created_at,
+            t.id                       AS target_id,
+            t.target                   AS target_value,
+            t.satuan                   AS target_satuan,
+            pp.id                      AS pelaksana_id,
+            pp.pegawai_id
+        FROM opd_hierarki oh
+        LEFT JOIN tb_indikator       i  ON oh.id = i.pokin_id
+        LEFT JOIN tb_target          t  ON i.id  = t.indikator_id
+        LEFT JOIN tb_pelaksana_pokin pp ON oh.id  = pp.pohon_kinerja_id
+        ORDER BY oh.level_pohon, oh.id, i.created_at, i.id, t.id, pp.id
+    `, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	pokinMap := make(map[int]domain.PohonKinerja)
+	processedIndikatorsBatch := make(map[string]bool)
+
+	for rows.Next() {
+		var (
+			pokinId, parent, levelPohon                                    int
+			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin, status string
+			isActive                                                       bool
+			cloneFrom                                                      int
+			indikatorId, namaIndikator                                     sql.NullString
+			indikatorCreatedAt                                             sql.NullString
+			targetId, targetValue, targetSatuan                            sql.NullString
+			pelaksanaId, pegawaiId                                         sql.NullString
+		)
+
+		if scanErr := rows.Scan(
+			&pokinId, &namaPohon, &parent, &jenisPohon, &levelPohon,
+			&kodeOpd, &keterangan, &tahunPokin, &status, &isActive, &cloneFrom,
+			&indikatorId, &namaIndikator, &indikatorCreatedAt,
+			&targetId, &targetValue, &targetSatuan,
+			&pelaksanaId, &pegawaiId,
+		); scanErr != nil {
+			return nil, scanErr
+		}
+
+		pokin, exists := pokinMap[pokinId]
+		if !exists {
+			pokin = domain.PohonKinerja{
+				Id:         pokinId,
+				NamaPohon:  namaPohon,
+				Parent:     parent,
+				JenisPohon: jenisPohon,
+				LevelPohon: levelPohon,
+				KodeOpd:    kodeOpd,
+				Keterangan: keterangan,
+				Tahun:      tahunPokin,
+				Status:     status,
+				IsActive:   isActive,
+				CloneFrom:  cloneFrom,
+			}
+		}
+
+		if pelaksanaId.Valid && pegawaiId.Valid {
+			pelaksana := domain.PelaksanaPokin{
+				Id:        pelaksanaId.String,
+				PegawaiId: pegawaiId.String,
+			}
+			isDuplicate := false
+			for _, p := range pokin.Pelaksana {
+				if p.Id == pelaksana.Id {
+					isDuplicate = true
+					break
+				}
+			}
+			if !isDuplicate {
+				pokin.Pelaksana = append(pokin.Pelaksana, pelaksana)
+			}
+		}
+
+		if indikatorId.Valid && namaIndikator.Valid {
+			rowKey := fmt.Sprintf("%s_%d", indikatorId.String, pokinId)
+			if !processedIndikatorsBatch[rowKey] {
+				processedIndikatorsBatch[rowKey] = true
+
+				var createdAt time.Time
+				if indikatorCreatedAt.Valid && indikatorCreatedAt.String != "" {
+					if parsed, parseErr := time.Parse("2006-01-02 15:04:05", indikatorCreatedAt.String); parseErr == nil {
+						createdAt = parsed
+					}
+				}
+
+				indikator := domain.Indikator{
+					Id:        indikatorId.String,
+					PokinId:   fmt.Sprint(pokinId),
+					Indikator: namaIndikator.String,
+					Tahun:     tahunPokin,
+					CreatedAt: createdAt,
+				}
+
+				if targetId.Valid && targetValue.Valid && targetSatuan.Valid {
+					indikator.Target = append(indikator.Target, domain.Target{
+						Id:          targetId.String,
+						IndikatorId: indikatorId.String,
+						Target:      targetValue.String,
+						Satuan:      targetSatuan.String,
+						Tahun:       tahunPokin,
+					})
+				}
+
+				pokin.Indikator = append(pokin.Indikator, indikator)
+			}
+		}
+
+		pokinMap[pokinId] = pokin
+	}
+
+	var result []domain.PohonKinerja
+	for _, pokin := range pokinMap {
+		sort.Slice(pokin.Indikator, func(i, j int) bool {
+			return pokin.Indikator[i].CreatedAt.Before(pokin.Indikator[j].CreatedAt)
+		})
+		result = append(result, pokin)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].LevelPohon == result[j].LevelPohon {
+			return result[i].Id < result[j].Id
+		}
+		return result[i].LevelPohon < result[j].LevelPohon
+	})
+
+	return result, nil
+}
+
+// findCloneFromByPokinIds mengambil clone_from langsung dari tb_pohon_kinerja (bypass CTE).
+func (repository *PohonKinerjaRepositoryImpl) findCloneFromByPokinIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]int, error) {
+	result := make(map[int]int)
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT id, COALESCE(clone_from, 0)
+		FROM tb_pohon_kinerja
+		WHERE id IN (%s)`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, cloneFrom int
+		if err := rows.Scan(&id, &cloneFrom); err != nil {
+			return nil, err
+		}
+		result[id] = cloneFrom
+	}
+	return result, nil
+}

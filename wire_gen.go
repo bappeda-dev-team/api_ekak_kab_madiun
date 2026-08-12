@@ -205,7 +205,13 @@ func InitializeServer() *http.Server {
 	ppdRepositoryImpl := repository.NewPpdRepositoryImpl()
 	ppdServiceImpl := service.NewPpdServiceImpl(ppdRepositoryImpl, db, validate)
 	ppdControllerImpl := controller.NewPpdControllerImpl(ppdServiceImpl)
-	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl)
+	nspkRepositoryImpl := repository.NewNspkRepositoryImpl()
+	nspkServiceImpl := service.NewNspkServiceImpl(nspkRepositoryImpl, db, validate)
+	nspkControllerImpl := controller.NewNspkControllerImpl(nspkServiceImpl)
+	nspkOpdRepositoryImpl := repository.NewNspkOpdRepositoryImpl()
+	nspkOpdServiceImpl := service.NewNspkOpdServiceImpl(nspkOpdRepositoryImpl, db, validate)
+	nspkOpdControllerImpl := controller.NewNspkOpdControllerImpl(nspkOpdServiceImpl)
+	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl, nspkControllerImpl, nspkOpdControllerImpl)
 	authMiddleware := middleware.NewAuthMiddleware(router)
 	server := NewServer(authMiddleware)
 	return server
@@ -372,6 +378,30 @@ var ppdSet = wire.NewSet(repository.NewPpdRepositoryImpl, wire.Bind(
 ), controller.NewPpdControllerImpl, wire.Bind(
 	new(controller.PpdController),
 	new(*controller.PpdControllerImpl),
+),
+)
+
+var nspkSet = wire.NewSet(repository.NewNspkRepositoryImpl, wire.Bind(
+	new(repository.NspkRepository),
+	new(*repository.NspkRepositoryImpl),
+), service.NewNspkServiceImpl, wire.Bind(
+	new(service.NspkService),
+	new(*service.NspkServiceImpl),
+), controller.NewNspkControllerImpl, wire.Bind(
+	new(controller.NspkController),
+	new(*controller.NspkControllerImpl),
+),
+)
+
+var nspkOpdSet = wire.NewSet(repository.NewNspkOpdRepositoryImpl, wire.Bind(
+	new(repository.NspkOpdRepository),
+	new(*repository.NspkOpdRepositoryImpl),
+), service.NewNspkOpdServiceImpl, wire.Bind(
+	new(service.NspkOpdService),
+	new(*service.NspkOpdServiceImpl),
+), controller.NewNspkOpdControllerImpl, wire.Bind(
+	new(controller.NspkOpdController),
+	new(*controller.NspkOpdControllerImpl),
 ),
 )
 

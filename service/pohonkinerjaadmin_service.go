@@ -35,4 +35,5 @@ type PohonKinerjaAdminService interface {
 	FindPokinFromPemda(ctx context.Context, kodeOpd string, tahun string) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
 	FindPokinFromOpd(ctx context.Context, kodeOpd string, tahun string, levelPohon int) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
 	CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak], error)
+	FindPokinAdminByIdHierarkiOpdView(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error)
 }
