@@ -227,22 +227,29 @@ func (repository *NspkOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 
 	for rows.Next() {
 		var item domain.NspkOpd
+		var nspk sql.NullString
+		var tujuanOpd sql.NullString
+		var sasaranOpd sql.NullString
 
 		err := rows.Scan(
 			&item.ID,
 			&item.KodeOpd,
 			&item.NamaOpd,
 			&item.IdNspk,
-			&item.NSPK,
+			&nspk,
 			&item.IdTujuanOpd,
-			&item.TujuanOpd,
+			&tujuanOpd,
 			&item.IdSasaranOpd,
-			&item.SasaranOpd,
+			&sasaranOpd,
 			&item.Tahun,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		item.NSPK = nspk.String
+		item.TujuanOpd = tujuanOpd.String
+		item.SasaranOpd = sasaranOpd.String
 
 		copyItem := item
 		isuMap[item.ID] = &copyItem
