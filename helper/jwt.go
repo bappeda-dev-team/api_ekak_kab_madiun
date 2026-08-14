@@ -1,56 +1,79 @@
 package helper
 
 import (
-	"ekak_kabupaten_madiun/model/web"
+	"context"
 	"fmt"
 	"os"
+	"log"
+	"ekak_kabupaten_madiun/model/web"
 
-	"github.com/MicahParks/keyfunc/v3"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/coreos/go-oidc/v3/oidc"
 )
 
 var (
-	jwks keyfunc.Keyfunc
+	jwtVerifier *oidc.IDTokenVerifier
 )
 
 func InitJWT() error {
-	keycloakCerts := os.Getenv("KEYCLOAK_CERTS_URL")
-
-	var err error
-	jwks, err = keyfunc.NewDefault([]string{keycloakCerts})
-	if err != nil {
-		return fmt.Errorf("failed to initialize Keycloak JWKS: %w", err)
+	jwtIssuer := os.Getenv("KEYCLOAK_ISSUER")
+	if jwtIssuer == "" {
+		return fmt.Errorf("KEYCLOAK_ISSUER is not configured")
 	}
+
+	log.Printf("Mencoba koneksi ke keycloak issuer: %s", jwtIssuer)
+	provider, err := oidc.NewProvider(
+		context.Background(),
+		jwtIssuer,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize Keycloak OIDC provider: %w", err)
+	}
+
+	jwtVerifier = provider.Verifier(
+		&oidc.Config{
+			SkipClientIDCheck: true,
+		},
+	)
 
 	return nil
 }
 
 func ValidateJWT(tokenString string) (web.JWTClaim, error) {
-	if jwks == nil {
+	if jwtVerifier == nil {
 		return web.JWTClaim{}, fmt.Errorf("JWT is not initialized")
 	}
 
-	token, err := jwt.Parse(
+	idToken, err := jwtVerifier.Verify(
+		context.Background(),
 		tokenString,
-		jwks.Keyfunc,
-		jwt.WithValidMethods([]string{"RS256"}),
 	)
 
 	if err != nil {
 		return web.JWTClaim{}, fmt.Errorf("invalid JWT: %w", err)
 	}
 
-	if !token.Valid {
-		return web.JWTClaim{}, fmt.Errorf("invalid JWT")
+	// if !token.Valid {
+	// 	return web.JWTClaim{}, fmt.Errorf("invalid JWT")
+	// }
+	var claims struct {
+		Subject string `json:"sub"`
+		Email   string `json:"email"`
+		Issuer  string `json:"iss"`
+		Iat     int64  `json:"iat"`
+		Exp     int64  `json:"exp"`
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return web.JWTClaim{}, fmt.Errorf("invalid JWT claims")
+	if err := idToken.Claims(&claims); err != nil {
+		return web.JWTClaim{}, fmt.Errorf(
+			"failed to parse JWT claims: %w",
+			err,
+		)
 	}
 
-	// mapping claims sementara
-	_ = claims
-
-	return web.JWTClaim{}, nil
+	return web.JWTClaim{
+		Issuer: claims.Issuer,
+		Email:  claims.Email,
+		Iat:    claims.Iat,
+		Exp:    claims.Exp,
+	}, nil
 }

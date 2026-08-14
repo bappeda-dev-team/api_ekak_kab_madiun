@@ -4,6 +4,7 @@ import (
 	"context"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -68,13 +69,22 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 
 	claims, err := helper.ValidateJWT(tokenString)
 	if err != nil {
+		log.Printf("ERROR INVALID SESSION: %v", err)
+
+		status := http.StatusUnauthorized
+		message := "Token tidak valid"
+
+		if strings.Contains(err.Error(), "token is expired") {
+			message = "Session telah berakhir, silakan login kembali"
+		}
+
 		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusUnauthorized)
+		writer.WriteHeader(status)
 
 		webResponse := web.WebResponse{
-			Code:   http.StatusUnauthorized,
+			Code:   status,
 			Status: "UNAUTHORIZED",
-			Data:   "Token tidak valid",
+			Data:   message,
 		}
 
 		helper.WriteToResponseBody(writer, webResponse)
