@@ -247,9 +247,17 @@ func (repository *NspkOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 			return nil, err
 		}
 
-		item.NSPK = nspk.String
-		item.TujuanOpd = tujuanOpd.String
-		item.SasaranOpd = sasaranOpd.String
+		if nspk.Valid {
+			item.NSPK = nspk.String
+		}
+
+		if tujuanOpd.Valid {
+			item.TujuanOpd = tujuanOpd.String
+		}
+
+		if sasaranOpd.Valid {
+			item.SasaranOpd = sasaranOpd.String
+		}
 
 		copyItem := item
 		isuMap[item.ID] = &copyItem
