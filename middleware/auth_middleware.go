@@ -66,8 +66,8 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-	claims := helper.ValidateJWT(tokenString)
-	if claims.UserId == 0 {
+	claims, err := helper.ValidateJWT(tokenString)
+	if err != nil {
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusUnauthorized)
 
@@ -80,6 +80,19 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		helper.WriteToResponseBody(writer, webResponse)
 		return
 	}
+	// if claims.UserId == 0 {
+	// 	writer.Header().Set("Content-Type", "application/json")
+	// 	writer.WriteHeader(http.StatusUnauthorized)
+
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusUnauthorized,
+	// 		Status: "UNAUTHORIZED",
+	// 		Data:   "Token tidak valid",
+	// 	}
+
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
 
 	ctx := context.WithValue(request.Context(), helper.UserInfoKey, claims)
 	request = request.WithContext(ctx)

@@ -4,129 +4,53 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"fmt"
 	"os"
-	"time"
 
+	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
-var jwtIssuer = os.Getenv("JWT_ISSUER")
-var jwtExpiration = os.Getenv("JWT_EXPIRATION")
+var (
+	jwks keyfunc.Keyfunc
+)
 
-func CreateNewJWT(userId int, pegawaiId string, email string, nip string, kodeOpd string, namaOpd string, namaPegawai string, roles []string) string {
-	exp := 24 * time.Hour
-	if jwtExpiration != "" {
-		if duration, err := time.ParseDuration(jwtExpiration + "h"); err == nil {
-			exp = duration
-		}
-	}
+func InitJWT() error {
+	keycloakCerts := os.Getenv("KEYCLOAK_CERTS_URL")
 
-	claims := jwt.MapClaims{
-		"iss":          jwtIssuer,
-		"user_id":      userId,
-		"pegawai_id":   pegawaiId,
-		"email":        email,
-		"nip":          nip,
-		"kode_opd":     kodeOpd,
-		"nama_opd":     namaOpd,
-		"nama_pegawai": namaPegawai,
-		"roles":        roles,
-		"iat":          time.Now().Unix(),
-		"exp":          time.Now().Add(exp).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString(jwtSecretKey)
+	var err error
+	jwks, err = keyfunc.NewDefault([]string{keycloakCerts})
 	if err != nil {
-		fmt.Println(err)
+		return fmt.Errorf("failed to initialize Keycloak JWKS: %w", err)
 	}
 
-	return signedToken
+	return nil
 }
 
-func ValidateJWT(tokenString string) web.JWTClaim {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return jwtSecretKey, nil
-	})
+func ValidateJWT(tokenString string) (web.JWTClaim, error) {
+	if jwks == nil {
+		return web.JWTClaim{}, fmt.Errorf("JWT is not initialized")
+	}
+
+	token, err := jwt.Parse(
+		tokenString,
+		jwks.Keyfunc,
+		jwt.WithValidMethods([]string{"RS256"}),
+	)
 
 	if err != nil {
-		fmt.Println(err)
-		return web.JWTClaim{}
+		return web.JWTClaim{}, fmt.Errorf("invalid JWT: %w", err)
 	}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		var roles []string
-		if rolesInterface, exists := claims["roles"]; exists {
-			if rolesArray, ok := rolesInterface.([]interface{}); ok {
-				for _, role := range rolesArray {
-					if roleStr, ok := role.(string); ok {
-						roles = append(roles, roleStr)
-					}
-				}
-			}
-		}
-
-		userId := 0
-		if id, ok := claims["user_id"].(float64); ok {
-			userId = int(id)
-		}
-
-		pegawaiId := ""
-		if id, ok := claims["pegawai_id"].(string); ok {
-			pegawaiId = id
-		}
-
-		email := ""
-		if e, ok := claims["email"].(string); ok {
-			email = e
-		}
-
-		nip := ""
-		if n, ok := claims["nip"].(string); ok {
-			nip = n
-		}
-
-		issuer := ""
-		if iss, ok := claims["iss"].(string); ok {
-			issuer = iss
-		}
-
-		iat := int64(0)
-		if issuedAt, ok := claims["iat"].(float64); ok {
-			iat = int64(issuedAt)
-		}
-
-		exp := int64(0)
-		if expiry, ok := claims["exp"].(float64); ok {
-			exp = int64(expiry)
-		}
-
-		kodeOpd := ""
-		if opd, ok := claims["kode_opd"].(string); ok {
-			kodeOpd = opd
-		}
-
-		namaOpd := ""
-		if opd, ok := claims["nama_opd"].(string); ok {
-			namaOpd = opd
-		}
-
-		return web.JWTClaim{
-			Issuer:    issuer,
-			UserId:    userId,
-			PegawaiId: pegawaiId,
-			KodeOpd:   kodeOpd,
-			NamaOpd:   namaOpd,
-			Email:     email,
-			Nip:       nip,
-			Roles:     roles,
-			Iat:       iat,
-			Exp:       exp,
-		}
+	if !token.Valid {
+		return web.JWTClaim{}, fmt.Errorf("invalid JWT")
 	}
 
-	return web.JWTClaim{}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return web.JWTClaim{}, fmt.Errorf("invalid JWT claims")
+	}
+
+	// mapping claims sementara
+	_ = claims
+
+	return web.JWTClaim{}, nil
 }
