@@ -279,8 +279,8 @@ func (repository *TujuanOpdRepositoryImpl) FindById(ctx context.Context, tx *sql
 			&kodeIndikator,
 			&indikatorNama,
 			&rumusPerhitungan,
-			&sumberData,
 			&definisiOperasional,
+			&sumberData,
 			&targetId,
 			&targetValue,
 			&satuan,
@@ -855,10 +855,11 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdId(ctx contex
 	script := `
         SELECT
             id,
+	    kode_indikator,
             indikator,
             COALESCE(rumus_perhitungan, '') as rumus_perhitungan,
             COALESCE(sumber_data, '') as sumber_data
-        FROM tb_indikator
+        FROM tb_indikator_matrix
         WHERE tujuan_opd_id = ?
         ORDER BY id ASC
     `
@@ -876,6 +877,7 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdId(ctx contex
 
 		err := rows.Scan(
 			&indikator.Id,
+			&indikator.KodeIndikator,
 			&indikator.Indikator,
 			&rumusPerhitungan,
 			&sumberData,
@@ -988,8 +990,8 @@ func (repository *TujuanOpdRepositoryImpl) FindIndikatorByTujuanOpdIdsBatch(ctx 
 			indikator,
 			COALESCE(rumus_perhitungan, '') as rumus_perhitungan,
 			COALESCE(sumber_data, '') as sumber_data
-		FROM tb_indikator
-		WHERE tujuan_opd_id IN (%s)
+		FROM tb_indikator_matrix
+		WHERE kode_indikator IN (%s)
 		ORDER BY tujuan_opd_id ASC, id ASC
 	`, strings.Join(placeholders, ","))
 
@@ -2122,4 +2124,30 @@ func (repository *TujuanOpdRepositoryImpl) FindAllOnly(ctx context.Context, tx *
 	}
 
 	return result, nil
+}
+
+func (repository *TujuanOpdRepositoryImpl) DeleteIndikatorByIds(ctx context.Context, tx *sql.Tx, indikatorIds []string) error {
+	if len(indikatorIds) == 0 {
+		return nil
+	}
+
+	// Build query dengan IN clause
+	placeholders := make([]string, len(indikatorIds))
+	args := make([]interface{}, len(indikatorIds))
+	for i, id := range indikatorIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		DELETE FROM tb_indikator_matrix
+		WHERE kode_indikator IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	return nil
 }

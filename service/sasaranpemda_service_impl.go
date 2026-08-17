@@ -294,12 +294,13 @@ func (s *SasaranPemdaServiceImpl) Create(
 		kodeInd := generateKodeIndikatorSasaran()
 		ind := domain.IndikatorPemda{
 			// Id = 0: DB auto-increment
-			KodeIndikator:    kodeInd,
-			SasaranPemdaId:   sp.Id,
-			Indikator:        sql.NullString{String: indReq.Indikator, Valid: true},
-			RumusPerhitungan: sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
-			SumberData:       sql.NullString{String: indReq.SumberData, Valid: true},
-			Jenis:            "renstra",
+			KodeIndikator:       kodeInd,
+			SasaranPemdaId:      sp.Id,
+			Indikator:           sql.NullString{String: indReq.Indikator, Valid: true},
+			DefinisiOperasional: sql.NullString{String: indReq.DefinisiOperasional, Valid: true},
+			RumusPerhitungan:    sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
+			SumberData:          sql.NullString{String: indReq.SumberData, Valid: true},
+			Jenis:               "renstra",
 		}
 		for _, tReq := range indReq.Target {
 			targetStr, err := helper.TargetToDBString(tReq.Target.Float64())
@@ -385,11 +386,12 @@ func (s *SasaranPemdaServiceImpl) Update(
 	var indikators []domain.IndikatorPemda
 	for _, indReq := range request.Indikator {
 		ind := domain.IndikatorPemda{
-			SasaranPemdaId:   existing.Id,
-			Indikator:        sql.NullString{String: indReq.Indikator, Valid: true},
-			RumusPerhitungan: sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
-			SumberData:       sql.NullString{String: indReq.SumberData, Valid: true},
-			Jenis:            "renstra",
+			SasaranPemdaId:      existing.Id,
+			Indikator:           sql.NullString{String: indReq.Indikator, Valid: true},
+			DefinisiOperasional: sql.NullString{String: indReq.DefinisiOperasional, Valid: true},
+			RumusPerhitungan:    sql.NullString{String: indReq.RumusPerhitungan, Valid: true},
+			SumberData:          sql.NullString{String: indReq.SumberData, Valid: true},
+			Jenis:               "renstra",
 		}
 		if indReq.IdIndikator > 0 {
 			// UPDATE — kode_indikator wajib dari DB (tidak boleh diubah dari request)
@@ -584,12 +586,13 @@ func (s *SasaranPemdaServiceImpl) FindAllWithPokin(
 				tAkhir, _ := strconv.Atoi(tahunAkhir)
 				for _, ind := range sasaran.Indikator {
 					indResp := sasaranpemda.IndikatorSubtematikResponse{
-						Id:               ind.Id,
-						KodeIndikator:    ind.KodeIndikator,
-						Indikator:        ind.Indikator,
-						RumusPerhitungan: ind.RumusPerhitungan.String,
-						SumberData:       ind.SumberData.String,
-						Target:           []sasaranpemda.TargetResponse{},
+						Id:                  ind.Id,
+						KodeIndikator:       ind.KodeIndikator,
+						Indikator:           ind.Indikator,
+						DefinisiOperasional: ind.DefinisiOperasional.String,
+						RumusPerhitungan:    ind.RumusPerhitungan.String,
+						SumberData:          ind.SumberData.String,
+						Target:              []sasaranpemda.TargetResponse{},
 					}
 					existingTarget := make(map[string]domain.TargetDetail)
 					for _, t := range ind.Target {

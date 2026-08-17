@@ -38,4 +38,5 @@ type TujuanOpdRepository interface {
 	FindByIdOnly(ctx context.Context, tx *sql.Tx, id int) (domain.TujuanOpd, error)
 	FindIndikatorTargetsRenstraByTujuanIds(ctx context.Context, tx *sql.Tx, tujuanIds []int) ([]domain.Indikator, error)
 	FindAllOnly(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error)
+	DeleteIndikatorByIds(ctx context.Context, tx *sql.Tx, indikatorIds []string) error
 }

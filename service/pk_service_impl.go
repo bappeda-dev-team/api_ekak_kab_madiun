@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/internal"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pegawai"
@@ -26,6 +27,7 @@ type PkServiceImpl struct {
 	rekinService                 RencanaKinerjaService
 	opdService                   OpdService
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository
+	penetapanClient              internal.PenetapanClient
 	Validate                     *validator.Validate
 	DB                           *sql.DB
 }
@@ -36,6 +38,7 @@ func NewPkServiceImpl(
 	rekinService RencanaKinerjaService,
 	opdService OpdService,
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository,
+	penetapanClient internal.PenetapanClient,
 	validate *validator.Validate,
 	DB *sql.DB,
 ) *PkServiceImpl {
@@ -45,6 +48,7 @@ func NewPkServiceImpl(
 		rekinService:                 rekinService,
 		opdService:                   opdService,
 		strukturOrganisasiRepository: strukturOrganisasiRepository,
+		penetapanClient:              penetapanClient,
 		Validate:                     validate,
 		DB:                           DB,
 	}
@@ -782,11 +786,21 @@ func (service *PkServiceImpl) KunciPK(
 		return pkopd.KunciPKResponse{}, err
 	}
 	// TODO -> Sync to penetapan service
-	// go func() {
-	// 	if err := service.penetapanClient.SyncPK(context.Background()); err != nil {
-	// 		log.Printf("[ERROR]PenetapanClient - sync penetapan gagal: %v", err)
-	// 	}
-	// }()
+	if err := service.penetapanClient.SyncPenetapanPkPegawai(context.Background(), kunciPK.IdPegawai, kunciPK.KodeOpd, kunciPK.Tahun); err != nil {
+		log.Printf("sync penetapan gagal: %v", err)
+
+		// Compensation: batalkan hasil KunciPK
+		if _, bukaErr := service.BukaKunciPK(ctx, pkopd.KunciPkRequest{
+			IdPegawai: kunciPK.IdPegawai,
+			KodeOpd:   kunciPK.KodeOpd,
+			Tahun:     kunciPK.Tahun,
+		}); bukaErr != nil {
+			log.Printf("gagal membatalkan KunciPK: %v", bukaErr)
+		}
+
+		return pkopd.KunciPKResponse{}, fmt.Errorf("sync ke penetapan gagal: %w", err)
+	}
+	log.Print("sync penetapan berhasil")
 
 	return pkopd.KunciPKResponse{
 		IdKunci:    idKunci,
@@ -1130,9 +1144,10 @@ func resolveLevel4Candidates(
 ) []pkopd.AtasanCandidate {
 
 	jabatanPegawai = normalizeNama(jabatanPegawai)
+	namaOpd := normalizeNama(rekin.KodeOpd.NamaOpd)
 
 	// hanya berlaku untuk Setda
-	if normalizeNama(rekin.KodeOpd.NamaOpd) != "SEKRETARIATDAERAH" {
+	if namaOpd != "SEKRETARIATDAERAH" {
 		return buildLevel4Candidates(sasaranPemdas)
 	}
 
@@ -1140,7 +1155,7 @@ func resolveLevel4Candidates(
 		return buildLevel4Candidates(sasaranPemdas)
 	}
 
-	if jabatanPegawai == "ASISTEN" {
+	if strings.Contains(jabatanPegawai, "ASISTEN") {
 		seen := make(map[string]bool)
 		var result []pkopd.AtasanCandidate
 
@@ -1185,7 +1200,8 @@ func resolveLevel4Candidates(
 // normaizeNama akan membuang spasi dan membuat karakter
 // jadi kapital semua
 func normalizeNama(namaJabatan string) string {
-	return strings.ToUpper(namaJabatan)
+	fixedNama := strings.ReplaceAll(namaJabatan, " ", "")
+	return strings.ToUpper(fixedNama)
 }
 
 func (service *PkServiceImpl) FindPkPenetapan(

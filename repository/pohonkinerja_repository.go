@@ -113,4 +113,11 @@ type PohonKinerjaRepository interface {
 	FindPokinPemdaByTahun(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error)
 	FindAllChildPokins(ctx context.Context, tx *sql.Tx, parentId int) ([]domain.PohonKinerja, error)
 	FindAllPokinOpdForCetak(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) ([]domain.PohonKinerja, error)
+	// OPD View: hierarki baru yang menggabungkan pohon pemda + pohon OPD via clone_from
+	FindPokinHierarkiPemdaToStrategic(ctx context.Context, tx *sql.Tx, idPokin int) ([]domain.PohonKinerja, error)
+	FindStrategicOpdByIdsBatch(ctx context.Context, tx *sql.Tx, ids []int) ([]domain.PohonKinerja, error)
+	// FindOpdStrategicByPemdaCloneFromBatch mencari strategic OPD (parent=0, level=4)
+	// yang clone_from-nya = id pohon kinerja pemda asli.
+	FindOpdStrategicByPemdaCloneFromBatch(ctx context.Context, tx *sql.Tx, pemdaSourceIds []int) (map[int][]domain.PohonKinerja, error)
+	FindOpdStrategicRootsByIdsBatch(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.PohonKinerja, error)
 }

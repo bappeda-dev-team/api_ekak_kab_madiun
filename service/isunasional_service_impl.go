@@ -174,3 +174,36 @@ func (service *IsuNasionalServiceImpl) FindAll(ctx context.Context, kodeOpd stri
 		Isus:                   isuResponses,
 	}, nil
 }
+
+func (service *IsuNasionalServiceImpl) FindByIds(ctx context.Context, request isunasional.FindByIdsRequest) ([]isunasional.IsuNasionalResponse, error) {
+
+	err := service.Validate.Struct(request)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	results, err := service.IsuNasionalRepository.FindByIds(ctx, tx, request.Ids)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]isunasional.IsuNasionalResponse, 0, len(results))
+
+	for _, result := range results {
+		responses = append(responses, isunasional.IsuNasionalResponse{
+			ID:               result.ID,
+			KodeBidangUrusan: result.KodeBidangUrusan,
+			KodeOpd:          result.KodeOpd,
+			Isu:          result.Isu,
+			Tahun:            result.Tahun,
+		})
+	}
+
+	return responses, nil
+}

@@ -425,15 +425,15 @@ func (service *UserServiceImpl) Login(ctx context.Context, request user.UserLogi
 		return user.UserLoginResponse{}, errors.New("silakan login menggunakan NIP")
 	}
 
-	pegawaiDomain, err := service.PegawaiRepository.FindByNip(ctx, tx, userDomain.Nip)
-	if err != nil {
-		return user.UserLoginResponse{}, err
-	}
+	// pegawaiDomain, err := service.PegawaiRepository.FindByNip(ctx, tx, userDomain.Nip)
+	// if err != nil {
+	// 	return user.UserLoginResponse{}, err
+	// }
 
-	opdDomain, err := service.OpdRepository.FindByKodeOpd(ctx, tx, pegawaiDomain.KodeOpd)
-	if err != nil {
-		return user.UserLoginResponse{}, err
-	}
+	// opdDomain, err := service.OpdRepository.FindByKodeOpd(ctx, tx, pegawaiDomain.KodeOpd)
+	// if err != nil {
+	// 	return user.UserLoginResponse{}, err
+	// }
 
 	err = bcrypt.CompareHashAndPassword([]byte(userDomain.Password), []byte(request.Password))
 	if err != nil {
@@ -449,19 +449,19 @@ func (service *UserServiceImpl) Login(ctx context.Context, request user.UserLogi
 		roleNames = append(roleNames, role.Role)
 	}
 
-	token := helper.CreateNewJWT(
-		userDomain.Id,
-		pegawaiDomain.Id,
-		userDomain.Email,
-		userDomain.Nip,
-		pegawaiDomain.KodeOpd,
-		opdDomain.NamaOpd,
-		pegawaiDomain.NamaPegawai,
-		roleNames,
-	)
+	// token := helper.CreateNewJWT(
+	// 	userDomain.Id,
+	// 	pegawaiDomain.Id,
+	// 	userDomain.Email,
+	// 	userDomain.Nip,
+	// 	pegawaiDomain.KodeOpd,
+	// 	opdDomain.NamaOpd,
+	// 	pegawaiDomain.NamaPegawai,
+	// 	roleNames,
+	// )
 
 	response := user.UserLoginResponse{
-		Token: token,
+		// Token: token,
 	}
 
 	return response, nil

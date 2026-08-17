@@ -57,6 +57,10 @@ func main() {
 		log.Println("Seeder selesai dijalankan")
 		return
 	}
+	if err := helper.InitJWT(); err != nil {
+		log.Fatalf("failed to initialize JWT: %v", err)
+	}
+
 	// Initialize dan jalankan server
 	server := InitializeServer()
 	log.Printf("Server berjalan di %s", server.Addr)

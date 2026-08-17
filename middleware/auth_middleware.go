@@ -4,6 +4,7 @@ import (
 	"context"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -36,6 +37,11 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		{"/pohon_kinerja_opd/cetak/", "^/pohon_kinerja_opd/cetak/[^/]+$"},
 		{"/tujuan_pemda/penetapan", "^/tujuan_pemda/penetapan$"},
 		{"/sasaran_pemda/penetapan", "^/sasaran_pemda/penetapan$"},
+		{"/ppd/find-by-ids", "^/ppd/find-by-ids$"},
+		{"/isu-klhs/find-by-ids", "^/isu-klhs/find-by-ids$"},
+		{"/isu-global/find-by-ids", "^/isu-global/find-by-ids$"},
+		{"/isu-nasional/find-by-ids", "^/isu-nasional/find-by-ids$"},
+		{"/isu-regional/find-by-ids", "^/isu-regional/find-by-ids$"},
 	}
 
 	currentPath := request.URL.Path
@@ -63,20 +69,42 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-	claims := helper.ValidateJWT(tokenString)
-	if claims.UserId == 0 {
+	claims, err := helper.ValidateJWT(tokenString)
+	if err != nil {
+		log.Printf("ERROR INVALID SESSION: %v", err)
+
+		status := http.StatusUnauthorized
+		message := "Token tidak valid"
+
+		if strings.Contains(err.Error(), "token is expired") {
+			message = "Session telah berakhir, silakan login kembali"
+		}
+
 		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusUnauthorized)
+		writer.WriteHeader(status)
 
 		webResponse := web.WebResponse{
-			Code:   http.StatusUnauthorized,
+			Code:   status,
 			Status: "UNAUTHORIZED",
-			Data:   "Token tidak valid",
+			Data:   message,
 		}
 
 		helper.WriteToResponseBody(writer, webResponse)
 		return
 	}
+	// if claims.UserId == 0 {
+	// 	writer.Header().Set("Content-Type", "application/json")
+	// 	writer.WriteHeader(http.StatusUnauthorized)
+
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusUnauthorized,
+	// 		Status: "UNAUTHORIZED",
+	// 		Data:   "Token tidak valid",
+	// 	}
+
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
 
 	ctx := context.WithValue(request.Context(), helper.UserInfoKey, claims)
 	request = request.WithContext(ctx)

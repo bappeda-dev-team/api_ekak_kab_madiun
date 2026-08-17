@@ -107,9 +107,9 @@ func (r *SasaranPemdaRepositoryImpl) Update(
 			// UPDATE indikator existing — id tetap, kode_indikator tidak boleh berubah
 			_, err = tx.ExecContext(ctx,
 				`UPDATE tb_indikator_matrix_pemda
-				 SET indikator=?, rumus_perhitungan=?, sumber_data=?, definisi_operasional=?
+				 SET indikator=?, definisi_operasional=?, rumus_perhitungan=?, sumber_data=?, definisi_operasional=?
 				 WHERE id=? AND sasaran_pemda_id=?`,
-				ind.Indikator, ind.RumusPerhitungan, ind.SumberData, ind.DefinisiOperasional,
+				ind.Indikator, ind.DefinisiOperasional, ind.RumusPerhitungan, ind.SumberData, ind.DefinisiOperasional,
 				ind.Id, sp.Id,
 			)
 			if err != nil {
@@ -645,6 +645,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAllWithPokin(
 		COALESCE(i.id, 0),
 		COALESCE(i.kode_indikator,''),
 		COALESCE(i.indikator,''),
+		COALESCE(i.definisi_operasional,''),
 		COALESCE(i.rumus_perhitungan,''), COALESCE(i.sumber_data,''),
 		COALESCE(t.id, 0),
 		COALESCE(t.target,''), COALESCE(t.satuan,''), COALESCE(t.tahun,'')
@@ -677,20 +678,20 @@ func (r *SasaranPemdaRepositoryImpl) FindAllWithPokin(
 	orderedTematikIds := make([]int, 0)
 	for rows.Next() {
 		var (
-			subtematikId                              int
-			namaSubtematik, jenisPohon, keterangan    string
-			levelPohon                                int
-			isActive                                  bool
-			pohonTahun                                string
-			tematikId                                 int
-			namaTematik                               string
-			idSasaran                                 sql.NullInt64
-			sasaranText                               sql.NullString
-			tahunAwalSp, tahunAkhirSp, jenisPeriodeSp sql.NullString
-			indDbId                                   int
-			kodeIndikator, indText, rumus, sumber     string
-			targetDbId                                int
-			targetValue, targetSatuan, targetTahun    string
+			subtematikId                                          int
+			namaSubtematik, jenisPohon, keterangan                string
+			levelPohon                                            int
+			isActive                                              bool
+			pohonTahun                                            string
+			tematikId                                             int
+			namaTematik                                           string
+			idSasaran                                             sql.NullInt64
+			sasaranText                                           sql.NullString
+			tahunAwalSp, tahunAkhirSp, jenisPeriodeSp             sql.NullString
+			indDbId                                               int
+			kodeIndikator, indText, defOperasional, rumus, sumber string
+			targetDbId                                            int
+			targetValue, targetSatuan, targetTahun                string
 		)
 		if err := rows.Scan(
 			&subtematikId, &namaSubtematik, &jenisPohon, &levelPohon,
@@ -698,7 +699,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAllWithPokin(
 			&tematikId, &namaTematik,
 			&idSasaran, &sasaranText,
 			&tahunAwalSp, &tahunAkhirSp, &jenisPeriodeSp,
-			&indDbId, &kodeIndikator, &indText, &rumus, &sumber,
+			&indDbId, &kodeIndikator, &indText, &defOperasional, &rumus, &sumber,
 			&targetDbId, &targetValue, &targetSatuan, &targetTahun,
 		); err != nil {
 			return nil, err
@@ -760,9 +761,10 @@ func (r *SasaranPemdaRepositoryImpl) FindAllWithPokin(
 		if foundInd == nil {
 			newInd := domain.IndikatorDetail{
 				Id: indDbId, KodeIndikator: kodeIndikator, Indikator: indText,
-				RumusPerhitungan: sql.NullString{String: rumus, Valid: rumus != ""},
-				SumberData:       sql.NullString{String: sumber, Valid: sumber != ""},
-				Target:           []domain.TargetDetail{},
+				DefinisiOperasional: sql.NullString{String: defOperasional, Valid: defOperasional != ""},
+				RumusPerhitungan:    sql.NullString{String: rumus, Valid: rumus != ""},
+				SumberData:          sql.NullString{String: sumber, Valid: sumber != ""},
+				Target:              []domain.TargetDetail{},
 			}
 			awal, _ := strconv.Atoi(tahunAwal)
 			akhir, _ := strconv.Atoi(tahunAkhir)

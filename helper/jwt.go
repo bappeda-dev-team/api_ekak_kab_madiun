@@ -1,132 +1,79 @@
 package helper
 
 import (
-	"ekak_kabupaten_madiun/model/web"
+	"context"
 	"fmt"
 	"os"
-	"time"
+	"log"
+	"ekak_kabupaten_madiun/model/web"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/coreos/go-oidc/v3/oidc"
 )
 
-var jwtSecretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
-var jwtIssuer = os.Getenv("JWT_ISSUER")
-var jwtExpiration = os.Getenv("JWT_EXPIRATION")
+var (
+	jwtVerifier *oidc.IDTokenVerifier
+)
 
-func CreateNewJWT(userId int, pegawaiId string, email string, nip string, kodeOpd string, namaOpd string, namaPegawai string, roles []string) string {
-	exp := 24 * time.Hour
-	if jwtExpiration != "" {
-		if duration, err := time.ParseDuration(jwtExpiration + "h"); err == nil {
-			exp = duration
-		}
+func InitJWT() error {
+	jwtIssuer := os.Getenv("KEYCLOAK_ISSUER")
+	if jwtIssuer == "" {
+		return fmt.Errorf("KEYCLOAK_ISSUER is not configured")
 	}
 
-	claims := jwt.MapClaims{
-		"iss":          jwtIssuer,
-		"user_id":      userId,
-		"pegawai_id":   pegawaiId,
-		"email":        email,
-		"nip":          nip,
-		"kode_opd":     kodeOpd,
-		"nama_opd":     namaOpd,
-		"nama_pegawai": namaPegawai,
-		"roles":        roles,
-		"iat":          time.Now().Unix(),
-		"exp":          time.Now().Add(exp).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString(jwtSecretKey)
+	log.Printf("Mencoba koneksi ke keycloak issuer: %s", jwtIssuer)
+	provider, err := oidc.NewProvider(
+		context.Background(),
+		jwtIssuer,
+	)
 	if err != nil {
-		fmt.Println(err)
+		return fmt.Errorf("failed to initialize Keycloak OIDC provider: %w", err)
 	}
 
-	return signedToken
+	jwtVerifier = provider.Verifier(
+		&oidc.Config{
+			SkipClientIDCheck: true,
+		},
+	)
+
+	return nil
 }
 
-func ValidateJWT(tokenString string) web.JWTClaim {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return jwtSecretKey, nil
-	})
+func ValidateJWT(tokenString string) (web.JWTClaim, error) {
+	if jwtVerifier == nil {
+		return web.JWTClaim{}, fmt.Errorf("JWT is not initialized")
+	}
+
+	idToken, err := jwtVerifier.Verify(
+		context.Background(),
+		tokenString,
+	)
 
 	if err != nil {
-		fmt.Println(err)
-		return web.JWTClaim{}
+		return web.JWTClaim{}, fmt.Errorf("invalid JWT: %w", err)
 	}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		var roles []string
-		if rolesInterface, exists := claims["roles"]; exists {
-			if rolesArray, ok := rolesInterface.([]interface{}); ok {
-				for _, role := range rolesArray {
-					if roleStr, ok := role.(string); ok {
-						roles = append(roles, roleStr)
-					}
-				}
-			}
-		}
-
-		userId := 0
-		if id, ok := claims["user_id"].(float64); ok {
-			userId = int(id)
-		}
-
-		pegawaiId := ""
-		if id, ok := claims["pegawai_id"].(string); ok {
-			pegawaiId = id
-		}
-
-		email := ""
-		if e, ok := claims["email"].(string); ok {
-			email = e
-		}
-
-		nip := ""
-		if n, ok := claims["nip"].(string); ok {
-			nip = n
-		}
-
-		issuer := ""
-		if iss, ok := claims["iss"].(string); ok {
-			issuer = iss
-		}
-
-		iat := int64(0)
-		if issuedAt, ok := claims["iat"].(float64); ok {
-			iat = int64(issuedAt)
-		}
-
-		exp := int64(0)
-		if expiry, ok := claims["exp"].(float64); ok {
-			exp = int64(expiry)
-		}
-
-		kodeOpd := ""
-		if opd, ok := claims["kode_opd"].(string); ok {
-			kodeOpd = opd
-		}
-
-		namaOpd := ""
-		if opd, ok := claims["nama_opd"].(string); ok {
-			namaOpd = opd
-		}
-
-		return web.JWTClaim{
-			Issuer:    issuer,
-			UserId:    userId,
-			PegawaiId: pegawaiId,
-			KodeOpd:   kodeOpd,
-			NamaOpd:   namaOpd,
-			Email:     email,
-			Nip:       nip,
-			Roles:     roles,
-			Iat:       iat,
-			Exp:       exp,
-		}
+	// if !token.Valid {
+	// 	return web.JWTClaim{}, fmt.Errorf("invalid JWT")
+	// }
+	var claims struct {
+		Subject string `json:"sub"`
+		Email   string `json:"email"`
+		Issuer  string `json:"iss"`
+		Iat     int64  `json:"iat"`
+		Exp     int64  `json:"exp"`
 	}
 
-	return web.JWTClaim{}
+	if err := idToken.Claims(&claims); err != nil {
+		return web.JWTClaim{}, fmt.Errorf(
+			"failed to parse JWT claims: %w",
+			err,
+		)
+	}
+
+	return web.JWTClaim{
+		Issuer: claims.Issuer,
+		Email:  claims.Email,
+		Iat:    claims.Iat,
+		Exp:    claims.Exp,
+	}, nil
 }

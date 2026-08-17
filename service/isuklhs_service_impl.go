@@ -174,3 +174,36 @@ func (service *IsuKlhsServiceImpl) FindAll(ctx context.Context, kodeOpd string) 
 		Isus:                   isuResponses,
 	}, nil
 }
+
+func (service *IsuKlhsServiceImpl) FindByIds(ctx context.Context, request isuklhs.FindByIdsRequest) ([]isuklhs.IsuKlhsResponse, error) {
+
+	err := service.Validate.Struct(request)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	results, err := service.IsuKlhsRepository.FindByIds(ctx, tx, request.Ids)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]isuklhs.IsuKlhsResponse, 0, len(results))
+
+	for _, result := range results {
+		responses = append(responses, isuklhs.IsuKlhsResponse{
+			ID:               result.ID,
+			KodeBidangUrusan: result.KodeBidangUrusan,
+			KodeOpd:          result.KodeOpd,
+			Isu:          result.Isu,
+			Tahun:            result.Tahun,
+		})
+	}
+
+	return responses, nil
+}

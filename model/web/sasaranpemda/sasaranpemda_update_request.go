@@ -9,12 +9,13 @@ type SasaranPemdaUpdateRequest struct {
 	Indikator []IndikatorUpdateRequest `json:"indikator"`
 }
 type IndikatorUpdateRequest struct {
-	IdIndikator      int                   `json:"id_indikator"`
-	KodeIndikator    string                `json:"kode_indikator"`
-	Indikator        string                `json:"indikator"`
-	RumusPerhitungan string                `json:"rumus_perhitungan"`
-	SumberData       string                `json:"sumber_data"`
-	Target           []TargetUpdateRequest `json:"target"`
+	IdIndikator         int                   `json:"id_indikator"`
+	KodeIndikator       string                `json:"kode_indikator"`
+	Indikator           string                `json:"indikator"`
+	DefinisiOperasional string                `json:"definisi_operasional"`
+	RumusPerhitungan    string                `json:"rumus_perhitungan"`
+	SumberData          string                `json:"sumber_data"`
+	Target              []TargetUpdateRequest `json:"target"`
 }
 type TargetUpdateRequest struct {
 	Id     int         `json:"id"`

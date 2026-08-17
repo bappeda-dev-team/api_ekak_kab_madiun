@@ -813,3 +813,51 @@ func (controller *PohonKinerjaAdminControllerImpl) CetakPokin(writer http.Respon
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+// docs swagger pokin admin
+// @Summary      Find Pokin Admin By Id Hierarki Opd View
+// @Description  Mendapatkan pohon kinerja admin berdasarkan ID pokin.
+// @Tags         Pohon Kinerja Admin
+// @Accept       json
+// @Produce      json
+// @Param        idPokin path     string  true  "ID Pokin"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.TematikResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router      /listOpdTematik/{idPokin} [get]
+// FindPokinAdminByIdHierarkiOpdView mengembalikan hierarki tematik dengan perspektif OPD:
+// strategic pemda di-resolve ke strategic OPD via clone_from, lalu turunannya
+// (tactical, operational) diambil dari pohon OPD. Strategic dengan kode_opd sama
+// di bawah parent yang sama dikelompokkan menjadi satu OpdGroupResponse.
+func (controller *PohonKinerjaAdminControllerImpl) FindPokinAdminByIdHierarkiOpdView(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokin := params.ByName("idPokin")
+	id, err := strconv.Atoi(idPokin)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	result, err := controller.pohonKinerjaAdminService.FindPokinAdminByIdHierarkiOpdView(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   result,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

@@ -69,6 +69,9 @@ func NewRouter(
 	isuKlhsController controller.IsuKlhsController,
 	isuNasionalController controller.IsuNasionalController,
 	isuRegionalController controller.IsuRegionalController,
+	ppdController controller.PpdController,
+	nspkController controller.NspkController,
+	nspkopdController controller.NspkOpdController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -538,29 +541,52 @@ func NewRouter(
 	router.POST("/ikk/select_ikk/create", ikkController.PilihIkk)
 	router.DELETE("/ikk/select_ikk/delete/:id", ikkController.DeletePilihanIkk)
 
-	//Master Isu KLHS 
+	//Master Potensi Perangkat Daerah
+	router.POST("/ppd/create", ppdController.Create)
+	router.PUT("/ppd/update/:id", ppdController.Update)
+	router.DELETE("/ppd/delete/:id", ppdController.Delete)
+	router.GET("/ppd/findall/:kode_opd", ppdController.FindAll)
+	router.POST("/ppd/find-by-ids", ppdController.FindByIds)
+	
+	//Master NSPK
+	router.POST("/nspk/create", nspkController.Create)
+	router.PUT("/nspk/update/:id", nspkController.Update)
+	router.DELETE("/nspk/delete/:id", nspkController.Delete)
+	router.GET("/nspk/findall/:kode_opd", nspkController.FindAll)
+	
+	// NSPK Opd
+	router.POST("/nspk-opd/create", nspkopdController.Create)
+	router.PUT("/nspk-opd/update/:id", nspkopdController.Update)
+	router.DELETE("/nspk-opd/delete/:id", nspkopdController.Delete)
+	router.GET("/nspk-opd/findall/:kode_opd", nspkopdController.FindAll)
+
+	//Master Isu KLHS
 	router.POST("/isu-klhs/create", isuKlhsController.Create)
 	router.PUT("/isu-klhs/update/:id", isuKlhsController.Update)
 	router.DELETE("/isu-klhs/delete/:id", isuKlhsController.Delete)
 	router.GET("/isu-klhs/findall/:kode_opd", isuKlhsController.FindAll)
-	
-	//Master Isu Global 
+	router.POST("/isu-klhs/find-by-ids", isuKlhsController.FindByIds)
+
+	//Master Isu Global
 	router.POST("/isu-global/create", isuGlobalController.Create)
 	router.PUT("/isu-global/update/:id", isuGlobalController.Update)
 	router.DELETE("/isu-global/delete/:id", isuGlobalController.Delete)
 	router.GET("/isu-global/findall/:kode_opd", isuGlobalController.FindAll)
-	
-	//Master Isu Nasional 
+	router.POST("/isu-global/find-by-ids", isuGlobalController.FindByIds)
+
+	//Master Isu Nasional
 	router.POST("/isu-nasional/create", isuNasionalController.Create)
 	router.PUT("/isu-nasional/update/:id", isuNasionalController.Update)
 	router.DELETE("/isu-nasional/delete/:id", isuNasionalController.Delete)
 	router.GET("/isu-nasional/findall/:kode_opd", isuNasionalController.FindAll)
-	
-	//Master Isu Regional 
+	router.POST("/isu-nasional/find-by-ids", isuNasionalController.FindByIds)
+
+	//Master Isu Regional
 	router.POST("/isu-regional/create", isuRegionalController.Create)
 	router.PUT("/isu-regional/update/:id", isuRegionalController.Update)
 	router.DELETE("/isu-regional/delete/:id", isuRegionalController.Delete)
 	router.GET("/isu-regional/findall/:kode_opd", isuRegionalController.FindAll)
+	router.POST("/isu-regional/find-by-ids", isuRegionalController.FindByIds)
 
 	// IKD
 	router.GET("/ikd/findall/:kode_opd/:tahun/:jenis_periode", ikdController.FindAll)
@@ -679,6 +705,9 @@ func NewRouter(
 	router.GET("/tujuan_pemda/lock/:tahun", tujuanPemdaController.IsTujuanPemdaLocked)
 	router.POST("/tujuan_pemda/lock/:tahun", tujuanPemdaController.LockTujuanPemda)
 	router.DELETE("/tujuan_pemda/lock/:tahun", tujuanPemdaController.UnlockTujuanPemda)
+
+	// report tematik (opd in tematik)
+	router.GET("/listOpdTematik/:idPokin", pohonKinerjaAdminController.FindPokinAdminByIdHierarkiOpdView)
 
 	return router
 }

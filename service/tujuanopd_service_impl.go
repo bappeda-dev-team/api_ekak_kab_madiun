@@ -168,6 +168,28 @@ func (service *TujuanOpdServiceImpl) Update(ctx context.Context, request tujuano
 		TahunAkhir:   existing.TahunAkhir,
 		JenisPeriode: existing.JenisPeriode,
 	}
+	existingIndikators, err := service.TujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuanOpd.Id)
+	if err != nil {
+		log.Printf("ERROR FIND INDIKATOR TUJUANS: %v", err)
+		return tujuanopd.TujuanOpdResponse{}, err
+	}
+	requestIds := make(map[string]struct{})
+	for _, ind := range request.Indikator {
+		if ind.Id != "" {
+			requestIds[ind.Id] = struct{}{}
+		}
+	}
+	var deletedIds []string
+
+	for _, existing := range existingIndikators {
+		if _, ok := requestIds[existing.KodeIndikator]; !ok {
+			deletedIds = append(deletedIds, existing.KodeIndikator)
+		}
+	}
+	if err := service.TujuanOpdRepository.DeleteIndikatorByIds(ctx, tx, deletedIds); err != nil {
+		log.Printf("ERROR DELETE INDIKATOR IDS: %v", err)
+		return tujuanopd.TujuanOpdResponse{}, err
+	}
 	for _, indikatorReq := range request.Indikator {
 		var kodeIndikator string
 		if indikatorReq.Id != "" {
@@ -422,6 +444,7 @@ func (service *TujuanOpdServiceImpl) FindAll(ctx context.Context, kodeOpd string
 			indikatorResponse := tujuanopd.IndikatorResponse{
 				Id:                  indikator.Id,
 				IdTujuanOpd:         tujuan.Id,
+				KodeIndikator:       indikator.KodeIndikator,
 				NamaIndikator:       indikator.Indikator,
 				DefinisiOperasional: indikator.DefinisiOperasional.String,
 				RumusPerhitungan:    indikator.RumusPerhitungan.String,
@@ -1476,10 +1499,10 @@ func (s *TujuanOpdServiceImpl) getIndikatorWithFallback(
 	if err != nil {
 		return nil, err
 	}
-	indikatorLama, err := s.TujuanOpdRepository.
-		FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
-	if err != nil {
-		return nil, err
-	}
-	return mergeIndikator(indikatorBaru, indikatorLama), nil
+	// indikatorLama, err := s.TujuanOpdRepository.
+	// 	FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	return indikatorBaru, nil
 }
