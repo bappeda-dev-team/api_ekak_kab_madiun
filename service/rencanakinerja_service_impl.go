@@ -3000,3 +3000,32 @@ func buildWarningMessage(warnings map[domain.WarningType]int) string {
 
 	return strings.Join(parts, "; ")
 }
+
+func (service *RencanaKinerjaServiceImpl) FindByIdRekins(ctx context.Context, idRekins []string) ([]rencanakinerja.RencanaKinerjaResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Gagal memulai transaksi: %v", err)
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	rekins, err := service.rencanaKinerjaRepository.FindByIdRekins(ctx, tx, idRekins)
+	if err != nil {
+		log.Printf("Gagal mencari RencanaKinerja: %v", err)
+		return nil, fmt.Errorf("gagal mencari RencanaKinerjaByIds: %v", err)
+	}
+	var responses []rencanakinerja.RencanaKinerjaResponse
+	for _, rencana := range rekins {
+		responses = append(responses, rencanakinerja.RencanaKinerjaResponse{
+			Id:                   rencana.Id,
+			NamaRencanaKinerja:   rencana.NamaRencanaKinerja,
+			Tahun:                rencana.Tahun,
+			StatusRencanaKinerja: rencana.StatusRencanaKinerja,
+			Catatan:              rencana.Catatan,
+			PegawaiId:            rencana.PegawaiId,
+			IdPohon:              rencana.IdPohon,
+		})
+	}
+
+	return responses, nil
+}
