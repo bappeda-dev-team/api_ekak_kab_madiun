@@ -72,6 +72,7 @@ func NewRouter(
 	ppdController controller.PpdController,
 	nspkController controller.NspkController,
 	nspkopdController controller.NspkOpdController,
+	arahkebijakanController controller.ArahKebijakanController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -215,6 +216,10 @@ func NewRouter(
 	// strategic arah kebijakan opd
 	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
 	router.GET("/export/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ExportExcel)
+
+	// arah kebijakan opd
+	router.POST("/arah-kebijakan/create", arahkebijakanController.Create)
+	router.PUT("/arah-kebijakan/update/:id", arahkebijakanController.Update)
 
 	// strategic arah kebijakan pemda
 	router.GET("/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.FindAll)
