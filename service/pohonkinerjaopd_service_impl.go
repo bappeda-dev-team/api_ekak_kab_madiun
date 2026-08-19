@@ -1662,7 +1662,9 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 							TacticalOpds,
 						strategic.TacticalOpdResponse{
 							TacticalOpd:    s.NamaTactical,
+							IdTacticalOpd:    s.IdTactical,
 							OperasionalOpds: []strategic.OperasionalOpdResponse{},
+							ArahKebijakanOpd: []strategic.ArahKebijakanOpdResponse{},
 						},
 					)
 
@@ -1717,6 +1719,47 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 							OperasionalOpd: s.NamaOperasional,
 						},
 					)
+			}
+		}
+
+		// ==================================
+		// ARAH KEBIJAKAN
+		// ==================================
+
+		if s.ArahKebijakan.ID != 0 {
+
+			arahList :=
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds[idxTactical].
+					ArahKebijakanOpd
+
+			sudahAda := false
+
+			for _, arah := range arahList {
+				if arah.Id == s.ArahKebijakan.ID {
+					sudahAda = true
+					break
+				}
+			}
+
+			if !sudahAda {
+
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds[idxTactical].
+					ArahKebijakanOpd = append(
+					arahList,
+					strategic.ArahKebijakanOpdResponse{
+						Id:      s.ArahKebijakan.ID,
+						PokinId: s.ArahKebijakan.PokinId,
+						Arah:    s.ArahKebijakan.Arah,
+					},
+				)
 			}
 		}
 	}

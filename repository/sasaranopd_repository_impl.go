@@ -1477,8 +1477,12 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 		COALESCE(to_opd.tujuan, '')        AS tujuan,
 		COALESCE(so.nama_sasaran_opd, '')  AS sasaran,
 		COALESCE(pk.nama_pohon, '')        AS strategi,
+		COALESCE(pk_child.id, 0)           AS id_tactical,
 		COALESCE(pk_child.nama_pohon, '')  AS tactical,
-		COALESCE(pk_child2.nama_pohon, '') AS operasional
+		COALESCE(pk_child2.nama_pohon, '') AS operasional,
+		COALESCE(tak.id, 0)              AS id_arah_kebijakan,
+    	COALESCE(tak.pokin_id, 0)        AS arah_pokin_id,
+    	COALESCE(tak.arah_kebijakan, '') AS arah_kebijakan
 
 	FROM tb_sasaran_opd so
 	JOIN tb_pohon_kinerja pk 
@@ -1494,6 +1498,9 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 
 	LEFT JOIN tb_tujuan_opd to_opd 
 		ON so.id_tujuan_opd = to_opd.id
+
+	LEFT JOIN tb_arah_kebijakan tak 
+		ON pk_child.id = tak.pokin_id
 
 	WHERE pk.kode_opd = ?
 	  AND pk.level_pohon = 4
@@ -1527,8 +1534,12 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 			&row.NamaTujuanOpd,
 			&row.NamaSasaranOpd,
 			&row.NamaStrategi,
+			&row.IdTactical,
 			&row.NamaTactical,
 			&row.NamaOperasional,
+			&row.ArahKebijakan.ID,
+			&row.ArahKebijakan.PokinId,
+			&row.ArahKebijakan.Arah,
 		)
 		if err != nil {
 			return nil, err
