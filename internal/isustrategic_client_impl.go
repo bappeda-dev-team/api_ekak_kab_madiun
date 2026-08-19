@@ -15,7 +15,7 @@ type IsustrategicClientImpl struct {
 func NewIsuStrategicClient(httpClient *http.Client) *IsustrategicClientImpl {
 	return &IsustrategicClientImpl{
 		BaseClient: newBaseClient(
-			"https://isu-strategis-dev.zeabur.app",
+			"https://apipermasalahanopdkabmahulu.zeabur.app",
 			"",
 			httpClient,
 		),

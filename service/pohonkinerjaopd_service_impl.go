@@ -1553,6 +1553,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 	tujuanIndex := make(map[string]int)
 	sasaranIndex := make(map[string]int)
 	strategiIndex := make(map[string]int)
+	tacticalIndex := make(map[string]int)
 
 	for _, s := range rows {
 
@@ -1622,7 +1623,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 					StrategiOpds,
 				strategic.StrategiOpdResponse{
 					StrategiOpd:       s.NamaStrategi,
-					ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{},
+					TacticalOpds: []strategic.TacticalOpdResponse{},
 				},
 			)
 
@@ -1636,10 +1637,53 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		}
 
 		// ==================================
-		// ARAH KEBIJAKAN
+		// TACTICAL
 		// ==================================
 
-		if s.NamaArahKebijakan != "" {
+		keyTactical := keyStrategi + "|" + s.NamaTactical
+
+		idxTactical, ok := tacticalIndex[keyTactical]
+
+		if s.NamaTactical != "" {
+			keyTactical := keyStrategi + "|" + s.NamaTactical
+
+			idxTactical, ok := tacticalIndex[keyTactical]
+
+			if !ok {
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds = append(
+						response.
+							StrategiArahKebijakanOpds[idxTujuan].
+							SasaranOpds[idxSasaran].
+							StrategiOpds[idxStrategi].
+							TacticalOpds,
+						strategic.TacticalOpdResponse{
+							TacticalOpd:    s.NamaTactical,
+							OperasionalOpds: []strategic.OperasionalOpdResponse{},
+						},
+					)
+
+				idxTactical = len(
+					response.
+						StrategiArahKebijakanOpds[idxTujuan].
+						SasaranOpds[idxSasaran].
+						StrategiOpds[idxStrategi].
+						TacticalOpds,
+				) - 1
+
+				tacticalIndex[keyTactical] = idxTactical
+			}
+
+			// baru proses operasional di sini
+		}
+		// ==================================
+		// OPERASIONAL
+		// ==================================
+
+		if s.NamaOperasional != "" && s.NamaTactical != "" {
 
 			sudahAda := false
 
@@ -1647,32 +1691,32 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 				StrategiArahKebijakanOpds[idxTujuan].
 				SasaranOpds[idxSasaran].
 				StrategiOpds[idxStrategi].
-				ArahKebijakanOpds {
+				TacticalOpds[idxTactical].
+				OperasionalOpds {
 
-				if arah.ArahKebijakanOpd == s.NamaArahKebijakan {
+				if arah.OperasionalOpd == s.NamaOperasional {
 					sudahAda = true
 					break
 				}
 			}
 
 			if !sudahAda {
-
 				response.
 					StrategiArahKebijakanOpds[idxTujuan].
 					SasaranOpds[idxSasaran].
 					StrategiOpds[idxStrategi].
-					ArahKebijakanOpds = append(
-
-					response.
-						StrategiArahKebijakanOpds[idxTujuan].
-						SasaranOpds[idxSasaran].
-						StrategiOpds[idxStrategi].
-						ArahKebijakanOpds,
-
-					strategic.ArahKebijakanOpdResponse{
-						ArahKebijakanOpd: s.NamaArahKebijakan,
-					},
-				)
+					TacticalOpds[idxTactical].
+					OperasionalOpds = append(
+						response.
+							StrategiArahKebijakanOpds[idxTujuan].
+							SasaranOpds[idxSasaran].
+							StrategiOpds[idxStrategi].
+							TacticalOpds[idxTactical].
+							OperasionalOpds,
+						strategic.OperasionalOpdResponse{
+							OperasionalOpd: s.NamaOperasional,
+						},
+					)
 			}
 		}
 	}
@@ -1985,7 +2029,7 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 				strategiStartRow := row
 
 				// jika tidak memiliki arah kebijakan
-				if len(strategi.ArahKebijakanOpds) == 0 {
+				if len(strategi.TacticalOpds) == 0 {
 
 					f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
 					f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
@@ -2000,13 +2044,13 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 
 				} else {
 
-					for _, arah := range strategi.ArahKebijakanOpds {
+					for _, arah := range strategi.TacticalOpds {
 
 						f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
 						f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
 						f.SetCellValue(sheet, fmt.Sprintf("C%d", row), sasaran.SasaranOpd)
 						f.SetCellValue(sheet, fmt.Sprintf("D%d", row), strategi.StrategiOpd)
-						f.SetCellValue(sheet, fmt.Sprintf("E%d", row), arah.ArahKebijakanOpd)
+						f.SetCellValue(sheet, fmt.Sprintf("E%d", row), arah.TacticalOpd)
 
 						f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
 						f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
