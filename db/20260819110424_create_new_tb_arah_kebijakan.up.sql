@@ -1,9 +1,9 @@
 CREATE TABLE tb_arah_kebijakan (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    pokin_id INT(50) DEFAULT 0,
-    arah_kebijakan VARCHAR(255) DEFAULT'',
-    kode_opd VARCHAR(255) DEFAULT'',
-    tahun INT(50) DEFAULT 0,
+    pokin_id INT(50) NOT NULL,
+    arah_kebijakan VARCHAR(255) NOT NULL,
+    kode_opd VARCHAR(255) NOT NULL,
+    tahun INT(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
