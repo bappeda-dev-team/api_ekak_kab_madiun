@@ -1640,7 +1640,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		// TACTICAL
 		// ==================================
 
-		keyTactical := keyStrategi + "|" + s.NamaTactical
+		keyTactical := keyStrategi + "|" + strconv.Itoa(s.IdTactical)
 
 		idxTactical, ok := tacticalIndex[keyTactical]
 
@@ -1726,7 +1726,8 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		// ARAH KEBIJAKAN
 		// ==================================
 
-		if s.ArahKebijakan.ID != 0 {
+		if s.ArahKebijakan.ID != 0 &&
+			s.ArahKebijakan.PokinId == s.IdTactical {
 
 			arahList :=
 				response.
@@ -1746,7 +1747,6 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 			}
 
 			if !sudahAda {
-
 				response.
 					StrategiArahKebijakanOpds[idxTujuan].
 					SasaranOpds[idxSasaran].
