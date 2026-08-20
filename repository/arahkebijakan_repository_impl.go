@@ -83,7 +83,7 @@ func (repository *ArahKebijakanRepositoryImpl) FindById(ctx context.Context, tx 
 			arah_kebijakan,
 			kode_opd,
 			tahun
-		FROM tb_master_nspk
+		FROM tb_arah_kebijakan
 		WHERE id = ?
 	`
 
