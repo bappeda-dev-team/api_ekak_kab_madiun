@@ -1640,7 +1640,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		// TACTICAL
 		// ==================================
 
-		keyTactical := keyStrategi + "|" + strconv.Itoa(s.IdTactical)
+		keyTactical := keyStrategi + "|" + s.NamaTactical
 
 		idxTactical, ok := tacticalIndex[keyTactical]
 
