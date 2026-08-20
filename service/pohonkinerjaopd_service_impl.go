@@ -1640,14 +1640,13 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		// TACTICAL
 		// ==================================
 
-		keyTactical := keyStrategi + "|" + s.NamaTactical
-
-		idxTactical, ok := tacticalIndex[keyTactical]
+		idxTactical := -1
 
 		if s.NamaTactical != "" {
 			keyTactical := keyStrategi + "|" + s.NamaTactical
 
-			idxTactical, ok := tacticalIndex[keyTactical]
+			var ok bool
+			idxTactical, ok = tacticalIndex[keyTactical]
 
 			if !ok {
 				response.
@@ -1655,18 +1654,18 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 					SasaranOpds[idxSasaran].
 					StrategiOpds[idxStrategi].
 					TacticalOpds = append(
-						response.
-							StrategiArahKebijakanOpds[idxTujuan].
-							SasaranOpds[idxSasaran].
-							StrategiOpds[idxStrategi].
-							TacticalOpds,
-						strategic.TacticalOpdResponse{
-							TacticalOpd:    s.NamaTactical,
-							IdTacticalOpd:    s.IdTactical,
-							OperasionalOpds: []strategic.OperasionalOpdResponse{},
-							ArahKebijakanOpd: []strategic.ArahKebijakanOpdResponse{},
-						},
-					)
+					response.
+						StrategiArahKebijakanOpds[idxTujuan].
+						SasaranOpds[idxSasaran].
+						StrategiOpds[idxStrategi].
+						TacticalOpds,
+					strategic.TacticalOpdResponse{
+						TacticalOpd:       s.NamaTactical,
+						IdTacticalOpd:     s.IdTactical,
+						OperasionalOpds:   []strategic.OperasionalOpdResponse{},
+						ArahKebijakanOpd: []strategic.ArahKebijakanOpdResponse{},
+					},
+				)
 
 				idxTactical = len(
 					response.
@@ -1678,8 +1677,6 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 
 				tacticalIndex[keyTactical] = idxTactical
 			}
-
-			// baru proses operasional di sini
 		}
 		// ==================================
 		// OPERASIONAL
