@@ -54,7 +54,7 @@ func (controller *RencanaKinerjaControllerImpl) Update(writer http.ResponseWrite
 		webResponse := web.WebRencanaKinerjaResponse{
 			Code:   400,
 			Status: "failed update rencana kinerja",
-			Data:   nil,
+			Data:   err.Error(),
 		}
 		helper.WriteToResponseBody(writer, webResponse)
 		return
