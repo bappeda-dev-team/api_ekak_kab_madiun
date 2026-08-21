@@ -15,6 +15,9 @@ RUN apk update -qq && \
 
 COPY . .
 
+# dummy .env
+RUN touch .env
+
 RUN go build -o api main.go wire_gen.go
 
 ENTRYPOINT ["/app/api"]
