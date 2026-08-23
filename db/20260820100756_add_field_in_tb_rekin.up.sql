@@ -1,0 +1,1 @@
+ALTER TABLE tb_rencana_kinerja ADD COLUMN sasaran_opd_id INT NOT NULL DEFAULT 0;

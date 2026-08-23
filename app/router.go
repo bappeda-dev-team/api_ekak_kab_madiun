@@ -421,6 +421,7 @@ func NewRouter(
 	router.DELETE("/sasaran_opd/delete/:id", sasaranOpdController.Delete)
 	router.GET("/sasaran_opd/pokin/:id_pokin/tahun/:tahun", sasaranOpdController.FindByIdPokin)
 	router.GET("/sasaran_opd/renja/:kode_opd/:tahun/:jenis_periode", sasaranOpdController.FindByTahun)
+	router.GET("/sasaran_opd/pegawai_level_1/:nip/:kode_opd/:tahun", sasaranOpdController.FindByNipAndOpd)
 
 	//visi pemda
 	router.POST("/visi_pemda/create", visiPemdaController.Create)

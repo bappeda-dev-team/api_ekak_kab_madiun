@@ -1,0 +1,1 @@
+ ALTER TABLE tb_rencana_kinerja DROP COLUMN sasaran_opd_id;
