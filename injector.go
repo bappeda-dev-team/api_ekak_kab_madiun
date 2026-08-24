@@ -614,6 +614,23 @@ var nspkOpdSet = wire.NewSet(
 	),
 )
 
+var arahKebijakanSet = wire.NewSet(
+	repository.NewArahKebijakanRepositoryImpl,
+	wire.Bind(
+		new(repository.ArahKebijakanRepository),
+		new(*repository.ArahKebijakanRepositoryImpl),
+	),
+	service.NewArahKebijakanServiceImpl,
+	wire.Bind(
+		new(service.ArahKebijakanService),
+		new(*service.ArahKebijakanServiceImpl),
+	),
+	controller.NewArahKebijakanControllerImpl,
+	wire.Bind(
+		new(controller.ArahKebijakanController),
+		new(*controller.ArahKebijakanControllerImpl),
+	),
+)
 
 func ProvideHTTPClient() *http.Client {
 	return &http.Client{
@@ -697,6 +714,7 @@ func InitializeServer() *http.Server {
 		ppdSet,
 		nspkSet,
 		nspkOpdSet,
+		arahKebijakanSet,
 		httpClientSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
