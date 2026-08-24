@@ -10,6 +10,6 @@ type PptkService interface {
 	Update(ctx context.Context, request pptk.PptkUpdateRequest) (pptk.PptkResponse, error)
 	Delete(ctx context.Context, id int) error
 	FindById(ctx context.Context, id int) (pptk.PptkResponse, error)
-	FindAll(ctx context.Context, kodeOpd string, tahun string) ([]pptk.PptkResponse, error)
-	FindAllByNip(ctx context.Context, nip string, tahun string) ([]pptk.PptkResponse, error)
+	FindAll(ctx context.Context, kodeSubkegiatan string, kodeOpd string, tahun string) ([]pptk.PptkResponse, error)
+	// FindAllByNip(ctx context.Context, nip string, tahun string) ([]pptk.PptkResponse, error)
 }

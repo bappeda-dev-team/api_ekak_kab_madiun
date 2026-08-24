@@ -560,7 +560,7 @@ func NewRouter(
 
 	// PPTK 
 	router.GET("/pptk/findall/:kode_opd/:tahun", pptkController.FindAll)
-	router.GET("/pptk/findall-nip/:nip/:tahun", pptkController.FindAllByNip)
+	// router.GET("/pptk/findall-nip/:nip/:tahun", pptkController.FindAllByNip)
 	router.GET("/pptk/detail/:id", pptkController.FindById)
 	router.POST("/pptk/create", pptkController.Create)
 	router.PUT("/pptk/update/:id", pptkController.Update)

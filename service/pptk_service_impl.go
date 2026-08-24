@@ -153,14 +153,14 @@ func (service *PptkServiceImpl) FindById(ctx context.Context, id int) (pptk.Pptk
 	}, nil
 }
 
-func (service *PptkServiceImpl) FindAll(ctx context.Context, kodeOpd string, tahun string) ([]pptk.PptkResponse, error) {
+func (service *PptkServiceImpl) FindAll(ctx context.Context, kodeSubkegiatan string, kodeOpd string, tahun string) ([]pptk.PptkResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
 
-	results, err := service.PptkRepository.FindAll(ctx, tx, kodeOpd, tahun)
+	results, err := service.PptkRepository.FindAll(ctx, tx, kodeSubkegiatan, kodeOpd, tahun)
 	if err != nil {
 		return nil, err
 	}
@@ -181,31 +181,31 @@ func (service *PptkServiceImpl) FindAll(ctx context.Context, kodeOpd string, tah
 
 	return responses, nil
 }
-func (service *PptkServiceImpl) FindAllByNip(ctx context.Context, nip string, tahun string) ([]pptk.PptkResponse, error) {
-	tx, err := service.DB.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer helper.CommitOrRollback(tx)
+// func (service *PptkServiceImpl) FindAllByNip(ctx context.Context, nip string, tahun string) ([]pptk.PptkResponse, error) {
+// 	tx, err := service.DB.Begin()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer helper.CommitOrRollback(tx)
 
-	results, err := service.PptkRepository.FindAllByNip(ctx, tx, nip, tahun)
-	if err != nil {
-		return nil, err
-	}
+// 	results, err := service.PptkRepository.FindAllByNip(ctx, tx, nip, tahun)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	var responses []pptk.PptkResponse
-	for _, result := range results {
-		responses = append(responses, pptk.PptkResponse{
-			Id:                 result.Id,
-			Nip:                result.Nip,
-			KodeOpd:       	 	result.KodeOpd,
-			Tahun: 				result.Tahun,
-			KodeSubKegiatan:    result.KodeSubKegiatan,
-			NipAtasan:          result.NipAtasan,
-			AktifAt:            result.AktifAt,
-			NonAktifAt: 	    result.NonAktifAt,
-		})
-	}
+// 	var responses []pptk.PptkResponse
+// 	for _, result := range results {
+// 		responses = append(responses, pptk.PptkResponse{
+// 			Id:                 result.Id,
+// 			Nip:                result.Nip,
+// 			KodeOpd:       	 	result.KodeOpd,
+// 			Tahun: 				result.Tahun,
+// 			KodeSubKegiatan:    result.KodeSubKegiatan,
+// 			NipAtasan:          result.NipAtasan,
+// 			AktifAt:            result.AktifAt,
+// 			NonAktifAt: 	    result.NonAktifAt,
+// 		})
+// 	}
 
-	return responses, nil
-}
+// 	return responses, nil
+// }

@@ -100,22 +100,26 @@ func (repository *PptkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, 
 	return Pptk, nil
 }
 
-func (repository *PptkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.Pptk, error) {
+func (repository *PptkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx,kodeSubkegiatan string, kodeOpd string, tahun string) ([]domain.Pptk, error) {
 	// Query untuk mengambil program unggulan beserta status aktifnya
 	script := `
         SELECT 
-            id, 
-			nip, 
-			kode_opd, 
-			tahun, 
-			kode_sub_kegiatan, 
-			nip_atasan, 
-			aktif_at, 
-			nonaktif_at
-        FROM tb_pptk
-        WHERE kode_opd = ? AND tahun = ?`
+            tp.id, 
+			tp.nip, 
+			peg.nama, 
+			tp.kode_opd, 
+			tp.tahun, 
+			tp.kode_sub_kegiatan, 
+			tp.nip_atasan, 
+			tpa.nama, 
+			tp.aktif_at, 
+			tp.nonaktif_at
+        FROM tb_pptk tp
+		LEFT JOIN tb_pegawai peg ON tp.nip = peg.nip
+		LEFT JOIN tb_pegawai tpa ON tp.nip_atasan = tpa.nip
+        WHERE tp.kode_sub_kegiatan = ? AND tp.kode_opd = ? AND tp.tahun = ?`
 
-	rows, err := tx.QueryContext(ctx, script, kodeOpd, tahun)
+	rows, err := tx.QueryContext(ctx, script, kodeSubkegiatan, kodeOpd, tahun)
 	if err != nil {
 		return []domain.Pptk{}, err
 	}
@@ -128,10 +132,12 @@ func (repository *PptkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, k
 		err = rows.Scan(
 			&pptk.Id,
 			&pptk.Nip,
+			&pptk.NamaPegawai,
 			&pptk.KodeOpd,
 			&pptk.Tahun,
 			&pptk.KodeSubKegiatan,
 			&pptk.NipAtasan,
+			&pptk.NamaAtasan,
 			&pptk.AktifAt,
 			&pptk.NonAktifAt,
 		)
@@ -142,22 +148,26 @@ func (repository *PptkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, k
 	}
 	return pptkList, nil
 }
-func (repository *PptkRepositoryImpl) FindAllByNip(ctx context.Context, tx *sql.Tx, nip string, tahun string) ([]domain.Pptk, error) {
+func (repository *PptkRepositoryImpl) FindAllByNip(ctx context.Context, tx *sql.Tx, kodeSubkegiatan string, pegawaiId string, tahun string) ([]domain.Pptk, error) {
 	// Query untuk mengambil program unggulan beserta status aktifnya
 	script := `
         SELECT 
-            id, 
-			nip, 
-			kode_opd, 
-			tahun, 
-			kode_sub_kegiatan, 
-			nip_atasan, 
-			aktif_at, 
-			nonaktif_at
-        FROM tb_pptk
-        WHERE nip = ? AND tahun = ?`
+            tp.id, 
+			tp.nip, 
+			peg.nama, 
+			tp.kode_opd, 
+			tp.tahun, 
+			tp.kode_sub_kegiatan, 
+			tp.nip_atasan, 
+			tpa.nama, 
+			tp.aktif_at, 
+			tp.nonaktif_at
+        FROM tb_pptk tp
+		LEFT JOIN tb_pegawai peg ON tp.nip = peg.nip
+		LEFT JOIN tb_pegawai tpa ON tp.nip_atasan = tpa.nip
+        WHERE tp.kode_sub_kegiatan = ? AND tp.nip = ? AND tp.tahun = ?`
 
-	rows, err := tx.QueryContext(ctx, script, nip, tahun)
+	rows, err := tx.QueryContext(ctx, script, kodeSubkegiatan, pegawaiId, tahun)
 	if err != nil {
 		return []domain.Pptk{}, err
 	}
@@ -170,10 +180,12 @@ func (repository *PptkRepositoryImpl) FindAllByNip(ctx context.Context, tx *sql.
 		err = rows.Scan(
 			&pptk.Id,
 			&pptk.Nip,
+			&pptk.NamaPegawai,
 			&pptk.KodeOpd,
 			&pptk.Tahun,
 			&pptk.KodeSubKegiatan,
 			&pptk.NipAtasan,
+			&pptk.NamaAtasan,
 			&pptk.AktifAt,
 			&pptk.NonAktifAt,
 		)

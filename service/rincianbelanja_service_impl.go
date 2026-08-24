@@ -16,13 +16,15 @@ import (
 type RincianBelanjaServiceImpl struct {
 	rincianBelanjaRepository repository.RincianBelanjaRepository
 	pegawaiRepository        repository.PegawaiRepository
+	pptkRepository           repository.PptkRepository
 	DB                       *sql.DB
 }
 
-func NewRincianBelanjaServiceImpl(rincianBelanjaRepository repository.RincianBelanjaRepository, pegawaiRepository repository.PegawaiRepository, DB *sql.DB) *RincianBelanjaServiceImpl {
+func NewRincianBelanjaServiceImpl(rincianBelanjaRepository repository.RincianBelanjaRepository, pegawaiRepository repository.PegawaiRepository, pptkRepository repository.PptkRepository, DB *sql.DB) *RincianBelanjaServiceImpl {
 	return &RincianBelanjaServiceImpl{
 		rincianBelanjaRepository: rincianBelanjaRepository,
 		pegawaiRepository:        pegawaiRepository,
+		pptkRepository:           pptkRepository,
 		DB:                       DB,
 	}
 }
@@ -316,12 +318,57 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 				})
 			}
 
+			// -----------------------------------------------------
+			// Ambil PPTK berdasarkan subkegiatan
+			// -----------------------------------------------------
+			pptkResults, err := service.pptkRepository.FindAll(
+				ctx,
+				tx,
+				rb.KodeSubkegiatan,
+				kodeOpd,
+				tahun,
+			)
+			if err != nil {
+				log.Printf(
+					"Error mengambil PPTK untuk subkegiatan %s: %v",
+					rb.KodeSubkegiatan,
+					err,
+				)
+
+				// Jangan menggagalkan seluruh laporan
+				pptkResults = nil
+			}
+
+			// -----------------------------------------------------
+			// Mapping PPTK ke response
+			// -----------------------------------------------------
+			pptkResponses := make([]rincianbelanja.PptkResponse, 0)
+
+			for _, result := range pptkResults {
+				pptkResponses = append(
+					pptkResponses,
+					rincianbelanja.PptkResponse{
+						Id:              result.Id,
+						Nip:             result.Nip,
+						NamaPegawai:     result.NamaPegawai,
+						KodeOpd:         result.KodeOpd,
+						Tahun:           result.Tahun,
+						KodeSubKegiatan: result.KodeSubKegiatan,
+						NipAtasan:       result.NipAtasan,
+						NamaAtasan:      result.NamaAtasan,
+						AktifAt:         result.AktifAt,
+						NonAktifAt:      result.NonAktifAt,
+					},
+				)
+			}
+
 			subResponse = &rincianbelanja.RincianBelanjaAsnResponse{
 				KodeSubkegiatan:      rb.KodeSubkegiatan,
 				NamaSubkegiatan:      rb.NamaSubkegiatan,
 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
 				TotalAnggaran:        0,
 				RincianBelanja:       []rincianbelanja.RincianBelanjaResponse{},
+				Pptk:                 pptkResponses,
 			}
 			subkegiatanMap[rb.KodeSubkegiatan] = subResponse
 		}
@@ -475,6 +522,51 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 				})
 			}
 
+			// -----------------------------------------------------
+			// Ambil PPTK berdasarkan subkegiatan
+			// -----------------------------------------------------
+			pptkResults, err := service.pptkRepository.FindAllByNip(
+				ctx,
+				tx,
+				rb.KodeSubkegiatan,
+				pegawaiId,
+				tahun,
+			)
+			if err != nil {
+				log.Printf(
+					"Error mengambil PPTK untuk subkegiatan %s: %v",
+					pegawaiId,
+					rb.KodeSubkegiatan,
+					err,
+				)
+
+				// Jangan menggagalkan seluruh laporan
+				pptkResults = nil
+			}
+
+			// -----------------------------------------------------
+			// Mapping PPTK ke response
+			// -----------------------------------------------------
+			pptkResponses := make([]rincianbelanja.PptkResponse, 0)
+
+			for _, result := range pptkResults {
+				pptkResponses = append(
+					pptkResponses,
+					rincianbelanja.PptkResponse{
+						Id:              result.Id,
+						Nip:             result.Nip,
+						NamaPegawai:     result.NamaPegawai,
+						KodeOpd:         result.KodeOpd,
+						Tahun:           result.Tahun,
+						KodeSubKegiatan: result.KodeSubKegiatan,
+						NipAtasan:       result.NipAtasan,
+						NamaAtasan:      result.NamaAtasan,
+						AktifAt:         result.AktifAt,
+						NonAktifAt:      result.NonAktifAt,
+					},
+				)
+			}
+
 			subResponse = &rincianbelanja.RincianBelanjaAsnResponse{
 				KodeOpd:              rb.KodeOpd,
 				KodeSubkegiatan:      rb.KodeSubkegiatan,
@@ -482,6 +574,7 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
 				TotalAnggaran:        0,
 				RincianBelanja:       []rincianbelanja.RincianBelanjaResponse{},
+				Pptk:                 pptkResponses,
 			}
 			subkegiatanMap[key] = subResponse
 		}
