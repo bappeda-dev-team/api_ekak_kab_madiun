@@ -590,7 +590,7 @@ func (repository *PkRepositoryImpl) FindPkPegawaiPenetapan(
 		pk.keterangan,
 		rk.sasaranopd_id
 	FROM pk_opd pk
-	LEFT JOIN tb_rencana_kinerja rk ON rk.id = pk.id_rekin_pemilik_pk
+	JOIN tb_rencana_kinerja rk ON rk.id = pk.id_rekin_pemilik_pk
 	WHERE pk.nip_pemilik_pk = ?
 		AND pk.kode_opd = ?
 		AND pk.tahun = ?
