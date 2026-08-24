@@ -14,12 +14,13 @@ import (
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
-	"net/http"
-	"time"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/google/wire"
+	"net/http"
+	"time"
+)
 
+import (
 	_ "ekak_kabupaten_madiun/docs"
 )
 
@@ -177,7 +178,8 @@ func InitializeServer() *http.Server {
 	dataMasterControllerImpl := controller.NewDataMasterControllerImpl(dataMasterServiceImpl)
 	pkRepositoryImpl := repository.NewPkRepositoryImpl()
 	strukturOrganisasiRepositoryImpl := repository.NewStrukturOrganisasiRepositoryImpl()
-	pkServiceImpl := service.NewPkServiceImpl(pkRepositoryImpl, pegawaiServiceImpl, rencanaKinerjaServiceImpl, opdServiceImpl, strukturOrganisasiRepositoryImpl, validate, db)
+	penetapanClientImpl := internal.NewPenetapanClient(httpClient)
+	pkServiceImpl := service.NewPkServiceImpl(pkRepositoryImpl, pegawaiServiceImpl, rencanaKinerjaServiceImpl, opdServiceImpl, strukturOrganisasiRepositoryImpl, penetapanClientImpl, validate, db)
 	pkControllerImpl := controller.NewPkControllerImpl(pkServiceImpl)
 	strategicArahKebijakanPemdaServiceImpl := service.NewStrategicArahKebijakanPemdaServiceImpl(opdRepositoryImpl, csfRepository, db, tujuanPemdaRepositoryImpl, sasaranPemdaRepositoryImpl)
 	strategicArahKebijakanPemdaControllerImpl := controller.NewStrategicArahKebijakanPemdaControllerImpl(strategicArahKebijakanPemdaServiceImpl, isustrategicClientImpl)
@@ -194,6 +196,12 @@ func InitializeServer() *http.Server {
 	isuKlhsRepositoryImpl := repository.NewIsuKlhsRepositoryImpl()
 	isuKlhsServiceImpl := service.NewIsuKlhsServiceImpl(isuKlhsRepositoryImpl, db, validate)
 	isuKlhsControllerImpl := controller.NewIsuKlhsControllerImpl(isuKlhsServiceImpl)
+	isuNasionalRepositoryImpl := repository.NewIsuNasionalRepositoryImpl()
+	isuNasionalServiceImpl := service.NewIsuNasionalServiceImpl(isuNasionalRepositoryImpl, db, validate)
+	isuNasionalControllerImpl := controller.NewIsuNasionalControllerImpl(isuNasionalServiceImpl)
+	isuRegionalRepositoryImpl := repository.NewIsuRegionalRepositoryImpl()
+	isuRegionalServiceImpl := service.NewIsuRegionalServiceImpl(isuRegionalRepositoryImpl, db, validate)
+	isuRegionalControllerImpl := controller.NewIsuRegionalControllerImpl(isuRegionalServiceImpl)
 	ppdRepositoryImpl := repository.NewPpdRepositoryImpl()
 	ppdServiceImpl := service.NewPpdServiceImpl(ppdRepositoryImpl, db, validate)
 	ppdControllerImpl := controller.NewPpdControllerImpl(ppdServiceImpl)
@@ -361,6 +369,48 @@ var strategicArahPemdaSet = wire.NewSet(service.NewStrategicArahKebijakanPemdaSe
 var isuStrategicClientSet = wire.NewSet(internal.NewIsuStrategicClient, wire.Bind(
 	new(internal.IsustrategicClient),
 	new(*internal.IsustrategicClientImpl),
+),
+)
+
+var penetapanClientSet = wire.NewSet(internal.NewPenetapanClient, wire.Bind(
+	new(internal.PenetapanClient),
+	new(*internal.PenetapanClientImpl),
+),
+)
+
+var ppdSet = wire.NewSet(repository.NewPpdRepositoryImpl, wire.Bind(
+	new(repository.PpdRepository),
+	new(*repository.PpdRepositoryImpl),
+), service.NewPpdServiceImpl, wire.Bind(
+	new(service.PpdService),
+	new(*service.PpdServiceImpl),
+), controller.NewPpdControllerImpl, wire.Bind(
+	new(controller.PpdController),
+	new(*controller.PpdControllerImpl),
+),
+)
+
+var nspkSet = wire.NewSet(repository.NewNspkRepositoryImpl, wire.Bind(
+	new(repository.NspkRepository),
+	new(*repository.NspkRepositoryImpl),
+), service.NewNspkServiceImpl, wire.Bind(
+	new(service.NspkService),
+	new(*service.NspkServiceImpl),
+), controller.NewNspkControllerImpl, wire.Bind(
+	new(controller.NspkController),
+	new(*controller.NspkControllerImpl),
+),
+)
+
+var nspkOpdSet = wire.NewSet(repository.NewNspkOpdRepositoryImpl, wire.Bind(
+	new(repository.NspkOpdRepository),
+	new(*repository.NspkOpdRepositoryImpl),
+), service.NewNspkOpdServiceImpl, wire.Bind(
+	new(service.NspkOpdService),
+	new(*service.NspkOpdServiceImpl),
+), controller.NewNspkOpdControllerImpl, wire.Bind(
+	new(controller.NspkOpdController),
+	new(*controller.NspkOpdControllerImpl),
 ),
 )
 

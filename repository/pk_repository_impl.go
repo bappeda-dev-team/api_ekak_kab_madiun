@@ -831,3 +831,40 @@ func (repository *PkRepositoryImpl) RenaksiPkByIdRekins(
 
 	return result, nil
 }
+
+func (repository *PkRepositoryImpl) UpdatePkPegawais(
+	ctx context.Context,
+	tx *sql.Tx,
+	pks []domain.PkOpd,
+) error {
+	query := `
+		UPDATE pk_opd
+		SET rekin_atasan = ?,
+		    rekin_pemilik_pk = ?,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`
+
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("prepare update pk failed: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, pk := range pks {
+		if _, err := stmt.ExecContext(
+			ctx,
+			pk.RekinAtasan,
+			pk.RekinPemilikPk,
+			pk.Id,
+		); err != nil {
+			return fmt.Errorf(
+				"update pk %s failed: %w",
+				pk.Id,
+				err,
+			)
+		}
+	}
+
+	return nil
+}

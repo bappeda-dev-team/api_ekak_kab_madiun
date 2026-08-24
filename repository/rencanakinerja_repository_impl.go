@@ -1942,3 +1942,38 @@ func (repository *RencanaKinerjaRepositoryImpl) batchInsertTarget(
 
 	return nil
 }
+
+func (repository *RencanaKinerjaRepositoryImpl) FindByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) ([]domain.RencanaKinerja, error) {
+	const op = "rencanakineraj_repository.FindByIdRekins"
+
+	if len(idRekins) == 0 {
+		return []domain.RencanaKinerja{}, nil
+	}
+
+	baseQuery := `
+	SELECT id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, created_at
+	FROM tb_rencana_kinerja
+	WHERE id IN (?)
+	`
+
+	query, args := helper.BuildInQueryString(baseQuery, idRekins)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	var rencanaKinerjas []domain.RencanaKinerja
+
+	for rows.Next() {
+		var rencanaKinerja domain.RencanaKinerja
+		err := rows.Scan(&rencanaKinerja.Id, &rencanaKinerja.IdPohon, &rencanaKinerja.NamaRencanaKinerja, &rencanaKinerja.Tahun, &rencanaKinerja.StatusRencanaKinerja, &rencanaKinerja.Catatan, &rencanaKinerja.KodeOpd, &rencanaKinerja.PegawaiId, &rencanaKinerja.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		rencanaKinerjas = append(rencanaKinerjas, rencanaKinerja)
+	}
+
+	return rencanaKinerjas, nil
+}

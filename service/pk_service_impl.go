@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/internal"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pegawai"
@@ -26,6 +27,7 @@ type PkServiceImpl struct {
 	rekinService                 RencanaKinerjaService
 	opdService                   OpdService
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository
+	penetapanClient              internal.PenetapanClient
 	Validate                     *validator.Validate
 	DB                           *sql.DB
 }
@@ -36,6 +38,7 @@ func NewPkServiceImpl(
 	rekinService RencanaKinerjaService,
 	opdService OpdService,
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository,
+	penetapanClient internal.PenetapanClient,
 	validate *validator.Validate,
 	DB *sql.DB,
 ) *PkServiceImpl {
@@ -45,6 +48,7 @@ func NewPkServiceImpl(
 		rekinService:                 rekinService,
 		opdService:                   opdService,
 		strukturOrganisasiRepository: strukturOrganisasiRepository,
+		penetapanClient:              penetapanClient,
 		Validate:                     validate,
 		DB:                           DB,
 	}
@@ -777,16 +781,38 @@ func (service *PkServiceImpl) KunciPK(
 		return pkopd.KunciPKResponse{}, err
 	}
 
+	// update pk_opd
+	if err := service.syncRekinPemilikPk(
+		ctx,
+		tx,
+		kunciPK.IdPegawai,
+		kunciPK.KodeOpd,
+		kunciPK.Tahun,
+	); err != nil {
+		log.Printf("pkRepository.KunciPK error sync rekin: %v", err)
+		return pkopd.KunciPKResponse{}, err
+	}
+
 	if err = tx.Commit(); err != nil {
 		log.Printf("commit failed: %v", err)
 		return pkopd.KunciPKResponse{}, err
 	}
 	// TODO -> Sync to penetapan service
-	// go func() {
-	// 	if err := service.penetapanClient.SyncPK(context.Background()); err != nil {
-	// 		log.Printf("[ERROR]PenetapanClient - sync penetapan gagal: %v", err)
-	// 	}
-	// }()
+	if err := service.penetapanClient.SyncPenetapanPkPegawai(context.Background(), kunciPK.IdPegawai, kunciPK.KodeOpd, kunciPK.Tahun); err != nil {
+		log.Printf("sync penetapan gagal: %v", err)
+
+		// Compensation: batalkan hasil KunciPK
+		if _, bukaErr := service.BukaKunciPK(ctx, pkopd.KunciPkRequest{
+			IdPegawai: kunciPK.IdPegawai,
+			KodeOpd:   kunciPK.KodeOpd,
+			Tahun:     kunciPK.Tahun,
+		}); bukaErr != nil {
+			log.Printf("gagal membatalkan KunciPK: %v", bukaErr)
+		}
+
+		return pkopd.KunciPKResponse{}, fmt.Errorf("sync ke penetapan gagal: %w", err)
+	}
+	log.Print("sync penetapan berhasil")
 
 	return pkopd.KunciPKResponse{
 		IdKunci:    idKunci,
@@ -828,6 +854,18 @@ func (service *PkServiceImpl) BukaKunciPK(
 	idKunci, err := service.pkRepository.KunciPK(ctx, tx, kunciPK)
 	if err != nil {
 		log.Printf("pkRepository.KunciPK error: %v", err)
+		return pkopd.KunciPKResponse{}, err
+	}
+
+	// update pk_opd
+	if err := service.syncRekinPemilikPk(
+		ctx,
+		tx,
+		kunciPK.IdPegawai,
+		kunciPK.KodeOpd,
+		kunciPK.Tahun,
+	); err != nil {
+		log.Printf("pkRepository.KunciPK error sync rekin: %v", err)
 		return pkopd.KunciPKResponse{}, err
 	}
 
@@ -1130,9 +1168,10 @@ func resolveLevel4Candidates(
 ) []pkopd.AtasanCandidate {
 
 	jabatanPegawai = normalizeNama(jabatanPegawai)
+	namaOpd := normalizeNama(rekin.KodeOpd.NamaOpd)
 
 	// hanya berlaku untuk Setda
-	if normalizeNama(rekin.KodeOpd.NamaOpd) != "SEKRETARIATDAERAH" {
+	if namaOpd != "SEKRETARIATDAERAH" {
 		return buildLevel4Candidates(sasaranPemdas)
 	}
 
@@ -1140,7 +1179,7 @@ func resolveLevel4Candidates(
 		return buildLevel4Candidates(sasaranPemdas)
 	}
 
-	if jabatanPegawai == "ASISTEN" {
+	if strings.Contains(jabatanPegawai, "ASISTEN") {
 		seen := make(map[string]bool)
 		var result []pkopd.AtasanCandidate
 
@@ -1185,7 +1224,8 @@ func resolveLevel4Candidates(
 // normaizeNama akan membuang spasi dan membuat karakter
 // jadi kapital semua
 func normalizeNama(namaJabatan string) string {
-	return strings.ToUpper(namaJabatan)
+	fixedNama := strings.ReplaceAll(namaJabatan, " ", "")
+	return strings.ToUpper(fixedNama)
 }
 
 func (service *PkServiceImpl) FindPkPenetapan(
@@ -1283,4 +1323,101 @@ func (service *PkServiceImpl) FindPkPenetapan(
 		})
 	}
 	return result, nil
+}
+
+func (service *PkServiceImpl) syncRekinPemilikPk(
+	ctx context.Context,
+	tx *sql.Tx,
+	idPegawai string,
+	kodeOpd string,
+	tahun int,
+) error {
+	pkPegawais, err := service.pkRepository.FindPkPegawaiPenetapan(
+		ctx,
+		tx,
+		idPegawai,
+		kodeOpd,
+		tahun,
+	)
+	if err != nil {
+		return fmt.Errorf("find pk pegawai: %w", err)
+	}
+
+	if len(pkPegawais) == 0 {
+		return nil
+	}
+
+	idRekinSet := make(map[string]struct{})
+
+	for _, pkPeg := range pkPegawais {
+		if pkPeg.IdRekinPemilikPk != "" {
+			idRekinSet[pkPeg.IdRekinPemilikPk] = struct{}{}
+		}
+
+		if pkPeg.IdRekinAtasan != "" {
+			idRekinSet[pkPeg.IdRekinAtasan] = struct{}{}
+		}
+	}
+
+	if len(idRekinSet) == 0 {
+		return nil
+	}
+
+	idRekins := make([]string, 0, len(idRekinSet))
+	for idRekin := range idRekinSet {
+		idRekins = append(idRekins, idRekin)
+	}
+
+	rekinPegawais, err := service.rekinService.FindByIdRekins(
+		ctx,
+		idRekins,
+	)
+	if err != nil {
+		return fmt.Errorf("find rekin pegawai: %w", err)
+	}
+
+	rekinMap := make(map[string]rencanakinerja.RencanaKinerjaResponse, len(rekinPegawais))
+
+	for _, rekin := range rekinPegawais {
+		rekinMap[rekin.Id] = rekin
+	}
+
+	newPkPegawais := make([]domain.PkOpd, len(pkPegawais))
+
+	for i, pkPeg := range pkPegawais {
+		newPkPegawais[i] = pkPeg
+
+		if rekin, ok := rekinMap[pkPeg.IdRekinPemilikPk]; ok {
+			newPkPegawais[i].RekinPemilikPk =
+				rekin.NamaRencanaKinerja
+		}
+
+		if rekin, ok := rekinMap[pkPeg.IdRekinAtasan]; ok {
+			newPkPegawais[i].RekinAtasan =
+				rekin.NamaRencanaKinerja
+		}
+	}
+
+	if err := service.pkRepository.UpdatePkPegawais(
+		ctx,
+		tx,
+		newPkPegawais,
+	); err != nil {
+		return fmt.Errorf("update pk pegawais: %w", err)
+	}
+
+	return nil
+}
+
+func findRekinPegawai(
+	rekinPegawais []rencanakinerja.RencanaKinerjaResponse,
+	idRekin string,
+) rencanakinerja.RencanaKinerjaResponse {
+	for _, rekin := range rekinPegawais {
+		if rekin.Id == idRekin {
+			return rekin
+		}
+	}
+
+	return rencanakinerja.RencanaKinerjaResponse{}
 }

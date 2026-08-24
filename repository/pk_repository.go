@@ -21,4 +21,5 @@ type PkRepository interface {
 	FindPkPegawaiPenetapan(ctx context.Context, tx *sql.Tx, idPegawai, kodeOpd string, tahun int) ([]domain.PkOpd, error)
 	IndikatorTargetPkByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) (map[string][]domain.Indikator, error)
 	RenaksiPkByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) (map[string][]domain.RencanaAksi, error)
+	UpdatePkPegawais(ctx context.Context, tx *sql.Tx, pks []domain.PkOpd) error
 }

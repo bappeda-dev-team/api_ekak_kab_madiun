@@ -552,6 +552,69 @@ var isuStrategicClientSet = wire.NewSet(
 	),
 )
 
+var penetapanClientSet = wire.NewSet(
+	internal.NewPenetapanClient,
+	wire.Bind(
+		new(internal.PenetapanClient),
+		new(*internal.PenetapanClientImpl),
+	),
+)
+
+var ppdSet = wire.NewSet(
+	repository.NewPpdRepositoryImpl,
+	wire.Bind(
+		new(repository.PpdRepository),
+		new(*repository.PpdRepositoryImpl),
+	),
+	service.NewPpdServiceImpl,
+	wire.Bind(
+		new(service.PpdService),
+		new(*service.PpdServiceImpl),
+	),
+	controller.NewPpdControllerImpl,
+	wire.Bind(
+		new(controller.PpdController),
+		new(*controller.PpdControllerImpl),
+	),
+)
+
+var nspkSet = wire.NewSet(
+	repository.NewNspkRepositoryImpl,
+	wire.Bind(
+		new(repository.NspkRepository),
+		new(*repository.NspkRepositoryImpl),
+	),
+	service.NewNspkServiceImpl,
+	wire.Bind(
+		new(service.NspkService),
+		new(*service.NspkServiceImpl),
+	),
+	controller.NewNspkControllerImpl,
+	wire.Bind(
+		new(controller.NspkController),
+		new(*controller.NspkControllerImpl),
+	),
+)
+
+var nspkOpdSet = wire.NewSet(
+	repository.NewNspkOpdRepositoryImpl,
+	wire.Bind(
+		new(repository.NspkOpdRepository),
+		new(*repository.NspkOpdRepositoryImpl),
+	),
+	service.NewNspkOpdServiceImpl,
+	wire.Bind(
+		new(service.NspkOpdService),
+		new(*service.NspkOpdServiceImpl),
+	),
+	controller.NewNspkOpdControllerImpl,
+	wire.Bind(
+		new(controller.NspkOpdController),
+		new(*controller.NspkOpdControllerImpl),
+	),
+)
+
+
 func ProvideHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 30 * time.Second,
@@ -630,6 +693,10 @@ func InitializeServer() *http.Server {
 		isuKlhsSet,
 		strategicArahPemdaSet,
 		isuStrategicClientSet,
+		penetapanClientSet,
+		ppdSet,
+		nspkSet,
+		nspkOpdSet,
 		httpClientSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
