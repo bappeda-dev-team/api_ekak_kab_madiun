@@ -43,10 +43,22 @@ type SasaranOpdResponse struct {
 }
 
 type StrategiOpdResponse struct {
-	StrategiOpd       string                     `json:"strategi_opd"`
-	ArahKebijakanOpds []ArahKebijakanOpdResponse `json:"arah_kebijakan_opds"`
+	StrategiOpd  string                `json:"strategi_opd"`
+	TacticalOpds []TacticalOpdResponse `json:"tactical_opds"`
 }
 
+type TacticalOpdResponse struct {
+	IdTacticalOpd    int                        `json:"id_tactical_opd"`
+	TacticalOpd      string                     `json:"tactical_opd"`
+	OperasionalOpds  []OperasionalOpdResponse   `json:"operasional_opds"`
+	ArahKebijakanOpd []ArahKebijakanOpdResponse `json:"arah_kebijakan_opd"`
+}
+
+type OperasionalOpdResponse struct {
+	OperasionalOpd string `json:"operasional_opd"`
+}
 type ArahKebijakanOpdResponse struct {
-	ArahKebijakanOpd string `json:"arah_kebijakan_opd"`
+	Id      int    `json:"id"`
+	PokinId int    `json:"pokin_id"`
+	Arah    string `json:"arah"`
 }

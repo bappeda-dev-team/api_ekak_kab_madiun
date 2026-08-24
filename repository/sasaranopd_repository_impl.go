@@ -1474,10 +1474,15 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 	query := `
 	SELECT
 		pk.kode_opd,
-		COALESCE(to_opd.tujuan, '')       AS tujuan,
-		COALESCE(so.nama_sasaran_opd, '') AS sasaran,
-		COALESCE(pk.nama_pohon, '')       AS strategi,
-		COALESCE(pk_child.nama_pohon, '') AS arah_kebijakan
+		COALESCE(to_opd.tujuan, '')        AS tujuan,
+		COALESCE(so.nama_sasaran_opd, '')  AS sasaran,
+		COALESCE(pk.nama_pohon, '')        AS strategi,
+		COALESCE(pk_child.id, 0)           AS id_tactical,
+		COALESCE(pk_child.nama_pohon, '')  AS tactical,
+		COALESCE(pk_child2.nama_pohon, '') AS operasional,
+		COALESCE(tak.id, 0)              AS id_arah_kebijakan,
+    	COALESCE(tak.pokin_id, 0)        AS arah_pokin_id,
+    	COALESCE(tak.arah_kebijakan, '') AS arah_kebijakan
 
 	FROM tb_sasaran_opd so
 	JOIN tb_pohon_kinerja pk 
@@ -1487,8 +1492,15 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 		ON pk_child.parent = pk.id 
 		AND pk_child.level_pohon = 5
 
+	LEFT JOIN tb_pohon_kinerja pk_child2 
+		ON pk_child2.parent = pk_child.id 
+		AND pk_child2.level_pohon = 6
+
 	LEFT JOIN tb_tujuan_opd to_opd 
 		ON so.id_tujuan_opd = to_opd.id
+
+	LEFT JOIN tb_arah_kebijakan tak 
+		ON pk_child.id = tak.pokin_id
 
 	WHERE pk.kode_opd = ?
 	  AND pk.level_pohon = 4
@@ -1500,7 +1512,8 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 		to_opd.tujuan,
 		so.nama_sasaran_opd,
 		pk.nama_pohon,
-		pk_child.nama_pohon
+		pk_child.nama_pohon,
+		pk_child2.nama_pohon
 	`
 
 	rows, err := tx.QueryContext(ctx, query,
@@ -1521,7 +1534,12 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 			&row.NamaTujuanOpd,
 			&row.NamaSasaranOpd,
 			&row.NamaStrategi,
-			&row.NamaArahKebijakan,
+			&row.IdTactical,
+			&row.NamaTactical,
+			&row.NamaOperasional,
+			&row.ArahKebijakan.ID,
+			&row.ArahKebijakan.PokinId,
+			&row.ArahKebijakan.Arah,
 		)
 		if err != nil {
 			return nil, err

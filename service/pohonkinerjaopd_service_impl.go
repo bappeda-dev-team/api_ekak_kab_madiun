@@ -1553,6 +1553,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 	tujuanIndex := make(map[string]int)
 	sasaranIndex := make(map[string]int)
 	strategiIndex := make(map[string]int)
+	tacticalIndex := make(map[string]int)
 
 	for _, s := range rows {
 
@@ -1622,7 +1623,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 					StrategiOpds,
 				strategic.StrategiOpdResponse{
 					StrategiOpd:       s.NamaStrategi,
-					ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{},
+					TacticalOpds: []strategic.TacticalOpdResponse{},
 				},
 			)
 
@@ -1636,10 +1637,52 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		}
 
 		// ==================================
-		// ARAH KEBIJAKAN
+		// TACTICAL
 		// ==================================
 
-		if s.NamaArahKebijakan != "" {
+		idxTactical := -1
+
+		if s.NamaTactical != "" {
+			keyTactical := keyStrategi + "|" + s.NamaTactical
+
+			var ok bool
+			idxTactical, ok = tacticalIndex[keyTactical]
+
+			if !ok {
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds = append(
+					response.
+						StrategiArahKebijakanOpds[idxTujuan].
+						SasaranOpds[idxSasaran].
+						StrategiOpds[idxStrategi].
+						TacticalOpds,
+					strategic.TacticalOpdResponse{
+						TacticalOpd:       s.NamaTactical,
+						IdTacticalOpd:     s.IdTactical,
+						OperasionalOpds:   []strategic.OperasionalOpdResponse{},
+						ArahKebijakanOpd: []strategic.ArahKebijakanOpdResponse{},
+					},
+				)
+
+				idxTactical = len(
+					response.
+						StrategiArahKebijakanOpds[idxTujuan].
+						SasaranOpds[idxSasaran].
+						StrategiOpds[idxStrategi].
+						TacticalOpds,
+				) - 1
+
+				tacticalIndex[keyTactical] = idxTactical
+			}
+		}
+		// ==================================
+		// OPERASIONAL
+		// ==================================
+
+		if s.NamaOperasional != "" && s.NamaTactical != "" {
 
 			sudahAda := false
 
@@ -1647,30 +1690,71 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 				StrategiArahKebijakanOpds[idxTujuan].
 				SasaranOpds[idxSasaran].
 				StrategiOpds[idxStrategi].
-				ArahKebijakanOpds {
+				TacticalOpds[idxTactical].
+				OperasionalOpds {
 
-				if arah.ArahKebijakanOpd == s.NamaArahKebijakan {
+				if arah.OperasionalOpd == s.NamaOperasional {
 					sudahAda = true
 					break
 				}
 			}
 
 			if !sudahAda {
-
 				response.
 					StrategiArahKebijakanOpds[idxTujuan].
 					SasaranOpds[idxSasaran].
 					StrategiOpds[idxStrategi].
-					ArahKebijakanOpds = append(
+					TacticalOpds[idxTactical].
+					OperasionalOpds = append(
+						response.
+							StrategiArahKebijakanOpds[idxTujuan].
+							SasaranOpds[idxSasaran].
+							StrategiOpds[idxStrategi].
+							TacticalOpds[idxTactical].
+							OperasionalOpds,
+						strategic.OperasionalOpdResponse{
+							OperasionalOpd: s.NamaOperasional,
+						},
+					)
+			}
+		}
 
-					response.
-						StrategiArahKebijakanOpds[idxTujuan].
-						SasaranOpds[idxSasaran].
-						StrategiOpds[idxStrategi].
-						ArahKebijakanOpds,
+		// ==================================
+		// ARAH KEBIJAKAN
+		// ==================================
 
+		if s.ArahKebijakan.ID != 0 &&
+			s.ArahKebijakan.PokinId == s.IdTactical {
+
+			arahList :=
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds[idxTactical].
+					ArahKebijakanOpd
+
+			sudahAda := false
+
+			for _, arah := range arahList {
+				if arah.Id == s.ArahKebijakan.ID {
+					sudahAda = true
+					break
+				}
+			}
+
+			if !sudahAda {
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds[idxTactical].
+					ArahKebijakanOpd = append(
+					arahList,
 					strategic.ArahKebijakanOpdResponse{
-						ArahKebijakanOpd: s.NamaArahKebijakan,
+						Id:      s.ArahKebijakan.ID,
+						PokinId: s.ArahKebijakan.PokinId,
+						Arah:    s.ArahKebijakan.Arah,
 					},
 				)
 			}
@@ -1985,7 +2069,7 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 				strategiStartRow := row
 
 				// jika tidak memiliki arah kebijakan
-				if len(strategi.ArahKebijakanOpds) == 0 {
+				if len(strategi.TacticalOpds) == 0 {
 
 					f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
 					f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
@@ -2000,13 +2084,13 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 
 				} else {
 
-					for _, arah := range strategi.ArahKebijakanOpds {
+					for _, arah := range strategi.TacticalOpds {
 
 						f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
 						f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
 						f.SetCellValue(sheet, fmt.Sprintf("C%d", row), sasaran.SasaranOpd)
 						f.SetCellValue(sheet, fmt.Sprintf("D%d", row), strategi.StrategiOpd)
-						f.SetCellValue(sheet, fmt.Sprintf("E%d", row), arah.ArahKebijakanOpd)
+						f.SetCellValue(sheet, fmt.Sprintf("E%d", row), arah.TacticalOpd)
 
 						f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
 						f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
