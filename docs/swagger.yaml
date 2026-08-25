@@ -3386,7 +3386,7 @@ paths:
       - Sasaran Opd Renja Ranwal
       - Sasaran Opd Renja Rankhir
       - Sasaran Opd Renja Penetapan
-  /sasaran_opd/pegawai/{nip}/{kode_opd}/{tahun}:
+  /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun}:
     get:
       consumes:
       - application/json
@@ -3432,7 +3432,7 @@ paths:
       - BearerAuth: []
       summary: Find Sasaran Opd by Nip and Opd
       tags:
-      - Sasaran Opd Renstra
+      - Sasaran Opd Level 1
   /sasaran_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:

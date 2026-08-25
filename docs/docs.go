@@ -1851,7 +1851,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/sasaran_opd/pegawai/{nip}/{kode_opd}/{tahun}": {
+        "/sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
                     {
@@ -1866,7 +1866,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Renstra"
+                    "Sasaran Opd Level 1"
                 ],
                 "summary": "Find Sasaran Opd by Nip and Opd",
                 "parameters": [

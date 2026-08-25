@@ -297,7 +297,7 @@ func (controller *SasaranOpdControllerImpl) FindByTahun(writer http.ResponseWrit
 
 // @Summary      Find Sasaran Opd by Nip and Opd
 // @Description  Mendapatkan data sasaran opd berdasarkan nip dan kode opd.
-// @Tags         Sasaran Opd Renstra
+// @Tags         Sasaran Opd Level 1
 // @Accept       json
 // @Produce      json
 // @Param        nip  path     string  true  "NIP"   example("1234567890")
@@ -306,7 +306,7 @@ func (controller *SasaranOpdControllerImpl) FindByTahun(writer http.ResponseWrit
 // @Success      200  {object}  web.WebResponse{data=[]sasaranopd.SasaranOpdByNipResponse}
 // @Failure      400  {object}  web.WebResponse
 // @Security     BearerAuth
-// @Router       /sasaran_opd/pegawai/{nip}/{kode_opd}/{tahun} [get]
+// @Router       /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun} [get]
 func (controller *SasaranOpdControllerImpl) FindByNipAndOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	nip := params.ByName("nip")
 	kodeOpd := params.ByName("kode_opd")
