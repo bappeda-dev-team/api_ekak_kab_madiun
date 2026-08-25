@@ -15,6 +15,7 @@ type SasaranOpdService interface {
 	FindByIdPokin(ctx context.Context, idPokin int, tahun string) (*sasaranopd.SasaranOpdResponse, error)
 	FindIdPokinSasaran(ctx context.Context, id int) (pohonkinerja.PohonKinerjaOpdResponse, error)
 	FindByTahun(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
+	FindByNipAndOpd(ctx context.Context, nip, kodeOpd, tahun string) ([]sasaranopd.SasaranOpdByNipResponse, error)
 	FindSasaranRenstra(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
 	FindSasaranRanwal(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
 	FindSasaranRankhir(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)

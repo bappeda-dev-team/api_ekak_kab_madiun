@@ -1718,6 +1718,129 @@ func (service *RencanaKinerjaServiceImpl) FindIdRekinLevel1(ctx context.Context,
 	return response, nil
 }
 
+func (service *RencanaKinerjaServiceImpl) FindAllRekinLevel1(ctx context.Context, pegawaiId string, kodeOPD string, tahun string) ([]rencanakinerja.RencanaKinerjaLevel1Response, error) {
+	log.Println("Memulai proses FindAllRekinLevel1")
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	rencanaKinerjaList, err := service.rencanaKinerjaRepository.FindAllRekinLevel1(ctx, tx, pegawaiId, kodeOPD, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mencari rencana kinerja level 1: %v", err)
+	}
+	log.Printf("Ditemukan %d rencana kinerja level 1", len(rencanaKinerjaList))
+
+	// Batch OPD dan Pegawai
+	opdMap := make(map[string]domainmaster.Opd)
+	pegawaiMap := make(map[string]domainmaster.Pegawai)
+	for _, rk := range rencanaKinerjaList {
+		if _, ok := opdMap[rk.KodeOpd]; !ok {
+			opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, rk.KodeOpd)
+			if err == nil {
+				opdMap[rk.KodeOpd] = opd
+			}
+		}
+		if _, ok := pegawaiMap[rk.PegawaiId]; !ok {
+			pegawai, err := service.pegawaiRepository.FindByNip(ctx, tx, rk.PegawaiId)
+			if err == nil {
+				pegawaiMap[rk.PegawaiId] = pegawai
+			}
+		}
+	}
+
+	var responses []rencanakinerja.RencanaKinerjaLevel1Response
+	for _, rk := range rencanaKinerjaList {
+		indikators, err := service.rencanaKinerjaRepository.FindIndikatorSasaranbyRekinId(ctx, tx, rk.Id)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, fmt.Errorf("gagal mencari indikator: %v", err)
+		}
+
+		var indikatorResponses []rencanakinerja.IndikatorResponseLevel1
+		for _, ind := range indikators {
+			// Ambil target berdasarkan tahun yang dipilih
+			targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorIdAndTahun(ctx, tx, ind.Id, tahun)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, fmt.Errorf("gagal mencari target: %v", err)
+			}
+
+			var targetResponses []rencanakinerja.TargetResponse
+			if len(targets) > 0 {
+				for _, t := range targets {
+					targetResponses = append(targetResponses, rencanakinerja.TargetResponse{
+						Id:              t.Id,
+						IndikatorId:     t.IndikatorId,
+						TargetIndikator: t.Target,
+						SatuanIndikator: t.Satuan,
+						Tahun:           t.Tahun,
+					})
+				}
+			} else {
+				// Tidak ada target untuk tahun ini — tambahkan slot kosong
+				targetResponses = append(targetResponses, rencanakinerja.TargetResponse{
+					Id:              "",
+					IndikatorId:     ind.Id,
+					TargetIndikator: "",
+					SatuanIndikator: "",
+					Tahun:           tahun,
+				})
+			}
+
+			// Ambil Formula & SumberData dari ManualIK
+			formula := ""
+			sumberData := ""
+			manualIK, err := service.manualIKRepository.FindByIndikatorId(ctx, tx, ind.Id)
+			if err == nil {
+				formula = manualIK.Formula
+				sumberData = manualIK.SumberData
+			}
+
+			manualIKExist, err := service.manualIKRepository.IsIndikatorExist(ctx, tx, ind.Id)
+			if err != nil {
+				manualIKExist = false
+			}
+
+			indikatorResponses = append(indikatorResponses, rencanakinerja.IndikatorResponseLevel1{
+				Id:               ind.Id,
+				RencanaKinerjaId: ind.RencanaKinerjaId,
+				NamaIndikator:    ind.Indikator,
+				Formula:          formula,
+				SumberData:       sumberData,
+				Target:           targetResponses,
+				ManualIKExist:    manualIKExist,
+			})
+		}
+
+		opd := opdMap[rk.KodeOpd]
+		pegawai := pegawaiMap[rk.PegawaiId]
+
+		responses = append(responses, rencanakinerja.RencanaKinerjaLevel1Response{
+			Id:                   rk.Id,
+			IdPohon:              rk.IdPohon,
+			SasaranOpdId:         rk.SasaranOpdId,
+			NamaSasaranOpd:       rk.NamaSasaranOpd,
+			NamaRencanaKinerja:   rk.NamaRencanaKinerja,
+			TahunAwal:            rk.TahunAwal,
+			TahunAkhir:           rk.TahunAkhir,
+			JenisPeriode:         rk.JenisPeriode,
+			Tahun:                tahun,
+			StatusRencanaKinerja: rk.StatusRencanaKinerja,
+			Catatan:              rk.Catatan,
+			KodeOpd: opdmaster.OpdResponseForAll{
+				KodeOpd: opd.KodeOpd,
+				NamaOpd: opd.NamaOpd,
+			},
+			PegawaiId:   rk.PegawaiId,
+			NamaPegawai: pegawai.NamaPegawai,
+			Indikator:   indikatorResponses,
+		})
+	}
+
+	return responses, nil
+}
+
 func (service *RencanaKinerjaServiceImpl) FindRekinLevel3(ctx context.Context, kodeOpd string, tahun string) ([]rencanakinerja.RencanaKinerjaResponse, error) {
 	log.Println("Memulai proses FindRekinLevel3")
 

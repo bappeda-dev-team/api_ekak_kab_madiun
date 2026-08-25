@@ -29,9 +29,11 @@ type PohonKinerjaAdminServiceImpl struct {
 	csfRepository             repository.CSFRepository
 	DB                        *sql.DB
 	programUnggulanRepository repository.ProgramUnggulanRepository
+	sasaranOpdRepository      repository.SasaranOpdRepository
+	tujuanOpdRepository       repository.TujuanOpdRepository
 }
 
-func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, csfRepository repository.CSFRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository, programUnggulanRepository repository.ProgramUnggulanRepository) *PohonKinerjaAdminServiceImpl {
+func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKinerjaRepository, opdRepository repository.OpdRepository, csfRepository repository.CSFRepository, DB *sql.DB, pegawaiRepository repository.PegawaiRepository, reviewRepository repository.ReviewRepository, programUnggulanRepository repository.ProgramUnggulanRepository, sasaranOpdRepository repository.SasaranOpdRepository, tujuanOpdRepository repository.TujuanOpdRepository) *PohonKinerjaAdminServiceImpl {
 	return &PohonKinerjaAdminServiceImpl{
 		pohonKinerjaRepository:    pohonKinerjaRepository,
 		opdRepository:             opdRepository,
@@ -40,6 +42,8 @@ func NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepository repository.PohonKine
 		reviewRepository:          reviewRepository,
 		csfRepository:             csfRepository,
 		programUnggulanRepository: programUnggulanRepository,
+		sasaranOpdRepository:      sasaranOpdRepository,
+		tujuanOpdRepository:       tujuanOpdRepository,
 	}
 }
 
@@ -3413,6 +3417,30 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarkiOpdView(c
 		pelaksanaMap = map[int][]domain.PelaksanaPokin{}
 	}
 
+	// ── 8b. Batch: sasaran OPD + tujuan OPD + bidang urusan (hanya untuk strategic root) ──
+	sasaranTujuanMap, err := service.sasaranOpdRepository.FindSasaranTujuanByPokinIdsBatch(ctx, tx, opdRootIds)
+	if err != nil {
+		sasaranTujuanMap = map[int][]domain.SasaranPokinInfo{}
+	}
+
+	// ── 8c. Kumpulkan id tujuan OPD unik lalu ambil data lengkapnya (indikator+target) ──
+	tujuanOpdIdSet := make(map[int]struct{})
+	for _, infos := range sasaranTujuanMap {
+		for _, info := range infos {
+			if info.IdTujuanOpd > 0 {
+				tujuanOpdIdSet[info.IdTujuanOpd] = struct{}{}
+			}
+		}
+	}
+	tujuanOpdIds := make([]int, 0, len(tujuanOpdIdSet))
+	for id := range tujuanOpdIdSet {
+		tujuanOpdIds = append(tujuanOpdIds, id)
+	}
+	tujuanOpdMap, err := service.tujuanOpdRepository.FindTujuanOpdWithIndikatorByIdsBatch(ctx, tx, tujuanOpdIds)
+	if err != nil {
+		tujuanOpdMap = map[int]domain.TujuanOpd{}
+	}
+
 	// ── 9. Batch: nama pegawai ──
 	nipSet := make(map[string]struct{})
 	for _, pelaksanas := range pelaksanaMap {
@@ -3491,7 +3519,49 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarkiOpdView(c
 
 	// ── 13. Terapkan batch ke node OPD (level 4-6, dengan pelaksana) ──
 	for i := range opdPokins {
+		if opdPokins[i].LevelPohon == 4 {
+			opdPokins[i].SasaranInfo = sasaranTujuanMap[opdPokins[i].Id]
+		}
 		applyBatchOpdView(&opdPokins[i], true)
+	}
+
+	// ── 13b. Lookup pemdaStrategicId → semua OPD strategic node (dengan SasaranInfo) ──
+	// Dibangun dari opdPokins (setelah SasaranInfo di-populate) menggunakan field clone_from.
+	// Menggantikan peran cloneToOpdStrategic yang tidak bisa menangani kasus
+	// satu pemda strategic diklaim oleh banyak OPD sekaligus.
+	pemdaIdToAllOpdStrategics := make(map[int][]domain.PohonKinerja)
+	for _, p := range opdPokins {
+		if p.LevelPohon == 4 && p.Parent == 0 && p.CloneFrom > 0 {
+			pemdaIdToAllOpdStrategics[p.CloneFrom] = append(pemdaIdToAllOpdStrategics[p.CloneFrom], p)
+		}
+	}
+	// Fallback: alur tarik OPD → pemda (pemda strategic mempunyai clone_from = id OPD strategic)
+	opdPokinById := make(map[int]domain.PohonKinerja)
+	for _, p := range opdPokins {
+		if p.LevelPohon == 4 {
+			opdPokinById[p.Id] = p
+		}
+	}
+	for _, p := range pemdaPokins {
+		if p.LevelPohon != 4 || p.Status != "disetujui" || p.CloneFrom == 0 {
+			continue
+		}
+		if len(opdStrategicByPemdaSource[p.Id]) > 0 {
+			continue // sudah ditangani di path utama
+		}
+		if opd, ok := opdPokinById[p.CloneFrom]; ok {
+			// Cek apakah belum ada agar tidak duplikat
+			alreadyAdded := false
+			for _, existing := range pemdaIdToAllOpdStrategics[p.Id] {
+				if existing.Id == opd.Id {
+					alreadyAdded = true
+					break
+				}
+			}
+			if !alreadyAdded {
+				pemdaIdToAllOpdStrategics[p.Id] = append(pemdaIdToAllOpdStrategics[p.Id], opd)
+			}
+		}
 	}
 
 	// ── 14. Bangun pohonMap pemda (level → parentId → nodes) ──
@@ -3519,5 +3589,5 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarkiOpdView(c
 	}
 
 	tematikNode := tematikNodes[0]
-	return helper.BuildTematikOpdViewResponse(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tematikNode), nil
+	return helper.BuildTematikOpdViewResponse(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, tematikNode), nil
 }

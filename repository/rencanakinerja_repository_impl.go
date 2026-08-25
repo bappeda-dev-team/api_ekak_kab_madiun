@@ -22,8 +22,8 @@ func NewRencanaKinerjaRepositoryImpl() *RencanaKinerjaRepositoryImpl {
 }
 
 func (repository *RencanaKinerjaRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error) {
-	script := "INSERT INTO tb_rencana_kinerja (id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode, periode_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, script, rencanaKinerja.Id, rencanaKinerja.IdPohon, rencanaKinerja.NamaRencanaKinerja, rencanaKinerja.Tahun, rencanaKinerja.StatusRencanaKinerja, rencanaKinerja.Catatan, rencanaKinerja.KodeOpd, rencanaKinerja.PegawaiId, rencanaKinerja.KodeSubKegiatan, rencanaKinerja.TahunAwal, rencanaKinerja.TahunAkhir, rencanaKinerja.JenisPeriode, rencanaKinerja.PeriodeId)
+	script := "INSERT INTO tb_rencana_kinerja (id, id_pohon, sasaranopd_id, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode, periode_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, rencanaKinerja.Id, rencanaKinerja.IdPohon, rencanaKinerja.SasaranOpdId, rencanaKinerja.NamaRencanaKinerja, rencanaKinerja.Tahun, rencanaKinerja.StatusRencanaKinerja, rencanaKinerja.Catatan, rencanaKinerja.KodeOpd, rencanaKinerja.PegawaiId, rencanaKinerja.KodeSubKegiatan, rencanaKinerja.TahunAwal, rencanaKinerja.TahunAkhir, rencanaKinerja.JenisPeriode, rencanaKinerja.PeriodeId)
 	if err != nil {
 		return domain.RencanaKinerja{}, fmt.Errorf("error saat menyimpan rencana kinerja: %v", err)
 	}
@@ -347,6 +347,77 @@ func (repository *RencanaKinerjaRepositoryImpl) RekinsasaranOpd(ctx context.Cont
 		if !seenIds[rencanaKinerja.Id] {
 			seenIds[rencanaKinerja.Id] = true
 			rencanaKinerjas = append(rencanaKinerjas, rencanaKinerja)
+		}
+	}
+
+	return rencanaKinerjas, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindAllRekinLevel1(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error) {
+	script := `
+        SELECT DISTINCT
+            rk.id,
+            rk.id_pohon,
+            COALESCE(rk.sasaranopd_id, 0),
+            COALESCE(so.nama_sasaran_opd, ''),
+            rk.nama_rencana_kinerja,
+            rk.tahun_awal,
+            rk.tahun_akhir,
+            COALESCE(rk.jenis_periode, ''),
+            rk.status_rencana_kinerja,
+            COALESCE(rk.catatan, ''),
+            rk.kode_opd,
+            rk.pegawai_id,
+            rk.created_at
+        FROM tb_rencana_kinerja rk
+        LEFT JOIN tb_sasaran_opd so ON rk.sasaranopd_id = so.id
+        WHERE ? BETWEEN rk.tahun_awal AND rk.tahun_akhir
+    `
+	params := []interface{}{tahun}
+
+	if pegawaiId != "" {
+		script += " AND rk.pegawai_id = ?"
+		params = append(params, pegawaiId)
+	}
+	if kodeOPD != "" {
+		script += " AND rk.kode_opd = ?"
+		params = append(params, kodeOPD)
+	}
+
+	script += " ORDER BY rk.created_at ASC"
+
+	rows, err := tx.QueryContext(ctx, script, params...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rencanaKinerjas []domain.RencanaKinerja
+	seenIds := make(map[string]bool)
+
+	for rows.Next() {
+		var rk domain.RencanaKinerja
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&rk.SasaranOpdId,
+			&rk.NamaSasaranOpd,
+			&rk.NamaRencanaKinerja,
+			&rk.TahunAwal,
+			&rk.TahunAkhir,
+			&rk.JenisPeriode,
+			&rk.StatusRencanaKinerja,
+			&rk.Catatan,
+			&rk.KodeOpd,
+			&rk.PegawaiId,
+			&rk.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if !seenIds[rk.Id] {
+			seenIds[rk.Id] = true
+			rencanaKinerjas = append(rencanaKinerjas, rk)
 		}
 	}
 

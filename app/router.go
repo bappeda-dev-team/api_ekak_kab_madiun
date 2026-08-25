@@ -81,8 +81,9 @@ func NewRouter(
 	router.DELETE("/rencana_kinerja/delete/:id", rencanaKinerjaController.Delete)
 	router.GET("/rencana_kinerja_pokin/pokin_by_pelaksana/:pegawai_id/:tahun", pohonKinerjaOpdController.FindPokinByPelaksana)
 	router.POST("/rencana_kinerja/create_level1", rencanaKinerjaController.CreateRekinLevel1)
-	router.PUT("/rencana_kinerja/update_level1/:id", rencanaKinerjaController.UpdateRekinLevel1)
+	// router.PUT("/rencana_kinerja/update_level1/:id", rencanaKinerjaController.UpdateRekinLevel1)
 	router.GET("/rencana_kinerja_level1/:id", rencanaKinerjaController.FindIdRekinLevel1)
+	router.GET("/rencana_kinerja_level1/findall/:pegawai_id/:kode_opd/:tahun", rencanaKinerjaController.FindAllRekinLevel1)
 	router.GET("/rencana_kinerja_level3/:kode_opd/:tahun", rencanaKinerjaController.FindRekinLevel3)
 	router.GET("/rencana_kinerja_opd/findall", rencanaKinerjaController.FindAll)
 	// router.GET("/rencana_kinerja_sasaran_opd/pegawai_level1/:pegawai_id/tahun/:tahun", rencanaKinerjaController.FindRekinSasaranOpd)
@@ -421,6 +422,7 @@ func NewRouter(
 	router.DELETE("/sasaran_opd/delete/:id", sasaranOpdController.Delete)
 	router.GET("/sasaran_opd/pokin/:id_pokin/tahun/:tahun", sasaranOpdController.FindByIdPokin)
 	router.GET("/sasaran_opd/renja/:kode_opd/:tahun/:jenis_periode", sasaranOpdController.FindByTahun)
+	router.GET("/sasaran_opd/pegawai_level_1/:nip/:kode_opd/:tahun", sasaranOpdController.FindByNipAndOpd)
 
 	//visi pemda
 	router.POST("/visi_pemda/create", visiPemdaController.Create)

@@ -15,6 +15,7 @@ type SasaranOpdController interface {
 	FindByIdPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindIdPokinSasaran(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindByNipAndOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindSasaranRenstra(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindSasaranRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindSasaranRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
