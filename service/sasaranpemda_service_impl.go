@@ -948,8 +948,9 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDual(
 	responses := make([]sasaranpemda.SasaranPemdaPenetapanDualResponse, 0, len(baseList))
 	for _, sp := range baseList {
 		resp := sasaranpemda.SasaranPemdaPenetapanDualResponse{
-			Id:           sp.Id,
-			SasaranPemda: sp.SasaranPemda,
+			Id:            sp.Id,
+			TujuanPemdaId: sp.TujuanPemdaId,
+			SasaranPemda:  sp.SasaranPemda,
 			Periode: sasaranpemda.PeriodeResponse{
 				TahunAwal:    sp.Periode.TahunAwal,
 				TahunAkhir:   sp.Periode.TahunAkhir,

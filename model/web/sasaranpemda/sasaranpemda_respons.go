@@ -97,8 +97,9 @@ type IndikatorPenetapanDualResponse struct {
 	TargetPenetapan     []TargetResponse `json:"target_penetapan"`
 }
 type SasaranPemdaPenetapanDualResponse struct {
-	Id           int                              `json:"id"`
-	SasaranPemda string                           `json:"sasaran_pemda"`
-	Periode      PeriodeResponse                  `json:"periode"`
-	Indikator    []IndikatorPenetapanDualResponse `json:"indikator"`
+	Id            int                              `json:"id"`
+	TujuanPemdaId int                              `json:"tujuan_pemda_id"`
+	SasaranPemda  string                           `json:"sasaran_pemda"`
+	Periode       PeriodeResponse                  `json:"periode"`
+	Indikator     []IndikatorPenetapanDualResponse `json:"indikator"`
 }
