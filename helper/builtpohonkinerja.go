@@ -529,14 +529,140 @@ func resolveOpdStrategic(sp domain.PohonKinerja, cloneToOpdStrategic map[string]
 	return domain.PohonKinerja{}, false
 }
 
-// buildOpdGroupsForParent mengelompokkan strategic pemda (level 4) yang merupakan
-// anak langsung dari parentId berdasarkan kode_opd. Di dalam setiap OPD group,
-// strategic di-resolve ke OPD asalnya lalu dikelompokkan lagi berdasarkan
+// buildBidangUrusanChilds mengelompokkan slice OPD strategic node berdasarkan
 // BidangUrusan → TujuanOpd (dengan indikator+target+sasaran_opd) → Strategic.
+func buildBidangUrusanChilds(
+	pohonMapOpd map[int]map[int][]domain.PohonKinerja,
+	tujuanOpdMap map[int]domain.TujuanOpd,
+	opdNodes []domain.PohonKinerja,
+) []interface{} {
+	type tujuanKey struct {
+		kodeBidangUrusan string
+		idTujuanOpd      int
+	}
+	bidangOrder := []string{}
+	bidangSeen := map[string]bool{}
+	tujuanOrder := map[string][]int{}
+	tujuanSeen := map[tujuanKey]bool{}
+	tujuanStrategics := map[tujuanKey][]domain.PohonKinerja{}
+	tujuanSasaran := map[tujuanKey][]string{}
+	tujuanSasaranSeen := map[tujuanKey]map[string]bool{}
+	bidangNama := map[string]string{}
+
+	for _, node := range opdNodes {
+		infos := node.SasaranInfo
+
+		if len(infos) == 0 {
+			tk := tujuanKey{kodeBidangUrusan: "", idTujuanOpd: 0}
+			if !bidangSeen[""] {
+				bidangSeen[""] = true
+				bidangOrder = append(bidangOrder, "")
+			}
+			if !tujuanSeen[tk] {
+				tujuanSeen[tk] = true
+				tujuanOrder[""] = append(tujuanOrder[""], 0)
+				tujuanSasaranSeen[tk] = map[string]bool{}
+			}
+			tujuanStrategics[tk] = append(tujuanStrategics[tk], node)
+			continue
+		}
+
+		primary := infos[0]
+		tk := tujuanKey{kodeBidangUrusan: primary.KodeBidangUrusan, idTujuanOpd: primary.IdTujuanOpd}
+
+		if !bidangSeen[primary.KodeBidangUrusan] {
+			bidangSeen[primary.KodeBidangUrusan] = true
+			bidangOrder = append(bidangOrder, primary.KodeBidangUrusan)
+			bidangNama[primary.KodeBidangUrusan] = primary.NamaBidangUrusan
+		}
+		if !tujuanSeen[tk] {
+			tujuanSeen[tk] = true
+			tujuanOrder[primary.KodeBidangUrusan] = append(tujuanOrder[primary.KodeBidangUrusan], primary.IdTujuanOpd)
+			tujuanSasaranSeen[tk] = map[string]bool{}
+		}
+		tujuanStrategics[tk] = append(tujuanStrategics[tk], node)
+
+		for _, info := range infos {
+			if info.IdTujuanOpd != primary.IdTujuanOpd {
+				continue
+			}
+			if !tujuanSasaranSeen[tk][info.NamaSasaranOpd] {
+				tujuanSasaranSeen[tk][info.NamaSasaranOpd] = true
+				tujuanSasaran[tk] = append(tujuanSasaran[tk], info.NamaSasaranOpd)
+			}
+		}
+	}
+
+	var bidangChilds []interface{}
+	for _, kodeBidang := range bidangOrder {
+		var tujuanChilds []interface{}
+		for _, idTujuan := range tujuanOrder[kodeBidang] {
+			tk := tujuanKey{kodeBidangUrusan: kodeBidang, idTujuanOpd: idTujuan}
+
+			var strategicChilds []interface{}
+			for _, opdNode := range tujuanStrategics[tk] {
+				strategicResp := BuildStrategicResponse(pohonMapOpd, opdNode)
+				strategicChilds = append(strategicChilds, strategicResp)
+			}
+
+			var indikatorResps []pohonkinerja.IndikatorResponse
+			if tj, ok := tujuanOpdMap[idTujuan]; ok {
+				for _, ind := range tj.Indikator {
+					var targets []pohonkinerja.TargetResponse
+					for _, t := range ind.Target {
+						targets = append(targets, pohonkinerja.TargetResponse{
+							Id:              t.Id,
+							IndikatorId:     t.IndikatorId,
+							TargetIndikator: t.Target,
+							SatuanIndikator: t.Satuan,
+							TahunSasaran:    t.Tahun,
+						})
+					}
+					indikatorResps = append(indikatorResps, pohonkinerja.IndikatorResponse{
+						Id:            ind.Id,
+						NamaIndikator: ind.Indikator,
+						Target:        targets,
+					})
+				}
+			}
+
+			namaTujuan := ""
+			if tj, ok := tujuanOpdMap[idTujuan]; ok {
+				namaTujuan = tj.Tujuan
+			} else if len(tujuanStrategics[tk]) > 0 {
+				for _, info := range tujuanStrategics[tk][0].SasaranInfo {
+					if info.IdTujuanOpd == idTujuan {
+						namaTujuan = info.NamaTujuanOpd
+						break
+					}
+				}
+			}
+
+			tujuanChilds = append(tujuanChilds, pohonkinerja.TujuanOpdStrategicGroupResponse{
+				Id:            idTujuan,
+				NamaTujuanOpd: namaTujuan,
+				Indikators:    indikatorResps,
+				SasaranOpd:    tujuanSasaran[tk],
+				Childs:        strategicChilds,
+			})
+		}
+
+		bidangChilds = append(bidangChilds, pohonkinerja.BidangUrusanGroupResponse{
+			NamaBidangUrusan: bidangNama[kodeBidang],
+			Childs:           tujuanChilds,
+		})
+	}
+	return bidangChilds
+}
+
+// buildOpdGroupsForParent mengelompokkan strategic pemda (level 4) yang merupakan
+// anak langsung dari parentId. Setiap pemda strategic di-resolve ke SEMUA OPD strategic
+// yang mengklonnya (via pemdaIdToAllOpdStrategics). OPD strategic kemudian
+// dikelompokkan per kode_opd → BidangUrusan → TujuanOpd → Strategic.
 func buildOpdGroupsForParent(
 	pohonMapPemda map[int]map[int][]domain.PohonKinerja,
 	pohonMapOpd map[int]map[int][]domain.PohonKinerja,
-	cloneToOpdStrategic map[string]domain.PohonKinerja,
+	pemdaIdToAllOpdStrategics map[int][]domain.PohonKinerja,
 	opdNamaMap map[string]string,
 	tujuanOpdMap map[int]domain.TujuanOpd,
 	parentId int,
@@ -546,179 +672,39 @@ func buildOpdGroupsForParent(
 		return nil
 	}
 
-	// Pertahankan urutan kode_opd sesuai kemunculan pertama
-	order := []string{}
-	groupMap := map[string][]domain.PohonKinerja{}
+	// Kumpulkan SEMUA OPD strategic node, deduplikasi by Id,
+	// lalu kelompokkan per kode_opd OPD (bukan pemda).
+	opdOrder := []string{}
+	opdGroupMap := map[string][]domain.PohonKinerja{}
+	seenOpdNodeId := map[int]bool{}
+
 	for _, sp := range strategicPemda {
-		if _, exists := groupMap[sp.KodeOpd]; !exists {
-			order = append(order, sp.KodeOpd)
+		allOpdNodes := pemdaIdToAllOpdStrategics[sp.Id]
+		for _, opdNode := range allOpdNodes {
+			if seenOpdNodeId[opdNode.Id] {
+				continue
+			}
+			seenOpdNodeId[opdNode.Id] = true
+			kode := opdNode.KodeOpd
+			if _, exists := opdGroupMap[kode]; !exists {
+				opdOrder = append(opdOrder, kode)
+			}
+			opdGroupMap[kode] = append(opdGroupMap[kode], opdNode)
 		}
-		groupMap[sp.KodeOpd] = append(groupMap[sp.KodeOpd], sp)
+	}
+
+	if len(opdGroupMap) == 0 {
+		return nil
 	}
 
 	var childs []interface{}
-	for _, kodeOpd := range order {
-		strategics := groupMap[kodeOpd]
-
-		// Resolve setiap strategic pemda → OPD strategic node
-		type resolvedStrategic struct {
-			opdNode domain.PohonKinerja
-		}
-		var resolved []resolvedStrategic
-		for _, sp := range strategics {
-			opdNode, found := resolveOpdStrategic(sp, cloneToOpdStrategic)
-			if !found {
-				continue
-			}
-			resolved = append(resolved, resolvedStrategic{opdNode: opdNode})
-		}
-		if len(resolved) == 0 {
-			continue
-		}
-
-		// ── Kelompokkan per BidangUrusan → per TujuanOpd ──
-		// Menggunakan kode_bidang_urusan sebagai key pengelompokan.
-		// Satu OPD strategic bisa punya multiple SasaranInfo → pilih tujuan_opd pertama per strategic
-		// agar tidak tampil di lebih dari satu grup TujuanOpd.
-		type tujuanKey struct {
-			kodeBidangUrusan string
-			idTujuanOpd      int
-		}
-		bidangOrder := []string{}
-		bidangSeen := map[string]bool{}
-		// bidangKode → tujuanId order
-		tujuanOrder := map[string][]int{}
-		tujuanSeen := map[tujuanKey]bool{}
-		// tujuanKey → strategic nodes
-		tujuanStrategics := map[tujuanKey][]domain.PohonKinerja{}
-		// tujuanKey → sasaran names (dedup)
-		tujuanSasaran := map[tujuanKey][]string{}
-		tujuanSasaranSeen := map[tujuanKey]map[string]bool{}
-		// bidangKode → nama
-		bidangNama := map[string]string{}
-
-		for _, rs := range resolved {
-			node := rs.opdNode
-			// Ambil info sasaran dari node (sudah di-populate di service)
-			infos := node.SasaranInfo
-
-			if len(infos) == 0 {
-				// Tidak ada sasaran OPD terhubung: masukkan ke grup kosong
-				tk := tujuanKey{kodeBidangUrusan: "", idTujuanOpd: 0}
-				if !bidangSeen[""] {
-					bidangSeen[""] = true
-					bidangOrder = append(bidangOrder, "")
-				}
-				if !tujuanSeen[tk] {
-					tujuanSeen[tk] = true
-					tujuanOrder[""] = append(tujuanOrder[""], 0)
-					tujuanSasaranSeen[tk] = map[string]bool{}
-				}
-				tujuanStrategics[tk] = append(tujuanStrategics[tk], node)
-				continue
-			}
-
-			// Gunakan tujuan_opd pertama sebagai kunci pengelompokan utama strategic ini
-			primary := infos[0]
-			tk := tujuanKey{kodeBidangUrusan: primary.KodeBidangUrusan, idTujuanOpd: primary.IdTujuanOpd}
-
-			if !bidangSeen[primary.KodeBidangUrusan] {
-				bidangSeen[primary.KodeBidangUrusan] = true
-				bidangOrder = append(bidangOrder, primary.KodeBidangUrusan)
-				bidangNama[primary.KodeBidangUrusan] = primary.NamaBidangUrusan
-			}
-			if !tujuanSeen[tk] {
-				tujuanSeen[tk] = true
-				tujuanOrder[primary.KodeBidangUrusan] = append(tujuanOrder[primary.KodeBidangUrusan], primary.IdTujuanOpd)
-				tujuanSasaranSeen[tk] = map[string]bool{}
-			}
-			tujuanStrategics[tk] = append(tujuanStrategics[tk], node)
-
-			// Kumpulkan semua nama sasaran yang terhubung dengan tujuan_opd ini
-			for _, info := range infos {
-				if info.IdTujuanOpd != primary.IdTujuanOpd {
-					continue
-				}
-				if !tujuanSasaranSeen[tk][info.NamaSasaranOpd] {
-					tujuanSasaranSeen[tk][info.NamaSasaranOpd] = true
-					tujuanSasaran[tk] = append(tujuanSasaran[tk], info.NamaSasaranOpd)
-				}
-			}
-		}
-
-		// ── Bangun hierarki BidangUrusan → TujuanOpd → Strategic ──
-		var bidangChilds []interface{}
-		for _, kodeBidang := range bidangOrder {
-			var tujuanChilds []interface{}
-			for _, idTujuan := range tujuanOrder[kodeBidang] {
-				tk := tujuanKey{kodeBidangUrusan: kodeBidang, idTujuanOpd: idTujuan}
-
-				// Build strategic responses untuk tujuan ini
-				var strategicChilds []interface{}
-				for _, opdNode := range tujuanStrategics[tk] {
-					strategicResp := BuildStrategicResponse(pohonMapOpd, opdNode)
-					strategicChilds = append(strategicChilds, strategicResp)
-				}
-
-				// Indikator tujuan_opd (dengan target + tahun)
-				var indikatorResps []pohonkinerja.IndikatorResponse
-				if tj, ok := tujuanOpdMap[idTujuan]; ok {
-					for _, ind := range tj.Indikator {
-						var targets []pohonkinerja.TargetResponse
-						for _, t := range ind.Target {
-							targets = append(targets, pohonkinerja.TargetResponse{
-								Id:              t.Id,
-								IndikatorId:     t.IndikatorId,
-								TargetIndikator: t.Target,
-								SatuanIndikator: t.Satuan,
-								TahunSasaran:    t.Tahun,
-							})
-						}
-						indikatorResps = append(indikatorResps, pohonkinerja.IndikatorResponse{
-							Id:            ind.Id,
-							NamaIndikator: ind.Indikator,
-							Target:        targets,
-						})
-					}
-				}
-
-				// Nama tujuan_opd
-				namaTujuan := ""
-				if tj, ok := tujuanOpdMap[idTujuan]; ok {
-					namaTujuan = tj.Tujuan
-				} else if len(tujuanStrategics[tk]) > 0 {
-					// fallback: ambil dari SasaranInfo
-					for _, info := range tujuanStrategics[tk][0].SasaranInfo {
-						if info.IdTujuanOpd == idTujuan {
-							namaTujuan = info.NamaTujuanOpd
-							break
-						}
-					}
-				}
-
-				tujuanChilds = append(tujuanChilds, pohonkinerja.TujuanOpdStrategicGroupResponse{
-					Id:            idTujuan,
-					NamaTujuanOpd: namaTujuan,
-					Indikators:    indikatorResps,
-					SasaranOpd:    tujuanSasaran[tk],
-					Childs:        strategicChilds,
-				})
-			}
-
-			bidangChilds = append(bidangChilds, pohonkinerja.BidangUrusanGroupResponse{
-				NamaBidangUrusan: bidangNama[kodeBidang],
-				Childs:           tujuanChilds,
-			})
-		}
-
-		displayKode := kodeOpd
-		if displayKode == "" && len(resolved) > 0 {
-			displayKode = resolved[0].opdNode.KodeOpd
-		}
+	for _, kodeOpd := range opdOrder {
+		opdNodes := opdGroupMap[kodeOpd]
+		bidangChilds := buildBidangUrusanChilds(pohonMapOpd, tujuanOpdMap, opdNodes)
 
 		childs = append(childs, pohonkinerja.OpdGroupResponse{
-			KodeOpd: displayKode,
-			NamaOpd: opdNamaMap[displayKode],
+			KodeOpd: kodeOpd,
+			NamaOpd: opdNamaMap[kodeOpd],
 			Childs:  bidangChilds,
 		})
 	}
@@ -731,7 +717,7 @@ func buildOpdGroupsForParent(
 func buildSubTematikOpdViewChilds(
 	pohonMapPemda map[int]map[int][]domain.PohonKinerja,
 	pohonMapOpd map[int]map[int][]domain.PohonKinerja,
-	cloneToOpdStrategic map[string]domain.PohonKinerja,
+	pemdaIdToAllOpdStrategics map[int][]domain.PohonKinerja,
 	opdNamaMap map[string]string,
 	tujuanOpdMap map[int]domain.TujuanOpd,
 	nodeId int,
@@ -740,7 +726,7 @@ func buildSubTematikOpdViewChilds(
 	var childs []interface{}
 
 	// OPD Groups dari strategic pemda yang langsung di bawah node ini
-	opdGroups := buildOpdGroupsForParent(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tujuanOpdMap, nodeId)
+	opdGroups := buildOpdGroupsForParent(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, nodeId)
 	childs = append(childs, opdGroups...)
 
 	// Sub-level berikutnya (mis. subsubtematik di bawah subtematik)
@@ -749,7 +735,7 @@ func buildSubTematikOpdViewChilds(
 		if subNodes, ok := pohonMapPemda[nextLevel][nodeId]; ok {
 			sort.Slice(subNodes, func(i, j int) bool { return subNodes[i].Id < subNodes[j].Id })
 			for _, sub := range subNodes {
-				subChilds := buildSubTematikOpdViewChilds(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tujuanOpdMap, sub.Id, nextLevel)
+				subChilds := buildSubTematikOpdViewChilds(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, sub.Id, nextLevel)
 
 				switch nextLevel {
 				case 2:
@@ -792,14 +778,15 @@ func buildSubTematikOpdViewChilds(
 
 // BuildTematikOpdViewResponse membangun TematikResponse untuk endpoint OPD View.
 // Perbedaan dari BuildTematikResponse biasa:
-//   - Strategic pemda (level 4) di-resolve ke strategic OPD via clone_from
-//   - Di dalam OpdGroup, strategic dikelompokkan: BidangUrusan → TujuanOpd → Strategic
+//   - Setiap pemda strategic (level 4) di-resolve ke SEMUA OPD strategic yang mengklonnya
+//   - OPD strategic dikelompokkan per kode_opd → BidangUrusan → TujuanOpd → Strategic
 //   - tujuanOpdMap berisi data tujuan OPD lengkap (indikator + target renstra)
+//   - pemdaIdToAllOpdStrategics: pemdaStrategicId → semua OPD strategic (dengan SasaranInfo)
 //   - Tactical & operational diambil dari pohon OPD (pohonMapOpd), bukan pohon pemda
 func BuildTematikOpdViewResponse(
 	pohonMapPemda map[int]map[int][]domain.PohonKinerja,
 	pohonMapOpd map[int]map[int][]domain.PohonKinerja,
-	cloneToOpdStrategic map[string]domain.PohonKinerja,
+	pemdaIdToAllOpdStrategics map[int][]domain.PohonKinerja,
 	opdNamaMap map[string]string,
 	tujuanOpdMap map[int]domain.TujuanOpd,
 	tematik domain.PohonKinerja,
@@ -807,14 +794,14 @@ func BuildTematikOpdViewResponse(
 	var childs []interface{}
 
 	// OPD Groups dari strategic pemda langsung di bawah tematik
-	opdGroups := buildOpdGroupsForParent(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tujuanOpdMap, tematik.Id)
+	opdGroups := buildOpdGroupsForParent(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, tematik.Id)
 	childs = append(childs, opdGroups...)
 
 	// Subtematik (level 1) di bawah tematik
 	if subTematiks, ok := pohonMapPemda[1][tematik.Id]; ok {
 		sort.Slice(subTematiks, func(i, j int) bool { return subTematiks[i].Id < subTematiks[j].Id })
 		for _, st := range subTematiks {
-			subChilds := buildSubTematikOpdViewChilds(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tujuanOpdMap, st.Id, 1)
+			subChilds := buildSubTematikOpdViewChilds(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, st.Id, 1)
 
 			subResp := pohonkinerja.SubtematikResponse{
 				Id:           st.Id,

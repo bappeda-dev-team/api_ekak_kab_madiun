@@ -3525,13 +3525,41 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarkiOpdView(c
 		applyBatchOpdView(&opdPokins[i], true)
 	}
 
+	// ── 13b. Lookup pemdaStrategicId → semua OPD strategic node (dengan SasaranInfo) ──
+	// Dibangun dari opdPokins (setelah SasaranInfo di-populate) menggunakan field clone_from.
+	// Menggantikan peran cloneToOpdStrategic yang tidak bisa menangani kasus
+	// satu pemda strategic diklaim oleh banyak OPD sekaligus.
+	pemdaIdToAllOpdStrategics := make(map[int][]domain.PohonKinerja)
 	for _, p := range opdPokins {
-		if p.LevelPohon == 4 && p.Parent == 0 {
-			// update entry di cloneToOpdStrategic yang memiliki Id sama
-			for key, existing := range cloneToOpdStrategic {
-				if existing.Id == p.Id {
-					cloneToOpdStrategic[key] = p
+		if p.LevelPohon == 4 && p.Parent == 0 && p.CloneFrom > 0 {
+			pemdaIdToAllOpdStrategics[p.CloneFrom] = append(pemdaIdToAllOpdStrategics[p.CloneFrom], p)
+		}
+	}
+	// Fallback: alur tarik OPD → pemda (pemda strategic mempunyai clone_from = id OPD strategic)
+	opdPokinById := make(map[int]domain.PohonKinerja)
+	for _, p := range opdPokins {
+		if p.LevelPohon == 4 {
+			opdPokinById[p.Id] = p
+		}
+	}
+	for _, p := range pemdaPokins {
+		if p.LevelPohon != 4 || p.Status != "disetujui" || p.CloneFrom == 0 {
+			continue
+		}
+		if len(opdStrategicByPemdaSource[p.Id]) > 0 {
+			continue // sudah ditangani di path utama
+		}
+		if opd, ok := opdPokinById[p.CloneFrom]; ok {
+			// Cek apakah belum ada agar tidak duplikat
+			alreadyAdded := false
+			for _, existing := range pemdaIdToAllOpdStrategics[p.Id] {
+				if existing.Id == opd.Id {
+					alreadyAdded = true
+					break
 				}
+			}
+			if !alreadyAdded {
+				pemdaIdToAllOpdStrategics[p.Id] = append(pemdaIdToAllOpdStrategics[p.Id], opd)
 			}
 		}
 	}
@@ -3561,5 +3589,5 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarkiOpdView(c
 	}
 
 	tematikNode := tematikNodes[0]
-	return helper.BuildTematikOpdViewResponse(pohonMapPemda, pohonMapOpd, cloneToOpdStrategic, opdNamaMap, tujuanOpdMap, tematikNode), nil
+	return helper.BuildTematikOpdViewResponse(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, tematikNode), nil
 }

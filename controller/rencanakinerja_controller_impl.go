@@ -242,6 +242,17 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRincianKak(writer http.Re
 // 	helper.WriteToResponseBody(writer, webResponse)
 // }
 
+// docs swagger Rencana Kinerja
+// @Summary      Create Rekin Level 1
+// @Description  Membuat rekin level 1.
+// @Tags         Rencana Kinerja
+// @Accept       json
+// @Produce      json
+// @Param        rencana_kinerja_create_request body rencanakinerja.RencanaKinerjaCreateRequest true "Rencana Kinerja Create Request"
+// @Success      200  {object}  web.WebRencanaKinerjaResponse{data=rencanakinerja.RencanaKinerjaResponse}
+// @Failure      400  {object}  web.WebRencanaKinerjaResponse
+// @Security     BearerAuth
+// @Router       /rencana_kinerja/create_level1 [post]
 func (controller *RencanaKinerjaControllerImpl) CreateRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	rencanaKinerjaCreateRequest := rencanakinerja.RencanaKinerjaCreateRequest{}
 	helper.ReadFromRequestBody(request, &rencanaKinerjaCreateRequest)
@@ -317,6 +328,30 @@ func (controller *RencanaKinerjaControllerImpl) FindIdRekinLevel1(writer http.Re
 		Code:   200,
 		Status: "OK",
 		Data:   rencanaKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	pegawaiId := params.ByName("pegawai_id")
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	responses, err := controller.rencanaKinerjaService.FindAllRekinLevel1(request.Context(), pegawaiId, kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   responses,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }

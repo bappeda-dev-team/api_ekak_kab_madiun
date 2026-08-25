@@ -303,10 +303,10 @@ func (controller *SasaranOpdControllerImpl) FindByTahun(writer http.ResponseWrit
 // @Param        nip  path     string  true  "NIP"   example("1234567890")
 // @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
 // @Param        tahun     path     string  true  "Tahun"      example("2025")
-// @Success      200  {object}  web.WebResponse{data=[]sasaranopd.SasaranOpdResponse}
+// @Success      200  {object}  web.WebResponse{data=[]sasaranopd.SasaranOpdByNipResponse}
 // @Failure      400  {object}  web.WebResponse
 // @Security     BearerAuth
-// @Router       /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun} [get]
+// @Router       /sasaran_opd/pegawai/{nip}/{kode_opd}/{tahun} [get]
 func (controller *SasaranOpdControllerImpl) FindByNipAndOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	nip := params.ByName("nip")
 	kodeOpd := params.ByName("kode_opd")

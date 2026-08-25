@@ -53,6 +53,27 @@ type TargetResponse struct {
 	Satuan string `json:"satuan"`
 }
 
+// SasaranOpdByNipResponse — flat response untuk endpoint FindByNipAndOpd.
+// Setiap item mewakili satu kombinasi pohon-kinerja + sasaran-opd.
+type SasaranOpdByNipResponse struct {
+	IdPohon        int                    `json:"id_pohon"`
+	KodeOpd        string                 `json:"kode_opd"`
+	NamaOpd        string                 `json:"nama_opd"`
+	NamaPohon      string                 `json:"nama_pohon"`
+	JenisPohon     string                 `json:"jenis_pohon"`
+	TahunPohon     string                 `json:"tahun_pohon"`
+	LevelPohon     int                    `json:"level_pohon"`
+	IdSasaranOpd   string                 `json:"id_sasaran_opd"`
+	NamaSasaranOpd string                 `json:"nama_sasaran_opd"`
+	IdTujuanOpd    int                    `json:"id_tujuan_opd"`
+	NamaTujuanOpd  string                 `json:"nama_tujuan_opd"`
+	TahunAwal      string                 `json:"tahun_awal"`
+	TahunAkhir     string                 `json:"tahun_akhir"`
+	JenisPeriode   string                 `json:"jenis_periode"`
+	Indikator      []IndikatorResponse    `json:"indikator"`
+	Pelaksana      []PelaksanaOpdResponse `json:"pelaksana"`
+}
+
 // respons create update
 
 type SasaranOpdCreateResponse struct {

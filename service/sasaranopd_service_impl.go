@@ -790,26 +790,24 @@ func (service *SasaranOpdServiceImpl) FindByTahun(ctx context.Context, kodeOpd s
 
 func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
 	ctx context.Context, nip, kodeOpd, tahun string,
-) ([]sasaranopd.SasaranOpdResponse, error) {
+) ([]sasaranopd.SasaranOpdByNipResponse, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
 
-	if _, err := strconv.Atoi(tahun); err != nil {
+	tahunInt, err := strconv.Atoi(tahun)
+	if err != nil {
 		return nil, fmt.Errorf("format tahun tidak valid")
 	}
 
 	sasaranOpds, err := s.sasaranOpdRepository.FindByNipAndOpd(ctx, tx, nip, kodeOpd, tahun)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return []sasaranopd.SasaranOpdResponse{}, nil
-		}
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	if len(sasaranOpds) == 0 {
-		return []sasaranopd.SasaranOpdResponse{}, nil
+		return []sasaranopd.SasaranOpdByNipResponse{}, nil
 	}
 
 	opd, err := s.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
@@ -817,43 +815,39 @@ func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
 		return nil, err
 	}
 
-	tahunInt, _ := strconv.Atoi(tahun)
-	var responses []sasaranopd.SasaranOpdResponse
+	// Deduplikasi: satu item per kombinasi (pokinId, sasaranId)
+	seen := make(map[string]bool)
+	var responses []sasaranopd.SasaranOpdByNipResponse
+
 	for _, soData := range sasaranOpds {
-		resp := sasaranopd.SasaranOpdResponse{
-			IdPohon:    soData.IdPohon,
-			KodeOpd:    soData.KodeOpd,
-			NamaOpd:    opd.NamaOpd,
-			NamaPohon:  soData.NamaPohon,
-			JenisPohon: soData.JenisPohon,
-			LevelPohon: soData.LevelPohon,
-			TahunPohon: soData.TahunPohon,
-			Pelaksana:  make([]sasaranopd.PelaksanaOpdResponse, 0),
-			SasaranOpd: make([]sasaranopd.SasaranOpdDetailResponse, 0),
-		}
+		// Bangun daftar pelaksana untuk pokin ini
+		pelaksanaList := make([]sasaranopd.PelaksanaOpdResponse, 0, len(soData.Pelaksana))
 		for _, pl := range soData.Pelaksana {
-			resp.Pelaksana = append(resp.Pelaksana, sasaranopd.PelaksanaOpdResponse{
+			pelaksanaList = append(pelaksanaList, sasaranopd.PelaksanaOpdResponse{
 				Id: pl.Id, PegawaiId: pl.PegawaiId,
 				Nip: pl.Nip, NamaPegawai: pl.NamaPegawai,
 			})
 		}
+
 		for _, sasaran := range soData.SasaranOpd {
+			// Lewati jika tahun tidak dalam range sasaran
 			tahunAwalInt, _ := strconv.Atoi(sasaran.TahunAwal)
 			tahunAkhirInt, _ := strconv.Atoi(sasaran.TahunAkhir)
 			if tahunInt < tahunAwalInt || tahunInt > tahunAkhirInt {
 				continue
 			}
-			tujuanOpd, _ := s.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
-			sasResp := sasaranopd.SasaranOpdDetailResponse{
-				Id:             strconv.Itoa(sasaran.Id),
-				NamaSasaranOpd: sasaran.NamaSasaranOpd,
-				IdTujuanOpd:    tujuanOpd.Id,
-				NamaTujuanOpd:  tujuanOpd.Tujuan,
-				TahunAwal:      sasaran.TahunAwal,
-				TahunAkhir:     sasaran.TahunAkhir,
-				JenisPeriode:   sasaran.JenisPeriode,
-				Indikator:      make([]sasaranopd.IndikatorResponse, 0),
+
+			// Cegah duplikat (pokin, sasaran) yang sama
+			key := fmt.Sprintf("%d|%d", soData.IdPohon, sasaran.Id)
+			if seen[key] {
+				continue
 			}
+			seen[key] = true
+
+			tujuanOpd, _ := s.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
+
+			// Bangun daftar indikator
+			indikatorList := make([]sasaranopd.IndikatorResponse, 0)
 			for _, ind := range sasaran.Indikator {
 				indResp := sasaranopd.IndikatorResponse{
 					Id:               ind.Id,
@@ -869,16 +863,27 @@ func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
 						})
 					}
 				}
-				if len(indResp.Target) > 0 {
-					sasResp.Indikator = append(sasResp.Indikator, indResp)
-				}
+				indikatorList = append(indikatorList, indResp)
 			}
-			if len(sasResp.Indikator) > 0 {
-				resp.SasaranOpd = append(resp.SasaranOpd, sasResp)
-			}
-		}
-		if len(resp.SasaranOpd) > 0 {
-			responses = append(responses, resp)
+
+			responses = append(responses, sasaranopd.SasaranOpdByNipResponse{
+				IdPohon:        soData.IdPohon,
+				KodeOpd:        soData.KodeOpd,
+				NamaOpd:        opd.NamaOpd,
+				NamaPohon:      soData.NamaPohon,
+				JenisPohon:     soData.JenisPohon,
+				TahunPohon:     soData.TahunPohon,
+				LevelPohon:     soData.LevelPohon,
+				IdSasaranOpd:   strconv.Itoa(sasaran.Id),
+				NamaSasaranOpd: sasaran.NamaSasaranOpd,
+				IdTujuanOpd:    tujuanOpd.Id,
+				NamaTujuanOpd:  tujuanOpd.Tujuan,
+				TahunAwal:      sasaran.TahunAwal,
+				TahunAkhir:     sasaran.TahunAkhir,
+				JenisPeriode:   sasaran.JenisPeriode,
+				Indikator:      indikatorList,
+				Pelaksana:      pelaksanaList,
+			})
 		}
 	}
 	return responses, nil
