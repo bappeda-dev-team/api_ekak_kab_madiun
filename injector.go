@@ -397,7 +397,7 @@ var kelompokAnggaranSet = wire.NewSet(
 )
 
 var isustrategisSet = wire.NewSet(
-	repository.NewCSFRepositoryImpl,
+	// repository.NewCSFRepositoryImpl,
 	service.NewCSFService,
 	controller.NewCSFControllerImpl,
 )
@@ -427,6 +427,32 @@ var pkOpdSet = wire.NewSet(
 	wire.Bind(new(service.PkService), new(*service.PkServiceImpl)),
 	controller.NewPkControllerImpl,
 	wire.Bind(new(controller.PkController), new(*controller.PkControllerImpl)),
+)
+
+var pptkSet = wire.NewSet(
+	repository.NewPptkRepositoryImpl,
+	wire.Bind(new(repository.PptkRepository), new(*repository.PptkRepositoryImpl)),
+	service.NewPptkServiceImpl,
+	wire.Bind(new(service.PptkService), new(*service.PptkServiceImpl)),
+	controller.NewPptkControllerImpl,
+	wire.Bind(new(controller.PptkController), new(*controller.PptkControllerImpl)),
+)
+
+var strategicArahKebijakanPemdaSet = wire.NewSet(
+	repository.NewCSFRepositoryImpl,
+	wire.Bind(new(repository.CSFRepository), new(*repository.CSFRepositoryImpl)),
+	service.NewStrategicArahKebijakanPemdaServiceImpl,
+	wire.Bind(new(service.StrategicArahKebijakanPemdaService), new(*service.StrategicArahKebijakanPemdaServiceImpl)),
+	controller.NewStrategicArahKebijakanPemdaControllerImpl,
+	wire.Bind(new(controller.StrategicArahKebijakanPemdaController), new(*controller.StrategicArahKebijakanPemdaControllerImpl)),
+)
+var programPrioritasPusatSet = wire.NewSet(
+	repository.NewProgramPrioritasPusatRepositoryImpl,
+	wire.Bind(new(repository.ProgramPrioritasPusatRepository), new(*repository.ProgramPrioritasPusatRepositoryImpl)),
+	service.NewProgramPrioritasPusatServiceImpl,
+	wire.Bind(new(service.ProgramPrioritasPusatService), new(*service.ProgramPrioritasPusatServiceImpl)),
+	controller.NewProgramPrioritasPusatControllerImpl,
+	wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)),
 )
 
 var strukturOrganisasiSet = wire.NewSet(
@@ -501,6 +527,9 @@ func InitializeServer() *http.Server {
 		programUnggulanSet,
 		matrixRenjaSet,
 		pkOpdSet,
+		pptkSet,
+		strategicArahKebijakanPemdaSet,
+		programPrioritasPusatSet,
 		strukturOrganisasiSet,
 		jabatanPegawaiSet,
 		cloneRecordSet,

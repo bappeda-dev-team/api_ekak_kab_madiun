@@ -60,7 +60,7 @@ func NewRouter(
 	programPrioritasPusatController controller.ProgramPrioritasPusatController,
 	matrixRenjaController controller.MatrixRenjaController,
 	pkController controller.PkController,
-	strategicArahKebijakanController controller.SrategicArahKebijakanPemdaController,
+	strategicArahKebijakanController controller.StrategicArahKebijakanPemdaController,
 	pptkController controller.PptkController,
 ) *httprouter.Router {
 	router := httprouter.New()
