@@ -1,0 +1,1 @@
+ALTER TABLE tb_arah_kebijakan MODIFY COLUMN arah_kebijakan VARCHAR(255);

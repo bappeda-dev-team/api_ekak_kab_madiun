@@ -14,13 +14,12 @@ import (
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
-	"github.com/go-playground/validator/v10"
-	"github.com/google/wire"
 	"net/http"
 	"time"
-)
 
-import (
+	"github.com/go-playground/validator/v10"
+	"github.com/google/wire"
+
 	_ "ekak_kabupaten_madiun/docs"
 )
 
@@ -214,12 +213,6 @@ func InitializeServer() *http.Server {
 	arahKebijakanRepositoryImpl := repository.NewArahKebijakanRepositoryImpl()
 	arahkebijakanServiceImpl := service.NewArahKebijakanServiceImpl(arahKebijakanRepositoryImpl, db, validate)
 	arahkebijakanControllerImpl := controller.NewArahKebijakanControllerImpl(arahkebijakanServiceImpl)
-	isuNasionalRepositoryImpl := repository.NewIsuNasionalRepositoryImpl()
-	isuNasionalServiceImpl := service.NewIsuNasionalServiceImpl(isuNasionalRepositoryImpl, db, validate)
-	isuNasionalControllerImpl := controller.NewIsuNasionalControllerImpl(isuNasionalServiceImpl)
-	isuRegionalRepositoryImpl := repository.NewIsuRegionalRepositoryImpl()
-	isuRegionalServiceImpl := service.NewIsuRegionalServiceImpl(isuRegionalRepositoryImpl, db, validate)
-	isuRegionalControllerImpl := controller.NewIsuRegionalControllerImpl(isuRegionalServiceImpl)
 	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl, nspkControllerImpl, nspkOpdControllerImpl, arahkebijakanControllerImpl)
 	authMiddleware := middleware.NewAuthMiddleware(router)
 	server := NewServer(authMiddleware)
