@@ -8,6 +8,7 @@ type SasaranOpdResponse struct {
 	JenisPohon string                     `json:"jenis_pohon"`
 	TahunPohon string                     `json:"tahun_pohon"`
 	LevelPohon int                        `json:"level_pohon"`
+	IsHide     bool                       `json:"is_hide"`
 	Pelaksana  []PelaksanaOpdResponse     `json:"pelaksana"`
 	SasaranOpd []SasaranOpdDetailResponse `json:"sasaran_opd"`
 }
@@ -63,6 +64,7 @@ type SasaranOpdByNipResponse struct {
 	JenisPohon     string                 `json:"jenis_pohon"`
 	TahunPohon     string                 `json:"tahun_pohon"`
 	LevelPohon     int                    `json:"level_pohon"`
+	IsHide         bool                   `json:"is_hide"`
 	IdSasaranOpd   string                 `json:"id_sasaran_opd"`
 	NamaSasaranOpd string                 `json:"nama_sasaran_opd"`
 	IdTujuanOpd    int                    `json:"id_tujuan_opd"`

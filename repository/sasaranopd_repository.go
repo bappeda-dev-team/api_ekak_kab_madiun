@@ -26,4 +26,7 @@ type SasaranOpdRepository interface {
 	// FindSasaranTujuanByPokinIdsBatch mengambil ringkasan sasaran OPD (nama saja),
 	// tujuan OPD, dan bidang urusan secara batch berdasarkan pokin_id (strategic level 4).
 	FindSasaranTujuanByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.SasaranPokinInfo, error)
+	// GetIsHideByPokinIds mengambil nilai is_hide dari tb_sasaran_opd_view secara batch.
+	// Key map adalah id_pokin; nilai true berarti is_hide=1, false berarti tidak ada entri atau is_hide=0.
+	GetIsHideByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]bool, error)
 }

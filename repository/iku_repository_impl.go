@@ -235,55 +235,58 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 	// Query untuk mengambil indikator dari tujuan OPD
 	scriptTujuan := `
        SELECT 
-		'Tujuan OPD' as jenis,
-		t.id as parent_id,
-		t.tujuan as nama_parent,
-		i.kode_indikator as indikator_id,
-		i.indikator,
-		COALESCE(i.definisi_operasional, '') as definisi_operasional,
-		COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
-		COALESCE(i.sumber_data, '') as sumber_data,
-		i.iku_active,
-		tg.id as target_id,
-		tg.target,
-		tg.satuan,
-		tg.tahun
-		FROM tb_tujuan_opd t
-		LEFT JOIN tb_indikator_matrix i ON t.id = i.tujuan_opd_id AND i.jenis = 'renstra'
-		LEFT JOIN tb_target tg ON i.kode_indikator = tg.indikator_id
-		WHERE t.kode_opd = ?
-		AND t.tahun_awal = ?
-		AND t.tahun_akhir = ?
-		AND t.jenis_periode = ?
-		AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
+	'Tujuan OPD' as jenis,
+	t.id as parent_id,
+	t.tujuan as nama_parent,
+	i.kode_indikator as indikator_id,
+	i.indikator,
+	COALESCE(i.definisi_operasional, '') as definisi_operasional,
+	COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
+	COALESCE(i.sumber_data, '') as sumber_data,
+	i.iku_active,
+	tg.id as target_id,
+	tg.target,
+	tg.satuan,
+	tg.tahun,
+	false as is_hide
+	FROM tb_tujuan_opd t
+	LEFT JOIN tb_indikator_matrix i ON t.id = i.tujuan_opd_id AND i.jenis = 'renstra'
+	LEFT JOIN tb_target tg ON i.kode_indikator = tg.indikator_id
+	WHERE t.kode_opd = ?
+	AND t.tahun_awal = ?
+	AND t.tahun_akhir = ?
+	AND t.jenis_periode = ?
+	AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
     `
 
 	// Query untuk mengambil indikator dari sasaran OPD
 	scriptSasaran := `
 	SELECT 
-		'Sasaran OPD' as jenis,
-		so.id as parent_id,
-		so.nama_sasaran_opd as nama_parent,
-		i.kode_indikator as indikator_id,
-		i.indikator,
-		COALESCE(i.definisi_operasional, '') as definisi_operasional,
-		COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
-		COALESCE(i.sumber_data, '') as sumber_data,
-		i.iku_active,
-		tg.id as target_id,
-		tg.target,
-		tg.satuan,
-		tg.tahun
-		FROM tb_sasaran_opd so
-		INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
-		LEFT JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id AND i.jenis = 'renstra'
-		LEFT JOIN tb_target tg ON i.kode_indikator = tg.indikator_id
-		WHERE pk.kode_opd = ?
-		AND so.tahun_awal = ?
-		AND so.tahun_akhir = ?
-		AND so.jenis_periode = ?
-		AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
-		`
+	'Sasaran OPD' as jenis,
+	so.id as parent_id,
+	so.nama_sasaran_opd as nama_parent,
+	i.kode_indikator as indikator_id,
+	i.indikator,
+	COALESCE(i.definisi_operasional, '') as definisi_operasional,
+	COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
+	COALESCE(i.sumber_data, '') as sumber_data,
+	i.iku_active,
+	tg.id as target_id,
+	tg.target,
+	tg.satuan,
+	tg.tahun,
+	COALESCE(sov.is_hide, 0) as is_hide
+	FROM tb_sasaran_opd so
+	INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+	LEFT JOIN tb_sasaran_opd_view sov ON pk.id = sov.id_pokin
+	LEFT JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id AND i.jenis = 'renstra'
+	LEFT JOIN tb_target tg ON i.kode_indikator = tg.indikator_id
+	WHERE pk.kode_opd = ?
+	AND so.tahun_awal = ?
+	AND so.tahun_akhir = ?
+	AND so.jenis_periode = ?
+	AND (tg.tahun IS NULL OR (CAST(tg.tahun AS SIGNED) BETWEEN CAST(? AS SIGNED) AND CAST(? AS SIGNED)))
+	`
 
 	// Map untuk menyimpan hasil
 	ikuMap := make(map[string]*domain.Indikator)
@@ -321,6 +324,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 				target                       sql.NullString
 				satuan                       sql.NullString
 				tahun                        sql.NullString
+				isHide                       sql.NullBool
 			)
 			err := rows.Scan(
 				&jenis,
@@ -336,6 +340,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 				&target,
 				&satuan,
 				&tahun,
+				&isHide,
 			)
 			if err != nil {
 				return err
@@ -343,6 +348,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 
 			// iku active / not
 			active := ikuActive.Valid && ikuActive.Bool
+			hide := isHide.Valid && isHide.Bool
 
 			// Skip jika indikatorId NULL
 			if !indikatorId.Valid {
@@ -374,6 +380,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpd(ctx context.Context, tx *sql.
 					JenisPeriode:        jenisPeriode,
 					Target:              emptyTargets,
 					IkuActive:           active,
+					IsHide:              hide,
 				}
 				ikuMap[key] = iku
 			}
@@ -488,51 +495,54 @@ func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sq
 	// Renja: tujuan/sasaran yang periode-nya mencakup tahun; indikator hanya jika ada target di tb_target untuk tahun tersebut.
 	scriptTujuan := `
        SELECT 
-		'Tujuan OPD' as jenis,
-		t.id as parent_id,
-		t.tujuan as nama_parent,
-		i.kode_indikator as indikator_id,
-		i.indikator,
-		COALESCE(i.definisi_operasional, '') as definisi_operasional,
-		COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
-		COALESCE(i.sumber_data, '') as sumber_data,
-		i.iku_active,
-		tg.id as target_id,
-		tg.target,
-		tg.satuan,
-		tg.tahun
-		FROM tb_tujuan_opd t
-		INNER JOIN tb_indikator_matrix i ON t.id = i.tujuan_opd_id AND i.jenis = ?
-		INNER JOIN tb_target tg ON i.kode_indikator = tg.indikator_id AND tg.tahun = ?
-		WHERE t.kode_opd = ?
-		AND t.jenis_periode = ?
-		AND CAST(t.tahun_awal AS SIGNED) <= CAST(? AS SIGNED)
-		AND CAST(t.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
+	'Tujuan OPD' as jenis,
+	t.id as parent_id,
+	t.tujuan as nama_parent,
+	i.kode_indikator as indikator_id,
+	i.indikator,
+	COALESCE(i.definisi_operasional, '') as definisi_operasional,
+	COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
+	COALESCE(i.sumber_data, '') as sumber_data,
+	i.iku_active,
+	tg.id as target_id,
+	tg.target,
+	tg.satuan,
+	tg.tahun,
+	false as is_hide
+	FROM tb_tujuan_opd t
+	INNER JOIN tb_indikator_matrix i ON t.id = i.tujuan_opd_id AND i.jenis = ?
+	INNER JOIN tb_target tg ON i.kode_indikator = tg.indikator_id AND tg.tahun = ?
+	WHERE t.kode_opd = ?
+	AND t.jenis_periode = ?
+	AND CAST(t.tahun_awal AS SIGNED) <= CAST(? AS SIGNED)
+	AND CAST(t.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
     `
 	scriptSasaran := `
 	SELECT 
-		'Sasaran OPD' as jenis,
-		so.id as parent_id,
-		so.nama_sasaran_opd as nama_parent,
-		i.kode_indikator as indikator_id,
-		i.indikator,
-		COALESCE(i.definisi_operasional, '') as definisi_operasional,
-		COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
-		COALESCE(i.sumber_data, '') as sumber_data,
-		i.iku_active,
-		tg.id as target_id,
-		tg.target,
-		tg.satuan,
-		tg.tahun
-		FROM tb_sasaran_opd so
-		INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
-		INNER JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id AND i.jenis = ?
-		INNER JOIN tb_target tg ON i.kode_indikator = tg.indikator_id AND tg.tahun = ?
-		WHERE pk.kode_opd = ?
-		AND so.jenis_periode = ?
-		AND CAST(so.tahun_awal AS SIGNED) <= CAST(? AS SIGNED)
-		AND CAST(so.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
-		`
+	'Sasaran OPD' as jenis,
+	so.id as parent_id,
+	so.nama_sasaran_opd as nama_parent,
+	i.kode_indikator as indikator_id,
+	i.indikator,
+	COALESCE(i.definisi_operasional, '') as definisi_operasional,
+	COALESCE(i.rumus_perhitungan, '') as rumus_perhitungan,
+	COALESCE(i.sumber_data, '') as sumber_data,
+	i.iku_active,
+	tg.id as target_id,
+	tg.target,
+	tg.satuan,
+	tg.tahun,
+	COALESCE(sov.is_hide, 0) as is_hide
+	FROM tb_sasaran_opd so
+	INNER JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+	LEFT JOIN tb_sasaran_opd_view sov ON pk.id = sov.id_pokin
+	INNER JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id AND i.jenis = ?
+	INNER JOIN tb_target tg ON i.kode_indikator = tg.indikator_id AND tg.tahun = ?
+	WHERE pk.kode_opd = ?
+	AND so.jenis_periode = ?
+	AND CAST(so.tahun_awal AS SIGNED) <= CAST(? AS SIGNED)
+	AND CAST(so.tahun_akhir AS SIGNED) >= CAST(? AS SIGNED)
+	`
 	ikuMap := make(map[string]*domain.Indikator)
 	processRows := func(rows *sql.Rows) error {
 		for rows.Next() {
@@ -547,6 +557,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sq
 				target                       sql.NullString
 				satuan                       sql.NullString
 				tahunTarget                  sql.NullString
+				isHide                       sql.NullBool
 			)
 			err := rows.Scan(
 				&jenis,
@@ -562,11 +573,13 @@ func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sq
 				&target,
 				&satuan,
 				&tahunTarget,
+				&isHide,
 			)
 			if err != nil {
 				return err
 			}
 			active := ikuActive.Valid && ikuActive.Bool
+			hide := isHide.Valid && isHide.Bool
 			if !indikatorId.Valid || !targetId.Valid || !tahunTarget.Valid {
 				continue
 			}
@@ -596,6 +609,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sq
 					Jenis:            jenisIndikator,
 					Target:           []domain.Target{tg},
 					IkuActive:        active,
+					IsHide:           hide,
 				}
 				ikuRow.DefinisiOperasional = definisiOperasional
 				ikuMap[key] = ikuRow

@@ -1917,3 +1917,38 @@ func (repository *SasaranOpdRepositoryImpl) FindSasaranTujuanByPokinIdsBatch(
 	}
 	return result, rows.Err()
 }
+
+func (repository *SasaranOpdRepositoryImpl) GetIsHideByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]bool, error) {
+	result := make(map[int]bool)
+	if len(pokinIds) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(
+		"SELECT id_pokin, is_hide FROM tb_sasaran_opd_view WHERE id_pokin IN (%s)",
+		strings.Join(placeholders, ","),
+	)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return result, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pokinId int
+		var isHide bool
+		if err := rows.Scan(&pokinId, &isHide); err != nil {
+			return result, err
+		}
+		result[pokinId] = isHide
+	}
+	return result, rows.Err()
+}

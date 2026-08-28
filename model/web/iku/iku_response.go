@@ -28,6 +28,7 @@ type IkuOpdResponse struct {
 	AsalIku             string              `json:"asal_iku"`
 	Indikator           string              `json:"indikator"`
 	IkuActive           bool                `json:"iku_active"`
+	IsHide              bool                `json:"is_hide"`
 	CreatedAt           time.Time           `json:"created_at"`
 	DefinisiOperasional string              `json:"definisi_operasional"`
 	RumusPerhitungan    string              `json:"rumus_perhitungan"`
