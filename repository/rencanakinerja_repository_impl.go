@@ -360,6 +360,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAllRekinLevel1(ctx context.C
             rk.id_pohon,
             COALESCE(rk.sasaranopd_id, 0),
             COALESCE(so.nama_sasaran_opd, ''),
+            COALESCE(sov.is_hide, 0) as is_hide_sasaran_opd,
             rk.nama_rencana_kinerja,
             rk.tahun_awal,
             rk.tahun_akhir,
@@ -371,6 +372,8 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAllRekinLevel1(ctx context.C
             rk.created_at
         FROM tb_rencana_kinerja rk
         LEFT JOIN tb_sasaran_opd so ON rk.sasaranopd_id = so.id
+        LEFT JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+        LEFT JOIN tb_sasaran_opd_view sov ON pk.id = sov.id_pokin
         WHERE ? BETWEEN rk.tahun_awal AND rk.tahun_akhir
     `
 	params := []interface{}{tahun}
@@ -402,6 +405,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindAllRekinLevel1(ctx context.C
 			&rk.IdPohon,
 			&rk.SasaranOpdId,
 			&rk.NamaSasaranOpd,
+			&rk.IsHideSasaranOpd,
 			&rk.NamaRencanaKinerja,
 			&rk.TahunAwal,
 			&rk.TahunAkhir,

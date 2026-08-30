@@ -50,6 +50,7 @@ type RencanaKinerjaLevel1Response struct {
 	IdPohon              int                         `json:"id_pohon,omitempty"`
 	SasaranOpdId         int                         `json:"sasaran_opd_id"`
 	NamaSasaranOpd       string                      `json:"nama_sasaran_opd,omitempty"`
+	IsHideSasaranOpd     bool                        `json:"is_hide_sasaran_opd"`
 	NamaPohon            string                      `json:"nama_pohon,omitempty"`
 	NamaRencanaKinerja   string                      `json:"nama_rencana_kinerja,omitempty"`
 	TahunAwal            string                      `json:"tahun_awal"`

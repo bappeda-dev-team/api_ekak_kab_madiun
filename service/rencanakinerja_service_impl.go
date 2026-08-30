@@ -1821,6 +1821,7 @@ func (service *RencanaKinerjaServiceImpl) FindAllRekinLevel1(ctx context.Context
 			IdPohon:              rk.IdPohon,
 			SasaranOpdId:         rk.SasaranOpdId,
 			NamaSasaranOpd:       rk.NamaSasaranOpd,
+			IsHideSasaranOpd:     rk.IsHideSasaranOpd,
 			NamaRencanaKinerja:   rk.NamaRencanaKinerja,
 			TahunAwal:            rk.TahunAwal,
 			TahunAkhir:           rk.TahunAkhir,
