@@ -17,9 +17,9 @@ type IndikatorRequest struct {
 
 type TargetRequest struct {
 	ID     int    `json:"id"`
-	Target string `json:"target"`
-	Satuan string `json:"satuan"`
-	Tahun  int    `json:"tahun"`
+	Target string `json:"target" validate:"required"`
+	Satuan string `json:"satuan" validate:"required"`
+	Tahun  int    `json:"tahun"  validate:"required"`
 }
 
 type IkkTerpilihCreateRequest struct {
