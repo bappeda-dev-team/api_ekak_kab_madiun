@@ -23,4 +23,6 @@ type SasaranOpdService interface {
 	CreateRenjaIndikator(ctx context.Context, sasaranOpdId int, jenis string, requests []sasaranopd.IndikatorCreateRequest) ([]sasaranopd.IndikatorResponse, error)
 	UpdateRenjaIndikator(ctx context.Context, kodeIndikator string, jenis string, request sasaranopd.IndikatorUpdateRequest) (sasaranopd.IndikatorResponse, error)
 	DeleteRenjaIndikator(ctx context.Context, kodeIndikator string) error
+	HideSasaranOpd(ctx context.Context, idPokin int) error
+	UnhideSasaranOpd(ctx context.Context, idPokin int) error
 }

@@ -27,4 +27,6 @@ type SasaranOpdController interface {
 	FindSasaranPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	CreateIndikatorPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateIndikatorPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	HideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UnhideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

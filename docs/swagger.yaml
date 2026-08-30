@@ -14,6 +14,8 @@ definitions:
         type: string
       indikator_id:
         type: string
+      is_hide:
+        type: boolean
       jenis:
         type: string
       jenis_periode:
@@ -1270,6 +1272,8 @@ definitions:
         items:
           $ref: '#/definitions/sasaranopd.IndikatorResponse'
         type: array
+      is_hide:
+        type: boolean
       jenis_periode:
         type: string
       jenis_pohon:
@@ -1366,6 +1370,8 @@ definitions:
     properties:
       id_pohon:
         type: integer
+      is_hide:
+        type: boolean
       jenis_pohon:
         type: string
       kode_opd:
@@ -3351,6 +3357,34 @@ paths:
       summary: Delete Sasaran Opd
       tags:
       - Sasaran Opd Renstra
+  /sasaran_opd/hide/{id_pokin}:
+    post:
+      consumes:
+      - application/json
+      description: Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic
+        level 4).
+      parameters:
+      - description: ID Pohon Kinerja
+        in: path
+        name: id_pokin
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hide Sasaran OPD
+      tags:
+      - Sasaran Opd View
   /sasaran_opd/indikator/delete/{kodeIndikator}:
     delete:
       consumes:
@@ -3859,6 +3893,34 @@ paths:
       summary: Sasaran Opd Renstra
       tags:
       - Sasaran Opd Renstra
+  /sasaran_opd/unhide/{id_pokin}:
+    delete:
+      consumes:
+      - application/json
+      description: Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic
+        level 4).
+      parameters:
+      - description: ID Pohon Kinerja
+        in: path
+        name: id_pokin
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unhide Sasaran OPD
+      tags:
+      - Sasaran Opd View
   /sasaran_opd/update/{id}:
     put:
       consumes:

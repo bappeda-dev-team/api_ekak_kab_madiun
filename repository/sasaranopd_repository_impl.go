@@ -1952,3 +1952,19 @@ func (repository *SasaranOpdRepositoryImpl) GetIsHideByPokinIds(ctx context.Cont
 	}
 	return result, rows.Err()
 }
+
+func (repository *SasaranOpdRepositoryImpl) HideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error {
+	script := `
+		INSERT INTO tb_sasaran_opd_view (id_pokin, is_hide)
+		VALUES (?, 1)
+		ON DUPLICATE KEY UPDATE is_hide = 1
+	`
+	_, err := tx.ExecContext(ctx, script, idPokin)
+	return err
+}
+
+func (repository *SasaranOpdRepositoryImpl) UnhideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error {
+	script := `UPDATE tb_sasaran_opd_view SET is_hide = 0 WHERE id_pokin = ?`
+	_, err := tx.ExecContext(ctx, script, idPokin)
+	return err
+}

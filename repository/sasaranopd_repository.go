@@ -29,4 +29,6 @@ type SasaranOpdRepository interface {
 	// GetIsHideByPokinIds mengambil nilai is_hide dari tb_sasaran_opd_view secara batch.
 	// Key map adalah id_pokin; nilai true berarti is_hide=1, false berarti tidak ada entri atau is_hide=0.
 	GetIsHideByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]bool, error)
+	HideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error
+	UnhideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error
 }

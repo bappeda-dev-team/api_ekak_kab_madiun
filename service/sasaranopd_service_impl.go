@@ -1187,3 +1187,53 @@ func (service *SasaranOpdServiceImpl) DeleteRenjaIndikator(ctx context.Context, 
 	}
 	return service.sasaranOpdRepository.DeleteIndikatorTargetRenja(ctx, tx, kodeIndikator) // ← lowercase
 }
+
+func (s *SasaranOpdServiceImpl) HideSasaranOpd(ctx context.Context, idPokin int) error {
+	if idPokin <= 0 {
+		return fmt.Errorf("id pohon kinerja tidak valid")
+	}
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	pohon, err := s.pohonkinerjaRepository.FindById(ctx, tx, idPokin)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+		}
+		return err
+	}
+	if pohon.Id == 0 {
+		return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+	}
+
+	return s.sasaranOpdRepository.HideSasaranOpdView(ctx, tx, idPokin)
+}
+
+func (s *SasaranOpdServiceImpl) UnhideSasaranOpd(ctx context.Context, idPokin int) error {
+	if idPokin <= 0 {
+		return fmt.Errorf("id pohon kinerja tidak valid")
+	}
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	pohon, err := s.pohonkinerjaRepository.FindById(ctx, tx, idPokin)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+		}
+		return err
+	}
+	if pohon.Id == 0 {
+		return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+	}
+
+	return s.sasaranOpdRepository.UnhideSasaranOpdView(ctx, tx, idPokin)
+}

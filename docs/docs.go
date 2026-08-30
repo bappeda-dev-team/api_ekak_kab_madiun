@@ -1794,6 +1794,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/sasaran_opd/hide/{id_pokin}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic level 4).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd View"
+                ],
+                "summary": "Hide Sasaran OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Pohon Kinerja",
+                        "name": "id_pokin",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sasaran_opd/indikator/delete/{kodeIndikator}": {
             "delete": {
                 "security": [
@@ -2613,6 +2656,49 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/unhide/{id_pokin}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic level 4).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd View"
+                ],
+                "summary": "Unhide Sasaran OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Pohon Kinerja",
+                        "name": "id_pokin",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     },
                     "400": {
@@ -5479,6 +5565,9 @@ const docTemplate = `{
                 "indikator_id": {
                     "type": "string"
                 },
+                "is_hide": {
+                    "type": "boolean"
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -7367,6 +7456,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/sasaranopd.IndikatorResponse"
                     }
                 },
+                "is_hide": {
+                    "type": "boolean"
+                },
                 "jenis_periode": {
                     "type": "string"
                 },
@@ -7510,6 +7602,9 @@ const docTemplate = `{
             "properties": {
                 "id_pohon": {
                     "type": "integer"
+                },
+                "is_hide": {
+                    "type": "boolean"
                 },
                 "jenis_pohon": {
                     "type": "string"

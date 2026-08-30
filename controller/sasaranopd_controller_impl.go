@@ -740,3 +740,83 @@ func (controller *SasaranOpdControllerImpl) UpdateIndikatorPenetapan(writer http
 		Data:   indikatorUpdateResponses,
 	})
 }
+
+// @Summary      Hide Sasaran OPD
+// @Description  Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic level 4).
+// @Tags         Sasaran Opd View
+// @Accept       json
+// @Produce      json
+// @Param        id_pokin  path  int  true  "ID Pohon Kinerja"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/hide/{id_pokin} [post]
+func (controller *SasaranOpdControllerImpl) HideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokin, err := strconv.Atoi(params.ByName("id_pokin"))
+	if err != nil || idPokin <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id_pokin tidak valid",
+		})
+		return
+	}
+
+	if err := controller.SasaranOpdService.HideSasaranOpd(request.Context(), idPokin); err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed hide sasaran opd",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success hide sasaran opd",
+		Data: map[string]interface{}{
+			"id_pokin": idPokin,
+			"is_hide":  true,
+		},
+	})
+}
+
+// @Summary      Unhide Sasaran OPD
+// @Description  Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic level 4).
+// @Tags         Sasaran Opd View
+// @Accept       json
+// @Produce      json
+// @Param        id_pokin  path  int  true  "ID Pohon Kinerja"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/unhide/{id_pokin} [delete]
+func (controller *SasaranOpdControllerImpl) UnhideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokin, err := strconv.Atoi(params.ByName("id_pokin"))
+	if err != nil || idPokin <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id_pokin tidak valid",
+		})
+		return
+	}
+
+	if err := controller.SasaranOpdService.UnhideSasaranOpd(request.Context(), idPokin); err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed unhide sasaran opd",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success unhide sasaran opd",
+		Data: map[string]interface{}{
+			"id_pokin": idPokin,
+			"is_hide":  false,
+		},
+	})
+}
