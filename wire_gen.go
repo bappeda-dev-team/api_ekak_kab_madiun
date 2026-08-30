@@ -407,6 +407,18 @@ var nspkOpdSet = wire.NewSet(repository.NewNspkOpdRepositoryImpl, wire.Bind(
 ),
 )
 
+var arahKebijakanSet = wire.NewSet(repository.NewArahKebijakanRepositoryImpl, wire.Bind(
+	new(repository.ArahKebijakanRepository),
+	new(*repository.ArahKebijakanRepositoryImpl),
+), service.NewArahKebijakanServiceImpl, wire.Bind(
+	new(service.ArahKebijakanService),
+	new(*service.ArahKebijakanServiceImpl),
+), controller.NewArahKebijakanControllerImpl, wire.Bind(
+	new(controller.ArahKebijakanController),
+	new(*controller.ArahKebijakanControllerImpl),
+),
+)
+
 func ProvideHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 30 * time.Second,

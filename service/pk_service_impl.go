@@ -785,9 +785,7 @@ func (service *PkServiceImpl) KunciPK(
 	if err := service.syncRekinPemilikPk(
 		ctx,
 		tx,
-		kunciPK.IdPegawai,
-		kunciPK.KodeOpd,
-		kunciPK.Tahun,
+		kunciPK,
 	); err != nil {
 		log.Printf("pkRepository.KunciPK error sync rekin: %v", err)
 		return pkopd.KunciPKResponse{}, err
@@ -861,9 +859,7 @@ func (service *PkServiceImpl) BukaKunciPK(
 	if err := service.syncRekinPemilikPk(
 		ctx,
 		tx,
-		kunciPK.IdPegawai,
-		kunciPK.KodeOpd,
-		kunciPK.Tahun,
+		kunciPK,
 	); err != nil {
 		log.Printf("pkRepository.KunciPK error sync rekin: %v", err)
 		return pkopd.KunciPKResponse{}, err
@@ -873,6 +869,13 @@ func (service *PkServiceImpl) BukaKunciPK(
 		log.Printf("commit failed: %v", err)
 		return pkopd.KunciPKResponse{}, err
 	}
+
+	if err := service.penetapanClient.UpdateStatusPenetapanPkPegawai(context.Background(), kunciPK.IdPegawai, kunciPK.KodeOpd, kunciPK.Tahun); err != nil {
+		log.Printf("update status penetapan gagal: %v", err)
+
+		return pkopd.KunciPKResponse{}, fmt.Errorf("sync ke penetapan gagal: %w", err)
+	}
+	log.Print("sync penetapan berhasil")
 
 	return pkopd.KunciPKResponse{
 		IdKunci:    idKunci,
@@ -1328,16 +1331,17 @@ func (service *PkServiceImpl) FindPkPenetapan(
 func (service *PkServiceImpl) syncRekinPemilikPk(
 	ctx context.Context,
 	tx *sql.Tx,
-	idPegawai string,
-	kodeOpd string,
-	tahun int,
+	kunciPK domain.KunciPK,
 ) error {
+	if kunciPK.StatusPk == "TERBUKA" {
+
+	}
 	pkPegawais, err := service.pkRepository.FindPkPegawaiPenetapan(
 		ctx,
 		tx,
-		idPegawai,
-		kodeOpd,
-		tahun,
+		kunciPK.IdPegawai,
+		kunciPK.KodeOpd,
+		kunciPK.Tahun,
 	)
 	if err != nil {
 		return fmt.Errorf("find pk pegawai: %w", err)
