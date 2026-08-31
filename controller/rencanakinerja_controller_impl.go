@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 	"ekak_kabupaten_madiun/service"
 	"net/http"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -332,10 +333,45 @@ func (controller *RencanaKinerjaControllerImpl) FindIdRekinLevel1(writer http.Re
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// docs swagger Rencana Kinerja
+// @Summary      Find All Rekin Level 1
+// @Description  Mengambil semua rekin level 1.
+// @Tags         Rencana Kinerja
+// @Accept       json
+// @Produce      json
+// @Param        pegawai_id path string true "ID pegawai"
+// @Param        kode_opd path string true "Kode OPD"
+// @Param        tahun path string true "Tahun"
+// @Success      200  {object}  web.WebRencanaKinerjaResponse{data=[]rencanakinerja.RencanaKinerjaLevel1Response}
+// @Failure      400  {object}  web.WebRencanaKinerjaResponse
+// @Security     BearerAuth
+// @Router       /rencanakinerja/pegawai_level_1/{pegawai_id}/{kode_opd}/{tahun} [get]
 func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	pegawaiId := params.ByName("pegawai_id")
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
+
+	// Fallback query string (sama seperti FindAll rekin biasa)
+	query := request.URL.Query()
+	if pegawaiId == "" || strings.HasPrefix(pegawaiId, ":") {
+		pegawaiId = query.Get("pegawai_id")
+	}
+	if kodeOpd == "" || strings.HasPrefix(kodeOpd, ":") {
+		kodeOpd = query.Get("kode_opd")
+	}
+	if tahun == "" || strings.HasPrefix(tahun, ":") {
+		tahun = query.Get("tahun")
+	}
+
+	if pegawaiId == "" || kodeOpd == "" || tahun == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD REQUEST",
+			Data:   "pegawai_id, kode_opd, dan tahun wajib diisi",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
 
 	responses, err := controller.rencanaKinerjaService.FindAllRekinLevel1(request.Context(), pegawaiId, kodeOpd, tahun)
 	if err != nil {
@@ -346,6 +382,10 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.R
 		}
 		helper.WriteToResponseBody(writer, webResponse)
 		return
+	}
+
+	if responses == nil {
+		responses = make([]rencanakinerja.RencanaKinerjaLevel1Response, 0)
 	}
 
 	webResponse := web.WebResponse{
