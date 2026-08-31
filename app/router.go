@@ -556,6 +556,8 @@ func NewRouter(
 	router.GET("/sasaran_opd/ranwal/:kode_opd/:tahun", sasaranOpdController.FindSasaranRanwal)
 	router.GET("/sasaran_opd/rankhir/:kode_opd/:tahun", sasaranOpdController.FindSasaranRankhir)
 	router.GET("/sasaran_opd/penetapan/:kode_opd/:tahun", sasaranOpdController.FindSasaranPenetapan)
+	router.POST("/sasaran_opd/hide/:id_pokin", sasaranOpdController.HideSasaranOpd)
+	router.DELETE("/sasaran_opd/unhide/:id_pokin", sasaranOpdController.UnhideSasaranOpd)
 
 	//sasaran renja
 	router.POST("/sasaran_opd/renja/ranwal/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorRanwal)
@@ -594,6 +596,10 @@ func NewRouter(
 	router.GET("/tujuan_pemda/lock/:tahun", tujuanPemdaController.IsTujuanPemdaLocked)
 	router.POST("/tujuan_pemda/lock/:tahun", tujuanPemdaController.LockTujuanPemda)
 	router.DELETE("/tujuan_pemda/lock/:tahun", tujuanPemdaController.UnlockTujuanPemda)
+
+	//tujuan pemda hide/unhide
+	router.POST("/tujuan_pemda/hide/:id", tujuanPemdaController.HideTujuanPemda)
+	router.DELETE("/tujuan_pemda/unhide/:id", tujuanPemdaController.UnhideTujuanPemda)
 
 	return router
 }

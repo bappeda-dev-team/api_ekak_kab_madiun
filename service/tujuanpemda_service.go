@@ -32,4 +32,8 @@ type TujuanPemdaService interface {
 	UnlockTujuanPemda(ctx context.Context, tahun string) error
 	IsTujuanPemdaLocked(ctx context.Context, tahun string) (bool, error)
 	FindAllLockTujuanPemda(ctx context.Context) ([]tujuanpemda.LockDataPemdaResponse, error)
+
+	// hide/unhide tujuan pemda
+	HideTujuanPemda(ctx context.Context, tujuanPemdaId int) error
+	UnhideTujuanPemda(ctx context.Context, tujuanPemdaId int) error
 }

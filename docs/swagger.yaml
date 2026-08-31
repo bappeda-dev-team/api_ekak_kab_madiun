@@ -14,6 +14,8 @@ definitions:
         type: string
       indikator_id:
         type: string
+      is_hide:
+        type: boolean
       jenis:
         type: string
       jenis_periode:
@@ -1270,6 +1272,8 @@ definitions:
         items:
           $ref: '#/definitions/sasaranopd.IndikatorResponse'
         type: array
+      is_hide:
+        type: boolean
       jenis_periode:
         type: string
       jenis_pohon:
@@ -1366,6 +1370,8 @@ definitions:
     properties:
       id_pohon:
         type: integer
+      is_hide:
+        type: boolean
       jenis_pohon:
         type: string
       kode_opd:
@@ -2137,6 +2143,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorPenetapanDualResponse'
         type: array
+      is_hide:
+        type: boolean
       is_lock:
         type: boolean
       misi:
@@ -2164,6 +2172,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorRankhirDualResponse'
         type: array
+      is_hide:
+        type: boolean
       misi:
         type: string
       nama_tematik:
@@ -2189,6 +2199,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorResponse'
         type: array
+      is_hide:
+        type: boolean
       jenis_pohon:
         type: string
       misi:
@@ -3285,6 +3297,50 @@ paths:
       summary: Create Rekin Level 1
       tags:
       - Rencana Kinerja
+  /rencanakinerja/pegawai_level_1/{pegawai_id}/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua rekin level 1.
+      parameters:
+      - description: ID pegawai
+        in: path
+        name: pegawai_id
+        required: true
+        type: string
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/rencanakinerja.RencanaKinerjaLevel1Response'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All Rekin Level 1
+      tags:
+      - Rencana Kinerja
   /sasaran_opd/create:
     post:
       consumes:
@@ -3351,6 +3407,34 @@ paths:
       summary: Delete Sasaran Opd
       tags:
       - Sasaran Opd Renstra
+  /sasaran_opd/hide/{id_pokin}:
+    post:
+      consumes:
+      - application/json
+      description: Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic
+        level 4).
+      parameters:
+      - description: ID Pohon Kinerja
+        in: path
+        name: id_pokin
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hide Sasaran OPD
+      tags:
+      - Sasaran Opd View
   /sasaran_opd/indikator/delete/{kodeIndikator}:
     delete:
       consumes:
@@ -3386,7 +3470,7 @@ paths:
       - Sasaran Opd Renja Ranwal
       - Sasaran Opd Renja Rankhir
       - Sasaran Opd Renja Penetapan
-  /sasaran_opd/pegawai/{nip}/{kode_opd}/{tahun}:
+  /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun}:
     get:
       consumes:
       - application/json
@@ -3432,7 +3516,7 @@ paths:
       - BearerAuth: []
       summary: Find Sasaran Opd by Nip and Opd
       tags:
-      - Sasaran Opd Renstra
+      - Sasaran Opd Level 1
   /sasaran_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -3859,6 +3943,34 @@ paths:
       summary: Sasaran Opd Renstra
       tags:
       - Sasaran Opd Renstra
+  /sasaran_opd/unhide/{id_pokin}:
+    delete:
+      consumes:
+      - application/json
+      description: Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic
+        level 4).
+      parameters:
+      - description: ID Pohon Kinerja
+        in: path
+        name: id_pokin
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unhide Sasaran OPD
+      tags:
+      - Sasaran Opd View
   /sasaran_opd/update/{id}:
     put:
       consumes:
@@ -5092,6 +5204,37 @@ paths:
       summary: Get Pokin With Periode Renstra
       tags:
       - Tujuan Pemda
+  /tujuan_pemda/hide/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Sembunyikan tujuan pemda berdasarkan ID
+      parameters:
+      - description: ID Tujuan Pemda
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hide Tujuan Pemda
+      tags:
+      - Tujuan Pemda
   /tujuan_pemda/lock:
     get:
       consumes:
@@ -5538,6 +5681,37 @@ paths:
       security:
       - BearerAuth: []
       summary: Update Target Tujuan Pemda Rankhir
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/unhide/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Tampilkan kembali tujuan pemda yang disembunyikan berdasarkan ID
+      parameters:
+      - description: ID Tujuan Pemda
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unhide Tujuan Pemda
       tags:
       - Tujuan Pemda
   /tujuan_pemda/update/{id}:

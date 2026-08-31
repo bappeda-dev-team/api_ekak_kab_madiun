@@ -708,6 +708,7 @@ func (service *TujuanPemdaServiceImpl) buildTujuanPemdaPokinResponse(
 	tp domain.TujuanPemda,
 	tahunAwal, tahunAkhir, jenisPeriode string,
 	tahunAwalInt, tahunAkhirInt int,
+	isHide bool,
 ) tujuanpemda.TujuanPemdaResponse {
 	visiPemda, _ := service.VisiPemdaRepository.FindById(ctx, tx, tp.IdVisi)
 	if visiPemda.Id == 0 {
@@ -730,6 +731,7 @@ func (service *TujuanPemdaServiceImpl) buildTujuanPemdaPokinResponse(
 			TahunAkhir:   tahunAkhir,
 			JenisPeriode: jenisPeriode,
 		},
+		IsHide:    isHide,
 		Indikator: buildIndikatorResponsesForPeriod(tp.IndikatorPemda, tahunAwalInt, tahunAkhirInt),
 	}
 }
@@ -748,6 +750,19 @@ func (service *TujuanPemdaServiceImpl) buildPokinResponse(
 	if err != nil {
 		return nil, fmt.Errorf("format tahun akhir tidak valid")
 	}
+	// Kumpulkan semua ID tujuan pemda untuk batch-fetch is_hide
+	allTujuanIds := make([]int, 0)
+	seenIds := make(map[int]bool)
+	for _, item := range list {
+		for _, tp := range item.TujuanPemda {
+			if tp.Id != 0 && !seenIds[tp.Id] {
+				allTujuanIds = append(allTujuanIds, tp.Id)
+				seenIds[tp.Id] = true
+			}
+		}
+	}
+	isHideMap, _ := service.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, allTujuanIds)
+
 	pokinMap := make(map[int]tujuanpemda.TujuanPemdaWithPokinResponse)
 	for _, item := range list {
 		pokinResp, exists := pokinMap[item.PokinId]
@@ -779,6 +794,7 @@ func (service *TujuanPemdaServiceImpl) buildPokinResponse(
 				ctx, tx, tp,
 				tahunAwal, tahunAkhir, jenisPeriode,
 				tahunAwalInt, tahunAkhirInt,
+				isHideMap[tp.Id],
 			)
 			tujuanMap[tp.Id] = tujuanResp
 		}
@@ -885,12 +901,20 @@ func (s *TujuanPemdaServiceImpl) loadLayerPenetapan(ctx context.Context, tx *sql
 func (s *TujuanPemdaServiceImpl) buildTujuanPemdaListResponse(
 	ctx context.Context, tx *sql.Tx, list []domain.TujuanPemda,
 ) ([]tujuanpemda.TujuanPemdaResponse, error) {
+	// Batch-fetch is_hide untuk semua tujuan pemda
+	ids := make([]int, 0, len(list))
+	for _, tp := range list {
+		ids = append(ids, tp.Id)
+	}
+	isHideMap, _ := s.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, ids)
+
 	responses := make([]tujuanpemda.TujuanPemdaResponse, 0, len(list))
 	for _, tp := range list {
 		resp, err := s.toTujuanPemdaResponse(ctx, tx, tp)
 		if err != nil {
 			return nil, err
 		}
+		resp.IsHide = isHideMap[tp.Id]
 		responses = append(responses, resp)
 	}
 	return responses, nil
@@ -1303,12 +1327,18 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaRankhirDual(
 	if err != nil {
 		return nil, err
 	}
+	ids := make([]int, 0, len(list))
+	for _, tp := range list {
+		ids = append(ids, tp.Id)
+	}
+	isHideMap, _ := s.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, ids)
 	responses := make([]tujuanpemda.TujuanPemdaRankhirDualResponse, 0, len(list))
 	for _, tp := range list {
 		resp, err := s.toTujuanPemdaRankhirDualResponse(ctx, tx, tp)
 		if err != nil {
 			return nil, err
 		}
+		resp.IsHide = isHideMap[tp.Id]
 		responses = append(responses, resp)
 	}
 	return responses, nil
@@ -1333,12 +1363,18 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDual(
 	if err != nil {
 		return nil, err
 	}
+	ids := make([]int, 0, len(list))
+	for _, tp := range list {
+		ids = append(ids, tp.Id)
+	}
+	isHideMap, _ := s.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, ids)
 	responses := make([]tujuanpemda.TujuanPemdaPenetapanDualResponse, 0, len(list))
 	for _, tp := range list {
 		resp, err := s.toTujuanPemdaPenetapanDualResponse(ctx, tx, tp, isLocked)
 		if err != nil {
 			return nil, err
 		}
+		resp.IsHide = isHideMap[tp.Id]
 		responses = append(responses, resp)
 	}
 	return responses, nil
@@ -1574,4 +1610,38 @@ func (s *TujuanPemdaServiceImpl) FindAllLockTujuanPemda(
 		})
 	}
 	return result, nil
+}
+
+// ─────────────────────────────────────────────────────────────────
+// HIDE / UNHIDE TUJUAN PEMDA
+// ─────────────────────────────────────────────────────────────────
+
+func (s *TujuanPemdaServiceImpl) HideTujuanPemda(ctx context.Context, tujuanPemdaId int) error {
+	if tujuanPemdaId <= 0 {
+		return fmt.Errorf("id tujuan pemda tidak valid")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	if !s.TujuanPemdaRepository.IsIdExists(ctx, tx, tujuanPemdaId) {
+		return fmt.Errorf("tujuan pemda dengan id %d tidak ditemukan", tujuanPemdaId)
+	}
+	return s.TujuanPemdaRepository.HideTujuanPemdaView(ctx, tx, tujuanPemdaId)
+}
+
+func (s *TujuanPemdaServiceImpl) UnhideTujuanPemda(ctx context.Context, tujuanPemdaId int) error {
+	if tujuanPemdaId <= 0 {
+		return fmt.Errorf("id tujuan pemda tidak valid")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	if !s.TujuanPemdaRepository.IsIdExists(ctx, tx, tujuanPemdaId) {
+		return fmt.Errorf("tujuan pemda dengan id %d tidak ditemukan", tujuanPemdaId)
+	}
+	return s.TujuanPemdaRepository.UnhideTujuanPemdaView(ctx, tx, tujuanPemdaId)
 }

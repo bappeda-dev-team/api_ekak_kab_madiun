@@ -1271,3 +1271,56 @@ func (r *TujuanPemdaRepositoryImpl) FindAllByTahun(
 	}
 	return result, nil
 }
+
+// ─────────────────────────────────────────────────────────────────
+// HIDE / UNHIDE — tb_tujuan_pemda_view
+// ─────────────────────────────────────────────────────────────────
+
+func (r *TujuanPemdaRepositoryImpl) GetIsHideByTujuanPemdaIds(
+	ctx context.Context, tx *sql.Tx, ids []int,
+) (map[int]bool, error) {
+	result := make(map[int]bool, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	query := "SELECT id_tujuan_pemda, is_hide FROM tb_tujuan_pemda_view WHERE id_tujuan_pemda IN (" +
+		strings.Join(placeholders, ",") + ")"
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return result, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var tujuanId int
+		var isHide bool
+		if err := rows.Scan(&tujuanId, &isHide); err != nil {
+			return result, err
+		}
+		result[tujuanId] = isHide
+	}
+	return result, rows.Err()
+}
+
+func (r *TujuanPemdaRepositoryImpl) HideTujuanPemdaView(
+	ctx context.Context, tx *sql.Tx, tujuanPemdaId int,
+) error {
+	query := `INSERT INTO tb_tujuan_pemda_view (id_tujuan_pemda, is_hide)
+	          VALUES (?, 1)
+	          ON DUPLICATE KEY UPDATE is_hide = 1`
+	_, err := tx.ExecContext(ctx, query, tujuanPemdaId)
+	return err
+}
+
+func (r *TujuanPemdaRepositoryImpl) UnhideTujuanPemdaView(
+	ctx context.Context, tx *sql.Tx, tujuanPemdaId int,
+) error {
+	query := `UPDATE tb_tujuan_pemda_view SET is_hide = 0 WHERE id_tujuan_pemda = ?`
+	_, err := tx.ExecContext(ctx, query, tujuanPemdaId)
+	return err
+}

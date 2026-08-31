@@ -1681,6 +1681,78 @@ const docTemplate = `{
                 }
             }
         },
+        "/rencanakinerja/pegawai_level_1/{pegawai_id}/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil semua rekin level 1.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rencana Kinerja"
+                ],
+                "summary": "Find All Rekin Level 1",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID pegawai",
+                        "name": "pegawai_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanakinerja.RencanaKinerjaLevel1Response"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sasaran_opd/create": {
             "post": {
                 "security": [
@@ -1794,6 +1866,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/sasaran_opd/hide/{id_pokin}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic level 4).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd View"
+                ],
+                "summary": "Hide Sasaran OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Pohon Kinerja",
+                        "name": "id_pokin",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sasaran_opd/indikator/delete/{kodeIndikator}": {
             "delete": {
                 "security": [
@@ -1851,7 +1966,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/sasaran_opd/pegawai/{nip}/{kode_opd}/{tahun}": {
+        "/sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
                     {
@@ -1866,7 +1981,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Renstra"
+                    "Sasaran Opd Level 1"
                 ],
                 "summary": "Find Sasaran Opd by Nip and Opd",
                 "parameters": [
@@ -2613,6 +2728,49 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/unhide/{id_pokin}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic level 4).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Opd View"
+                ],
+                "summary": "Unhide Sasaran OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Pohon Kinerja",
+                        "name": "id_pokin",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     },
                     "400": {
@@ -4549,6 +4707,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/tujuan_pemda/hide/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sembunyikan tujuan pemda berdasarkan ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Hide Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Tujuan Pemda",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tujuan_pemda/lock": {
             "get": {
                 "security": [
@@ -5272,6 +5479,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/tujuan_pemda/unhide/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tampilkan kembali tujuan pemda yang disembunyikan berdasarkan ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Unhide Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Tujuan Pemda",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tujuan_pemda/update/{id}": {
             "put": {
                 "security": [
@@ -5478,6 +5734,9 @@ const docTemplate = `{
                 },
                 "indikator_id": {
                     "type": "string"
+                },
+                "is_hide": {
+                    "type": "boolean"
                 },
                 "jenis": {
                     "type": "string"
@@ -7367,6 +7626,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/sasaranopd.IndikatorResponse"
                     }
                 },
+                "is_hide": {
+                    "type": "boolean"
+                },
                 "jenis_periode": {
                     "type": "string"
                 },
@@ -7510,6 +7772,9 @@ const docTemplate = `{
             "properties": {
                 "id_pohon": {
                     "type": "integer"
+                },
+                "is_hide": {
+                    "type": "boolean"
                 },
                 "jenis_pohon": {
                     "type": "string"
@@ -8677,6 +8942,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/tujuanpemda.IndikatorPenetapanDualResponse"
                     }
                 },
+                "is_hide": {
+                    "type": "boolean"
+                },
                 "is_lock": {
                     "type": "boolean"
                 },
@@ -8718,6 +8986,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/tujuanpemda.IndikatorRankhirDualResponse"
                     }
                 },
+                "is_hide": {
+                    "type": "boolean"
+                },
                 "misi": {
                     "type": "string"
                 },
@@ -8755,6 +9026,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/tujuanpemda.IndikatorResponse"
                     }
+                },
+                "is_hide": {
+                    "type": "boolean"
                 },
                 "jenis_pohon": {
                     "type": "string"
