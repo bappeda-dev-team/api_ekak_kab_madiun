@@ -597,5 +597,9 @@ func NewRouter(
 	router.POST("/tujuan_pemda/lock/:tahun", tujuanPemdaController.LockTujuanPemda)
 	router.DELETE("/tujuan_pemda/lock/:tahun", tujuanPemdaController.UnlockTujuanPemda)
 
+	//tujuan pemda hide/unhide
+	router.POST("/tujuan_pemda/hide/:id", tujuanPemdaController.HideTujuanPemda)
+	router.DELETE("/tujuan_pemda/unhide/:id", tujuanPemdaController.UnhideTujuanPemda)
+
 	return router
 }

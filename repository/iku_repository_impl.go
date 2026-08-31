@@ -45,12 +45,14 @@ func (repository *IkuRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, ta
         CASE
             WHEN pk_tematik.id IS NULL THEN false
             ELSE true
-        END as is_exists
+        END as is_exists,
+        COALESCE(tpv.is_hide, 0) as is_hide
     FROM tb_indikator_matrix_pemda i
     INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
     LEFT JOIN tb_target_pemda t
         ON t.kode_indikator = i.kode_indikator AND t.jenis = 'renstra'
     LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
+    LEFT JOIN tb_tujuan_pemda_view tpv ON tp.id = tpv.id_tujuan_pemda
     WHERE tp.tahun_awal_periode = ?
     AND tp.tahun_akhir_periode = ?
     AND tp.jenis_periode = ?
@@ -83,7 +85,8 @@ indikator_sasaran AS (
             WHEN pk_tematik.id IS NULL THEN false
             WHEN pk_subtematik.id IS NULL THEN false
             ELSE true
-        END as is_exists
+        END as is_exists,
+        COALESCE(tpv.is_hide, 0) as is_hide
     FROM tb_indikator_matrix_pemda i
     INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
     LEFT JOIN tb_target_pemda t
@@ -91,6 +94,7 @@ indikator_sasaran AS (
     LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
     LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
     LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
+    LEFT JOIN tb_tujuan_pemda_view tpv ON tp.id = tpv.id_tujuan_pemda
     WHERE sp.tahun_awal = ?
     AND sp.tahun_akhir = ?
     AND sp.jenis_periode = ?
@@ -135,6 +139,7 @@ ORDER BY indikator_created_at ASC`
 			jenisPeriodeData   string
 			isActive           bool
 			isExists           bool
+			isHide             sql.NullBool
 		)
 
 		err := rows.Scan(
@@ -156,6 +161,7 @@ ORDER BY indikator_created_at ASC`
 			&jenisPeriodeData,
 			&isActive,
 			&isExists,
+			&isHide,
 		)
 		if err != nil {
 			return nil, err
@@ -194,6 +200,7 @@ ORDER BY indikator_created_at ASC`
 				Target:           targets,
 				IsActive:         isActive,
 				IkuActive:        ikuActive,
+				IsHide:           isHide.Valid && isHide.Bool,
 			}
 			indikatorMap[indikatorId.String] = item
 		}

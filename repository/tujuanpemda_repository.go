@@ -29,4 +29,9 @@ type TujuanPemdaRepository interface {
 	FindIndikatorPemdaByKode(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.IndikatorPemda, error)
 	UpsertTargetPemda(ctx context.Context, tx *sql.Tx, target domain.TargetPemda) (domain.TargetPemda, error)
 	FindAllByTahun(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode, targetJenis string) ([]domain.TujuanPemda, error)
+
+	// hide/unhide tujuan pemda view
+	GetIsHideByTujuanPemdaIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]bool, error)
+	HideTujuanPemdaView(ctx context.Context, tx *sql.Tx, tujuanPemdaId int) error
+	UnhideTujuanPemdaView(ctx context.Context, tx *sql.Tx, tujuanPemdaId int) error
 }

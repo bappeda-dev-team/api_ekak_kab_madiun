@@ -2143,6 +2143,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorPenetapanDualResponse'
         type: array
+      is_hide:
+        type: boolean
       is_lock:
         type: boolean
       misi:
@@ -2170,6 +2172,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorRankhirDualResponse'
         type: array
+      is_hide:
+        type: boolean
       misi:
         type: string
       nama_tematik:
@@ -2195,6 +2199,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorResponse'
         type: array
+      is_hide:
+        type: boolean
       jenis_pohon:
         type: string
       misi:
@@ -3289,6 +3295,50 @@ paths:
       security:
       - BearerAuth: []
       summary: Create Rekin Level 1
+      tags:
+      - Rencana Kinerja
+  /rencanakinerja/pegawai_level_1/{pegawai_id}/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua rekin level 1.
+      parameters:
+      - description: ID pegawai
+        in: path
+        name: pegawai_id
+        required: true
+        type: string
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/rencanakinerja.RencanaKinerjaLevel1Response'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All Rekin Level 1
       tags:
       - Rencana Kinerja
   /sasaran_opd/create:
@@ -5154,6 +5204,37 @@ paths:
       summary: Get Pokin With Periode Renstra
       tags:
       - Tujuan Pemda
+  /tujuan_pemda/hide/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Sembunyikan tujuan pemda berdasarkan ID
+      parameters:
+      - description: ID Tujuan Pemda
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hide Tujuan Pemda
+      tags:
+      - Tujuan Pemda
   /tujuan_pemda/lock:
     get:
       consumes:
@@ -5600,6 +5681,37 @@ paths:
       security:
       - BearerAuth: []
       summary: Update Target Tujuan Pemda Rankhir
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/unhide/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Tampilkan kembali tujuan pemda yang disembunyikan berdasarkan ID
+      parameters:
+      - description: ID Tujuan Pemda
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unhide Tujuan Pemda
       tags:
       - Tujuan Pemda
   /tujuan_pemda/update/{id}:

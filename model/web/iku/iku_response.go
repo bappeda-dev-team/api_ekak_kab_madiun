@@ -7,6 +7,7 @@ type IkuResponse struct {
 	Sumber           string           `json:"asal_iku"`
 	IkuActive        bool             `json:"iku_active"`
 	IsActive         bool             `json:"is_active,omitempty"`
+	IsHide           bool             `json:"is_hide"`
 	Indikator        string           `json:"indikator"`
 	RumusPerhitungan string           `json:"rumus_perhitungan"`
 	SumberData       string           `json:"sumber_data"`
