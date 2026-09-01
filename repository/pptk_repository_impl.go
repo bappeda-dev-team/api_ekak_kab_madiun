@@ -71,23 +71,31 @@ func (repository *PptkRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id
 }
 
 func (repository *PptkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.Pptk, error) {
-	script := `SELECT id, 
-					  nip, 
-					  kode_opd, 
-					  tahun, 
-					  kode_sub_kegiatan, 
-					  nip_atasan, 
-					  aktif_at, 
-					  nonaktif_at 
-					  FROM tb_pptk WHERE id = ?`
+	script := `SELECT 
+            tp.id, 
+			tp.nip, 
+			peg.nama, 
+			tp.kode_opd, 
+			tp.tahun, 
+			tp.kode_sub_kegiatan, 
+			tp.nip_atasan, 
+			tpa.nama, 
+			tp.aktif_at, 
+			tp.nonaktif_at
+        FROM tb_pptk tp
+		LEFT JOIN tb_pegawai peg ON tp.nip = peg.nip
+		LEFT JOIN tb_pegawai tpa ON tp.nip_atasan = tpa.nip
+        WHERE tp.id = ?`
 	var Pptk domain.Pptk
 	err := tx.QueryRowContext(ctx, script, id).Scan(
 		&Pptk.Id,
 		&Pptk.Nip,
+		&Pptk.NamaPegawai,
 		&Pptk.KodeOpd,
 		&Pptk.Tahun,
 		&Pptk.KodeSubKegiatan,
 		&Pptk.NipAtasan,
+		&Pptk.NamaAtasan,
 		&Pptk.AktifAt,
 		&Pptk.NonAktifAt,
 	)
