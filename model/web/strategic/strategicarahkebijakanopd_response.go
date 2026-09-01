@@ -55,7 +55,8 @@ type TacticalOpdResponse struct {
 }
 
 type OperasionalOpdResponse struct {
-	OperasionalOpd string `json:"operasional_opd"`
+	OperasionalOpd      string `json:"operasional_opd"`
+	TahunOperasionalOpd int    `json:"tahun_operasional_opd"`
 }
 type ArahKebijakanOpdResponse struct {
 	Id      int    `json:"id"`

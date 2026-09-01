@@ -3,14 +3,15 @@ package domain
 import "time"
 
 type StrategicRow struct {
-	KodeOpd         string
-	NamaTujuanOpd   string
-	NamaSasaranOpd  string
-	NamaStrategi    string // level 4
-	IdTactical      int    // level 5
-	NamaTactical    string // level 5
-	NamaOperasional string // level 6
-	ArahKebijakan   ArahKebijakanRow
+	KodeOpd          string
+	NamaTujuanOpd    string
+	NamaSasaranOpd   string
+	NamaStrategi     string // level 4
+	IdTactical       int    // level 5
+	NamaTactical     string // level 5
+	NamaOperasional  string // level 6
+	TahunOperasional int // level 6
+	ArahKebijakan    ArahKebijakanRow
 }
 
 type ArahKebijakanRow struct {
