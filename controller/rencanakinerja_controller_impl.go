@@ -364,7 +364,7 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.R
 	}
 
 	if pegawaiId == "" || kodeOpd == "" || tahun == "" {
-		webResponse := web.WebResponse{
+		webResponse := web.WebRencanaKinerjaResponse{
 			Code:   400,
 			Status: "BAD REQUEST",
 			Data:   "pegawai_id, kode_opd, dan tahun wajib diisi",
@@ -375,7 +375,7 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.R
 
 	responses, err := controller.rencanaKinerjaService.FindAllRekinLevel1(request.Context(), pegawaiId, kodeOpd, tahun)
 	if err != nil {
-		webResponse := web.WebResponse{
+		webResponse := web.WebRencanaKinerjaResponse{
 			Code:   400,
 			Status: "BAD REQUEST",
 			Data:   err.Error(),
@@ -388,7 +388,7 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.R
 		responses = make([]rencanakinerja.RencanaKinerjaLevel1Response, 0)
 	}
 
-	webResponse := web.WebResponse{
+	webResponse := web.WebRencanaKinerjaResponse{
 		Code:   200,
 		Status: "OK",
 		Data:   responses,
