@@ -41,6 +41,7 @@ type Indikator struct {
 	Jenis               string
 	DefinisiOperasional sql.NullString
 	KodeIndikator       string
+	IsHide              bool
 }
 type IndikatorPemda struct {
 	Id                  int

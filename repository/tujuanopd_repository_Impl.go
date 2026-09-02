@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -2105,4 +2106,149 @@ func (repository *TujuanOpdRepositoryImpl) DeleteTargetOpdByJenis(
 		kodeIndikator, tahun, jenis,
 	)
 	return err
+}
+
+// FindTujuanOpdWithIndikatorByIdsBatch mengambil data tujuan OPD lengkap (indikator + target renstra)
+// secara batch. Hasilnya adalah map id_tujuan_opd → TujuanOpd.
+func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdWithIndikatorByIdsBatch(
+	ctx context.Context, tx *sql.Tx, ids []int,
+) (map[int]domain.TujuanOpd, error) {
+	if len(ids) == 0 {
+		return map[int]domain.TujuanOpd{}, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			t.id,
+			COALESCE(t.tujuan, '')               AS tujuan,
+			COALESCE(t.kode_bidang_urusan, '')   AS kode_bidang_urusan,
+			COALESCE(im.id, '')                  AS indikator_id,
+			COALESCE(im.kode_indikator, '')      AS kode_indikator,
+			COALESCE(im.indikator, '')           AS indikator_nama,
+			COALESCE(im.rumus_perhitungan, '')   AS rumus_perhitungan,
+			COALESCE(im.sumber_data, '')         AS sumber_data,
+			COALESCE(im.jenis, '')               AS indikator_jenis,
+			COALESCE(tg.id, '')                  AS target_id,
+			COALESCE(tg.target, '')              AS target_value,
+			COALESCE(tg.satuan, '')              AS satuan,
+			COALESCE(tg.tahun, '')               AS tahun_target
+		FROM tb_tujuan_opd t
+		LEFT JOIN tb_indikator_matrix im
+			ON t.id = im.tujuan_opd_id AND im.jenis = 'renstra'
+		LEFT JOIN tb_target tg
+			ON im.kode_indikator = tg.indikator_id
+			AND (tg.jenis = 'renstra' OR tg.jenis = '')
+		WHERE t.id IN (%s)
+		ORDER BY t.id, im.id, CAST(tg.tahun AS SIGNED)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Gunakan map intermediate agar pointer slice aman
+	type tujuanHeader struct {
+		tujuan           string
+		kodeBidangUrusan string
+	}
+	headerMap := make(map[int]tujuanHeader)
+	// tujuanId → kodeIndikator → *Indikator
+	indMap := make(map[int]map[string]*domain.Indikator)
+	// indOrder per tujuanId (menjaga urutan)
+	indOrder := make(map[int][]string)
+	targetSeen := make(map[string]bool)
+
+	for rows.Next() {
+		var (
+			tujuanId         int
+			tujuan           string
+			kodeBidangUrusan string
+			indikatorId      string
+			kodeIndikator    string
+			indikatorNama    string
+			rumusPerhitungan string
+			sumberData       string
+			indikatorJenis   string
+			targetId         string
+			targetValue      string
+			satuan           string
+			tahunTarget      string
+		)
+		if err := rows.Scan(
+			&tujuanId, &tujuan, &kodeBidangUrusan,
+			&indikatorId, &kodeIndikator, &indikatorNama,
+			&rumusPerhitungan, &sumberData, &indikatorJenis,
+			&targetId, &targetValue, &satuan, &tahunTarget,
+		); err != nil {
+			return nil, err
+		}
+
+		if _, ok := headerMap[tujuanId]; !ok {
+			headerMap[tujuanId] = tujuanHeader{tujuan: tujuan, kodeBidangUrusan: kodeBidangUrusan}
+			indMap[tujuanId] = make(map[string]*domain.Indikator)
+		}
+
+		if indikatorId == "" || kodeIndikator == "" {
+			continue
+		}
+
+		if _, ok := indMap[tujuanId][kodeIndikator]; !ok {
+			ind := &domain.Indikator{
+				Id:               indikatorId,
+				KodeIndikator:    kodeIndikator,
+				TujuanOpdId:      tujuanId,
+				Indikator:        indikatorNama,
+				RumusPerhitungan: sql.NullString{String: rumusPerhitungan, Valid: rumusPerhitungan != ""},
+				SumberData:       sql.NullString{String: sumberData, Valid: sumberData != ""},
+				Jenis:            indikatorJenis,
+				Target:           []domain.Target{},
+			}
+			indMap[tujuanId][kodeIndikator] = ind
+			indOrder[tujuanId] = append(indOrder[tujuanId], kodeIndikator)
+		}
+
+		if targetId != "" {
+			tKey := fmt.Sprintf("%d|%s|%s", tujuanId, kodeIndikator, targetId)
+			if !targetSeen[tKey] {
+				targetSeen[tKey] = true
+				indMap[tujuanId][kodeIndikator].Target = append(
+					indMap[tujuanId][kodeIndikator].Target,
+					domain.Target{
+						Id:          targetId,
+						IndikatorId: kodeIndikator,
+						Target:      targetValue,
+						Satuan:      satuan,
+						Tahun:       tahunTarget,
+					},
+				)
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	result := make(map[int]domain.TujuanOpd, len(headerMap))
+	for tujuanId, hdr := range headerMap {
+		indikators := make([]domain.Indikator, 0, len(indOrder[tujuanId]))
+		for _, kodeInd := range indOrder[tujuanId] {
+			indikators = append(indikators, *indMap[tujuanId][kodeInd])
+		}
+		result[tujuanId] = domain.TujuanOpd{
+			Id:               tujuanId,
+			Tujuan:           hdr.tujuan,
+			KodeBidangUrusan: hdr.kodeBidangUrusan,
+			Indikator:        indikators,
+		}
+	}
+	return result, nil
 }

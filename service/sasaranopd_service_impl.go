@@ -821,6 +821,118 @@ func (service *SasaranOpdServiceImpl) FindByTahun(ctx context.Context, kodeOpd s
 	return responses, nil
 }
 
+func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
+	ctx context.Context, nip, kodeOpd, tahun string,
+) ([]sasaranopd.SasaranOpdByNipResponse, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	tahunInt, err := strconv.Atoi(tahun)
+	if err != nil {
+		return nil, fmt.Errorf("format tahun tidak valid")
+	}
+
+	sasaranOpds, err := s.sasaranOpdRepository.FindByNipAndOpd(ctx, tx, nip, kodeOpd, tahun)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	if len(sasaranOpds) == 0 {
+		return []sasaranopd.SasaranOpdByNipResponse{}, nil
+	}
+
+	opd, err := s.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+
+	// ── Batch fetch is_hide dari tb_sasaran_opd_view ───────────
+	pokinIds := make([]int, 0, len(sasaranOpds))
+	for _, so := range sasaranOpds {
+		pokinIds = append(pokinIds, so.IdPohon)
+	}
+	isHideMap, err := s.sasaranOpdRepository.GetIsHideByPokinIds(ctx, tx, pokinIds)
+	if err != nil {
+		isHideMap = make(map[int]bool)
+	}
+
+	// Deduplikasi: satu item per kombinasi (pokinId, sasaranId)
+	seen := make(map[string]bool)
+	var responses []sasaranopd.SasaranOpdByNipResponse
+
+	for _, soData := range sasaranOpds {
+		// Bangun daftar pelaksana untuk pokin ini
+		pelaksanaList := make([]sasaranopd.PelaksanaOpdResponse, 0, len(soData.Pelaksana))
+		for _, pl := range soData.Pelaksana {
+			pelaksanaList = append(pelaksanaList, sasaranopd.PelaksanaOpdResponse{
+				Id: pl.Id, PegawaiId: pl.PegawaiId,
+				Nip: pl.Nip, NamaPegawai: pl.NamaPegawai,
+			})
+		}
+
+		for _, sasaran := range soData.SasaranOpd {
+			// Lewati jika tahun tidak dalam range sasaran
+			tahunAwalInt, _ := strconv.Atoi(sasaran.TahunAwal)
+			tahunAkhirInt, _ := strconv.Atoi(sasaran.TahunAkhir)
+			if tahunInt < tahunAwalInt || tahunInt > tahunAkhirInt {
+				continue
+			}
+
+			// Cegah duplikat (pokin, sasaran) yang sama
+			key := fmt.Sprintf("%d|%d", soData.IdPohon, sasaran.Id)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+
+			tujuanOpd, _ := s.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
+
+			// Bangun daftar indikator
+			indikatorList := make([]sasaranopd.IndikatorResponse, 0)
+			for _, ind := range sasaran.Indikator {
+				indResp := sasaranopd.IndikatorResponse{
+					Id:               ind.Id,
+					Indikator:        ind.Indikator,
+					RumusPerhitungan: ind.RumusPerhitungan.String,
+					SumberData:       ind.SumberData.String,
+					Target:           make([]sasaranopd.TargetResponse, 0),
+				}
+				for _, t := range ind.Target {
+					if t.Tahun == tahun {
+						indResp.Target = append(indResp.Target, sasaranopd.TargetResponse{
+							Id: t.Id, Tahun: t.Tahun, Target: t.Target, Satuan: t.Satuan,
+						})
+					}
+				}
+				indikatorList = append(indikatorList, indResp)
+			}
+
+			responses = append(responses, sasaranopd.SasaranOpdByNipResponse{
+				IdPohon:        soData.IdPohon,
+				KodeOpd:        soData.KodeOpd,
+				NamaOpd:        opd.NamaOpd,
+				NamaPohon:      soData.NamaPohon,
+				JenisPohon:     soData.JenisPohon,
+				TahunPohon:     soData.TahunPohon,
+				LevelPohon:     soData.LevelPohon,
+				IsHide:         isHideMap[soData.IdPohon],
+				IdSasaranOpd:   strconv.Itoa(sasaran.Id),
+				NamaSasaranOpd: sasaran.NamaSasaranOpd,
+				IdTujuanOpd:    tujuanOpd.Id,
+				NamaTujuanOpd:  tujuanOpd.Tujuan,
+				TahunAwal:      sasaran.TahunAwal,
+				TahunAkhir:     sasaran.TahunAkhir,
+				JenisPeriode:   sasaran.JenisPeriode,
+				Indikator:      indikatorList,
+				Pelaksana:      pelaksanaList,
+			})
+		}
+	}
+	return responses, nil
+}
+
 func (s *SasaranOpdServiceImpl) FindSasaranRenstra(
 	ctx context.Context, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode string,
 ) ([]sasaranopd.SasaranOpdResponse, error) {
@@ -913,6 +1025,7 @@ func (s *SasaranOpdServiceImpl) buildSasaranResponse(
 		return []sasaranopd.SasaranOpdResponse{}, nil
 	}
 	opd, _ := s.opdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+
 	// ── Batch fetch tujuan_opd (hindari N+1) ──────────────────
 	tujuanCache := make(map[int]domain.TujuanOpd)
 	for _, so := range sasaranOpds {
@@ -928,12 +1041,24 @@ func (s *SasaranOpdServiceImpl) buildSasaranResponse(
 			}
 		}
 	}
+
+	// ── Batch fetch is_hide dari tb_sasaran_opd_view ───────────
+	pokinIds := make([]int, 0, len(sasaranOpds))
+	for _, so := range sasaranOpds {
+		pokinIds = append(pokinIds, so.IdPohon)
+	}
+	isHideMap, err := s.sasaranOpdRepository.GetIsHideByPokinIds(ctx, tx, pokinIds)
+	if err != nil {
+		isHideMap = make(map[int]bool) // fallback: semua false
+	}
+
 	var responses []sasaranopd.SasaranOpdResponse
 	for _, so := range sasaranOpds {
 		resp := sasaranopd.SasaranOpdResponse{
 			IdPohon: so.IdPohon, KodeOpd: so.KodeOpd, NamaOpd: opd.NamaOpd,
 			NamaPohon: so.NamaPohon, JenisPohon: so.JenisPohon,
 			LevelPohon: so.LevelPohon, TahunPohon: so.TahunPohon,
+			IsHide:     isHideMap[so.IdPohon],
 			Pelaksana:  []sasaranopd.PelaksanaOpdResponse{},
 			SasaranOpd: []sasaranopd.SasaranOpdDetailResponse{},
 		}
@@ -1120,6 +1245,56 @@ func (service *SasaranOpdServiceImpl) DeleteRenjaIndikator(ctx context.Context, 
 		return err
 	}
 	return service.sasaranOpdRepository.DeleteIndikatorTargetRenja(ctx, tx, kodeIndikator) // ← lowercase
+}
+
+func (s *SasaranOpdServiceImpl) HideSasaranOpd(ctx context.Context, idPokin int) error {
+	if idPokin <= 0 {
+		return fmt.Errorf("id pohon kinerja tidak valid")
+	}
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	pohon, err := s.pohonkinerjaRepository.FindById(ctx, tx, idPokin)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+		}
+		return err
+	}
+	if pohon.Id == 0 {
+		return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+	}
+
+	return s.sasaranOpdRepository.HideSasaranOpdView(ctx, tx, idPokin)
+}
+
+func (s *SasaranOpdServiceImpl) UnhideSasaranOpd(ctx context.Context, idPokin int) error {
+	if idPokin <= 0 {
+		return fmt.Errorf("id pohon kinerja tidak valid")
+	}
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	pohon, err := s.pohonkinerjaRepository.FindById(ctx, tx, idPokin)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+		}
+		return err
+	}
+	if pohon.Id == 0 {
+		return fmt.Errorf("pohon kinerja dengan id %d tidak ditemukan", idPokin)
+	}
+
+	return s.sasaranOpdRepository.UnhideSasaranOpdView(ctx, tx, idPokin)
 }
 
 func (s *SasaranOpdServiceImpl) getIndikatorWithFallback(
