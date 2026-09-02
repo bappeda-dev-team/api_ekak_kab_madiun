@@ -15,6 +15,7 @@ type SasaranOpdService interface {
 	FindByIdPokin(ctx context.Context, idPokin int, tahun string) (*sasaranopd.SasaranOpdResponse, error)
 	FindIdPokinSasaran(ctx context.Context, id int) (pohonkinerja.PohonKinerjaOpdResponse, error)
 	FindByTahun(ctx context.Context, kodeOpd string, tahun string, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
+	FindByNipAndOpd(ctx context.Context, nip, kodeOpd, tahun string) ([]sasaranopd.SasaranOpdByNipResponse, error)
 	FindSasaranRenstra(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
 	FindSasaranRanwal(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
 	FindSasaranRankhir(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]sasaranopd.SasaranOpdResponse, error)
@@ -22,4 +23,6 @@ type SasaranOpdService interface {
 	CreateRenjaIndikator(ctx context.Context, sasaranOpdId int, jenis string, requests []sasaranopd.IndikatorCreateRequest) ([]sasaranopd.IndikatorResponse, error)
 	UpdateRenjaIndikator(ctx context.Context, kodeIndikator string, jenis string, request sasaranopd.IndikatorUpdateRequest) (sasaranopd.IndikatorResponse, error)
 	DeleteRenjaIndikator(ctx context.Context, kodeIndikator string) error
+	HideSasaranOpd(ctx context.Context, idPokin int) error
+	UnhideSasaranOpd(ctx context.Context, idPokin int) error
 }

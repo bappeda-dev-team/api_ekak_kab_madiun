@@ -13,7 +13,6 @@ type PohonKinerjaAdminService interface {
 	FindAll(ctx context.Context, tahun string) (pohonkinerja.PohonKinerjaAdminResponse, error)
 	FindSubTematik(ctx context.Context, tahun string) (pohonkinerja.OutcomeResponse, error)
 	FindPokinAdminByIdHierarki(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error)
-	FindPokinAdminByIdHierarkiOpdView(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error)
 	CreateStrategicAdmin(ctx context.Context, request pohonkinerja.PohonKinerjaAdminStrategicCreateRequest) (pohonkinerja.PohonKinerjaAdminResponseData, error)
 	CloneStrategiFromPemda(ctx context.Context, request pohonkinerja.PohonKinerjaAdminStrategicCreateRequest) (pohonkinerja.PohonKinerjaAdminResponseData, error)
 	TolakPokin(ctx context.Context, request pohonkinerja.PohonKinerjaAdminTolakRequest) error

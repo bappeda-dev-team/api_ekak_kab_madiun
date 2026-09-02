@@ -123,6 +123,23 @@ type StrategicResponse struct {
 	Childs       []interface{}                `json:"childs,omitempty"`
 }
 
+// BidangUrusanGroupResponse mengelompokkan TujuanOpd (beserta strategic di bawahnya)
+// yang berada dalam satu bidang urusan, di dalam OPD view.
+type BidangUrusanGroupResponse struct {
+	NamaBidangUrusan string        `json:"nama_bidang_urusan"`
+	Childs           []interface{} `json:"childs"`
+}
+
+// TujuanOpdStrategicGroupResponse merepresentasikan satu tujuan OPD beserta
+// indikator+target renstranya, nama-nama sasaran OPD, dan strategic di bawahnya.
+type TujuanOpdStrategicGroupResponse struct {
+	Id            int                 `json:"id_tujuan_opd"`
+	NamaTujuanOpd string              `json:"nama_tujuan_opd"`
+	Indikators    []IndikatorResponse `json:"indikator"`
+	SasaranOpd    []string            `json:"sasaran_opd"`
+	Childs        []interface{}       `json:"childs"`
+}
+
 type TacticalResponse struct {
 	Id           int                          `json:"id"`
 	Parent       int                          `json:"parent"`
@@ -193,12 +210,4 @@ type TematikListOpdResponse struct {
 type OpdListResponse struct {
 	KodeOpd         string `json:"kode_opd"`
 	PerangkatDaerah string `json:"perangkat_daerah"`
-}
-
-// OpdGroupResponse mengelompokkan strategic OPD yang memiliki kode_opd sama
-// di bawah parent subtematik yang sama dalam tampilan OPD view
-type OpdGroupResponse struct {
-	KodeOpd string        `json:"kode_opd"`
-	NamaOpd string        `json:"nama_opd"`
-	Childs  []interface{} `json:"childs"`
 }

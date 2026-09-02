@@ -63,6 +63,8 @@ definitions:
         type: string
       indikator_id:
         type: string
+      is_hide:
+        type: boolean
       jenis:
         type: string
       jenis_periode:
@@ -1168,6 +1170,199 @@ definitions:
       nama:
         type: string
     type: object
+  rencanakinerja.DataOutput:
+    properties:
+      output_data:
+        items:
+          type: string
+        type: array
+    type: object
+  rencanakinerja.IndikatorCreateRequest:
+    properties:
+      nama_indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/rencanakinerja.TargetCreateRequest'
+        type: array
+    type: object
+  rencanakinerja.IndikatorResponse:
+    properties:
+      data_output:
+        $ref: '#/definitions/rencanakinerja.DataOutput'
+      id_indikator:
+        type: string
+      manual_ik_exist:
+        type: boolean
+      nama_indikator:
+        type: string
+      rencana_kinerja_id:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/rencanakinerja.TargetResponse'
+        type: array
+    type: object
+  rencanakinerja.IndikatorResponseLevel1:
+    properties:
+      id_indikator:
+        type: string
+      manual_ik_exist:
+        type: boolean
+      nama_indikator:
+        type: string
+      rencana_kinerja_id:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/rencanakinerja.TargetResponse'
+        type: array
+    type: object
+  rencanakinerja.RencanaKinerjaCreateRequest:
+    properties:
+      catatan:
+        type: string
+      id_pohon:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/rencanakinerja.IndikatorCreateRequest'
+        type: array
+      jenis_periode:
+        type: string
+      kode_opd:
+        type: string
+      nama_rencana_kinerja:
+        type: string
+      pegawai_id:
+        type: string
+      periode_id:
+        type: integer
+      sasaranopd_id:
+        type: integer
+      status_rencana_kinerja:
+        type: string
+      tahun:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+    type: object
+  rencanakinerja.RencanaKinerjaLevel1Response:
+    properties:
+      catatan:
+        type: string
+      id_pohon:
+        type: integer
+      id_rencana_kinerja:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/rencanakinerja.IndikatorResponseLevel1'
+        type: array
+      is_hide_sasaran_opd:
+        type: boolean
+      level_pohon:
+        type: integer
+      nama_pegawai:
+        type: string
+      nama_pohon:
+        type: string
+      nama_rencana_kinerja:
+        type: string
+      nama_sasaran_opd:
+        type: string
+      operasional_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      pegawai_id:
+        type: string
+      perlu_ubah_pokin:
+        type: boolean
+      sasaran_opd_id:
+        type: integer
+      status_rencana_kinerja:
+        type: string
+      tahun:
+        type: string
+    type: object
+  rencanakinerja.RencanaKinerjaResponse:
+    properties:
+      action:
+        items:
+          $ref: '#/definitions/web.ActionButton'
+        type: array
+      catatan:
+        type: string
+      id_parent_pohon:
+        type: integer
+      id_pohon:
+        type: integer
+      id_rencana_kinerja:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/rencanakinerja.IndikatorResponse'
+        type: array
+      jenis_periode:
+        type: string
+      level_pohon:
+        type: integer
+      nama_pegawai:
+        type: string
+      nama_pohon:
+        type: string
+      nama_rencana_kinerja:
+        type: string
+      operasional_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      pegawai_id:
+        type: string
+      perlu_ubah_pokin:
+        type: boolean
+      status_rencana_kinerja:
+        type: string
+      sub_kegiatan:
+        $ref: '#/definitions/subkegiatan.SubKegiatanResponse'
+      tahun:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+    type: object
+  rencanakinerja.TargetCreateRequest:
+    properties:
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  rencanakinerja.TargetResponse:
+    properties:
+      id_target:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
   sasaranopd.IndikatorCreateRequest:
     properties:
       definisi_operasional:
@@ -1261,6 +1456,47 @@ definitions:
       pegawai_id:
         type: string
     type: object
+  sasaranopd.SasaranOpdByNipResponse:
+    properties:
+      id_pohon:
+        type: integer
+      id_sasaran_opd:
+        type: string
+      id_tujuan_opd:
+        type: integer
+      indikator:
+        items:
+          $ref: '#/definitions/sasaranopd.IndikatorResponse'
+        type: array
+      is_hide:
+        type: boolean
+      jenis_periode:
+        type: string
+      jenis_pohon:
+        type: string
+      kode_opd:
+        type: string
+      level_pohon:
+        type: integer
+      nama_opd:
+        type: string
+      nama_pohon:
+        type: string
+      nama_sasaran_opd:
+        type: string
+      nama_tujuan_opd:
+        type: string
+      pelaksana:
+        items:
+          $ref: '#/definitions/sasaranopd.PelaksanaOpdResponse'
+        type: array
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      tahun_pohon:
+        type: string
+    type: object
   sasaranopd.SasaranOpdCreateRequest:
     properties:
       id_pohon:
@@ -1330,6 +1566,8 @@ definitions:
     properties:
       id_pohon:
         type: integer
+      is_hide:
+        type: boolean
       jenis_pohon:
         type: string
       kode_opd:
@@ -2101,6 +2339,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorPenetapanDualResponse'
         type: array
+      is_hide:
+        type: boolean
       is_lock:
         type: boolean
       misi:
@@ -2128,6 +2368,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorRankhirDualResponse'
         type: array
+      is_hide:
+        type: boolean
       misi:
         type: string
       nama_tematik:
@@ -2153,6 +2395,8 @@ definitions:
         items:
           $ref: '#/definitions/tujuanpemda.IndikatorResponse'
         type: array
+      is_hide:
+        type: boolean
       jenis_pohon:
         type: string
       misi:
@@ -2211,6 +2455,18 @@ definitions:
       name:
         type: string
       url:
+        type: string
+    type: object
+  web.WebRencanaKinerjaResponse:
+    properties:
+      code:
+        type: integer
+      rencana_kinerja: {}
+      rencana_kinerja_action:
+        items:
+          $ref: '#/definitions/web.ActionButton'
+        type: array
+      status:
         type: string
     type: object
   web.WebResponse:
@@ -3358,6 +3614,83 @@ paths:
       summary: Update Parent Pohon Kinerja Opd Clone
       tags:
       - Clone Pohon Kinerja Opd
+  /rencana_kinerja/create_level1:
+    post:
+      consumes:
+      - application/json
+      description: Membuat rekin level 1.
+      parameters:
+      - description: Rencana Kinerja Create Request
+        in: body
+        name: rencana_kinerja_create_request
+        required: true
+        schema:
+          $ref: '#/definitions/rencanakinerja.RencanaKinerjaCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/rencanakinerja.RencanaKinerjaResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Rekin Level 1
+      tags:
+      - Rencana Kinerja
+  /rencanakinerja/pegawai_level_1/{pegawai_id}/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua rekin level 1.
+      parameters:
+      - description: ID pegawai
+        in: path
+        name: pegawai_id
+        required: true
+        type: string
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/rencanakinerja.RencanaKinerjaLevel1Response'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebRencanaKinerjaResponse'
+      security:
+      - BearerAuth: []
+      summary: Find All Rekin Level 1
+      tags:
+      - Rencana Kinerja
   /sasaran_opd/create:
     post:
       consumes:
@@ -3424,6 +3757,34 @@ paths:
       summary: Delete Sasaran Opd
       tags:
       - Sasaran Opd Renstra
+  /sasaran_opd/hide/{id_pokin}:
+    post:
+      consumes:
+      - application/json
+      description: Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic
+        level 4).
+      parameters:
+      - description: ID Pohon Kinerja
+        in: path
+        name: id_pokin
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hide Sasaran OPD
+      tags:
+      - Sasaran Opd View
   /sasaran_opd/indikator/delete/{kodeIndikator}:
     delete:
       consumes:
@@ -3459,6 +3820,53 @@ paths:
       - Sasaran Opd Renja Ranwal
       - Sasaran Opd Renja Rankhir
       - Sasaran Opd Renja Penetapan
+  /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun}:
+    get:
+      consumes:
+      - application/json
+      description: Mendapatkan data sasaran opd berdasarkan nip dan kode opd.
+      parameters:
+      - description: NIP
+        example: '"1234567890"'
+        in: path
+        name: nip
+        required: true
+        type: string
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranopd.SasaranOpdByNipResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Find Sasaran Opd by Nip and Opd
+      tags:
+      - Sasaran Opd Level 1
   /sasaran_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -3885,6 +4293,34 @@ paths:
       summary: Sasaran Opd Renstra
       tags:
       - Sasaran Opd Renstra
+  /sasaran_opd/unhide/{id_pokin}:
+    delete:
+      consumes:
+      - application/json
+      description: Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic
+        level 4).
+      parameters:
+      - description: ID Pohon Kinerja
+        in: path
+        name: id_pokin
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unhide Sasaran OPD
+      tags:
+      - Sasaran Opd View
   /sasaran_opd/update/{id}:
     put:
       consumes:
@@ -5118,6 +5554,37 @@ paths:
       summary: Get Pokin With Periode Renstra
       tags:
       - Tujuan Pemda
+  /tujuan_pemda/hide/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Sembunyikan tujuan pemda berdasarkan ID
+      parameters:
+      - description: ID Tujuan Pemda
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hide Tujuan Pemda
+      tags:
+      - Tujuan Pemda
   /tujuan_pemda/lock:
     get:
       consumes:
@@ -5564,6 +6031,37 @@ paths:
       security:
       - BearerAuth: []
       summary: Update Target Tujuan Pemda Rankhir
+      tags:
+      - Tujuan Pemda
+  /tujuan_pemda/unhide/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Tampilkan kembali tujuan pemda yang disembunyikan berdasarkan ID
+      parameters:
+      - description: ID Tujuan Pemda
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unhide Tujuan Pemda
       tags:
       - Tujuan Pemda
   /tujuan_pemda/update/{id}:
