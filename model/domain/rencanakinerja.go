@@ -31,9 +31,10 @@ type RencanaKinerja struct {
 	NamaSubKegiatan    string
 	KodeKegiatan       string
 	NamaKegiatan       string
-	SasaranOpdId       int
-	NamaSasaranOpd     string
-	PohonKinerjaParent PohonKinerja
+	SasaranOpdId         int
+	NamaSasaranOpd       string
+	IsHideSasaranOpd     bool
+	PohonKinerjaParent   PohonKinerja
 	KodeProgram        string
 	Program            string
 	PaguProgram        string

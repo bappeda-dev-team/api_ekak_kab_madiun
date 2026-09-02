@@ -33,4 +33,8 @@ type TujuanPemdaController interface {
 	UnlockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	IsTujuanPemdaLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllLockTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	// hide/unhide
+	HideTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UnhideTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

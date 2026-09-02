@@ -295,6 +295,39 @@ func (controller *SasaranOpdControllerImpl) FindByTahun(writer http.ResponseWrit
 	}
 }
 
+// @Summary      Find Sasaran Opd by Nip and Opd
+// @Description  Mendapatkan data sasaran opd berdasarkan nip dan kode opd.
+// @Tags         Sasaran Opd Level 1
+// @Accept       json
+// @Produce      json
+// @Param        nip  path     string  true  "NIP"   example("1234567890")
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path     string  true  "Tahun"      example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]sasaranopd.SasaranOpdByNipResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun} [get]
+func (controller *SasaranOpdControllerImpl) FindByNipAndOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	nip := params.ByName("nip")
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	responses, err := controller.SasaranOpdService.FindByNipAndOpd(request.Context(), nip, kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   200,
+		Status: "success find sasaran opd by nip and opd",
+		Data:   responses,
+	})
+}
+
 // GetRenjaRanwal godoc
 // @Summary      Sasaran Opd Renstra
 // @Description  Mendapatkan data sasaran opd renstra berdasarkan kode OPD dan tahun.
@@ -705,5 +738,85 @@ func (controller *SasaranOpdControllerImpl) UpdateIndikatorPenetapan(writer http
 		Code:   http.StatusOK,
 		Status: "success update indikator",
 		Data:   indikatorUpdateResponses,
+	})
+}
+
+// @Summary      Hide Sasaran OPD
+// @Description  Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic level 4).
+// @Tags         Sasaran Opd View
+// @Accept       json
+// @Produce      json
+// @Param        id_pokin  path  int  true  "ID Pohon Kinerja"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/hide/{id_pokin} [post]
+func (controller *SasaranOpdControllerImpl) HideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokin, err := strconv.Atoi(params.ByName("id_pokin"))
+	if err != nil || idPokin <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id_pokin tidak valid",
+		})
+		return
+	}
+
+	if err := controller.SasaranOpdService.HideSasaranOpd(request.Context(), idPokin); err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed hide sasaran opd",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success hide sasaran opd",
+		Data: map[string]interface{}{
+			"id_pokin": idPokin,
+			"is_hide":  true,
+		},
+	})
+}
+
+// @Summary      Unhide Sasaran OPD
+// @Description  Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic level 4).
+// @Tags         Sasaran Opd View
+// @Accept       json
+// @Produce      json
+// @Param        id_pokin  path  int  true  "ID Pohon Kinerja"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/unhide/{id_pokin} [delete]
+func (controller *SasaranOpdControllerImpl) UnhideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokin, err := strconv.Atoi(params.ByName("id_pokin"))
+	if err != nil || idPokin <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id_pokin tidak valid",
+		})
+		return
+	}
+
+	if err := controller.SasaranOpdService.UnhideSasaranOpd(request.Context(), idPokin); err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed unhide sasaran opd",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success unhide sasaran opd",
+		Data: map[string]interface{}{
+			"id_pokin": idPokin,
+			"is_hide":  false,
+		},
 	})
 }

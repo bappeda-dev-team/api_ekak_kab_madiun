@@ -41,6 +41,10 @@ type TujuanOpdRepository interface {
 	FindAllOnly(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error)
 	DeleteIndikatorByIds(ctx context.Context, tx *sql.Tx, indikatorIds []string) error
 
+	// FindTujuanOpdWithIndikatorByIdsBatch mengambil data tujuan OPD lengkap (dengan
+	// indikator dan target renstra) secara batch berdasarkan list id tujuan_opd.
+	FindTujuanOpdWithIndikatorByIdsBatch(ctx context.Context, tx *sql.Tx, ids []int) (map[int]domain.TujuanOpd, error)
+
 	// ── Target-only CRUD (ranwal/rankhir/penetapan) ──────────────
 	TargetOpdExistsByKey(ctx context.Context, tx *sql.Tx, kodeIndikator, tahun, jenis string) (bool, error)
 	CreateTargetOpdSingle(ctx context.Context, tx *sql.Tx, t domain.Target) (domain.Target, error)

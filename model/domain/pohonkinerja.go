@@ -47,6 +47,17 @@ type PohonKinerja struct {
 	LevelPohonParent     int
 	TaggingPokin         []TaggingPokin
 	KeteranganTahunClone string
+	SasaranInfo          []SasaranPokinInfo
+}
+
+// SasaranPokinInfo menyimpan informasi ringkas sasaran OPD yang terhubung dengan
+// sebuah node strategic (level 4) beserta tujuan OPD dan bidang urusannya.
+type SasaranPokinInfo struct {
+	IdTujuanOpd      int
+	NamaSasaranOpd   string
+	NamaTujuanOpd    string
+	KodeBidangUrusan string
+	NamaBidangUrusan string
 }
 
 type CSF struct {

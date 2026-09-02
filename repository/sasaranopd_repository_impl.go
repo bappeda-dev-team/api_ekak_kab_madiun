@@ -1179,6 +1179,176 @@ func (repository *SasaranOpdRepositoryImpl) FindByTahun(ctx context.Context, tx 
 	return result, nil
 }
 
+func (repository *SasaranOpdRepositoryImpl) FindByNipAndOpd(
+	ctx context.Context, tx *sql.Tx,
+	nip, kodeOpd, tahun string,
+) ([]domain.SasaranOpd, error) {
+	script := `
+    SELECT DISTINCT
+        pk.id            AS pokin_id,
+        pk.nama_pohon,
+        pk.kode_opd,
+        pk.jenis_pohon,
+        pk.level_pohon,
+        pk.tahun         AS tahun_pohon,
+        pp.id            AS pelaksana_id,
+        pp.pegawai_id,
+        p.nip            AS pelaksana_nip,
+        p.nama           AS nama_pegawai,
+        so.id            AS sasaran_id,
+        so.nama_sasaran_opd,
+        so.tahun_awal,
+        so.tahun_akhir,
+        so.jenis_periode,
+        so.id_tujuan_opd,
+        i.id             AS indikator_id,
+        i.indikator,
+        i.rumus_perhitungan,
+        i.sumber_data,
+        t.id             AS target_id,
+        t.tahun          AS target_tahun,
+        t.target,
+        t.satuan
+    FROM tb_pohon_kinerja pk
+    LEFT JOIN tb_pelaksana_pokin pp ON pk.id = pp.pohon_kinerja_id
+    LEFT JOIN tb_pegawai p          ON pp.pegawai_id = p.id
+    INNER JOIN tb_sasaran_opd so    ON pk.id = so.pokin_id
+    LEFT JOIN tb_indikator i        ON so.id = i.sasaran_opd_id
+    LEFT JOIN tb_target t           ON i.id = t.indikator_id AND t.tahun = ?
+    WHERE pk.level_pohon = 4
+      AND pk.parent = 0
+      AND pk.kode_opd = ?
+      AND EXISTS (
+          SELECT 1 FROM tb_pelaksana_pokin pp2
+          INNER JOIN tb_pegawai p2 ON pp2.pegawai_id = p2.id
+          WHERE pp2.pohon_kinerja_id = pk.id AND p2.nip = ?
+      )
+      AND CAST(pk.tahun AS SIGNED) >= CAST(so.tahun_awal AS SIGNED)
+      AND CAST(pk.tahun AS SIGNED) <= CAST(so.tahun_akhir AS SIGNED)
+      AND CAST(? AS SIGNED) BETWEEN CAST(so.tahun_awal AS SIGNED) AND CAST(so.tahun_akhir AS SIGNED)
+    ORDER BY pk.nama_pohon ASC, so.nama_sasaran_opd ASC`
+
+	rows, err := tx.QueryContext(ctx, script, tahun, kodeOpd, nip, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	pokinMap := make(map[int]*domain.SasaranOpd)
+	pelaksanaMap := make(map[string]bool)
+
+	for rows.Next() {
+		var (
+			pokinId, levelPohon                           int
+			namaPohon, kodeOpdRow, jenisPohon, tahunPohon string
+			pelaksanaId, pegawaiId, pelaksanaNip          sql.NullString
+			namaPegawai                                   sql.NullString
+			sasaranId                                     sql.NullInt64
+			namaSasaranOpd                                sql.NullString
+			idTujuanOpd                                   sql.NullInt64
+			tahunAwalSasaran, tahunAkhirSasaran           sql.NullString
+			jenisPeriodeSasaran                           sql.NullString
+			indikatorId, indikator                        sql.NullString
+			rumusPerhitungan, sumberData                  sql.NullString
+			targetId, targetTahun                         sql.NullString
+			targetValue, targetSatuan                     sql.NullString
+		)
+		if err := rows.Scan(
+			&pokinId, &namaPohon, &kodeOpdRow, &jenisPohon, &levelPohon, &tahunPohon,
+			&pelaksanaId, &pegawaiId, &pelaksanaNip, &namaPegawai,
+			&sasaranId, &namaSasaranOpd,
+			&tahunAwalSasaran, &tahunAkhirSasaran, &jenisPeriodeSasaran,
+			&idTujuanOpd,
+			&indikatorId, &indikator,
+			&rumusPerhitungan, &sumberData,
+			&targetId, &targetTahun, &targetValue, &targetSatuan,
+		); err != nil {
+			return nil, err
+		}
+
+		so, exists := pokinMap[pokinId]
+		if !exists {
+			so = &domain.SasaranOpd{
+				Id: pokinId, IdPohon: pokinId,
+				KodeOpd:    kodeOpdRow,
+				NamaPohon:  namaPohon,
+				JenisPohon: jenisPohon,
+				LevelPohon: levelPohon,
+				TahunPohon: tahunPohon,
+				Pelaksana:  make([]domain.PelaksanaPokin, 0),
+				SasaranOpd: make([]domain.SasaranOpdDetail, 0),
+			}
+			pokinMap[pokinId] = so
+		}
+
+		if pelaksanaId.Valid && !pelaksanaMap[pelaksanaId.String] {
+			pelaksanaMap[pelaksanaId.String] = true
+			so.Pelaksana = append(so.Pelaksana, domain.PelaksanaPokin{
+				Id: pelaksanaId.String, PegawaiId: pegawaiId.String,
+				Nip: pelaksanaNip.String, NamaPegawai: namaPegawai.String,
+			})
+		}
+
+		if sasaranId.Valid {
+			var existingSasaran *domain.SasaranOpdDetail
+			for i := range so.SasaranOpd {
+				if so.SasaranOpd[i].Id == int(sasaranId.Int64) {
+					existingSasaran = &so.SasaranOpd[i]
+					break
+				}
+			}
+			if existingSasaran == nil {
+				so.SasaranOpd = append(so.SasaranOpd, domain.SasaranOpdDetail{
+					Id:             int(sasaranId.Int64),
+					IdPohon:        pokinId,
+					NamaSasaranOpd: namaSasaranOpd.String,
+					IdTujuanOpd:    int(idTujuanOpd.Int64),
+					TahunAwal:      tahunAwalSasaran.String,
+					TahunAkhir:     tahunAkhirSasaran.String,
+					JenisPeriode:   jenisPeriodeSasaran.String,
+					Indikator:      make([]domain.Indikator, 0),
+				})
+				existingSasaran = &so.SasaranOpd[len(so.SasaranOpd)-1]
+			}
+
+			if indikatorId.Valid {
+				var existingInd *domain.Indikator
+				for i := range existingSasaran.Indikator {
+					if existingSasaran.Indikator[i].Id == indikatorId.String {
+						existingInd = &existingSasaran.Indikator[i]
+						break
+					}
+				}
+				if existingInd == nil {
+					existingSasaran.Indikator = append(existingSasaran.Indikator, domain.Indikator{
+						Id:               indikatorId.String,
+						Indikator:        indikator.String,
+						RumusPerhitungan: rumusPerhitungan,
+						SumberData:       sumberData,
+						Target:           make([]domain.Target, 0),
+					})
+					existingInd = &existingSasaran.Indikator[len(existingSasaran.Indikator)-1]
+				}
+				if targetId.Valid && targetTahun.Valid {
+					existingInd.Target = append(existingInd.Target, domain.Target{
+						Id:          targetId.String,
+						IndikatorId: indikatorId.String,
+						Tahun:       targetTahun.String,
+						Target:      targetValue.String,
+						Satuan:      targetSatuan.String,
+					})
+				}
+			}
+		}
+	}
+
+	var result []domain.SasaranOpd
+	for _, v := range pokinMap {
+		result = append(result, *v)
+	}
+	return result, nil
+}
+
 func (r *SasaranOpdRepositoryImpl) FindSasaranByPeriod(
 	ctx context.Context, tx *sql.Tx,
 	kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, jenisIndikator string,
@@ -2152,5 +2322,114 @@ func (repository *SasaranOpdRepositoryImpl) FindAllOnly(ctx context.Context, tx 
 		result = append(result, *sasaranOpd)
 	}
 
-	return result, nil
+	return result, rows.Err()
+}
+
+func (repository *SasaranOpdRepositoryImpl) HideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error {
+	script := `
+		INSERT INTO tb_sasaran_opd_view (id_pokin, is_hide)
+		VALUES (?, 1)
+		ON DUPLICATE KEY UPDATE is_hide = 1
+	`
+	_, err := tx.ExecContext(ctx, script, idPokin)
+	return err
+}
+
+func (repository *SasaranOpdRepositoryImpl) UnhideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error {
+	script := `UPDATE tb_sasaran_opd_view SET is_hide = 0 WHERE id_pokin = ?`
+	_, err := tx.ExecContext(ctx, script, idPokin)
+	return err
+}
+
+// FindSasaranTujuanByPokinIdsBatch mengambil ringkasan nama sasaran OPD, tujuan OPD,
+// dan bidang urusan secara batch berdasarkan pokin_id strategic level 4.
+// Satu query dengan JOIN ke tb_tujuan_opd dan tb_bidang_urusan agar efisien.
+func (repository *SasaranOpdRepositoryImpl) FindSasaranTujuanByPokinIdsBatch(
+	ctx context.Context, tx *sql.Tx, pokinIds []int,
+) (map[int][]domain.SasaranPokinInfo, error) {
+	if len(pokinIds) == 0 {
+		return map[int][]domain.SasaranPokinInfo{}, nil
+	}
+
+	placeholders := strings.Repeat("?,", len(pokinIds))
+	placeholders = placeholders[:len(placeholders)-1]
+
+	query := fmt.Sprintf(`
+		SELECT
+			so.pokin_id,
+			COALESCE(so.id_tujuan_opd, 0)        AS id_tujuan_opd,
+			so.nama_sasaran_opd,
+			COALESCE(t.tujuan, '')               AS nama_tujuan_opd,
+			COALESCE(t.kode_bidang_urusan, '')   AS kode_bidang_urusan,
+			COALESCE(b.nama_bidang_urusan, '')   AS nama_bidang_urusan
+		FROM tb_sasaran_opd so
+		LEFT JOIN tb_tujuan_opd t  ON so.id_tujuan_opd = t.id
+		LEFT JOIN tb_bidang_urusan b ON t.kode_bidang_urusan = b.kode_bidang_urusan
+		WHERE so.pokin_id IN (%s)
+		ORDER BY so.pokin_id, so.id_tujuan_opd, so.id
+	`, placeholders)
+
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		args[i] = id
+	}
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int][]domain.SasaranPokinInfo)
+	for rows.Next() {
+		var pokinId int
+		var info domain.SasaranPokinInfo
+		if err := rows.Scan(
+			&pokinId,
+			&info.IdTujuanOpd,
+			&info.NamaSasaranOpd,
+			&info.NamaTujuanOpd,
+			&info.KodeBidangUrusan,
+			&info.NamaBidangUrusan,
+		); err != nil {
+			return nil, err
+		}
+		result[pokinId] = append(result[pokinId], info)
+	}
+	return result, rows.Err()
+}
+
+func (repository *SasaranOpdRepositoryImpl) GetIsHideByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]bool, error) {
+	result := make(map[int]bool)
+	if len(pokinIds) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, len(pokinIds))
+	args := make([]interface{}, len(pokinIds))
+	for i, id := range pokinIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(
+		"SELECT id_pokin, is_hide FROM tb_sasaran_opd_view WHERE id_pokin IN (%s)",
+		strings.Join(placeholders, ","),
+	)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return result, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pokinId int
+		var isHide bool
+		if err := rows.Scan(&pokinId, &isHide); err != nil {
+			return result, err
+		}
+		result[pokinId] = isHide
+	}
+	return result, rows.Err()
 }
