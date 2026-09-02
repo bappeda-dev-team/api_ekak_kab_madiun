@@ -51,15 +51,22 @@ func (service *PptkServiceImpl) Create(ctx context.Context, request pptk.PptkCre
 		return pptk.PptkResponse{}, err
 	}
 
+	newData, err := service.PptkRepository.FindById(ctx, tx, result.Id)
+	if err != nil {
+		return pptk.PptkResponse{}, err
+	}
+
 	return pptk.PptkResponse{
-		Id:                 result.Id,
-		Nip:                result.Nip,
-		KodeOpd:       	 	result.KodeOpd,
-		Tahun: 				result.Tahun,
-		KodeSubKegiatan:    result.KodeSubKegiatan,
-		NipAtasan:          result.NipAtasan,
-		AktifAt:            result.AktifAt,
-		NonAktifAt: 	    result.NonAktifAt,
+		Id:                 newData.Id,
+		Nip:                newData.Nip,
+		NamaPegawai:        newData.NamaPegawai,
+		KodeOpd:       	 	newData.KodeOpd,
+		Tahun: 				newData.Tahun,
+		KodeSubKegiatan:    newData.KodeSubKegiatan,
+		NipAtasan:          newData.NipAtasan,
+		NamaAtasan:         newData.NamaAtasan,
+		AktifAt:            newData.AktifAt,
+		NonAktifAt: 	    newData.NonAktifAt,
 	}, nil
 }
 
@@ -103,13 +110,15 @@ func (service *PptkServiceImpl) Update(ctx context.Context, request pptk.PptkUpd
 
 	return pptk.PptkResponse{
 		Id:                 updateData.Id,
-		Nip:                result.Nip,
-		KodeOpd:       	 	result.KodeOpd,
-		Tahun: 				result.Tahun,
-		KodeSubKegiatan:    result.KodeSubKegiatan,
-		NipAtasan:          result.NipAtasan,
-		AktifAt:            result.AktifAt,
-		NonAktifAt: 	    result.NonAktifAt,
+		Nip:                updateData.Nip,
+		NamaPegawai:        updateData.NamaPegawai,
+		KodeOpd:       	 	updateData.KodeOpd,
+		Tahun: 				updateData.Tahun,
+		KodeSubKegiatan:    updateData.KodeSubKegiatan,
+		NipAtasan:          updateData.NipAtasan,
+		NamaAtasan:         updateData.NamaAtasan,
+		AktifAt:            updateData.AktifAt,
+		NonAktifAt: 	    updateData.NonAktifAt,
 	}, nil
 }
 
@@ -144,10 +153,12 @@ func (service *PptkServiceImpl) FindById(ctx context.Context, id int) (pptk.Pptk
 	return pptk.PptkResponse{
 		Id:                 result.Id,
 		Nip:                result.Nip,
+		NamaPegawai:        result.NamaPegawai,
 		KodeOpd:       	 	result.KodeOpd,
 		Tahun: 				result.Tahun,
 		KodeSubKegiatan:    result.KodeSubKegiatan,
 		NipAtasan:          result.NipAtasan,
+		NamaAtasan:         result.NamaAtasan,
 		AktifAt:            result.AktifAt,
 		NonAktifAt: 	    result.NonAktifAt,
 	}, nil
