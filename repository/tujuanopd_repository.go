@@ -12,16 +12,16 @@ type TujuanOpdRepository interface {
 	Update(ctx context.Context, tx *sql.Tx, tujuanOpd domain.TujuanOpd) error
 	Delete(ctx context.Context, tx *sql.Tx, id int) error
 	FindById(ctx context.Context, tx *sql.Tx, id int) (domain.TujuanOpd, error)
-	FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error)
 	FindIndikatorByTujuanId(ctx context.Context, tx *sql.Tx, tujuanOpdId int) ([]domain.Indikator, error)
 	FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) ([]domain.Target, error)
+	FindAll(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error)
 	FindTujuanOpdByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error)
 	FindTujuanOpdByTahunByStrategicArahKebijakan(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error)
 	FindIndikatorByTujuanOpdId(ctx context.Context, tx *sql.Tx, tujuanOpdId int) ([]domain.Indikator, error)
 	FindTujuanOpdForCascadingOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error)
 	FindIndikatorByTujuanOpdIdsBatch(ctx context.Context, tx *sql.Tx, tujuanOpdIds []int) (map[int][]domain.Indikator, error)
 
-	//trnstra
+	// renstra
 	// FindAll untuk renstra (range tahun)
 	FindAllByPeriod(ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, jenisIndikator string) ([]domain.TujuanOpd, error)
 	// FindAll untuk ranwal/rankhir (single tahun)
@@ -34,9 +34,17 @@ type TujuanOpdRepository interface {
 	FindIndikatorByKodeIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.Indikator, error)
 	FindAllByTahunForPokin(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisIndikator string) ([]domain.TujuanOpd, error)
 	SetTujuanOpdLocked(ctx context.Context, tx *sql.Tx, id int, locked bool) error
+	FindAllByTahunDualJenis(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisOverride string) ([]domain.TujuanOpd, error)
 	FindIndikatorTargetsByTujuanIds(ctx context.Context, tx *sql.Tx, tujuanIds []int) ([]domain.Indikator, error)
 	FindByIdOnly(ctx context.Context, tx *sql.Tx, id int) (domain.TujuanOpd, error)
 	FindIndikatorTargetsRenstraByTujuanIds(ctx context.Context, tx *sql.Tx, tujuanIds []int) ([]domain.Indikator, error)
 	FindAllOnly(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.TujuanOpd, error)
 	DeleteIndikatorByIds(ctx context.Context, tx *sql.Tx, indikatorIds []string) error
+
+	// ── Target-only CRUD (ranwal/rankhir/penetapan) ──────────────
+	TargetOpdExistsByKey(ctx context.Context, tx *sql.Tx, kodeIndikator, tahun, jenis string) (bool, error)
+	CreateTargetOpdSingle(ctx context.Context, tx *sql.Tx, t domain.Target) (domain.Target, error)
+	FindTargetOpdById(ctx context.Context, tx *sql.Tx, id string) (domain.Target, error)
+	UpdateTargetOpdById(ctx context.Context, tx *sql.Tx, id, targetValue, satuan string) (domain.Target, error)
+	DeleteTargetOpdByJenis(ctx context.Context, tx *sql.Tx, kodeIndikator, tahun, jenis string) error
 }
