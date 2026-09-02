@@ -1480,6 +1480,7 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 		COALESCE(pk_child.id, 0)           AS id_tactical,
 		COALESCE(pk_child.nama_pohon, '')  AS tactical,
 		COALESCE(pk_child2.nama_pohon, '') AS operasional,
+		COALESCE(pk_child2.tahun, 0) AS tahun_operasional,
 		COALESCE(tak.id, 0)              AS id_arah_kebijakan,
     	COALESCE(tak.pokin_id, 0)        AS arah_pokin_id,
     	COALESCE(tak.arah_kebijakan, '') AS arah_kebijakan
@@ -1537,6 +1538,7 @@ func (r *SasaranOpdRepositoryImpl) FindStrategicArahKebijakan(ctx context.Contex
 			&row.IdTactical,
 			&row.NamaTactical,
 			&row.NamaOperasional,
+			&row.TahunOperasional,
 			&row.ArahKebijakan.ID,
 			&row.ArahKebijakan.PokinId,
 			&row.ArahKebijakan.Arah,

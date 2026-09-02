@@ -1714,6 +1714,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 							OperasionalOpds,
 						strategic.OperasionalOpdResponse{
 							OperasionalOpd: s.NamaOperasional,
+							TahunOperasionalOpd: s.TahunOperasional,
 						},
 					)
 			}
