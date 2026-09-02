@@ -23,4 +23,10 @@ type TujuanOpdService interface {
 	TujuanOpdPenetapan(ctx context.Context, kodeOpd, tahun, jenisPeriode string) ([]tujuanopd.TujuanOpdPenetapanResponse, error)
 	LockTujuanOpd(ctx context.Context, kodeOpd, tahun string) error
 	UnlockTujuanOpd(ctx context.Context, kodeOpd, tahun string) error
+
+	// ── Target-only CRUD untuk layer ranwal / rankhir / penetapan ──
+	// Indikator sudah ada di renstra; hanya target yang dikelola.
+	CreateTargetOpdLayer(ctx context.Context, jenis string, req tujuanopd.LayerTargetBatchRequest) ([]tujuanopd.TargetResponse, error)
+	UpdateTargetOpdLayer(ctx context.Context, jenis string, req tujuanopd.LayerTargetUpdateBatchRequest) ([]tujuanopd.TargetResponse, error)
+	DeleteTargetOpdLayer(ctx context.Context, kodeIndikator, tahun, jenis string) error
 }

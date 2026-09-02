@@ -21,16 +21,28 @@ type TujuanOpdResponse struct {
 }
 
 type IndikatorResponse struct {
-	Id                  string           `json:"id"`
-	KodeIndikator       string           `json:"kode_indikator"`
-	IdTujuanOpd         int              `json:"id_tujuan_opd"`
-	NamaIndikator       string           `json:"indikator"`
-	RumusPerhitungan    string           `json:"rumus_perhitungan"`
-	SumberData          string           `json:"sumber_data"`
-	Jenis               string           `json:"jenis"`
-	DefinisiOperasional string           `json:"definisi_operasional"`
-	SumberJenis         string           `json:"sumber_jenis,omitempty"`
-	Target              []TargetResponse `json:"target"`
+	Id                  string `json:"id"`
+	KodeIndikator       string `json:"kode_indikator"`
+	IdTujuanOpd         int    `json:"id_tujuan_opd"`
+	NamaIndikator       string `json:"indikator"`
+	RumusPerhitungan    string `json:"rumus_perhitungan"`
+	SumberData          string `json:"sumber_data"`
+	Jenis               string `json:"jenis"`
+	DefinisiOperasional string `json:"definisi_operasional"`
+	SumberJenis         string `json:"sumber_jenis,omitempty"`
+
+	// Diisi untuk renstra / ranwal (single-slot)
+	Target []TargetResponse `json:"target,omitempty"`
+
+	// Dual-slot rankhir: target_ranwal + target_rankhir
+	TargetRanwal  []TargetResponse `json:"target_ranwal,omitempty"`
+	TargetRankhir []TargetResponse `json:"target_rankhir,omitempty"`
+
+	// Dual-slot penetapan: target_rankhir + target_penetapan
+	TargetPenetapan []TargetResponse `json:"target_penetapan,omitempty"`
+
+	// Legacy compare field
+	TargetRenstra []TargetResponse `json:"target_renstra,omitempty"`
 }
 
 type TargetResponse struct {
