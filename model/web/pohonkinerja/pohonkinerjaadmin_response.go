@@ -174,6 +174,14 @@ type OperationalNResponse struct {
 	Childs       []OperationalNResponse       `json:"childs,omitempty"`
 }
 
+// OpdGroupResponse mengelompokkan strategic OPD yang memiliki kode_opd sama
+// di bawah parent subtematik yang sama dalam tampilan OPD view
+type OpdGroupResponse struct {
+	KodeOpd string        `json:"kode_opd"`
+	NamaOpd string        `json:"nama_opd"`
+	Childs  []interface{} `json:"childs"`
+}
+
 type TematikListOpdResponse struct {
 	Tematik    string            `json:"tematik"`
 	LevelPohon int               `json:"level_pohon"`

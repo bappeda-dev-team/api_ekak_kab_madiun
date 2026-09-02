@@ -667,6 +667,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/listOpdTematik/{idPokin}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan pohon kinerja admin berdasarkan ID pokin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pohon Kinerja Admin"
+                ],
+                "summary": "Find Pokin Admin By Id Hierarki Opd View",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Pokin",
+                        "name": "idPokin",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.TematikResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -1359,6 +1414,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/pohon_kinerja/pilih_parent/{kode_opd}/{tahun}/{level_pohon}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pohon Kinerja Opd"
+                ],
+                "summary": "Pilih Parent",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Level Pohon",
+                        "name": "level_pohon",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaAdminResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pohon_kinerja_opd/clone": {
             "post": {
                 "security": [
@@ -1465,6 +1589,68 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/pohonkinerja.ControlPokinOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pohon_kinerja_opd/findall/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua pohon kinerja opd berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pohon Kinerja Opd"
+                ],
+                "summary": "Find All Pohon Kinerja Opd",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.PohonKinerjaOpdAllResponse"
                                         }
                                     }
                                 }
@@ -2618,6 +2804,515 @@ const docTemplate = `{
                 }
             }
         },
+        "/sasaran_pemda/lock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh daftar tahun yang sedang di-lock untuk modul sasaran pemda (jenis: sasaran_pemda).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Lock"
+                ],
+                "summary": "Daftar Semua Lock Sasaran Pemda",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.LockDataPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_pemda/lock/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengecek apakah data sasaran pemda untuk tahun tertentu sedang terkunci.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Lock"
+                ],
+                "summary": "Cek Status Lock Sasaran Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang dicek",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sasaranpemda.LockDataPemdaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengunci data sasaran pemda untuk tahun tertentu (jenis: sasaran_pemda). Setelah lock: create/update/delete sasaran diblokir, target penetapan tidak bisa diubah. Target rankhir masih boleh diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Lock"
+                ],
+                "summary": "Lock Data Sasaran Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan di-lock",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuka kunci data sasaran pemda untuk tahun tertentu.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Lock"
+                ],
+                "summary": "Unlock Data Sasaran Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan di-unlock",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_pemda/penetapan/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: penetapan).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Penetapan"
+                ],
+                "summary": "Daftar Sasaran Pemda Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_pemda/rankhir/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: rankhir).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Rankhir"
+                ],
+                "summary": "Daftar Sasaran Pemda Rankhir",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_pemda/ranwal/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda untuk tahun tertentu (jenis: renstra).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Ranwal"
+                ],
+                "summary": "Daftar Sasaran Pemda Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sub_kegiatan/findall": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sub kegiatan dengan paginasi, filter LIKE, dan info next/previous page.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sub Kegiatan"
+                ],
+                "summary": "Daftar Sub Kegiatan (Paginasi)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Nomor halaman (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 10,
+                        "description": "Jumlah data per halaman (default: 10, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"01.01\"",
+                        "description": "Filter kode sub kegiatan (LIKE %...%)",
+                        "name": "kode_subkegiatan",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"pendidikan\"",
+                        "description": "Filter nama sub kegiatan (LIKE %...%)",
+                        "name": "nama_sub_kegiatan",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/subkegiatan.SubKegiatanPaginatedResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/trialtujuan_opd/penetapan/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Penetapan"
+                ],
+                "summary": "Tujuan Opd Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TujuanOpdPenetapanResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tujuan_opd/detail/{tujuanOpdId}": {
             "get": {
                 "security": [
@@ -2667,6 +3362,195 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/penetapan/target/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target baru untuk penetapan. Indikator harus sudah ada di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Layer Target"
+                ],
+                "summary": "Create Target Penetapan Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/penetapan/target/delete/{kode_indikator}/{tahun}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus target penetapan berdasarkan kode_indikator dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Penetapan Target"
+                ],
+                "summary": "Delete Target Penetapan Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2026\"",
+                        "description": "Tahun target",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/penetapan/target/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui target penetapan berdasarkan ID target. Hanya target dan satuan yang diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Penetapan Target"
+                ],
+                "summary": "Update Target Penetapan Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch update targets (wajib ada id)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetUpdateBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -2734,6 +3618,195 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/rankhir/target/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target baru untuk rankhir. Indikator harus sudah ada di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Rankhir Target"
+                ],
+                "summary": "Create Target Rankhir Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/rankhir/target/delete/{kode_indikator}/{tahun}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus target rankhir berdasarkan kode_indikator dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Rankhir Target"
+                ],
+                "summary": "Delete Target Rankhir Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2026\"",
+                        "description": "Tahun target",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/rankhir/target/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui target rankhir berdasarkan ID target. Hanya target dan satuan yang diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Opd Rankhir Target"
+                ],
+                "summary": "Update Target Rankhir Tujuan OPD",
+                "parameters": [
+                    {
+                        "description": "Batch update targets (wajib ada id)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanopd.LayerTargetUpdateBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -3528,6 +4601,936 @@ const docTemplate = `{
                 }
             }
         },
+        "/tujuan_pemda/findall_with_pokin/{tahun_awal}/{tahun_akhir}/{jenis_periode}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data Pohon Kinerja berdasarkan tahun awal, tahun akhir, dan jenis periode",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Get Pokin With Periode Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun Awal",
+                        "name": "tahun_awal",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun Akhir",
+                        "name": "tahun_akhir",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Jenis Periode (triwulan, semester, tahunan, dll)",
+                        "name": "jenis_periode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/lock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh daftar tahun yang sedang di-lock untuk modul tujuan pemda.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Daftar Semua Lock Tujuan Pemda",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.LockDataPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/lock/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengecek apakah data tujuan pemda untuk tahun tertentu sedang terkunci.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Cek Status Lock Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang dicek",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/tujuanpemda.LockDataPemdaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengunci data tujuan pemda untuk tahun tertentu. Setelah lock: indikator tidak bisa ditambah/diubah, delete diblokir, target ranwal \u0026 penetapan tidak bisa diubah. Target renstra \u0026 rankhir masih boleh diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Lock Data Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan di-lock",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuka kunci data tujuan pemda untuk tahun tertentu.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda Lock"
+                ],
+                "summary": "Unlock Data Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan di-unlock",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/penetapan/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa fallback antar jenis.",
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Tujuan Pemda Penetapan (Dual Target)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"RPJMD\"",
+                        "description": "Jenis Periode",
+                        "name": "jenis_periode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TujuanPemdaPenetapanDualResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/pokin_with_periode/{pokin_id}/{jenis_periode}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data Pohon Kinerja berdasarkan ID Pokin dan jenis periode",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Get Pokin With Periode",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pokin ID",
+                        "name": "pokin_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Jenis Periode (triwulan, semester, tahunan, dll)",
+                        "name": "jenis_periode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/rankhir/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa fallback antar jenis.",
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Tujuan Pemda Rankhir (Dual Target)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"renstra\"",
+                        "description": "Jenis Periode",
+                        "name": "jenis_periode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TujuanPemdaRankhirDualResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/ranwal/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan data tujuan pemda ranwal berdasarkan tahun dan jenis periode. Response langsung ke tujuan pemda (tanpa wrapper pohon kinerja). Target ranwal menimpa renstra jika tersedia.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Tujuan Pemda Ranwal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang berada dalam range RPJMD",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"renstra\"",
+                        "description": "Jenis Periode",
+                        "name": "jenis_periode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TujuanPemdaResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/target/penetapan/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target baru untuk penetapan. Gagal jika target sudah ada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Create Target Tujuan Pemda Penetapan",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/target/penetapan/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui target dan satuan saja. Jenis, kode_indikator, dan tahun tidak diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Update Target Tujuan Pemda Penetapan",
+                "parameters": [
+                    {
+                        "description": "Daftar target (wajib ada id)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanpemda.LayerTargetUpdateBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/target/rankhir/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target baru untuk rankhir. Gagal jika target sudah ada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Create Target Tujuan Pemda Rankhir",
+                "parameters": [
+                    {
+                        "description": "Daftar target yang akan dibuat",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanpemda.LayerTargetBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/target/rankhir/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui target dan satuan saja. Jenis, kode_indikator, dan tahun tidak diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Update Target Tujuan Pemda Rankhir",
+                "parameters": [
+                    {
+                        "description": "Daftar target (wajib ada id)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanpemda.LayerTargetUpdateBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui data tujuan pemda.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Update Tujuan Pemda",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Tujuan Pemda ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data tujuan pemda yang akan diupdate",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanpemda.TujuanPemdaUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/tujuanpemda.TujuanPemdaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_pemda/{jenis}/target/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menyimpan atau memperbarui target tujuan pemda untuk layer ranwal, rankhir, atau penetapan. Hanya mengubah target — metadata indikator (nama, rumus, dll.) tidak diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan Pemda"
+                ],
+                "summary": "Upsert Target Tujuan Pemda Layer RKPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"ranwal\"",
+                        "description": "Jenis layer: ranwal, rankhir, atau penetapan",
+                        "name": "jenis",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Daftar target yang akan di-upsert",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/tujuanpemda.LayerTargetBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanpemda.TargetResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/user/login": {
             "post": {
                 "description": "Autentikasi user untuk mendapatkan JWT Token",
@@ -3570,6 +5573,81 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "ikk.IkkFullResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikators": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IndikatorResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "ikk.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.TargetResponse"
+                    }
+                }
+            }
+        },
+        "ikk.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "iku.IkuOpdResponse": {
             "type": "object",
             "properties": {
@@ -3741,6 +5819,17 @@ const docTemplate = `{
                 }
             }
         },
+        "opdmaster.OpdResponseForAll": {
+            "type": "object",
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                }
+            }
+        },
         "pohonkinerja.ControlPokinOpdData": {
             "type": "object",
             "properties": {
@@ -3841,6 +5930,52 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.CrosscuttingDikirimResponse": {
+            "type": "object",
+            "properties": {
+                "id_crosscutting": {
+                    "type": "integer"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "kode_opd_tujuan": {
+                    "type": "string"
+                },
+                "nama_opd_tujuan": {
+                    "type": "string"
+                },
+                "nama_pohon_tujuan": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.CrosscuttingPokinResponse": {
+            "type": "object",
+            "properties": {
+                "id_crosscutting": {
+                    "type": "integer"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "kode_opd_asal": {
+                    "type": "string"
+                },
+                "nama_opd_asal": {
+                    "type": "string"
+                },
+                "nama_pohon_asal": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "pohonkinerja.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -3863,6 +5998,20 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/pohonkinerja.TargetResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.IndikatorTujuanResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TargetTujuanResponse"
                     }
                 }
             }
@@ -3928,6 +6077,190 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.OperationalNOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.OperationalNOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_crosscutting": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.OperationalOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.OperationalNOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_tematik": {
+                    "type": "integer"
+                },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_crosscutting": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
         "pohonkinerja.PelaksanaOpdResponse": {
             "type": "object",
             "properties": {
@@ -3944,6 +6277,93 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "pohon_kinerja_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.PohonKinerjaAdminResponseData": {
+            "type": "object",
+            "properties": {
+                "alasan_sebagai_kondisi_strategis": {
+                    "type": "string"
+                },
+                "childs": {
+                    "type": "array",
+                    "items": {}
+                },
+                "data_terukur_pendukung_pernyataan": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kondisi_terukur_yang_diharapkan": {
+                    "type": "string"
+                },
+                "kondisi_yang_ingin_diwujudkan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "nama_opd_pengaju": {
+                    "type": "string"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "pernyataan_kondisi_strategis": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 }
             }
@@ -3971,11 +6391,43 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.PohonKinerjaOpdAllResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.StrategicOpdResponse"
+                    }
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tujuan_opd": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TujuanOpdResponse"
+                    }
+                }
+            }
+        },
         "pohonkinerja.PohonKinerjaOpdResponse": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "integer"
+                },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
                 },
                 "indikator": {
                     "type": "array",
@@ -4047,6 +6499,216 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.ReviewResponse": {
+            "type": "object",
+            "properties": {
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_pohon_kinerja": {
+                    "type": "integer"
+                },
+                "jenis_pokin": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.StrategicOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TacticalOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_tematik": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_crosscutting": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.TacticalOpdResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.OperationalOpdResponse"
+                    }
+                },
+                "crosscutting": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingPokinResponse"
+                    }
+                },
+                "crosscutting_dikirim": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.CrosscuttingDikirimResponse"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_tematik": {
+                    "type": "integer"
+                },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "pelaksana": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.PelaksanaOpdResponse"
+                    }
+                },
+                "perangkat_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_crosscutting": {
+                    "type": "string"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                }
+            }
+        },
         "pohonkinerja.TaggingResponse": {
             "type": "object",
             "properties": {
@@ -4086,6 +6748,88 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.TargetTujuanResponse": {
+            "type": "object",
+            "properties": {
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.TematikResponse": {
+            "type": "object",
+            "properties": {
+                "childs": {
+                    "description": "SubTematiks []SubtematikResponse ` + "`" + `json:\"childs,omitempty\"` + "`" + `\nStrategics  []StrategicResponse  ` + "`" + `json:\"strategics,omitempty\"` + "`" + `",
+                    "type": "array",
+                    "items": {}
+                },
+                "id": {
+                    "description": "CSF         CSFApiResponse      ` + "`" + `json:\"csf\"` + "`" + `",
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "jumlah_review": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "tagging": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.TaggingResponse"
+                    }
+                },
+                "tema": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.TujuanOpdResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "description": "Periode   PeriodeResponse           ` + "`" + `json:\"periode,omitempty\"` + "`" + `",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorTujuanResponse"
+                    }
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tujuan": {
                     "type": "string"
                 }
             }
@@ -4422,6 +7166,9 @@ const docTemplate = `{
         "programkegiatan.PaguAnggaranTotalResponse": {
             "type": "object",
             "properties": {
+                "jenis_pagu": {
+                    "type": "string"
+                },
                 "pagu_indikatif": {
                     "type": "integer"
                 },
@@ -4962,6 +7709,297 @@ const docTemplate = `{
                 }
             }
         },
+        "sasaranpemda.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "description": "id DB auto-increment",
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "description": "IND-SAS-PMD-YYYY-xxxxx",
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.TargetResponse"
+                    }
+                }
+            }
+        },
+        "sasaranpemda.LockDataPemdaResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranpemda.PeriodeResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranpemda.SasaranPemdaResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.IndikatorResponse"
+                    }
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "nama_subtema": {
+                    "type": "string"
+                },
+                "periode": {
+                    "$ref": "#/definitions/sasaranpemda.PeriodeResponse"
+                },
+                "sasaran_pemda": {
+                    "type": "string"
+                },
+                "subtema_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
+                    "type": "string"
+                },
+                "tujuan_pemda_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sasaranpemda.TargetDisplay": {
+            "type": "object"
+        },
+        "sasaranpemda.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "id DB auto-increment (0 = slot kosong)",
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/sasaranpemda.TargetDisplay"
+                }
+            }
+        },
+        "subkegiatan.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "id_indikator": {
+                    "type": "string"
+                },
+                "nama_indikator": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.TargetResponse"
+                    }
+                }
+            }
+        },
+        "subkegiatan.IndikatorSubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "sub_kegiatan_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "subkegiatan.PaguSubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "pagu_anggaran": {
+                    "type": "integer"
+                },
+                "sub_kegiatan_id": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "subkegiatan.SubKegiatanPaginatedResponse": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "has_previous": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.SubKegiatanResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "next_page": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "previous_page": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 250
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 25
+                }
+            }
+        },
+        "subkegiatan.SubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.IndikatorResponse"
+                    }
+                },
+                "indikator_subkegiatan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.IndikatorSubKegiatanResponse"
+                    }
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "nama_sub_kegiatan": {
+                    "type": "string"
+                },
+                "pagu": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/subkegiatan.PaguSubKegiatanResponse"
+                    }
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subkegiatanterpilih_id": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "subkegiatan.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id_target": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "tujuanopd.IndikatorCreateRequest": {
             "type": "object",
             "properties": {
@@ -5018,7 +8056,38 @@ const docTemplate = `{
                 "sumber_data": {
                     "type": "string"
                 },
+                "sumber_jenis": {
+                    "type": "string"
+                },
                 "target": {
+                    "description": "Diisi untuk renstra / ranwal (single-slot)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_penetapan": {
+                    "description": "Dual-slot penetapan: target_rankhir + target_penetapan",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_ranwal": {
+                    "description": "Dual-slot rankhir: target_ranwal + target_rankhir",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TargetResponse"
+                    }
+                },
+                "target_renstra": {
+                    "description": "Legacy compare field",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/tujuanopd.TargetResponse"
@@ -5061,6 +8130,70 @@ const docTemplate = `{
                 }
             }
         },
+        "tujuanopd.LayerTargetBatchRequest": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.LayerTargetItemRequest"
+                    }
+                }
+            }
+        },
+        "tujuanopd.LayerTargetItemRequest": {
+            "type": "object",
+            "required": [
+                "kode_indikator",
+                "satuan",
+                "tahun",
+                "target"
+            ],
+            "properties": {
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanopd.LayerTargetUpdateBatchRequest": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.LayerTargetUpdateItemRequest"
+                    }
+                }
+            }
+        },
+        "tujuanopd.LayerTargetUpdateItemRequest": {
+            "type": "object",
+            "required": [
+                "id",
+                "satuan",
+                "target"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "tujuanopd.TargetCreateRequest": {
             "type": "object",
             "properties": {
@@ -5085,6 +8218,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "indikator_id": {
+                    "type": "string"
+                },
+                "jenis": {
                     "type": "string"
                 },
                 "satuan": {
@@ -5150,6 +8286,38 @@ const docTemplate = `{
                 }
             }
         },
+        "tujuanopd.TujuanOpdPenetapanResponse": {
+            "type": "object",
+            "properties": {
+                "is_lock": {
+                    "type": "boolean"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kode_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "tujuan_opd": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanopd.TujuanOpdResponse"
+                    }
+                },
+                "urusan": {
+                    "type": "string"
+                }
+            }
+        },
         "tujuanopd.TujuanOpdResponse": {
             "type": "object",
             "properties": {
@@ -5161,6 +8329,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/tujuanopd.IndikatorResponse"
                     }
+                },
+                "jenis_penetapan": {
+                    "description": "IsLocked         bool                ` + "`" + `json:\"is_locked\"` + "`" + `",
+                    "type": "string"
                 },
                 "jenis_periode": {
                     "type": "string"
@@ -5248,12 +8420,464 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tujuan_opd": {
+                    "description": "IsLock           bool                ` + "`" + `json:\"is_lock\"` + "`" + `",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/tujuanopd.TujuanOpdResponse"
                     }
                 },
                 "urusan": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.IndikatorPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                }
+            }
+        },
+        "tujuanpemda.IndikatorRankhirDualResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                },
+                "target_ranwal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetDualResponse"
+                    }
+                }
+            }
+        },
+        "tujuanpemda.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetResponse"
+                    }
+                }
+            }
+        },
+        "tujuanpemda.IndikatorUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "id_indikator": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.TargetUpdateRequest"
+                    }
+                },
+                "tujuan_pemda_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.LayerTargetBatchRequest": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.LayerTargetItemRequest"
+                    }
+                }
+            }
+        },
+        "tujuanpemda.LayerTargetItemRequest": {
+            "type": "object",
+            "properties": {
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "number"
+                }
+            }
+        },
+        "tujuanpemda.LayerTargetUpdateBatchRequest": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.LayerTargetUpdateItemRequest"
+                    }
+                }
+            }
+        },
+        "tujuanpemda.LayerTargetUpdateItemRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "number"
+                }
+            }
+        },
+        "tujuanpemda.LockDataPemdaResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.PeriodeResponse": {
+            "type": "object",
+            "properties": {
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.TargetDisplay": {
+            "type": "object"
+        },
+        "tujuanpemda.TargetDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/tujuanpemda.TargetDisplay"
+                }
+            }
+        },
+        "tujuanpemda.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/tujuanpemda.TargetDisplay"
+                }
+            }
+        },
+        "tujuanpemda.TargetUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "number"
+                }
+            }
+        },
+        "tujuanpemda.TujuanPemdaPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_misi": {
+                    "type": "integer"
+                },
+                "id_visi": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.IndikatorPenetapanDualResponse"
+                    }
+                },
+                "is_lock": {
+                    "type": "boolean"
+                },
+                "misi": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "periode": {
+                    "$ref": "#/definitions/tujuanpemda.PeriodeResponse"
+                },
+                "tematik_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
+                    "type": "string"
+                },
+                "visi": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.TujuanPemdaRankhirDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_misi": {
+                    "type": "integer"
+                },
+                "id_visi": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.IndikatorRankhirDualResponse"
+                    }
+                },
+                "misi": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "periode": {
+                    "$ref": "#/definitions/tujuanpemda.PeriodeResponse"
+                },
+                "tematik_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
+                    "type": "string"
+                },
+                "visi": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.TujuanPemdaResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_misi": {
+                    "type": "integer"
+                },
+                "id_visi": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.IndikatorResponse"
+                    }
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "misi": {
+                    "type": "string"
+                },
+                "nama_tematik": {
+                    "type": "string"
+                },
+                "periode": {
+                    "$ref": "#/definitions/tujuanpemda.PeriodeResponse"
+                },
+                "periode_id": {
+                    "type": "integer"
+                },
+                "tematik_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
+                    "type": "string"
+                },
+                "visi": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanpemda.TujuanPemdaUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_misi": {
+                    "type": "integer"
+                },
+                "id_visi": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tujuanpemda.IndikatorUpdateRequest"
+                    }
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "periode_id": {
+                    "type": "integer"
+                },
+                "tahun_akhir_periode": {
+                    "type": "string"
+                },
+                "tahun_awal_periode": {
+                    "type": "string"
+                },
+                "tema_id": {
+                    "type": "integer"
+                },
+                "tujuan_pemda": {
                     "type": "string"
                 }
             }
@@ -5269,6 +8893,23 @@ const docTemplate = `{
                 }
             }
         },
+        "web.ActionButton": {
+            "type": "object",
+            "properties": {
+                "jenis_usulan": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "web.WebResponse": {
             "type": "object",
             "properties": {
@@ -5276,6 +8917,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "data": {},
+                "error": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 }

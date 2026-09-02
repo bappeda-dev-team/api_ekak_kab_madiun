@@ -6406,7 +6406,6 @@ func (repository *PohonKinerjaRepositoryImpl) FindStrategicOpdByIdsBatch(ctx con
 	return result, nil
 }
 
-// findCloneFromByPokinIds mengambil clone_from langsung dari tb_pohon_kinerja (bypass CTE).
 func (repository *PohonKinerjaRepositoryImpl) findCloneFromByPokinIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]int, error) {
 	result := make(map[int]int)
 	if len(ids) == 0 {
@@ -6430,7 +6429,6 @@ func (repository *PohonKinerjaRepositoryImpl) findCloneFromByPokinIds(ctx contex
 		return nil, err
 	}
 	defer rows.Close()
-
 	for rows.Next() {
 		var id, cloneFrom int
 		if err := rows.Scan(&id, &cloneFrom); err != nil {

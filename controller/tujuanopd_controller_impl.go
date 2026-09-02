@@ -703,3 +703,199 @@ func (controller *TujuanOpdControllerImpl) TujuanOpdPenetapan(writer http.Respon
 		Data:   tujuanOpdResponses,
 	})
 }
+
+// CreateTargetOpdRankhir godoc
+// @Summary      Create Target Rankhir Tujuan OPD
+// @Description  Membuat target baru untuk rankhir. Indikator harus sudah ada di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).
+// @Tags         Tujuan Opd Rankhir Target
+// @Accept       json
+// @Produce      json
+// @Param        request  body      tujuanopd.LayerTargetBatchRequest  true   "Batch targets"
+// @Success      201      {object}  web.WebResponse{data=[]tujuanopd.TargetResponse}
+// @Failure      400      {object}  web.WebResponse
+// @Failure      500      {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/rankhir/target/create [post]
+func (controller *TujuanOpdControllerImpl) CreateTargetRankhirOpdLayer(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	jenis := "rankhir"
+	var req tujuanopd.LayerTargetBatchRequest
+	helper.ReadFromRequestBody(request, &req)
+
+	result, err := controller.TujuanOpdService.CreateTargetOpdLayer(request.Context(), jenis, req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusCreated,
+		Status: "success create target layer",
+		Data:   result,
+	})
+}
+
+// CreateTargetOpdPenetapan godoc
+// @Summary      Create Target Penetapan Tujuan OPD
+// @Description  Membuat target baru untuk penetapan. Indikator harus sudah ada di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).
+// @Tags         Tujuan Opd Layer Target
+// @Accept       json
+// @Produce      json
+// @Param        request  body      tujuanopd.LayerTargetBatchRequest  true   "Batch targets"
+// @Success      201      {object}  web.WebResponse{data=[]tujuanopd.TargetResponse}
+// @Failure      400      {object}  web.WebResponse
+// @Failure      500      {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/penetapan/target/create [post]
+func (controller *TujuanOpdControllerImpl) CreateTargetPenetapanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	jenis := "penetapan"
+	var req tujuanopd.LayerTargetBatchRequest
+	helper.ReadFromRequestBody(request, &req)
+
+	result, err := controller.TujuanOpdService.CreateTargetOpdLayer(request.Context(), jenis, req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusCreated,
+		Status: "success create target layer",
+		Data:   result,
+	})
+}
+
+// UpdateTargetRankhirOpd godoc
+// @Summary      Update Target Rankhir Tujuan OPD
+// @Description  Memperbarui target rankhir berdasarkan ID target. Hanya target dan satuan yang diubah.
+// @Tags         Tujuan Opd Rankhir Target
+// @Accept       json
+// @Produce      json
+// @Param        request  body  tujuanopd.LayerTargetUpdateBatchRequest  true  "Batch update targets (wajib ada id)"
+// @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TargetResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/rankhir/target/update [put]
+func (controller *TujuanOpdControllerImpl) UpdateTargetRankhirOpdLayer(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	jenis := "rankhir"
+	var req tujuanopd.LayerTargetUpdateBatchRequest
+	helper.ReadFromRequestBody(request, &req)
+	result, err := controller.TujuanOpdService.UpdateTargetOpdLayer(request.Context(), jenis, req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success update target rankhir",
+		Data:   result,
+	})
+}
+
+// UpdateTargetPenetapanOpd godoc
+// @Summary      Update Target Penetapan Tujuan OPD
+// @Description  Memperbarui target penetapan berdasarkan ID target. Hanya target dan satuan yang diubah.
+// @Tags         Tujuan Opd Penetapan Target
+// @Accept       json
+// @Produce      json
+// @Param        request  body  tujuanopd.LayerTargetUpdateBatchRequest  true  "Batch update targets (wajib ada id)"
+// @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TargetResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/penetapan/target/update [put]
+func (controller *TujuanOpdControllerImpl) UpdateTargetPenetapanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	jenis := "penetapan"
+	var req tujuanopd.LayerTargetUpdateBatchRequest
+	helper.ReadFromRequestBody(request, &req)
+	result, err := controller.TujuanOpdService.UpdateTargetOpdLayer(request.Context(), jenis, req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success update target penetapan",
+		Data:   result,
+	})
+}
+
+// DeleteTargetRankhirOpd godoc
+// @Summary      Delete Target Rankhir Tujuan OPD
+// @Description  Menghapus target rankhir berdasarkan kode_indikator dan tahun.
+// @Tags         Tujuan Opd Rankhir Target
+// @Accept       json
+// @Produce      json
+// @Param        kode_indikator  path  string  true  "Kode Indikator"
+// @Param        tahun           path  string  true  "Tahun target"  example("2026")
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/rankhir/target/delete/{kode_indikator}/{tahun} [delete]
+func (controller *TujuanOpdControllerImpl) DeleteTargetRankhirOpdLayer(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	jenis := "rankhir"
+	kodeIndikator := params.ByName("kode_indikator")
+	tahun := params.ByName("tahun")
+	err := controller.TujuanOpdService.DeleteTargetOpdLayer(request.Context(), kodeIndikator, tahun, jenis)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success delete target rankhir",
+		Data:   nil,
+	})
+}
+
+// DeleteTargetPenetapanOpd godoc
+// @Summary      Delete Target Penetapan Tujuan OPD
+// @Description  Menghapus target penetapan berdasarkan kode_indikator dan tahun.
+// @Tags         Tujuan Opd Penetapan Target
+// @Accept       json
+// @Produce      json
+// @Param        kode_indikator  path  string  true  "Kode Indikator"
+// @Param        tahun           path  string  true  "Tahun target"  example("2026")
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/penetapan/target/delete/{kode_indikator}/{tahun} [delete]
+func (controller *TujuanOpdControllerImpl) DeleteTargetPenetapanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	jenis := "penetapan"
+	kodeIndikator := params.ByName("kode_indikator")
+	tahun := params.ByName("tahun")
+	err := controller.TujuanOpdService.DeleteTargetOpdLayer(request.Context(), kodeIndikator, tahun, jenis)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success delete target penetapan",
+		Data:   nil,
+	})
+}
