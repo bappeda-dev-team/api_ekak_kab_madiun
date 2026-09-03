@@ -13,7 +13,6 @@ type PohonKinerjaAdminService interface {
 	FindAll(ctx context.Context, tahun string) (pohonkinerja.PohonKinerjaAdminResponse, error)
 	FindSubTematik(ctx context.Context, tahun string) (pohonkinerja.OutcomeResponse, error)
 	FindPokinAdminByIdHierarki(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error)
-	FindPokinAdminByIdHierarkiOpdView(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error)
 	CreateStrategicAdmin(ctx context.Context, request pohonkinerja.PohonKinerjaAdminStrategicCreateRequest) (pohonkinerja.PohonKinerjaAdminResponseData, error)
 	CloneStrategiFromPemda(ctx context.Context, request pohonkinerja.PohonKinerjaAdminStrategicCreateRequest) (pohonkinerja.PohonKinerjaAdminResponseData, error)
 	TolakPokin(ctx context.Context, request pohonkinerja.PohonKinerjaAdminTolakRequest) error
@@ -35,4 +34,6 @@ type PohonKinerjaAdminService interface {
 	FindPokinByCrosscuttingStatus(ctx context.Context, kodeOpd string, tahun string) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
 	FindPokinFromPemda(ctx context.Context, kodeOpd string, tahun string) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
 	FindPokinFromOpd(ctx context.Context, kodeOpd string, tahun string, levelPohon int) ([]pohonkinerja.PohonKinerjaAdminResponseData, error)
+	CetakPokinByTematik(ctx context.Context, tematikId int) (pohonkinerja.CetakResponse[[]pohonkinerja.PokinCetak], error)
+	FindPokinAdminByIdHierarkiOpdView(ctx context.Context, idPokin int) (pohonkinerja.TematikResponse, error)
 }

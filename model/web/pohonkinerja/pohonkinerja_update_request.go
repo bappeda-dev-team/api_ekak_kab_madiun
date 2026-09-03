@@ -14,6 +14,7 @@ type PohonKinerjaUpdateRequest struct {
 	PelaksanaId  []PelaksanaUpdateRequest `json:"pelaksana"`
 	Indikator    []IndikatorUpdateRequest `json:"indikator"`
 	TaggingPokin []TaggingUpdateRequest   `json:"tagging"`
+	Ikk          []IkkTerpilihRequest     `json:"ikk"`
 }
 
 type PelaksanaUpdateRequest struct {

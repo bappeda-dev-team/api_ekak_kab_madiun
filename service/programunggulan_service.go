@@ -12,7 +12,9 @@ type ProgramUnggulanService interface {
 	FindById(ctx context.Context, id int) (programunggulan.ProgramUnggulanResponse, error)
 	FindAll(ctx context.Context, tahunAwal string, tahunAkhir string) ([]programunggulan.ProgramUnggulanResponse, error)
 	FindByKodeProgramUnggulan(ctx context.Context, kodeProgramUnggulan string) (programunggulan.ProgramUnggulanResponse, error)
-	FindByTahun(ctx context.Context, tahun string) ([]programunggulan.ProgramUnggulanResponse, error)
+	FindByTahun(ctx context.Context, tahun string, kodeOpd string) ([]programunggulan.ProgramUnggulanResponse, error)
 	FindUnusedByTahun(ctx context.Context, tahun string) ([]programunggulan.ProgramUnggulanResponse, error)
 	FindByIdTerkait(ctx context.Context, request programunggulan.FindByIdTerkaitRequest) ([]programunggulan.ProgramUnggulanResponse, error)
+	CreateOpdProgramUnggulan(ctx context.Context, request programunggulan.CreateOpdProgramUnggulanRequest) (programunggulan.CreateOpdProgramUnggulanResponse, error)
+	DeleteOpdProgramUnggulan(ctx context.Context, id int) error
 }

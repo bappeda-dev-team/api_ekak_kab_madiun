@@ -168,6 +168,28 @@ func (service *TujuanOpdServiceImpl) Update(ctx context.Context, request tujuano
 		TahunAkhir:   existing.TahunAkhir,
 		JenisPeriode: existing.JenisPeriode,
 	}
+	existingIndikators, err := service.TujuanOpdRepository.FindIndikatorByTujuanOpdId(ctx, tx, tujuanOpd.Id)
+	if err != nil {
+		log.Printf("ERROR FIND INDIKATOR TUJUANS: %v", err)
+		return tujuanopd.TujuanOpdResponse{}, err
+	}
+	requestIds := make(map[string]struct{})
+	for _, ind := range request.Indikator {
+		if ind.Id != "" {
+			requestIds[ind.Id] = struct{}{}
+		}
+	}
+	var deletedIds []string
+
+	for _, existing := range existingIndikators {
+		if _, ok := requestIds[existing.KodeIndikator]; !ok {
+			deletedIds = append(deletedIds, existing.KodeIndikator)
+		}
+	}
+	if err := service.TujuanOpdRepository.DeleteIndikatorByIds(ctx, tx, deletedIds); err != nil {
+		log.Printf("ERROR DELETE INDIKATOR IDS: %v", err)
+		return tujuanopd.TujuanOpdResponse{}, err
+	}
 	for _, indikatorReq := range request.Indikator {
 		var kodeIndikator string
 		if indikatorReq.Id != "" {
@@ -252,10 +274,19 @@ func (service *TujuanOpdServiceImpl) FindById(ctx context.Context, tujuanOpdId i
 	}
 	defer helper.CommitOrRollback(tx)
 
-	tujuanOpd, err := service.TujuanOpdRepository.FindById(ctx, tx, tujuanOpdId)
+	tujuanOpd, err := service.TujuanOpdRepository.FindByIdOnly(ctx, tx, tujuanOpdId)
 	if err != nil {
 		return tujuanopd.TujuanOpdResponse{}, err
 	}
+
+	tujuanOpdIds := []int{tujuanOpd.Id}
+	indikatorTujuan, err := service.getIndikatorWithFallback(ctx, tx, tujuanOpdIds)
+	if err != nil {
+		log.Printf("ERROR service.getIndikatorWithFallback: %v", err)
+		return tujuanopd.TujuanOpdResponse{}, err
+	}
+
+	tujuanOpd.Indikator = indikatorTujuan
 
 	// Ambil data OPD
 	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, tujuanOpd.KodeOpd)
@@ -1760,4 +1791,53 @@ func BuildTujuanOpdBidangResponse(
 		return result[i].KodeBidangUrusan < result[j].KodeBidangUrusan
 	})
 	return result
+}
+
+func mergeIndikator(
+	indikatorBaru []domain.Indikator,
+	indikatorLama []domain.Indikator,
+) []domain.Indikator {
+
+	// fallback kalau data baru kosong
+	if len(indikatorBaru) == 0 {
+		log.Println("USING INDIKATOR LAMA")
+		return indikatorLama
+	}
+
+	log.Println("USING INDIKATOR BARU")
+
+	return indikatorBaru
+}
+
+func isEmptyIndikator(ind domain.Indikator) bool {
+	return !ind.DefinisiOperasional.Valid &&
+		len(ind.Target) == 0
+}
+
+func fallbackNullString(newVal, oldVal sql.NullString) sql.NullString {
+	if !newVal.Valid || newVal.String == "" {
+		if oldVal.Valid {
+			return oldVal
+		}
+	}
+	return newVal
+}
+
+func (s *TujuanOpdServiceImpl) getIndikatorWithFallback(
+	ctx context.Context,
+	tx *sql.Tx,
+	tujuanIds []int,
+) ([]domain.Indikator, error) {
+
+	indikatorBaru, err := s.TujuanOpdRepository.
+		FindIndikatorTargetsRenstraByTujuanIds(ctx, tx, tujuanIds)
+	if err != nil {
+		return nil, err
+	}
+	// indikatorLama, err := s.TujuanOpdRepository.
+	// 	FindIndikatorTargetsByTujuanIds(ctx, tx, tujuanIds)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	return indikatorBaru, nil
 }

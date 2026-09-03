@@ -9,6 +9,8 @@ type LeaderboardPokinResponse struct {
 }
 
 type LeaderboardTematikItem struct {
-	Nama string                   `json:"nama"`
-	Anak []LeaderboardTematikItem `json:"child"`
+	Nama  string                   `json:"nama"`
+	Anak  []LeaderboardTematikItem `json:"child"`
+	Level int                      `json:"level"`
+	Jenis string                      `json:"jenis"`
 }

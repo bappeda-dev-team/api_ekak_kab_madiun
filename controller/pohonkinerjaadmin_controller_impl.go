@@ -767,6 +767,39 @@ func (controller *PohonKinerjaAdminControllerImpl) ClonePokinPemda(writer http.R
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+func (controller *PohonKinerjaAdminControllerImpl) CetakPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tematikIdQ := params.ByName("id")
+	tematikId, err := strconv.Atoi(tematikIdQ)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   "tematikId tidak valid",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	result, err := controller.pohonKinerjaAdminService.CetakPokinByTematik(request.Context(), tematikId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "Success Get Pokin By Tematik",
+		Data:   result,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
 // docs swagger pokin admin
 // @Summary      Find Pokin Admin By Id Hierarki Opd View
 // @Description  Mendapatkan pohon kinerja admin berdasarkan ID pokin.

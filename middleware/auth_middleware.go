@@ -28,6 +28,17 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		{"/pohon_kinerja/pokin_atasan/", "^/pohon_kinerja/pokin_atasan/[^/]+$"},
 		{"/rekin/atasan/", "^/rekin/atasan/[^/]+$"},
 		{"/api_internal/rencana_kinerja/findall", "^/api_internal/rencana_kinerja/findall$"},
+		{"/tujuan_opd/penetapan", "^/tujuan_opd/penetapan$"},
+		{"/sasaran_opd/penetapan", "^/sasaran_opd/penetapan$"},
+		{"/matrix_renja/penetapan", "^/matrix_renja/penetapan$"},
+		{"/pk/penetapan", "^/pk/penetapan$"},
+		{"/pohon_kinerja/cetak/", "^/pohon_kinerja/cetak/[^/]+$"},
+		{"/pohon_kinerja_opd/cetak/", "^/pohon_kinerja_opd/cetak/[^/]+$"},
+		{"/ppd/find-by-ids", "^/ppd/find-by-ids$"},
+		{"/isu-klhs/find-by-ids", "^/isu-klhs/find-by-ids$"},
+		{"/isu-global/find-by-ids", "^/isu-global/find-by-ids$"},
+		{"/isu-nasional/find-by-ids", "^/isu-nasional/find-by-ids$"},
+		{"/isu-regional/find-by-ids", "^/isu-regional/find-by-ids$"},
 	}
 
 	currentPath := request.URL.Path

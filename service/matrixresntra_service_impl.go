@@ -8,6 +8,7 @@ import (
 	"ekak_kabupaten_madiun/repository"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 )
@@ -39,10 +40,90 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatan(ctx context.Contex
 		return nil, err
 	}
 	defer tx.Rollback()
+	// cek indikator matrix renstra
+	indRenstra, err := service.MatrixRenstraRepository.FindIndikatorRenstra(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	if len(indRenstra) == 0 {
+		log.Printf("MATRIX RENSTRA KOSONG KODE OPD - %s | TAHUN %s - %s", kodeOpd, tahunAwal, tahunAkhir)
+	}
+
+	// fallback ind renstra kosong
+	indLama, err := service.MatrixRenstraRepository.FindIndikatorLama(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	if len(indLama) == 0 {
+		log.Printf("INDIKATOR LAMA KOSONG")
+	}
+
+	final := make(map[string]domain.Indikator)
+
+	// base dari lama
+
+	for _, ind := range indLama {
+		final[ind.Kode] = ind
+	}
+
+	// override oleh renstra
+
+	for _, ind := range indRenstra {
+		final[ind.Kode] = ind
+	}
+	var indikatorGabungan []domain.Indikator
+
+	for _, v := range final {
+		indikatorGabungan = append(indikatorGabungan, v)
+	}
+
+	subMap := make(map[string]domain.Indikator)
+
+	kegiatanMap := make(map[string]domain.Indikator)
+
+	programMap := make(map[string]domain.Indikator)
+
+	for _, ind := range indikatorGabungan { // hasil merge renstra + lama
+
+		kode := ind.Kode
+		switch {
+		case len(kode) == 17: // subkegiatan
+			subMap[kode] = ind
+		case len(kode) == 12: // kegiatan
+			kegiatanMap[kode] = ind
+		default: // program
+			programMap[kode] = ind
+		}
+
+	}
 
 	data, err := service.MatrixRenstraRepository.GetByKodeSubKegiatan(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
 	if err != nil {
 		return nil, err
+	}
+	// ubah data, inject semua indikator kelama kalau renstra kosong
+	for i, item := range data {
+
+		// skip kalau sudah ada indikator renstra
+		if item.Indikator != "" {
+			continue
+		}
+		if ind, ok := subMap[item.KodeSubKegiatan]; ok {
+			log.Println("SUBKEGIATAN INJECT")
+			data[i] = injectIndikator(item, ind)
+			continue
+		}
+		if ind, ok := kegiatanMap[item.KodeKegiatan]; ok {
+			log.Println("KEGIATAN INJECT")
+			data[i] = injectIndikator(item, ind)
+			continue
+		}
+		if ind, ok := programMap[item.KodeProgram]; ok {
+			log.Println("PROGRAM INJECT")
+			data[i] = injectIndikator(item, ind)
+			continue
+		}
+
 	}
 
 	result := service.transformToResponse(data, kodeOpd, tahunAwal, tahunAkhir)
@@ -510,4 +591,16 @@ func randomUint31() (uint32, error) {
 		return 0, err
 	}
 	return binary.BigEndian.Uint32(b[:]) & 0x7fffffff, nil
+}
+
+func injectIndikator(item domain.SubKegiatanQuery, ind domain.Indikator) domain.SubKegiatanQuery {
+	item.IndikatorId = ind.KodeIndikator
+	item.IndikatorKode = ind.Kode
+	item.Indikator = ind.Indikator
+	for _, tar := range ind.Target {
+		item.Target = tar.Target
+		item.Satuan = tar.Satuan
+	}
+	item.IndikatorTahun = ind.Tahun
+	return item
 }

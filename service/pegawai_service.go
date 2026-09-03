@@ -12,4 +12,6 @@ type PegawaiService interface {
 	FindById(ctx context.Context, id string) (pegawai.PegawaiResponse, error)
 	FindAll(ctx context.Context, kodeOpd string, nip string) ([]pegawai.PegawaiResponse, error)
 	TambahJabatan(ctx context.Context, request pegawai.TambahJabatanRequest) (pegawai.PegawaiResponse, error)
+	FindRolePegawais(ctx context.Context, pegawaiIds []string) (map[string][]string, error)
+	FindByKodeOpdLevel(ctx context.Context, kodeOpd string, level int) ([]pegawai.PegawaiResponse, error)
 }

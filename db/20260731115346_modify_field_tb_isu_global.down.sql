@@ -1,0 +1,1 @@
+ALTER TABLE tb_isu_global MODIFY COLUMN isu_global VARCHAR(255);

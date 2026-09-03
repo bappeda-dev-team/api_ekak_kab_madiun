@@ -1,0 +1,13 @@
+package controller
+
+import (
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+)
+
+type SrategicArahKebijakanPemdaController interface {
+	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindIsu(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	ExportExcel(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+}

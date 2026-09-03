@@ -1,0 +1,2 @@
+ALTER TABLE tb_target
+ADD COLUMN realisasi DECIMAL(10,2) DEFAULT NULL;

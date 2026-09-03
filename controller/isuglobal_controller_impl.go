@@ -1,0 +1,171 @@
+package controller
+
+import (
+	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/model/web"
+	"ekak_kabupaten_madiun/model/web/isuglobal"
+	"ekak_kabupaten_madiun/service"
+	"net/http"
+	"strconv"
+
+	"github.com/julienschmidt/httprouter"
+)
+
+type IsuGlobalControllerImpl struct {
+	IsuGlobalService service.IsuGlobalService
+}
+
+func NewIsuGlobalControllerImpl(isuGlobalService service.IsuGlobalService) *IsuGlobalControllerImpl {
+	return &IsuGlobalControllerImpl{
+		IsuGlobalService: isuGlobalService,
+	}
+}
+
+func (controller *IsuGlobalControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	isuGlobalRequest := isuglobal.IsuGlobalRequest{}
+	helper.ReadFromRequestBody(request, &isuGlobalRequest)
+
+	// TODO: guard jika request invalid
+	// return 400 Invalid
+
+	isuGlobalResponse, err := controller.IsuGlobalService.Create(request.Context(), isuGlobalRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			// TODO: CODE: AMBIL DARI http
+			Code: http.StatusInternalServerError,
+			// TODO: STATUS: TERJEMAHKAN DARI code
+			Status: http.StatusText(http.StatusInternalServerError),
+			// TODO: buat nil saja
+			Data: err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		// TODO: CODE AMBIL DARI http
+		Code:   201,
+		Status: "Success Created Isu Global",
+		Data:   isuGlobalResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *IsuGlobalControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	isuGlobalUpdateRequest := isuglobal.IsuGlobalUpdateRequest{}
+	helper.ReadFromRequestBody(request, &isuGlobalUpdateRequest)
+
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	isuGlobalUpdateRequest.ID = id
+
+	isuGlobalResponse, err := controller.IsuGlobalService.Update(request.Context(), isuGlobalUpdateRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Updated Isu Global",
+		Data:   isuGlobalResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *IsuGlobalControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	isuGlobalId := params.ByName("id")
+	id, err := strconv.Atoi(isuGlobalId)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	err = controller.IsuGlobalService.Delete(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Deleted Isu Global",
+		Data:   nil,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *IsuGlobalControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+
+	kodeOpd := params.ByName("kode_opd")
+
+	bidangUrusanResponses, err := controller.IsuGlobalService.FindAll(request.Context(), kodeOpd)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   bidangUrusanResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *IsuGlobalControllerImpl) FindByIds(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+
+	findRequest := isuglobal.FindByIdsRequest{}
+	helper.ReadFromRequestBody(request, &findRequest)
+
+	response, err := controller.IsuGlobalService.FindByIds(request.Context(), findRequest)
+	if err != nil {
+
+		statusCode := http.StatusBadRequest
+
+		webResponse := web.WebResponse{
+			Code:   statusCode,
+			Status: http.StatusText(statusCode),
+			Data:   err.Error(),
+		}
+
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: http.StatusText(http.StatusOK),
+		Data:   response,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

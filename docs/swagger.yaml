@@ -1,5 +1,54 @@
 basePath: /
 definitions:
+  ikk.IkkFullResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      indikators:
+        items:
+          $ref: '#/definitions/ikk.IndikatorResponse'
+        type: array
+      jenis:
+        type: string
+      keterangan:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      kode_opd:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      nama_opd:
+        type: string
+      tahun:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  ikk.IndikatorResponse:
+    properties:
+      id:
+        type: integer
+      indikator:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/ikk.TargetResponse'
+        type: array
+    type: object
+  ikk.TargetResponse:
+    properties:
+      id:
+        type: integer
+      satuan:
+        type: string
+      tahun:
+        type: integer
+      target:
+        type: string
+    type: object
   iku.IkuOpdResponse:
     properties:
       asal_iku:
@@ -48,6 +97,71 @@ definitions:
         type: string
       target:
         type: string
+    type: object
+  iku.TargetResponse:
+    properties:
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  indikator.IkmRequest:
+    properties:
+      definisi_operasional:
+        type: string
+      indikator:
+        type: string
+      is_active:
+        type: boolean
+      jenis:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/iku.TargetResponse'
+        type: array
+    type: object
+  indikator.IkmResponse:
+    properties:
+      definisi_operasional:
+        type: string
+      id:
+        type: string
+      indikator:
+        type: string
+      is_active:
+        type: boolean
+      jenis:
+        type: string
+      kode_bidang_urusan:
+        type: string
+      nama_bidang_urusan:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/iku.TargetResponse'
+        type: array
     type: object
   opdmaster.OpdResponseForAll:
     properties:
@@ -214,6 +328,10 @@ definitions:
         items:
           $ref: '#/definitions/pohonkinerja.LeaderboardTematikItem'
         type: array
+      jenis:
+        type: string
+      level:
+        type: integer
       nama:
         type: string
     type: object
@@ -233,6 +351,10 @@ definitions:
         type: array
       id:
         type: integer
+      ikk:
+        items:
+          $ref: '#/definitions/ikk.IkkFullResponse'
+        type: array
       indikator:
         items:
           $ref: '#/definitions/pohonkinerja.IndikatorResponse'
@@ -244,6 +366,8 @@ definitions:
       jumlah_review:
         type: integer
       keterangan:
+        type: string
+      keterangan_crosscutting:
         type: string
       level_pohon:
         type: integer
@@ -262,7 +386,6 @@ definitions:
           $ref: '#/definitions/pohonkinerja.ReviewResponse'
         type: array
       status:
-        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
         type: string
       status_crosscutting:
         type: string
@@ -289,6 +412,10 @@ definitions:
         type: integer
       id_tematik:
         type: integer
+      ikk:
+        items:
+          $ref: '#/definitions/ikk.IkkFullResponse'
+        type: array
       indikator:
         items:
           $ref: '#/definitions/pohonkinerja.IndikatorResponse'
@@ -300,6 +427,8 @@ definitions:
       jumlah_review:
         type: integer
       keterangan:
+        type: string
+      keterangan_crosscutting:
         type: string
       level_pohon:
         type: integer
@@ -320,7 +449,6 @@ definitions:
           $ref: '#/definitions/pohonkinerja.ReviewResponse'
         type: array
       status:
-        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
         type: string
       status_crosscutting:
         type: string
@@ -438,6 +566,10 @@ definitions:
     properties:
       id:
         type: integer
+      ikk:
+        items:
+          $ref: '#/definitions/ikk.IkkFullResponse'
+        type: array
       indikator:
         items:
           $ref: '#/definitions/pohonkinerja.IndikatorResponse'
@@ -531,6 +663,8 @@ definitions:
         type: integer
       keterangan:
         type: string
+      keterangan_crosscutting:
+        type: string
       level_pohon:
         type: integer
       nama_pohon:
@@ -550,7 +684,6 @@ definitions:
           $ref: '#/definitions/pohonkinerja.ReviewResponse'
         type: array
       status:
-        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
         type: string
       status_crosscutting:
         type: string
@@ -577,6 +710,10 @@ definitions:
         type: integer
       id_tematik:
         type: integer
+      ikk:
+        items:
+          $ref: '#/definitions/ikk.IkkFullResponse'
+        type: array
       indikator:
         items:
           $ref: '#/definitions/pohonkinerja.IndikatorResponse'
@@ -588,6 +725,8 @@ definitions:
       jumlah_review:
         type: integer
       keterangan:
+        type: string
+      keterangan_crosscutting:
         type: string
       level_pohon:
         type: integer
@@ -608,7 +747,6 @@ definitions:
           $ref: '#/definitions/pohonkinerja.ReviewResponse'
         type: array
       status:
-        description: KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
         type: string
       status_crosscutting:
         type: string
@@ -926,6 +1064,8 @@ definitions:
     type: object
   programkegiatan.PaguAnggaranTotalResponse:
     properties:
+      jenis_pagu:
+        type: string
       pagu_indikatif:
         type: integer
       tahun:
@@ -1069,6 +1209,25 @@ definitions:
           $ref: '#/definitions/rencanakinerja.TargetResponse'
         type: array
     type: object
+  rencanakinerja.IndikatorResponseLevel1:
+    properties:
+      id_indikator:
+        type: string
+      manual_ik_exist:
+        type: boolean
+      nama_indikator:
+        type: string
+      rencana_kinerja_id:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/rencanakinerja.TargetResponse'
+        type: array
+    type: object
   rencanakinerja.RencanaKinerjaCreateRequest:
     properties:
       catatan:
@@ -1098,6 +1257,43 @@ definitions:
       tahun_akhir:
         type: string
       tahun_awal:
+        type: string
+    type: object
+  rencanakinerja.RencanaKinerjaLevel1Response:
+    properties:
+      catatan:
+        type: string
+      id_pohon:
+        type: integer
+      id_rencana_kinerja:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/rencanakinerja.IndikatorResponseLevel1'
+        type: array
+      is_hide_sasaran_opd:
+        type: boolean
+      level_pohon:
+        type: integer
+      nama_pegawai:
+        type: string
+      nama_pohon:
+        type: string
+      nama_rencana_kinerja:
+        type: string
+      nama_sasaran_opd:
+        type: string
+      operasional_daerah:
+        $ref: '#/definitions/opdmaster.OpdResponseForAll'
+      pegawai_id:
+        type: string
+      perlu_ubah_pokin:
+        type: boolean
+      sasaran_opd_id:
+        type: integer
+      status_rencana_kinerja:
+        type: string
+      tahun:
         type: string
     type: object
   rencanakinerja.RencanaKinerjaResponse:
@@ -2278,6 +2474,8 @@ definitions:
       code:
         type: integer
       data: {}
+      error:
+        type: string
       status:
         type: string
     type: object
@@ -2289,6 +2487,158 @@ info:
   title: EKAK Kabupaten Madiun API
   version: "1.0"
 paths:
+  /ikm:
+    get:
+      consumes:
+      - application/json
+      description: Get all indikator IKM berdasarkan tahun awal dan akhir
+      parameters:
+      - description: Tahun Awal
+        in: query
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        in: query
+        name: tahun_akhir
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/indikator.IkmResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Get IKM by Periode
+      tags:
+      - Indikator IKM
+    post:
+      consumes:
+      - application/json
+      description: Membuat indikator IKM baru
+      parameters:
+      - description: Request Body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/indikator.IkmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Create IKM
+      tags:
+      - Indikator IKM
+  /ikm/{id}:
+    delete:
+      description: Hapus indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Delete IKM
+      tags:
+      - Indikator IKM
+    get:
+      description: Get indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Get IKM by ID
+      tags:
+      - Indikator IKM
+    put:
+      consumes:
+      - application/json
+      description: Update indikator IKM berdasarkan ID
+      parameters:
+      - description: ID IKM
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request Body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/indikator.IkmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/indikator.IkmResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      summary: Update IKM
+      tags:
+      - Indikator IKM
   /iku_renja_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:

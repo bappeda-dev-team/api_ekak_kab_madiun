@@ -180,7 +180,7 @@ func (controller *ProgramUnggulanControllerImpl) FindByKodeProgramUnggulan(write
 	helper.WriteToResponseBody(writer, webResponse)
 }
 func (controller *ProgramUnggulanControllerImpl) FindByTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	programUnggulanResponse, err := controller.ProgramUnggulanService.FindByTahun(request.Context(), params.ByName("tahun"))
+	programUnggulanResponse, err := controller.ProgramUnggulanService.FindByTahun(request.Context(), params.ByName("tahun"), params.ByName("kode_opd"))
 	if err != nil {
 		webResponse := web.WebResponse{
 			Code:   500,
@@ -235,6 +235,59 @@ func (controller *ProgramUnggulanControllerImpl) FindByIdTerkait(writer http.Res
 		Code:   200,
 		Status: "Success Found Program Unggulan Terkait",
 		Data:   programUnggulanResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *ProgramUnggulanControllerImpl) CreateOpdProgramUnggulan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	createOpdProgramUnggulanRequest := programunggulan.CreateOpdProgramUnggulanRequest{}
+	helper.ReadFromRequestBody(request, &createOpdProgramUnggulanRequest)
+
+	createOpdProgramUnggulanResponse, err := controller.ProgramUnggulanService.CreateOpdProgramUnggulan(request.Context(), createOpdProgramUnggulanRequest)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Created Opd Program Unggulan",
+		Data:   createOpdProgramUnggulanResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *ProgramUnggulanControllerImpl) DeleteOpdProgramUnggulan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	err = controller.ProgramUnggulanService.DeleteOpdProgramUnggulan(request.Context(), id)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Deleted Opd Program Unggulan",
+		Data:   nil,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }

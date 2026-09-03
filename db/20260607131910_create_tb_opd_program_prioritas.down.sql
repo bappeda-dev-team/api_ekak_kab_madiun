@@ -1,0 +1,1 @@
+DROP TABLE tb_opd_program_prioritas;

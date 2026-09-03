@@ -1,0 +1,5 @@
+ALTER TABLE tb_indikator
+  MODIFY COLUMN indikator VARCHAR(255) NOT NULL DEFAULT '';
+
+ALTER TABLE tb_indikator_matrix
+  MODIFY COLUMN indikator VARCHAR(255) NOT NULL DEFAULT '';

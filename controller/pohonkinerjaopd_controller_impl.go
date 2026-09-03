@@ -6,6 +6,8 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/service"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -216,6 +218,154 @@ func (controller *PohonKinerjaOpdControllerImpl) FindAll(writer http.ResponseWri
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+func (controller *PohonKinerjaOpdControllerImpl) FindAllArah(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	// Jika kodeOpd atau tahun kosong, kembalikan response null
+	if kodeOpd == "" || tahun == "" {
+		webResponse := web.WebResponse{
+			Code:   200,
+			Status: "OK",
+			Data:   nil,
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// Panggil service FindAll
+	pohonKinerjaResponse, err := controller.PohonKinerjaOpdService.FindAllArah(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		// Jika tidak ada data, kembalikan response sukses dengan data null
+		if err == sql.ErrNoRows {
+			webResponse := web.WebResponse{
+				Code:   200,
+				Status: "OK",
+				Data:   nil,
+			}
+			helper.WriteToResponseBody(writer, webResponse)
+			return
+		}
+
+		// Untuk error lainnya
+		webResponse := web.WebResponse{
+			Code:   404,
+			Status: "Not Found",
+			Data:   err.Error(),
+		}
+		writer.WriteHeader(http.StatusNotFound)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	// Kirim response sukses
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "Success Get All Strategic Arah Kebijakan",
+		Data:   pohonKinerjaResponse,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaOpdControllerImpl) ExportExcel(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	if kodeOpd == "" || tahun == "" {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "Bad Request",
+			Data:   "kode opd dan tahun wajib diisi",
+		}
+
+		writer.WriteHeader(http.StatusBadRequest)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	buffer, err := controller.PohonKinerjaOpdService.ExportExcel(
+		request.Context(),
+		kodeOpd,
+		tahun,
+	)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   500,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		}
+
+		writer.WriteHeader(http.StatusInternalServerError)
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	filename := fmt.Sprintf(
+		"Strategic_Arah_Kebijakan_%s_%s.xlsx",
+		kodeOpd,
+		tahun,
+	)
+
+	writer.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	writer.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	writer.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
+	writer.Header().Set("Content-Length", strconv.Itoa(buffer.Len()))
+
+	_, err = writer.Write(buffer.Bytes())
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// func (controller *PohonKinerjaOpdControllerImpl) FindAllArahPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+// 	kodeOpd := params.ByName("kode_opd")
+// 	tahun := params.ByName("tahun")
+
+// 	// Jika kodeOpd atau tahun kosong, kembalikan response null
+// 	if kodeOpd == "" || tahun == "" {
+// 		webResponse := web.WebResponse{
+// 			Code:   200,
+// 			Status: "OK",
+// 			Data:   nil,
+// 		}
+// 		helper.WriteToResponseBody(writer, webResponse)
+// 		return
+// 	}
+
+// 	// Panggil service FindAll
+// 	pohonKinerjaResponse, err := controller.PohonKinerjaOpdService.FindAllArahPemda(request.Context(), kodeOpd, tahun)
+// 	if err != nil {
+// 		// Jika tidak ada data, kembalikan response sukses dengan data null
+// 		if err == sql.ErrNoRows {
+// 			webResponse := web.WebResponse{
+// 				Code:   200,
+// 				Status: "OK",
+// 				Data:   nil,
+// 			}
+// 			helper.WriteToResponseBody(writer, webResponse)
+// 			return
+// 		}
+
+// 		// Untuk error lainnya
+// 		webResponse := web.WebResponse{
+// 			Code:   404,
+// 			Status: "Not Found",
+// 			Data:   err.Error(),
+// 		}
+// 		writer.WriteHeader(http.StatusNotFound)
+// 		helper.WriteToResponseBody(writer, webResponse)
+// 		return
+// 	}
+
+// 	// Kirim response sukses
+// 	webResponse := web.WebResponse{
+// 		Code:   200,
+// 		Status: "Success Get All Strategic Arah Kebijakan",
+// 		Data:   pohonKinerjaResponse,
+// 	}
+// 	helper.WriteToResponseBody(writer, webResponse)
+// }
 
 func (controller *PohonKinerjaOpdControllerImpl) FindStrategicNoParent(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
@@ -747,4 +897,54 @@ func (controller *PohonKinerjaOpdControllerImpl) FindLeaderboardHiddenKodeOpds(w
 		Data:   response,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *PohonKinerjaOpdControllerImpl) Cetak(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	tahunParams := params.ByName("tahun")
+
+	tahun, err := strconv.Atoi(tahunParams)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   nil,
+			Error:  "Tahun tidak valid",
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	kodeOpd := params.ByName("kode_opd")
+	if kodeOpd == "" {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: http.StatusText(http.StatusBadRequest),
+			Data:   nil,
+			Error:  "Kode opd harus terisi",
+		}
+		helper.WriteToResponseBody(w, webResponse)
+		return
+
+	}
+
+	pokinOpdCetak, err := controller.PohonKinerjaOpdService.CetakPokin(r.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: http.StatusText(http.StatusInternalServerError),
+			Data:   nil,
+			Error:  "Terjadi kesalahan",
+		}
+		log.Printf("[ERROR] Cetak PohonKinerjaOpdService.CetakPokin: %v", err)
+		helper.WriteToResponseBody(w, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: http.StatusText(http.StatusOK),
+		Data:   pokinOpdCetak,
+	}
+
+	helper.WriteToResponseBodyWstatus(w, webResponse)
 }

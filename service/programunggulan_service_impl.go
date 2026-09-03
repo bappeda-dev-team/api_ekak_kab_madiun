@@ -164,6 +164,14 @@ func (service *ProgramUnggulanServiceImpl) FindAll(ctx context.Context, tahunAwa
 
 	var responses []programunggulan.ProgramUnggulanResponse
 	for _, result := range results {
+		var opdResponseList []programunggulan.OpdProgramUnggulanResponse
+		for _, opd := range result.OpdList {
+			opdResponseList = append(opdResponseList, programunggulan.OpdProgramUnggulanResponse{
+				Id:      opd.Id,
+				KodeOpd: opd.KodeOpd,
+				NamaOpd: opd.NamaOpd,
+			})
+		}
 		responses = append(responses, programunggulan.ProgramUnggulanResponse{
 			Id:                        result.Id,
 			NamaTagging:               result.NamaTagging,
@@ -173,6 +181,8 @@ func (service *ProgramUnggulanServiceImpl) FindAll(ctx context.Context, tahunAwa
 			TahunAwal:                 result.TahunAwal,
 			TahunAkhir:                result.TahunAkhir,
 			IsActive:                  result.IsActive,
+			OpdList:                   opdResponseList,
+			TahunTerpakai:             result.TahunTerpakai,
 		})
 	}
 
@@ -202,24 +212,23 @@ func (service *ProgramUnggulanServiceImpl) FindByKodeProgramUnggulan(ctx context
 	}, nil
 }
 
-func (service *ProgramUnggulanServiceImpl) FindByTahun(ctx context.Context, tahun string) ([]programunggulan.ProgramUnggulanResponse, error) {
+func (service *ProgramUnggulanServiceImpl) FindByTahun(ctx context.Context, tahun string, kodeOpd string) ([]programunggulan.ProgramUnggulanResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
-
-	// Validasi format tahun
 	_, err = strconv.Atoi(tahun)
 	if err != nil {
 		return nil, errors.New("format tahun tidak valid")
 	}
-
-	results, err := service.ProgramUnggulanRepository.FindByTahun(ctx, tx, tahun)
+	if kodeOpd == "" {
+		return nil, errors.New("kode_opd tidak boleh kosong")
+	}
+	results, err := service.ProgramUnggulanRepository.FindByTahunAndKodeOpd(ctx, tx, tahun, kodeOpd)
 	if err != nil {
 		return nil, err
 	}
-
 	var responses []programunggulan.ProgramUnggulanResponse
 	for _, result := range results {
 		responses = append(responses, programunggulan.ProgramUnggulanResponse{
@@ -232,7 +241,6 @@ func (service *ProgramUnggulanServiceImpl) FindByTahun(ctx context.Context, tahu
 			TahunAkhir:                result.TahunAkhir,
 		})
 	}
-
 	return responses, nil
 }
 
@@ -296,4 +304,95 @@ func (service *ProgramUnggulanServiceImpl) FindByIdTerkait(ctx context.Context, 
 	}
 
 	return responses, nil
+}
+
+func (service *ProgramUnggulanServiceImpl) CreateOpdProgramUnggulan(ctx context.Context, request programunggulan.CreateOpdProgramUnggulanRequest) (programunggulan.CreateOpdProgramUnggulanResponse, error) {
+	err := service.Validate.Struct(request)
+	if err != nil {
+		return programunggulan.CreateOpdProgramUnggulanResponse{}, err
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programunggulan.CreateOpdProgramUnggulanResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+	_, err = service.ProgramUnggulanRepository.FindByKodeProgramUnggulan(ctx, tx, request.KodeProgramUnggulan)
+	if err != nil {
+		return programunggulan.CreateOpdProgramUnggulanResponse{}, errors.New("program unggulan tidak ditemukan")
+	}
+	kodeOpds := dedupeStrings(request.KodeOpd)
+	// Guard: cek data yang sudah ada
+	existingOpds, err := service.ProgramUnggulanRepository.FindOpdByKodeProgramUnggulanAndKodeOpds(ctx, tx, request.KodeProgramUnggulan, kodeOpds)
+	if err != nil {
+		return programunggulan.CreateOpdProgramUnggulanResponse{}, err
+	}
+	// Filter hanya kode_opd yang belum ada
+	newKodeOpds := filterNewKodeOpds(kodeOpds, existingOpds)
+	// Insert hanya yang baru
+	if len(newKodeOpds) > 0 {
+		err = service.ProgramUnggulanRepository.CreateOpdProgramUnggulan(ctx, tx, request.KodeProgramUnggulan, newKodeOpds)
+		if err != nil {
+			return programunggulan.CreateOpdProgramUnggulanResponse{}, err
+		}
+	}
+	// Ambil semua data (existing + baru) untuk response
+	opdList, err := service.ProgramUnggulanRepository.FindOpdByKodeProgramUnggulanAndKodeOpds(ctx, tx, request.KodeProgramUnggulan, kodeOpds)
+	if err != nil {
+		return programunggulan.CreateOpdProgramUnggulanResponse{}, err
+	}
+	var opdResponses []programunggulan.OpdProgramUnggulanResponse
+	for _, opd := range opdList {
+		opdResponses = append(opdResponses, programunggulan.OpdProgramUnggulanResponse{
+			Id:      opd.Id,
+			KodeOpd: opd.KodeOpd,
+			NamaOpd: opd.NamaOpd,
+		})
+	}
+	return programunggulan.CreateOpdProgramUnggulanResponse{
+		KodeProgramUnggulan: request.KodeProgramUnggulan,
+		OpdList:             opdResponses,
+	}, nil
+}
+func filterNewKodeOpds(requested []string, existing []domain.OpdProgramUnggulan) []string {
+	existingMap := make(map[string]struct{}, len(existing))
+	for _, opd := range existing {
+		existingMap[opd.KodeOpd] = struct{}{}
+	}
+	var result []string
+	for _, kodeOpd := range requested {
+		if _, exists := existingMap[kodeOpd]; exists {
+			continue // skip, sudah ada di database
+		}
+		result = append(result, kodeOpd)
+	}
+	return result
+}
+
+func dedupeStrings(items []string) []string {
+	seen := make(map[string]struct{}, len(items))
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		if _, exists := seen[item]; exists {
+			continue
+		}
+		seen[item] = struct{}{}
+		result = append(result, item)
+	}
+	return result
+}
+
+func (service *ProgramUnggulanServiceImpl) DeleteOpdProgramUnggulan(ctx context.Context, id int) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	opdList, err := service.ProgramUnggulanRepository.FindOpdProgramUnggulanById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if len(opdList) == 0 {
+		return errors.New("opd program unggulan tidak ditemukan")
+	}
+	return service.ProgramUnggulanRepository.DeleteOpdProgramUnggulan(ctx, tx, id)
 }

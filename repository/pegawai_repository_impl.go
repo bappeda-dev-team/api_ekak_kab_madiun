@@ -200,7 +200,7 @@ func (repository *PegawaiRepositoryImpl) FindPegawaiByNipsBatch(ctx context.Cont
 				SELECT jp.id_jabatan
 				FROM tb_jabatan_pegawai jp
 				WHERE jp.id_pegawai = peg.nip
-				ORDER BY jp.tahun DESC, jp.bulan DESC
+				ORDER BY jp.created_at DESC, jp.tahun DESC, jp.bulan DESC
 				LIMIT 1
 			)
 		WHERE peg.nip IN (%s)
@@ -247,4 +247,121 @@ func (repository *PegawaiRepositoryImpl) FindPegawaiByNipsBatch(ctx context.Cont
 	}
 
 	return result, nil
+}
+
+func (repo *PegawaiRepositoryImpl) FindRolePegawaiByNipsBatch(ctx context.Context, tx *sql.Tx, nips []string) (map[string][]string, error) {
+	if len(nips) <= 0 {
+		return map[string][]string{}, nil
+	}
+
+	placeholders := make([]string, len(nips))
+	args := make([]any, len(nips))
+	for i, nip := range nips {
+		placeholders[i] = "?"
+		args[i] = nip
+	}
+
+	script := fmt.Sprintf(`
+		SELECT
+			peg.nip,
+                        role.role
+		FROM tb_pegawai peg
+		LEFT JOIN tb_role role
+			ON role.id = (
+				SELECT usr.role_id
+				FROM tb_user_role usr
+                                JOIN tb_users us ON us.id = usr.user_id
+				WHERE us.nip = peg.nip
+			)
+		WHERE peg.nip IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]string)
+	for _, nip := range nips {
+		result[nip] = []string{}
+	}
+	for rows.Next() {
+		var nip string
+		var namaRoleNS sql.NullString
+
+		err := rows.Scan(
+			&nip,
+			&namaRoleNS,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if namaRoleNS.Valid {
+			result[nip] = append(result[nip], namaRoleNS.String)
+		}
+	}
+
+	return result, nil
+}
+
+func (repository *PegawaiRepositoryImpl) FindByKodeOpdLevel(ctx context.Context, tx *sql.Tx, kodeOpd string, level int) ([]domainmaster.Pegawai, error) {
+	script := `SELECT
+            peg.id,
+            peg.nama,
+            peg.nip,
+            opd.kode_opd,
+            opd.nama_opd,
+            jab.nama_jabatan
+            FROM tb_pegawai peg
+            LEFT JOIN tb_operasional_daerah opd ON peg.kode_opd = opd.kode_opd
+	    LEFT JOIN tb_jabatan jab
+	    	ON jab.id = (
+	    		SELECT jp.id_jabatan
+	    		FROM tb_jabatan_pegawai jp
+	    		WHERE jp.id_pegawai = peg.nip
+	    		ORDER BY jp.tahun DESC, jp.bulan DESC
+	    		LIMIT 1
+	    	)
+	    JOIN tb_users us ON us.nip = peg.nip
+	    JOIN tb_user_role role ON us.id = role.user_id
+            WHERE peg.kode_opd = ? AND role.role_id = ?
+	    ORDER BY peg.nama ASC`
+
+	rows, err := tx.QueryContext(ctx, script, kodeOpd, level)
+	if err != nil {
+		return []domainmaster.Pegawai{}, err
+	}
+	defer rows.Close()
+	var pegawais []domainmaster.Pegawai
+	for rows.Next() {
+		pegawai := domainmaster.Pegawai{}
+
+		var kodeOpd, namaOpd sql.NullString
+		var namaJabatan sql.NullString
+
+		err := rows.Scan(
+			&pegawai.Id,
+			&pegawai.NamaPegawai,
+			&pegawai.Nip,
+			&kodeOpd,
+			&namaOpd,
+			&namaJabatan,
+		)
+		if err != nil {
+			return []domainmaster.Pegawai{}, err
+		}
+
+		if kodeOpd.Valid {
+			pegawai.KodeOpd = kodeOpd.String
+		}
+		if namaOpd.Valid {
+			pegawai.NamaOpd = namaOpd.String
+		}
+		if namaJabatan.Valid {
+			pegawai.NamaJabatan = namaJabatan.String
+		}
+		pegawais = append(pegawais, pegawai)
+	}
+	return pegawais, nil
 }

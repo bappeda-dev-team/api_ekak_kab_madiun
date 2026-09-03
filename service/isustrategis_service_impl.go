@@ -7,6 +7,8 @@ import (
 	"ekak_kabupaten_madiun/model/web/isustrategis"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
+	"fmt"
+	"strconv"
 )
 
 type CSFServiceImpl struct {
@@ -19,6 +21,85 @@ func NewCSFService(csfRepository repository.CSFRepository, db *sql.DB) CSFServic
 		CSFRepository: csfRepository,
 		DB:            db,
 	}
+}
+
+func (service *CSFServiceImpl) AllCsfsByTahun(ctx context.Context, tahun string) ([]isustrategis.CSFResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Buat instance repository pohon
+	pokinRepo := repository.NewPohonKinerjaRepositoryImpl()
+
+	// Ambil data dari CSFRepository
+	csfList, err := service.CSFRepository.AllCsfByTahun(ctx, tx, tahun, pokinRepo)
+	if err != nil {
+		return nil, err
+	}
+
+	// Konversi tahun ke int
+	tahunInt, err := strconv.Atoi(tahun)
+	if err != nil {
+		return nil, fmt.Errorf("tahun tidak valid: %v", err)
+	}
+
+	var responses []isustrategis.CSFResponse
+	for _, pokin := range csfList {
+		// Konversi indikator
+		var indikatorResponses []pohonkinerja.IndikatorResponse
+		for _, ind := range pokin.Indikator {
+			var targetResponses []pohonkinerja.TargetResponse
+			for _, t := range ind.Target {
+				targetResponses = append(targetResponses, pohonkinerja.TargetResponse{
+					Id:              t.Id,
+					IndikatorId:     t.IndikatorId,
+					TargetIndikator: t.Target,
+					SatuanIndikator: t.Satuan,
+				})
+			}
+
+			indikatorResponses = append(indikatorResponses, pohonkinerja.IndikatorResponse{
+				Id:            ind.Id,
+				NamaIndikator: ind.Indikator,
+				Target:        targetResponses,
+			})
+		}
+
+		// Bangun response CSF
+		csfResp := isustrategis.CSFResponse{
+			ID:                         pokin.Id, // belum ada ID, default
+			PohonID:                    pokin.Id,
+			PernyataanKondisiStrategis: "",
+			AlasanKondisiStrategis:     "",
+			DataTerukur:                "",
+			KondisiTerukur:             "",
+			KondisiWujud:               "",
+			Tahun:                      tahunInt,
+			JenisPohon:                 pokin.JenisPohon,
+			LevelPohon:                 pokin.LevelPohon,
+			Strategi:                   pokin.Strategi,
+			NamaPohon:                  pokin.NamaPohon,
+			Keterangan:                 pokin.Keterangan,
+			IsActive:                   pokin.IsActive,
+			Indikators:                 indikatorResponses,
+		}
+
+		// Jika CSF ada, isi field-field terkait
+		if pokin.CSF != nil {
+			csfResp.PernyataanKondisiStrategis = pokin.CSF.PernyataanKondisiStrategis
+			csfResp.AlasanKondisiStrategis = pokin.CSF.AlasanKondisiStrategis
+			csfResp.DataTerukur = pokin.CSF.DataTerukur
+			csfResp.KondisiTerukur = pokin.CSF.KondisiTerukur
+			csfResp.KondisiWujud = pokin.CSF.KondisiWujud
+			csfResp.Tahun = pokin.CSF.Tahun
+		}
+
+		responses = append(responses, csfResp)
+	}
+
+	return responses, nil
 }
 
 func (service *CSFServiceImpl) FindByTahun(ctx context.Context, tahun string) ([]isustrategis.CSFResponse, error) {

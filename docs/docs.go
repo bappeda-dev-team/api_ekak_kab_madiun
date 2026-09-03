@@ -18,6 +18,253 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/ikm": {
+            "get": {
+                "description": "Get all indikator IKM berdasarkan tahun awal dan akhir",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Get IKM by Periode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun Awal",
+                        "name": "tahun_awal",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun Akhir",
+                        "name": "tahun_akhir",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/indikator.IkmResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Membuat indikator IKM baru",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Create IKM",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/indikator.IkmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/indikator.IkmResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ikm/{id}": {
+            "get": {
+                "description": "Get indikator IKM berdasarkan ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Get IKM by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID IKM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/indikator.IkmResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update indikator IKM berdasarkan ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Update IKM",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID IKM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request Body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/indikator.IkmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/indikator.IkmResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Hapus indikator IKM berdasarkan ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Indikator IKM"
+                ],
+                "summary": "Delete IKM",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID IKM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/iku_renja_opd/penetapan/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -5714,6 +5961,81 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "ikk.IkkFullResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikators": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IndikatorResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "ikk.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.TargetResponse"
+                    }
+                }
+            }
+        },
+        "ikk.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "iku.IkuOpdResponse": {
             "type": "object",
             "properties": {
@@ -5786,6 +6108,105 @@ const docTemplate = `{
                 },
                 "target": {
                     "type": "string"
+                }
+            }
+        },
+        "iku.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "indikator.IkmRequest": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/iku.TargetResponse"
+                    }
+                }
+            }
+        },
+        "indikator.IkmResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/iku.TargetResponse"
+                    }
                 }
             }
         },
@@ -6036,6 +6457,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/pohonkinerja.LeaderboardTematikItem"
                     }
                 },
+                "jenis": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
                 "nama": {
                     "type": "string"
                 }
@@ -6065,6 +6492,12 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
+                },
                 "indikator": {
                     "type": "array",
                     "items": {
@@ -6081,6 +6514,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
                     "type": "string"
                 },
                 "level_pohon": {
@@ -6108,7 +6544,6 @@ const docTemplate = `{
                     }
                 },
                 "status": {
-                    "description": "KeteranganCrosscutting *string                     ` + "`" + `json:\"keterangan_crosscutting\"` + "`" + `",
                     "type": "string"
                 },
                 "status_crosscutting": {
@@ -6149,6 +6584,12 @@ const docTemplate = `{
                 "id_tematik": {
                     "type": "integer"
                 },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
+                },
                 "indikator": {
                     "type": "array",
                     "items": {
@@ -6165,6 +6606,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
                     "type": "string"
                 },
                 "level_pohon": {
@@ -6195,7 +6639,6 @@ const docTemplate = `{
                     }
                 },
                 "status": {
-                    "description": "KeteranganCrosscutting *string                     ` + "`" + `json:\"keterangan_crosscutting\"` + "`" + `",
                     "type": "string"
                 },
                 "status_crosscutting": {
@@ -6371,6 +6814,12 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
+                },
                 "indikator": {
                     "type": "array",
                     "items": {
@@ -6512,6 +6961,9 @@ const docTemplate = `{
                 "keterangan": {
                     "type": "string"
                 },
+                "keterangan_crosscutting": {
+                    "type": "string"
+                },
                 "level_pohon": {
                     "type": "integer"
                 },
@@ -6540,7 +6992,6 @@ const docTemplate = `{
                     }
                 },
                 "status": {
-                    "description": "KeteranganCrosscutting *string                     ` + "`" + `json:\"keterangan_crosscutting\"` + "`" + `",
                     "type": "string"
                 },
                 "status_crosscutting": {
@@ -6581,6 +7032,12 @@ const docTemplate = `{
                 "id_tematik": {
                     "type": "integer"
                 },
+                "ikk": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ikk.IkkFullResponse"
+                    }
+                },
                 "indikator": {
                     "type": "array",
                     "items": {
@@ -6597,6 +7054,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "keterangan": {
+                    "type": "string"
+                },
+                "keterangan_crosscutting": {
                     "type": "string"
                 },
                 "level_pohon": {
@@ -6627,7 +7087,6 @@ const docTemplate = `{
                     }
                 },
                 "status": {
-                    "description": "KeteranganCrosscutting *string                     ` + "`" + `json:\"keterangan_crosscutting\"` + "`" + `",
                     "type": "string"
                 },
                 "status_crosscutting": {
@@ -7098,6 +7557,9 @@ const docTemplate = `{
         "programkegiatan.PaguAnggaranTotalResponse": {
             "type": "object",
             "properties": {
+                "jenis_pagu": {
+                    "type": "string"
+                },
                 "pagu_indikatif": {
                     "type": "integer"
                 },
@@ -7317,6 +7779,35 @@ const docTemplate = `{
                 }
             }
         },
+        "rencanakinerja.IndikatorResponseLevel1": {
+            "type": "object",
+            "properties": {
+                "id_indikator": {
+                    "type": "string"
+                },
+                "manual_ik_exist": {
+                    "type": "boolean"
+                },
+                "nama_indikator": {
+                    "type": "string"
+                },
+                "rencana_kinerja_id": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanakinerja.TargetResponse"
+                    }
+                }
+            }
+        },
         "rencanakinerja.RencanaKinerjaCreateRequest": {
             "type": "object",
             "properties": {
@@ -7360,6 +7851,62 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "rencanakinerja.RencanaKinerjaLevel1Response": {
+            "type": "object",
+            "properties": {
+                "catatan": {
+                    "type": "string"
+                },
+                "id_pohon": {
+                    "type": "integer"
+                },
+                "id_rencana_kinerja": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanakinerja.IndikatorResponseLevel1"
+                    }
+                },
+                "is_hide_sasaran_opd": {
+                    "type": "boolean"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "nama_rencana_kinerja": {
+                    "type": "string"
+                },
+                "nama_sasaran_opd": {
+                    "type": "string"
+                },
+                "operasional_daerah": {
+                    "$ref": "#/definitions/opdmaster.OpdResponseForAll"
+                },
+                "pegawai_id": {
+                    "type": "string"
+                },
+                "perlu_ubah_pokin": {
+                    "type": "boolean"
+                },
+                "sasaran_opd_id": {
+                    "type": "integer"
+                },
+                "status_rencana_kinerja": {
+                    "type": "string"
+                },
+                "tahun": {
                     "type": "string"
                 }
             }
@@ -9147,6 +9694,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "data": {},
+                "error": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 }

@@ -19,10 +19,15 @@ type SasaranOpdRepository interface {
 	FindByNipAndOpd(ctx context.Context, tx *sql.Tx, nip, kodeOpd, tahun string) ([]domain.SasaranOpd, error)
 	FindSasaranByPeriod(ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, jenisIndikator string) ([]domain.SasaranOpd, error)
 	FindSasaranByTahun(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode, jenisIndikator string) ([]domain.SasaranOpd, error)
+	FindStrategicArahKebijakan(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPeriode string) ([]domain.StrategicRow, error)
 	CreateRenjaIndikator(ctx context.Context, tx *sql.Tx, sasaranOpdId int, indikators []domain.Indikator) error
 	UpdateRenjaIndikator(ctx context.Context, tx *sql.Tx, indikators []domain.Indikator) error
 	DeleteIndikatorTargetRenja(ctx context.Context, tx *sql.Tx, indikatorId string) error
 	FindIndikatorByKodeIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) (domain.Indikator, error)
+	FindByIdOnly(ctx context.Context, tx *sql.Tx, id int) (*domain.SasaranOpd, error)
+	FindIndikatorTargetsBySasaranIds(ctx context.Context, tx *sql.Tx, sasaranIds []int) ([]domain.Indikator, error)
+	FindIndikatorTargetsRenstraBySasaranIds(ctx context.Context, tx *sql.Tx, sasaranIds []int) ([]domain.Indikator, error)
+	FindAllOnly(ctx context.Context, tx *sql.Tx, KodeOpd string, tahunAwal string, tahunAkhir string, jenisPeriode string) ([]domain.SasaranOpd, error)
 	// FindSasaranTujuanByPokinIdsBatch mengambil ringkasan sasaran OPD (nama saja),
 	// tujuan OPD, dan bidang urusan secara batch berdasarkan pokin_id (strategic level 4).
 	FindSasaranTujuanByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int][]domain.SasaranPokinInfo, error)

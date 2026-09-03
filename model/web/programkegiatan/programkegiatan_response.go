@@ -104,6 +104,7 @@ type SubKegiatanResponse struct {
 type PaguAnggaranTotalResponse struct {
 	Tahun        string `json:"tahun"`
 	PaguAnggaran int64  `json:"pagu_indikatif"`
+	JenisPagu    string `json:"jenis_pagu"`
 }
 
 type AnggaranRenstraResponse struct {

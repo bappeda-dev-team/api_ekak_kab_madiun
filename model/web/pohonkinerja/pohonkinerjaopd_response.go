@@ -2,6 +2,7 @@ package pohonkinerja
 
 import (
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/ikk"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 )
 
@@ -20,6 +21,7 @@ type PohonKinerjaOpdResponse struct {
 	Pelaksana              []PelaksanaOpdResponse `json:"pelaksana"`
 	Indikator              []IndikatorResponse    `json:"indikator"`
 	Tagging                []TaggingResponse      `json:"tagging"`
+	Ikk                    []ikk.IkkFullResponse  `json:"ikk"`
 	KeteranganCrosscutting *string                `json:"keterangan_crosscutting"`
 	UpdatedBy              string                 `json:"updated_by"`
 	KeteranganTahunClone   string                 `json:"keterangan_tahun_clone,omitempty"`
@@ -34,97 +36,100 @@ type PohonKinerjaOpdAllResponse struct {
 }
 
 type StrategicOpdResponse struct {
-	Id                  int                           `json:"id"`
-	CrosscuttingDikirim []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
-	Parent              *int                          `json:"parent"`
-	Strategi            string                        `json:"nama_pohon"`
-	JenisPohon          string                        `json:"jenis_pohon"`
-	LevelPohon          int                           `json:"level_pohon"`
-	Keterangan          string                        `json:"keterangan"`
-	// KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
-	Status             string                      `json:"status"`
-	IdTematik          *int                        `json:"id_tematik"`
-	NamaTematik        *string                     `json:"nama_tematik"`
-	CountReview        int                         `json:"jumlah_review"`
-	KodeOpd            opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
-	IsActive           bool                        `json:"is_active"`
-	Tagging            []TaggingResponse           `json:"tagging"`
-	Pelaksana          []PelaksanaOpdResponse      `json:"pelaksana"`
-	Crosscutting       []CrosscuttingPokinResponse `json:"crosscutting,omitempty"`
-	Indikator          []IndikatorResponse         `json:"indikator"`
-	Tacticals          []TacticalOpdResponse       `json:"childs,omitempty"`
-	Review             []ReviewResponse            `json:"review,omitempty"`
-	StatusCrosscutting string                      `json:"status_crosscutting"`
+	Id                     int                           `json:"id"`
+	CrosscuttingDikirim    []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
+	Parent                 *int                          `json:"parent"`
+	Strategi               string                        `json:"nama_pohon"`
+	JenisPohon             string                        `json:"jenis_pohon"`
+	LevelPohon             int                           `json:"level_pohon"`
+	Keterangan             string                        `json:"keterangan"`
+	KeteranganCrosscutting *string                       `json:"keterangan_crosscutting"`
+	Status                 string                        `json:"status"`
+	IdTematik              *int                          `json:"id_tematik"`
+	NamaTematik            *string                       `json:"nama_tematik"`
+	CountReview            int                           `json:"jumlah_review"`
+	KodeOpd                opdmaster.OpdResponseForAll   `json:"perangkat_daerah"`
+	IsActive               bool                          `json:"is_active"`
+	StatusCrosscutting     string                        `json:"status_crosscutting"`
+	Crosscutting           []CrosscuttingPokinResponse   `json:"crosscutting,omitempty"`
+	Tagging                []TaggingResponse             `json:"tagging"`
+	Pelaksana              []PelaksanaOpdResponse        `json:"pelaksana"`
+	Indikator              []IndikatorResponse           `json:"indikator"`
+	Tacticals              []TacticalOpdResponse         `json:"childs,omitempty"`
+	Review                 []ReviewResponse              `json:"review,omitempty"`
 }
 
 type TacticalOpdResponse struct {
-	Id                  int                           `json:"id"`
-	CrosscuttingDikirim []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
-	Parent              int                           `json:"parent"`
-	Strategi            string                        `json:"nama_pohon"`
-	JenisPohon          string                        `json:"jenis_pohon"`
-	LevelPohon          int                           `json:"level_pohon"`
-	Keterangan          string                        `json:"keterangan"`
-	// KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
-	Status             string                      `json:"status"`
-	IdTematik          *int                        `json:"id_tematik"`
-	NamaTematik        *string                     `json:"nama_tematik"`
-	CountReview        int                         `json:"jumlah_review"`
-	KodeOpd            opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
-	IsActive           bool                        `json:"is_active"`
-	Tagging            []TaggingResponse           `json:"tagging"`
-	Pelaksana          []PelaksanaOpdResponse      `json:"pelaksana"`
-	Crosscutting       []CrosscuttingPokinResponse `json:"crosscutting,omitempty"`
-	Indikator          []IndikatorResponse         `json:"indikator"`
-	Operationals       []OperationalOpdResponse    `json:"childs,omitempty"`
-	StatusCrosscutting string                      `json:"status_crosscutting"`
-	Review             []ReviewResponse            `json:"review,omitempty"`
+	Id                     int                           `json:"id"`
+	CrosscuttingDikirim    []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
+	Parent                 int                           `json:"parent"`
+	Strategi               string                        `json:"nama_pohon"`
+	JenisPohon             string                        `json:"jenis_pohon"`
+	LevelPohon             int                           `json:"level_pohon"`
+	Keterangan             string                        `json:"keterangan"`
+	KeteranganCrosscutting *string                       `json:"keterangan_crosscutting"`
+	Status                 string                        `json:"status"`
+	IdTematik              *int                          `json:"id_tematik"`
+	NamaTematik            *string                       `json:"nama_tematik"`
+	CountReview            int                           `json:"jumlah_review"`
+	KodeOpd                opdmaster.OpdResponseForAll   `json:"perangkat_daerah"`
+	IsActive               bool                          `json:"is_active"`
+	StatusCrosscutting     string                        `json:"status_crosscutting"`
+	Crosscutting           []CrosscuttingPokinResponse   `json:"crosscutting,omitempty"`
+	Tagging                []TaggingResponse             `json:"tagging"`
+	Pelaksana              []PelaksanaOpdResponse        `json:"pelaksana"`
+	Indikator              []IndikatorResponse           `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse         `json:"ikk"`
+	Operationals           []OperationalOpdResponse      `json:"childs,omitempty"`
+	Review                 []ReviewResponse              `json:"review,omitempty"`
 }
 
 type OperationalOpdResponse struct {
-	Id                  int                           `json:"id"`
-	CrosscuttingDikirim []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
-	Parent              int                           `json:"parent"`
-	Strategi            string                        `json:"nama_pohon"`
-	JenisPohon          string                        `json:"jenis_pohon"`
-	LevelPohon          int                           `json:"level_pohon"`
-	Keterangan          string                        `json:"keterangan"`
-	// KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
-	Status             string                      `json:"status"`
-	IdTematik          *int                        `json:"id_tematik"`
-	NamaTematik        *string                     `json:"nama_tematik"`
-	CountReview        int                         `json:"jumlah_review"`
-	KodeOpd            opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
-	IsActive           bool                        `json:"is_active"`
-	Tagging            []TaggingResponse           `json:"tagging"`
-	Pelaksana          []PelaksanaOpdResponse      `json:"pelaksana"`
-	Indikator          []IndikatorResponse         `json:"indikator"`
-	Crosscutting       []CrosscuttingPokinResponse `json:"crosscutting,omitempty"`
-	Childs             []OperationalNOpdResponse   `json:"childs,omitempty"`
-	StatusCrosscutting string                      `json:"status_crosscutting"`
-	Review             []ReviewResponse            `json:"review,omitempty"`
+	Id                     int                           `json:"id"`
+	CrosscuttingDikirim    []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
+	Parent                 int                           `json:"parent"`
+	Strategi               string                        `json:"nama_pohon"`
+	JenisPohon             string                        `json:"jenis_pohon"`
+	LevelPohon             int                           `json:"level_pohon"`
+	Keterangan             string                        `json:"keterangan"`
+	KeteranganCrosscutting *string                       `json:"keterangan_crosscutting"`
+	Status                 string                        `json:"status"`
+	IdTematik              *int                          `json:"id_tematik"`
+	NamaTematik            *string                       `json:"nama_tematik"`
+	CountReview            int                           `json:"jumlah_review"`
+	KodeOpd                opdmaster.OpdResponseForAll   `json:"perangkat_daerah"`
+	IsActive               bool                          `json:"is_active"`
+	StatusCrosscutting     string                        `json:"status_crosscutting"`
+	Crosscutting           []CrosscuttingPokinResponse   `json:"crosscutting,omitempty"`
+	Tagging                []TaggingResponse             `json:"tagging"`
+	Pelaksana              []PelaksanaOpdResponse        `json:"pelaksana"`
+	Indikator              []IndikatorResponse           `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse         `json:"ikk"`
+	Childs                 []OperationalNOpdResponse     `json:"childs,omitempty"`
+	Review                 []ReviewResponse              `json:"review,omitempty"`
 }
 
 type OperationalNOpdResponse struct {
-	Id                  int                           `json:"id"`
-	CrosscuttingDikirim []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
-	Parent              int                           `json:"parent"`
-	Strategi            string                        `json:"nama_pohon"`
-	JenisPohon          string                        `json:"jenis_pohon"`
-	LevelPohon          int                           `json:"level_pohon"`
-	Keterangan          string                        `json:"keterangan"`
-	// KeteranganCrosscutting *string                     `json:"keterangan_crosscutting"`
-	Status             string                      `json:"status"`
-	CountReview        int                         `json:"jumlah_review"`
-	KodeOpd            opdmaster.OpdResponseForAll `json:"perangkat_daerah"`
-	IsActive           bool                        `json:"is_active"`
-	Tagging            []TaggingResponse           `json:"tagging"`
-	Pelaksana          []PelaksanaOpdResponse      `json:"pelaksana"`
-	Indikator          []IndikatorResponse         `json:"indikator"`
-	Crosscutting       []CrosscuttingPokinResponse `json:"crosscutting,omitempty"`
-	Childs             []OperationalNOpdResponse   `json:"childs,omitempty"`
-	StatusCrosscutting string                      `json:"status_crosscutting"`
-	Review             []ReviewResponse            `json:"review,omitempty"`
+	Id                     int                           `json:"id"`
+	CrosscuttingDikirim    []CrosscuttingDikirimResponse `json:"crosscutting_dikirim,omitempty"`
+	Parent                 int                           `json:"parent"`
+	Strategi               string                        `json:"nama_pohon"`
+	JenisPohon             string                        `json:"jenis_pohon"`
+	LevelPohon             int                           `json:"level_pohon"`
+	Keterangan             string                        `json:"keterangan"`
+	KeteranganCrosscutting *string                       `json:"keterangan_crosscutting"`
+	Status                 string                        `json:"status"`
+	CountReview            int                           `json:"jumlah_review"`
+	KodeOpd                opdmaster.OpdResponseForAll   `json:"perangkat_daerah"`
+	IsActive               bool                          `json:"is_active"`
+	StatusCrosscutting     string                        `json:"status_crosscutting"`
+	Crosscutting           []CrosscuttingPokinResponse   `json:"crosscutting,omitempty"`
+	Tagging                []TaggingResponse             `json:"tagging"`
+	Pelaksana              []PelaksanaOpdResponse        `json:"pelaksana"`
+	Indikator              []IndikatorResponse           `json:"indikator"`
+	Ikk                    []ikk.IkkFullResponse         `json:"ikk"`
+	Childs                 []OperationalNOpdResponse     `json:"childs,omitempty"`
+	Review                 []ReviewResponse              `json:"review,omitempty"`
 }
 
 type PelaksanaOpdResponse struct {
@@ -172,6 +177,15 @@ type LevelDetail struct {
 	Level       int    `json:"level"`
 	JenisPohon  string `json:"jenis_pohon"`
 	JumlahPemda int    `json:"jumlah_pemda"`
+}
+
+type IkkTerpilihResponse struct {
+	Id            int    `json:"id"`
+	PokinId       int    `json:"pohon_kinerja_id"`
+	IkkId         int    `json:"ikk_id"`
+	NamaPokin     string `json:"nama_pokin"`
+	JenisIkk      string `json:"jenis_ikk"`
+	KeteranganIkk string `json:"keterangan_ikk"`
 }
 
 func MapTujuanOpdToResponseCascading(

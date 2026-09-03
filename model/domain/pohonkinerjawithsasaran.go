@@ -68,12 +68,13 @@ type SasaranPemdaDetail struct {
 	Indikator    []IndikatorDetail
 }
 type IndikatorDetail struct {
-	Id               int
-	KodeIndikator    string
-	Indikator        string
-	RumusPerhitungan sql.NullString
-	SumberData       sql.NullString
-	Target           []TargetDetail
+	Id                  int
+	KodeIndikator       string
+	Indikator           string
+	DefinisiOperasional sql.NullString
+	RumusPerhitungan    sql.NullString
+	SumberData          sql.NullString
+	Target              []TargetDetail
 }
 type TargetDetail struct {
 	Id            int
