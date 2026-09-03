@@ -380,7 +380,7 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.R
 		responses = make([]rencanakinerja.RencanaKinerjaLevel1Response, 0)
 	}
 
-	webResponse := web.WebRencanaKinerjaResponse{
+	webResponse := web.WebResponse{
 		Code:   200,
 		Status: "OK",
 		Data:   responses,
