@@ -454,6 +454,15 @@ var lockDataPemdaRepository = wire.NewSet(
 	wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)),
 )
 
+var rencanaAksiOpdSet = wire.NewSet(
+	repository.NewRencanaAksiOpdRepositoryImpl,
+	wire.Bind(new(repository.RencanaAksiOpdRepository), new(*repository.RencanaAksiOpdRepositoryImpl)),
+	service.NewRencanaAksiOpdServiceImpl,
+	wire.Bind(new(service.RencanaAksiOpdService), new(*service.RencanaAksiOpdServiceImpl)),
+	controller.NewRencanaAksiOpdControllerImpl,
+	wire.Bind(new(controller.RencanaAksiOpdController), new(*controller.RencanaAksiOpdControllerImpl)),
+)
+
 func InitializeServer() *http.Server {
 
 	wire.Build(
@@ -511,6 +520,7 @@ func InitializeServer() *http.Server {
 		cloneRecordSet,
 		lockDataRepository,
 		lockDataPemdaRepository,
+		rencanaAksiOpdSet,
 		app.NewRouter,
 		wire.Bind(new(http.Handler), new(*httprouter.Router)),
 		middleware.NewAuthMiddleware,
