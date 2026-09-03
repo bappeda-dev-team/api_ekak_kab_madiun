@@ -1,6 +1,6 @@
 ARG GO_VERSION=1.24.2
 
-FROM registry.docker.com/library/golang:$GO_VERSION-alpine as base
+FROM registry.docker.com/library/golang:$GO_VERSION-alpine AS base
 
 # app lives here
 WORKDIR /app
@@ -14,6 +14,9 @@ RUN apk update -qq && \
     apk add --no-cache git
 
 COPY . .
+
+# dummy .env
+RUN touch .env
 
 RUN go build -o api main.go wire_gen.go
 
