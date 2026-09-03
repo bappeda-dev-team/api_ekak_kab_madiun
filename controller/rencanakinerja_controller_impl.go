@@ -177,17 +177,9 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRencanaKinerja(writer htt
 		return
 	}
 
-	actionButton := []web.ActionButton{
-		{
-			NameAction: "Create Rencana Kinerja",
-			Method:     "POST",
-			Url:        "/rencana_kinerja/create",
-		},
-	}
-	webResponse := web.WebRencanaKinerjaResponse{
+	webResponse := web.WebResponse{
 		Code:   http.StatusOK,
 		Status: "success get rencana kinerja",
-		Action: actionButton,
 		Data:   rencanaKinerjaResponses,
 	}
 
