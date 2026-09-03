@@ -7,7 +7,7 @@ WORKDIR /app
 
 
 # Throw-away build stage to reduce size of final image
-FROM base as build
+FROM base AS build
 
 # Install packages needed to build
 RUN apk update -qq && \
