@@ -11,7 +11,14 @@ type RincianBelanjaAsnResponse struct {
 	IndikatorSubkegiatan []IndikatorResponse      `json:"indikator_subkegiatan"`
 	TotalAnggaran        int                      `json:"total_anggaran"`
 	RincianBelanja       []RincianBelanjaResponse `json:"rincian_belanja"`
+	KandidatPptk         []KandidatPptkResponse   `json:"kandidat_pptk"`
 	Pptk                 []PptkResponse           `json:"pptk"`
+}
+
+type KandidatPptkResponse struct {
+	Nip   string `json:"nip"`
+	Nama  string `json:"nama"`
+	Level string `json:"level"`
 }
 
 type PptkResponse struct {

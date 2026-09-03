@@ -12,5 +12,7 @@ type PptkRepository interface {
 	Delete(ctx context.Context, tx *sql.Tx, id int) error
 	FindById(ctx context.Context, tx *sql.Tx, id int) (domain.Pptk, error)
 	FindAll(ctx context.Context, tx *sql.Tx, kodeSubkegiatan string, kodeOpd string, tahun string) ([]domain.Pptk, error)
+	KandidatPptkOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.KandidatPptk, error)
 	FindAllByNip(ctx context.Context, tx *sql.Tx, kodeSubkegiatan string, pegawaiId string, tahun string) ([]domain.Pptk, error)
+	KandidatPptkPegawai(ctx context.Context, tx *sql.Tx, pegawaiId string, tahun string) ([]domain.KandidatPptk, error)
 }

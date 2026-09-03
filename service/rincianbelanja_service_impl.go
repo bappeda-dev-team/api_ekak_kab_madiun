@@ -268,6 +268,27 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 		return nil, err
 	}
 
+	// find kandidat pptk
+	kandidatPptkList, err := service.pptkRepository.KandidatPptkOpd(
+		ctx,
+		tx,
+		kodeOpd,
+		tahun,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
+
+	for _, kandidat := range kandidatPptkList {
+		kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
+			Nip:   kandidat.PegawaiId,
+			Nama:  kandidat.NamaPegawai,
+			Level: kandidat.Level,
+		}
+	}
+
 	// Map untuk mengelompokkan berdasarkan kode subkegiatan
 	subkegiatanMap := make(map[string]*rincianbelanja.RincianBelanjaAsnResponse)
 
@@ -340,6 +361,24 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 			}
 
 			// -----------------------------------------------------
+			// Mapping Kandidat PPTK ke response
+			// -----------------------------------------------------
+			kandidatPptkResponses := make([]rincianbelanja.KandidatPptkResponse, 0)
+			kandidatTracker := make(map[string]bool)
+
+			for _, rk := range rb.RencanaKinerja {
+				if kandidat, exists := kandidatPptkMap[rk.PegawaiId]; exists {
+					if !kandidatTracker[rk.PegawaiId] {
+						kandidatPptkResponses = append(
+							kandidatPptkResponses,
+							kandidat,
+						)
+
+						kandidatTracker[rk.PegawaiId] = true
+					}
+				}
+			}
+			// -----------------------------------------------------
 			// Mapping PPTK ke response
 			// -----------------------------------------------------
 			pptkResponses := make([]rincianbelanja.PptkResponse, 0)
@@ -368,6 +407,7 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
 				TotalAnggaran:        0,
 				RincianBelanja:       []rincianbelanja.RincianBelanjaResponse{},
+				KandidatPptk:         kandidatPptkResponses,
 				Pptk:                 pptkResponses,
 			}
 			subkegiatanMap[rb.KodeSubkegiatan] = subResponse
@@ -469,6 +509,26 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 		return nil, err
 	}
 
+	kandidatPptkList, err := service.pptkRepository.KandidatPptkPegawai(
+		ctx,
+		tx,
+		pegawaiId,
+		tahun,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
+
+	for _, kandidat := range kandidatPptkList {
+		kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
+			Nip:   kandidat.PegawaiId,
+			Nama:  kandidat.NamaPegawai,
+			Level: kandidat.Level,
+		}
+	}
+
 	// Map untuk mengelompokkan berdasarkan kode OPD dan subkegiatan
 	subkegiatanMap := make(map[string]*rincianbelanja.RincianBelanjaAsnResponse)
 
@@ -545,6 +605,26 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			}
 
 			// -----------------------------------------------------
+			// Mapping Kandidat PPTK ke response
+			// -----------------------------------------------------
+
+			kandidatPptkResponses := make([]rincianbelanja.KandidatPptkResponse, 0)
+			kandidatTracker := make(map[string]bool)
+
+			for _, rk := range rb.RencanaKinerja {
+				if kandidat, exists := kandidatPptkMap[rk.PegawaiId]; exists {
+					if !kandidatTracker[rk.PegawaiId] {
+						kandidatPptkResponses = append(
+							kandidatPptkResponses,
+							kandidat,
+						)
+
+						kandidatTracker[rk.PegawaiId] = true
+					}
+				}
+			}
+
+			// -----------------------------------------------------
 			// Mapping PPTK ke response
 			// -----------------------------------------------------
 			pptkResponses := make([]rincianbelanja.PptkResponse, 0)
@@ -574,6 +654,7 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
 				TotalAnggaran:        0,
 				RincianBelanja:       []rincianbelanja.RincianBelanjaResponse{},
+				KandidatPptk:         kandidatPptkResponses,
 				Pptk:                 pptkResponses,
 			}
 			subkegiatanMap[key] = subResponse
