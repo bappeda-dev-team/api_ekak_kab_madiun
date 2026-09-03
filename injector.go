@@ -490,6 +490,8 @@ var rencanaAksiOpdSet = wire.NewSet(
 	wire.Bind(new(service.RencanaAksiOpdService), new(*service.RencanaAksiOpdServiceImpl)),
 	controller.NewRencanaAksiOpdControllerImpl,
 	wire.Bind(new(controller.RencanaAksiOpdController), new(*controller.RencanaAksiOpdControllerImpl)),
+)
+
 var ikkSet = wire.NewSet(
 	repository.NewIkkRepositoryImpl,
 	wire.Bind(new(repository.IkkRepository), new(*repository.IkkRepositoryImpl)),

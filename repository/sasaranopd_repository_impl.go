@@ -1240,11 +1240,11 @@ func (repository *SasaranOpdRepositoryImpl) FindByNipAndOpd(
 	}
 	defer rows.Close()
 
-	pokinMap    := make(map[int]*domain.SasaranOpd)
+	pokinMap := make(map[int]*domain.SasaranOpd)
 	pelaksanaSet := make(map[string]bool)
-	sasaranMap  := make(map[string]*domain.SasaranOpdDetail) // "pokinId-sasaranId"
-	indikatorMap := make(map[string]*domain.Indikator)       // "sasKey-indikatorId"
-	targetSet   := make(map[string]bool)                     // "indKey-targetId"
+	sasaranMap := make(map[string]*domain.SasaranOpdDetail) // "pokinId-sasaranId"
+	indikatorMap := make(map[string]*domain.Indikator)      // "sasKey-indikatorId"
+	targetSet := make(map[string]bool)                      // "indKey-targetId"
 
 	for rows.Next() {
 		var (
@@ -1261,8 +1261,6 @@ func (repository *SasaranOpdRepositoryImpl) FindByNipAndOpd(
 			indikatorNama                                 sql.NullString
 			rumusPerhitungan, sumberData                  sql.NullString
 			definisiOperasional, indikatorJenis           sql.NullString
-			indikatorId, indikator                        sql.NullString
-			rumusPerhitungan, sumberData                  sql.NullString
 			targetId, targetTahun                         sql.NullString
 			targetValue, targetSatuan                     sql.NullString
 		)
