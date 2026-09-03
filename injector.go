@@ -483,6 +483,13 @@ var lockDataPemdaRepository = wire.NewSet(
 	wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)),
 )
 
+var rencanaAksiOpdSet = wire.NewSet(
+	repository.NewRencanaAksiOpdRepositoryImpl,
+	wire.Bind(new(repository.RencanaAksiOpdRepository), new(*repository.RencanaAksiOpdRepositoryImpl)),
+	service.NewRencanaAksiOpdServiceImpl,
+	wire.Bind(new(service.RencanaAksiOpdService), new(*service.RencanaAksiOpdServiceImpl)),
+	controller.NewRencanaAksiOpdControllerImpl,
+	wire.Bind(new(controller.RencanaAksiOpdController), new(*controller.RencanaAksiOpdControllerImpl)),
 var ikkSet = wire.NewSet(
 	repository.NewIkkRepositoryImpl,
 	wire.Bind(new(repository.IkkRepository), new(*repository.IkkRepositoryImpl)),
@@ -702,6 +709,7 @@ func InitializeServer() *http.Server {
 		indikatorSet,
 		lockDataRepository,
 		lockDataPemdaRepository,
+		rencanaAksiOpdSet,
 		ikkSet,
 		ikdSet,
 		isuRegionalSet,
