@@ -62,7 +62,7 @@ func NewRouter(
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
 	rencanaAksiOpdController controller.RencanaAksiOpdController,
-	strategicArahKebijakanController controller.SrategicArahKebijakanPemdaController,
+	strategicArahKebijakanController controller.StrategicArahKebijakanPemdaController,
 	indikatorController controller.IndikatorController,
 	ikkController controller.IkkController,
 	ikdController controller.IkdController,
@@ -74,6 +74,7 @@ func NewRouter(
 	nspkController controller.NspkController,
 	nspkopdController controller.NspkOpdController,
 	arahkebijakanController controller.ArahKebijakanController,
+	pptkController controller.PptkController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -686,6 +687,14 @@ func NewRouter(
 	router.PUT("/sasaran_opd/renja/rankhir/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorRankhir)
 	router.POST("/sasaran_opd/renja/penetapan/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorPenetapan)
 	router.PUT("/sasaran_opd/renja/penetapan/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorPenetapan)
+
+	// PPTK
+	router.GET("/pptk/findall/:kode_opd/:tahun", pptkController.FindAll)
+	// router.GET("/pptk/findall-nip/:nip/:tahun", pptkController.FindAllByNip)
+	router.GET("/pptk/detail/:id", pptkController.FindById)
+	router.POST("/pptk/create", pptkController.Create)
+	router.PUT("/pptk/update/:id", pptkController.Update)
+	router.DELETE("/pptk/delete/:id", pptkController.Delete)
 
 	// IKU Renja Opd
 	router.GET("/iku_renja_opd/ranwal/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRanwal)
