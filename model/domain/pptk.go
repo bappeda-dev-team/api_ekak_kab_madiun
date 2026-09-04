@@ -16,3 +16,9 @@ type Pptk struct {
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
+
+type KandidatPptk struct {
+	PegawaiId   string
+	NamaPegawai string
+	Level       string
+}

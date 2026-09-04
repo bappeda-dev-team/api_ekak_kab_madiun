@@ -14,3 +14,9 @@ type PptkResponse struct {
 	AktifAt         time.Time  `json:"aktif_at"`
 	NonAktifAt      *time.Time `json:"nonaktif_at"`
 }
+
+type KandidatPptkResponse struct {
+	Nip   string `json:"nip"`
+	Nama  string `json:"nama"`
+	Level string `json:"level"`
+}
