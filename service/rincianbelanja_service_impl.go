@@ -269,19 +269,19 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 	}
 
 	// find kandidat pptk
-	kandidatPptkList, err := service.pptkRepository.KandidatPptkOpd(
-		ctx,
-		tx,
-		kodeOpd,
-		tahun,
-	)
-	if err != nil {
-		return nil, err
-	}
+	// kandidatPptkList, err := service.pptkRepository.KandidatPptkOpd(
+	// 	ctx,
+	// 	tx,
+	// 	kodeOpd,
+	// 	tahun,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
 
-	for _, kandidat := range kandidatPptkList {
+	for _, kandidat := range rincianBelanjaList {
 		kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
 			Nip:   kandidat.PegawaiId,
 			Nama:  kandidat.NamaPegawai,
@@ -509,25 +509,25 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 		return nil, err
 	}
 
-	kandidatPptkList, err := service.pptkRepository.KandidatPptkPegawai(
-		ctx,
-		tx,
-		pegawaiId,
-		tahun,
-	)
-	if err != nil {
-		return nil, err
-	}
+	// kandidatPptkList, err := service.pptkRepository.KandidatPptkPegawai(
+	// 	ctx,
+	// 	tx,
+	// 	pegawaiId,
+	// 	tahun,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
+	// kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
 
-	for _, kandidat := range kandidatPptkList {
-		kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
-			Nip:   kandidat.PegawaiId,
-			Nama:  kandidat.NamaPegawai,
-			Level: kandidat.Level,
-		}
-	}
+	// for _, kandidat := range rincianBelanjaList {
+	// 	kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
+	// 		Nip:   pegawaiId,
+	// 		Nama:  kandidat.NamaPegawai,
+	// 		Level: kandidat.Level,
+	// 	}
+	// }
 
 	// Map untuk mengelompokkan berdasarkan kode OPD dan subkegiatan
 	subkegiatanMap := make(map[string]*rincianbelanja.RincianBelanjaAsnResponse)
@@ -612,15 +612,17 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			kandidatTracker := make(map[string]bool)
 
 			for _, rk := range rb.RencanaKinerja {
-				if kandidat, exists := kandidatPptkMap[rk.PegawaiId]; exists {
-					if !kandidatTracker[rk.PegawaiId] {
-						kandidatPptkResponses = append(
-							kandidatPptkResponses,
-							kandidat,
-						)
+				if !kandidatTracker[rk.PegawaiId] {
+					kandidatPptkResponses = append(
+						kandidatPptkResponses,
+						rincianbelanja.KandidatPptkResponse{
+							Nip:   rk.PegawaiId,
+							Nama:  rk.NamaPegawai,
+							Level: rk.Level,
+						},
+					)
 
-						kandidatTracker[rk.PegawaiId] = true
-					}
+					kandidatTracker[rk.PegawaiId] = true
 				}
 			}
 

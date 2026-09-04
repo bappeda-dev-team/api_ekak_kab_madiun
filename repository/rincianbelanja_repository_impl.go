@@ -420,6 +420,14 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
    SELECT 
 	   rkp.pegawai_id,
 	   rkp.nama_pegawai,
+	   (
+		   SELECT r.role
+		   FROM tb_users u
+		   LEFT JOIN tb_user_role ur ON ur.user_id = u.id
+		   LEFT JOIN tb_role r ON r.id = ur.role_id
+		   WHERE u.nip = rkp.pegawai_id
+		   LIMIT 1
+	   ) as level,
 	   rkp.kode_subkegiatan,
 	   rkp.nama_subkegiatan,
 	   rkp.rekin_id,
@@ -447,12 +455,13 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
 	var result []domain.RincianBelanjaAsn
 	var currentSubkegiatan *domain.RincianBelanjaAsn
 	var currentRencanaKinerja *domain.RencanaKinerjaAsn
+	
 	// ✅ TAMBAHKAN MAP UNTUK TRACKING RENAKSI YANG SUDAH DITAMBAHKAN
 	renaksiTracker := make(map[string]map[string]bool) // map[rekin_id]map[renaksi_id]bool
 
 	for rows.Next() {
 		var (
-			pegawaiId, namaPegawai, kodeSubkegiatan, namaSubkegiatan string
+			pegawaiId, namaPegawai, level, kodeSubkegiatan, namaSubkegiatan string
 			rekinId, namaRencanaKinerja                              string
 			renaksiId, namaRenaksi                                   sql.NullString
 			urutan                                                   sql.NullInt64
@@ -462,6 +471,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
 		err := rows.Scan(
 			&pegawaiId,
 			&namaPegawai,
+			&level,
 			&kodeSubkegiatan,
 			&namaSubkegiatan,
 			&rekinId,
@@ -483,6 +493,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
 			currentSubkegiatan = &domain.RincianBelanjaAsn{
 				PegawaiId:       pegawaiId,
 				NamaPegawai:     namaPegawai,
+				Level:           level,
 				KodeSubkegiatan: kodeSubkegiatan,
 				NamaSubkegiatan: namaSubkegiatan,
 				TotalAnggaran:   0,
@@ -498,6 +509,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
 				RencanaKinerja:   namaRencanaKinerja,
 				PegawaiId:        pegawaiId,
 				NamaPegawai:      namaPegawai,
+				Level:            level,
 				RencanaAksi:      make([]domain.RincianBelanja, 0),
 			}
 			currentSubkegiatan.RencanaKinerja = append(currentSubkegiatan.RencanaKinerja, *currentRencanaKinerja)
@@ -528,6 +540,8 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaOpd(ctx con
 				renaksiTracker[rekinId][renaksiId.String] = true
 			}
 		}
+
+		
 	}
 
 	// Tambahkan subkegiatan terakhir jika ada
@@ -593,6 +607,16 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
     SELECT 
         rr.pegawai_id,
         rr.nama_pegawai,
+		(
+            SELECT r.role
+            FROM tb_users u
+            LEFT JOIN tb_user_role ur 
+                ON ur.user_id = u.id
+            LEFT JOIN tb_role r 
+                ON r.id = ur.role_id
+            WHERE u.nip = rr.pegawai_id
+            LIMIT 1
+        ) as level,
         rr.kode_opd,
         rr.kode_subkegiatan,
         rr.nama_subkegiatan,
@@ -624,7 +648,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 
 	for rows.Next() {
 		var (
-			pegawaiId, namaPegawai, kodeOpd, kodeSubkegiatan, namaSubkegiatan string
+			pegawaiId, namaPegawai, level, kodeOpd, kodeSubkegiatan, namaSubkegiatan string
 			rekinId, namaRencanaKinerja                                       string
 			renaksiId, namaRenaksi                                            sql.NullString
 			urutan                                                            sql.NullInt64
@@ -634,6 +658,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 		err := rows.Scan(
 			&pegawaiId,
 			&namaPegawai,
+			&level,
 			&kodeOpd,
 			&kodeSubkegiatan,
 			&namaSubkegiatan,
@@ -659,6 +684,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 				KodeOpd:         kodeOpd,
 				KodeSubkegiatan: kodeSubkegiatan,
 				NamaSubkegiatan: namaSubkegiatan,
+				Level:           level,
 				TotalAnggaran:   0,
 				RencanaKinerja:  []domain.RencanaKinerjaAsn{},
 			}
@@ -674,6 +700,7 @@ func (repository *RincianBelanjaRepositoryImpl) LaporanRincianBelanjaPegawai(ctx
 				RencanaKinerja:   namaRencanaKinerja,
 				PegawaiId:        pegawaiId,
 				NamaPegawai:      namaPegawai,
+				Level:            level,
 				RencanaAksi:      make([]domain.RincianBelanja, 0),
 			}
 			currentSubkegiatan.RencanaKinerja = append(currentSubkegiatan.RencanaKinerja, *currentRencanaKinerja)

@@ -4,6 +4,7 @@ type RincianBelanjaAsn struct {
 	PegawaiId       string
 	KodeOpd         string
 	NamaPegawai     string
+	Level           string
 	KodeSubkegiatan string
 	NamaSubkegiatan string
 	Indikator       []Indikator
@@ -16,6 +17,7 @@ type RencanaKinerjaAsn struct {
 	RencanaKinerja   string
 	PegawaiId        string
 	NamaPegawai      string
+	Level            string
 	Indikator        []Indikator
 	RencanaAksi      []RincianBelanja
 }
