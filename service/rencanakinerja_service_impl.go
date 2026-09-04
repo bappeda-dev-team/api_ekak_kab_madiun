@@ -303,8 +303,7 @@ func (service *RencanaKinerjaServiceImpl) Update(ctx context.Context, request re
 		if indikatorRequest.Id != "" {
 			indikatorId = indikatorRequest.Id
 		} else {
-			randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
-			indikatorId = fmt.Sprintf("IND-REKIN-%s", randomDigits)
+			indikatorId = genereateIndikatorRekinId()
 			log.Printf("Membuat Indikator baru dengan ID: %s", indikatorId)
 		}
 
@@ -321,8 +320,7 @@ func (service *RencanaKinerjaServiceImpl) Update(ctx context.Context, request re
 			if targetRequest.Id != "" {
 				targetId = targetRequest.Id
 			} else {
-				randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
-				targetId = fmt.Sprintf("TRGT-IND-REKIN-%s", randomDigits)
+				targetId = generateTargetRekinId()
 				log.Printf("Membuat Target baru dengan ID: %s", targetId)
 			}
 

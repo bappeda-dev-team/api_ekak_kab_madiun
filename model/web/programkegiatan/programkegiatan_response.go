@@ -31,6 +31,7 @@ type IndikatorMatrixResponse struct {
 	Indikator     string `json:"indikator"`
 	// PaguAnggaran  int64  `json:"pagu_anggaran,omitempty"`
 	Tahun        string `json:"tahun"`
+	TargetId     string `json:"target_id"`
 	Target       string `json:"target"`
 	Satuan       string `json:"satuan"`
 	StatusTarget bool   `json:"status_target_renja,omitempty"`

@@ -61,7 +61,8 @@ func NewRouter(
 	matrixRenjaController controller.MatrixRenjaController,
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
-	strategicArahKebijakanController controller.SrategicArahKebijakanPemdaController,
+	rencanaAksiOpdController controller.RencanaAksiOpdController,
+	strategicArahKebijakanController controller.StrategicArahKebijakanPemdaController,
 	indikatorController controller.IndikatorController,
 	ikkController controller.IkkController,
 	ikdController controller.IkdController,
@@ -73,6 +74,7 @@ func NewRouter(
 	nspkController controller.NspkController,
 	nspkopdController controller.NspkOpdController,
 	arahkebijakanController controller.ArahKebijakanController,
+	pptkController controller.PptkController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -686,6 +688,14 @@ func NewRouter(
 	router.POST("/sasaran_opd/renja/penetapan/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorPenetapan)
 	router.PUT("/sasaran_opd/renja/penetapan/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorPenetapan)
 
+	// PPTK
+	router.GET("/pptk/findall/:kode_opd/:tahun", pptkController.FindAll)
+	// router.GET("/pptk/findall-nip/:nip/:tahun", pptkController.FindAllByNip)
+	router.GET("/pptk/detail/:id", pptkController.FindById)
+	router.POST("/pptk/create", pptkController.Create)
+	router.PUT("/pptk/update/:id", pptkController.Update)
+	router.DELETE("/pptk/delete/:id", pptkController.Delete)
+
 	// IKU Renja Opd
 	router.GET("/iku_renja_opd/ranwal/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRanwal)
 	router.GET("/iku_renja_opd/rankhir/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRankhir)
@@ -727,6 +737,14 @@ func NewRouter(
 	//tujuan pemda hide/unhide
 	router.POST("/tujuan_pemda/hide/:id", tujuanPemdaController.HideTujuanPemda)
 	router.DELETE("/tujuan_pemda/unhide/:id", tujuanPemdaController.UnhideTujuanPemda)
+
+	router.GET("/rencana-aksi-opd/:sasaran_opd_id/:tahun", rencanaAksiOpdController.FindBySasaranOpdAndTahun)
+	router.POST("/rencana-aksi-opd/sync_jadwal/:rekin_id", rencanaAksiOpdController.SyncJadwalPelaksanaan)
+	router.POST("/rencana-aksi-opd/create", rencanaAksiOpdController.Create)
+	router.PUT("/rencana-aksi-opd/update/:id", rencanaAksiOpdController.Update)
+	router.DELETE("/rencana-aksi-opd/delete/:id", rencanaAksiOpdController.Delete)
+	router.GET("/renaksi-opd/detail/:id", rencanaAksiOpdController.FindById)
+	router.GET("/sasaran_opd/all/:kode_opd/:tahun", rencanaAksiOpdController.FindAllSasaranByTahun)
 
 	return router
 }

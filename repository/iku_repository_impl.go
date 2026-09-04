@@ -828,7 +828,7 @@ func (repository *IkuRepositoryImpl) FindAllIkuRenja(ctx context.Context, tx *sq
 		}
 		return nil
 	}
-	args := []interface{}{jenisIndikator, tahun, kodeOpd, jenisPeriode, tahun, tahun}
+	args := []any{jenisIndikator, tahun, kodeOpd, jenisPeriode, tahun, tahun}
 	rowsTujuan, err := tx.QueryContext(ctx, scriptTujuan, args...)
 	if err != nil {
 		return nil, err

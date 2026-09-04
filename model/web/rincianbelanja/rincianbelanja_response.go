@@ -1,5 +1,7 @@
 package rincianbelanja
 
+import "time"
+
 type RincianBelanjaAsnResponse struct {
 	KodeOpd              string                   `json:"kode_opd,omitempty"`
 	PegawaiId            string                   `json:"pegawai_id,omitempty"`
@@ -9,6 +11,27 @@ type RincianBelanjaAsnResponse struct {
 	IndikatorSubkegiatan []IndikatorResponse      `json:"indikator_subkegiatan"`
 	TotalAnggaran        int                      `json:"total_anggaran"`
 	RincianBelanja       []RincianBelanjaResponse `json:"rincian_belanja"`
+	KandidatPptk         []KandidatPptkResponse   `json:"kandidat_pptk"`
+	Pptk                 []PptkResponse           `json:"pptk"`
+}
+
+type KandidatPptkResponse struct {
+	Nip   string `json:"nip"`
+	Nama  string `json:"nama"`
+	Level string `json:"level"`
+}
+
+type PptkResponse struct {
+	Id              int        `json:"id"`
+	Nip             string     `json:"nip"`
+	NamaPegawai     string     `json:"nama_pegawai"`
+	KodeOpd         string     `json:"kode_opd"`
+	Tahun           int        `json:"tahun"`
+	KodeSubKegiatan string     `json:"kode_sub_kegiatan"`
+	NipAtasan       *string    `json:"nip_atasan"`
+	NamaAtasan      *string    `json:"nama_atasan"`
+	AktifAt         time.Time  `json:"aktif_at"`
+	NonAktifAt      *time.Time `json:"nonaktif_at"`
 }
 
 type RincianBelanjaResponse struct {

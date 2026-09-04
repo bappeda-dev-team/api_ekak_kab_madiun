@@ -399,7 +399,7 @@ var kelompokAnggaranSet = wire.NewSet(
 )
 
 var isustrategisSet = wire.NewSet(
-	repository.NewCSFRepositoryImpl,
+	// repository.NewCSFRepositoryImpl,
 	service.NewCSFService,
 	controller.NewCSFControllerImpl,
 )
@@ -440,6 +440,32 @@ var pkOpdSet = wire.NewSet(
 	wire.Bind(new(controller.PkController), new(*controller.PkControllerImpl)),
 )
 
+var pptkSet = wire.NewSet(
+	repository.NewPptkRepositoryImpl,
+	wire.Bind(new(repository.PptkRepository), new(*repository.PptkRepositoryImpl)),
+	service.NewPptkServiceImpl,
+	wire.Bind(new(service.PptkService), new(*service.PptkServiceImpl)),
+	controller.NewPptkControllerImpl,
+	wire.Bind(new(controller.PptkController), new(*controller.PptkControllerImpl)),
+)
+
+var strategicArahKebijakanPemdaSet = wire.NewSet(
+	repository.NewCSFRepositoryImpl,
+	wire.Bind(new(repository.CSFRepository), new(*repository.CSFRepositoryImpl)),
+	service.NewStrategicArahKebijakanPemdaServiceImpl,
+	wire.Bind(new(service.StrategicArahKebijakanPemdaService), new(*service.StrategicArahKebijakanPemdaServiceImpl)),
+	controller.NewStrategicArahKebijakanPemdaControllerImpl,
+	wire.Bind(new(controller.StrategicArahKebijakanPemdaController), new(*controller.StrategicArahKebijakanPemdaControllerImpl)),
+)
+var programPrioritasPusatSet = wire.NewSet(
+	repository.NewProgramPrioritasPusatRepositoryImpl,
+	wire.Bind(new(repository.ProgramPrioritasPusatRepository), new(*repository.ProgramPrioritasPusatRepositoryImpl)),
+	service.NewProgramPrioritasPusatServiceImpl,
+	wire.Bind(new(service.ProgramPrioritasPusatService), new(*service.ProgramPrioritasPusatServiceImpl)),
+	controller.NewProgramPrioritasPusatControllerImpl,
+	wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)),
+)
+
 var strukturOrganisasiSet = wire.NewSet(
 	repository.NewStrukturOrganisasiRepositoryImpl,
 	wire.Bind(new(repository.StrukturOrganisasiRepository), new(*repository.StrukturOrganisasiRepositoryImpl)),
@@ -453,15 +479,6 @@ var jabatanPegawaiSet = wire.NewSet(
 var cloneRecordSet = wire.NewSet(
 	repository.NewCloneRecordRepositoryImpl,
 	wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)),
-)
-
-var programPrioritasPusatSet = wire.NewSet(
-	repository.NewProgramPrioritasPusatRepositoryImpl,
-	wire.Bind(new(repository.ProgramPrioritasPusatRepository), new(*repository.ProgramPrioritasPusatRepositoryImpl)),
-	service.NewProgramPrioritasPusatServiceImpl,
-	wire.Bind(new(service.ProgramPrioritasPusatService), new(*service.ProgramPrioritasPusatServiceImpl)),
-	controller.NewProgramPrioritasPusatControllerImpl,
-	wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)),
 )
 
 var indikatorSet = wire.NewSet(
@@ -481,6 +498,15 @@ var lockDataRepository = wire.NewSet(
 var lockDataPemdaRepository = wire.NewSet(
 	repository.NewLockDataPemdaRepositoryImpl,
 	wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)),
+)
+
+var rencanaAksiOpdSet = wire.NewSet(
+	repository.NewRencanaAksiOpdRepositoryImpl,
+	wire.Bind(new(repository.RencanaAksiOpdRepository), new(*repository.RencanaAksiOpdRepositoryImpl)),
+	service.NewRencanaAksiOpdServiceImpl,
+	wire.Bind(new(service.RencanaAksiOpdService), new(*service.RencanaAksiOpdServiceImpl)),
+	controller.NewRencanaAksiOpdControllerImpl,
+	wire.Bind(new(controller.RencanaAksiOpdController), new(*controller.RencanaAksiOpdControllerImpl)),
 )
 
 var ikkSet = wire.NewSet(
@@ -537,12 +563,12 @@ var isuKlhsSet = wire.NewSet(
 	wire.Bind(new(controller.IsuKlhsController), new(*controller.IsuKlhsControllerImpl)),
 )
 
-var strategicArahPemdaSet = wire.NewSet(
-	service.NewStrategicArahKebijakanPemdaServiceImpl,
-	wire.Bind(new(service.StrategicArahKebijakanPemdaService), new(*service.StrategicArahKebijakanPemdaServiceImpl)),
-	controller.NewStrategicArahKebijakanPemdaControllerImpl,
-	wire.Bind(new(controller.SrategicArahKebijakanPemdaController), new(*controller.StrategicArahKebijakanPemdaControllerImpl)),
-)
+// var strategicArahPemdaSet = wire.NewSet(
+// 	service.NewStrategicArahKebijakanPemdaServiceImpl,
+// 	wire.Bind(new(service.StrategicArahKebijakanPemdaService), new(*service.StrategicArahKebijakanPemdaServiceImpl)),
+// 	controller.NewStrategicArahKebijakanPemdaControllerImpl,
+// 	wire.Bind(new(controller.StrategicArahKebijakanPemdaController), new(*controller.StrategicArahKebijakanPemdaControllerImpl)),
+// )
 
 var isuStrategicClientSet = wire.NewSet(
 	internal.NewIsuStrategicClient,
@@ -695,20 +721,23 @@ func InitializeServer() *http.Server {
 		matrixRenjaSet,
 		dataMasterSet,
 		pkOpdSet,
+		pptkSet,
+		strategicArahKebijakanPemdaSet,
+		programPrioritasPusatSet,
 		strukturOrganisasiSet,
 		jabatanPegawaiSet,
 		cloneRecordSet,
-		programPrioritasPusatSet,
 		indikatorSet,
 		lockDataRepository,
 		lockDataPemdaRepository,
+		rencanaAksiOpdSet,
 		ikkSet,
 		ikdSet,
 		isuRegionalSet,
 		isuNasionalSet,
 		isuGlobalSet,
 		isuKlhsSet,
-		strategicArahPemdaSet,
+		// strategicArahPemdaSet,
 		isuStrategicClientSet,
 		penetapanClientSet,
 		ppdSet,

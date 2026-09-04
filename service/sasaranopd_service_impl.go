@@ -830,11 +830,6 @@ func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
 	}
 	defer helper.CommitOrRollback(tx)
 
-	tahunInt, err := strconv.Atoi(tahun)
-	if err != nil {
-		return nil, fmt.Errorf("format tahun tidak valid")
-	}
-
 	sasaranOpds, err := s.sasaranOpdRepository.FindByNipAndOpd(ctx, tx, nip, kodeOpd, tahun)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
@@ -873,13 +868,6 @@ func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
 		}
 
 		for _, sasaran := range soData.SasaranOpd {
-			// Lewati jika tahun tidak dalam range sasaran
-			tahunAwalInt, _ := strconv.Atoi(sasaran.TahunAwal)
-			tahunAkhirInt, _ := strconv.Atoi(sasaran.TahunAkhir)
-			if tahunInt < tahunAwalInt || tahunInt > tahunAkhirInt {
-				continue
-			}
-
 			// Cegah duplikat (pokin, sasaran) yang sama
 			key := fmt.Sprintf("%d|%d", soData.IdPohon, sasaran.Id)
 			if seen[key] {
@@ -889,22 +877,23 @@ func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
 
 			tujuanOpd, _ := s.tujuanOpdRepository.FindById(ctx, tx, sasaran.IdTujuanOpd)
 
-			// Bangun daftar indikator
+			// Bangun daftar indikator (dari tb_indikator_matrix / penetapan)
 			indikatorList := make([]sasaranopd.IndikatorResponse, 0)
 			for _, ind := range sasaran.Indikator {
 				indResp := sasaranopd.IndikatorResponse{
-					Id:               ind.Id,
-					Indikator:        ind.Indikator,
-					RumusPerhitungan: ind.RumusPerhitungan.String,
-					SumberData:       ind.SumberData.String,
-					Target:           make([]sasaranopd.TargetResponse, 0),
+					Id:                  ind.KodeIndikator,
+					KodeIndikator:       ind.KodeIndikator,
+					Jenis:               ind.Jenis,
+					DefinisiOperasional: ind.DefinisiOperasional.String,
+					Indikator:           ind.Indikator,
+					RumusPerhitungan:    ind.RumusPerhitungan.String,
+					SumberData:          ind.SumberData.String,
+					Target:              make([]sasaranopd.TargetResponse, 0),
 				}
 				for _, t := range ind.Target {
-					if t.Tahun == tahun {
-						indResp.Target = append(indResp.Target, sasaranopd.TargetResponse{
-							Id: t.Id, Tahun: t.Tahun, Target: t.Target, Satuan: t.Satuan,
-						})
-					}
+					indResp.Target = append(indResp.Target, sasaranopd.TargetResponse{
+						Id: t.Id, Tahun: t.Tahun, Target: t.Target, Satuan: t.Satuan,
+					})
 				}
 				indikatorList = append(indikatorList, indResp)
 			}
