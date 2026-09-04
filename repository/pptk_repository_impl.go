@@ -457,3 +457,61 @@ func (repository *PptkRepositoryImpl) KandidatPptkPegawai(ctx context.Context, t
 
 	return result, nil
 }
+
+func (repository *PptkRepositoryImpl) KandidatAtasanPptk(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeOpd string,
+	nipBawahan string,
+) (*domain.KandidatAtasanPptk, error) {
+
+	var nipAtasan string
+
+	err := tx.QueryRowContext(ctx, `
+		SELECT nip_atasan
+		FROM struktur_organisasi
+		WHERE kode_opd = ?
+		  AND nip_bawahan = ?
+		  AND nip_atasan IS NOT NULL
+		  AND TRIM(nip_atasan) <> ''
+		LIMIT 1
+	`, kodeOpd, nipBawahan).Scan(&nipAtasan)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("gagal mengambil atasan kandidat %s: %w", nipBawahan, err)
+	}
+
+	var result domain.KandidatAtasanPptk
+
+	err = tx.QueryRowContext(ctx, `
+		SELECT
+			p.nip,
+			p.nama,
+			r.role
+		FROM tb_pegawai p
+		INNER JOIN tb_users u ON u.nip = p.nip
+		INNER JOIN tb_user_role ur ON ur.user_id = u.id
+		INNER JOIN tb_role r ON r.id = ur.role_id
+		WHERE p.nip = ?
+		  AND r.role = 'level_2'
+		LIMIT 1
+	`, nipAtasan).Scan(
+		&result.Nip,
+		&result.Nama,
+		&result.Level,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("gagal mengambil data atasan %s: %w", nipAtasan, err)
+	}
+
+	return &result, nil
+}

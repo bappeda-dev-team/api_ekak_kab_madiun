@@ -16,6 +16,7 @@ type RencanaKinerjaAsn struct {
 	RencanaKinerja   string
 	PegawaiId        string
 	NamaPegawai      string
+	Level            string
 	Indikator        []Indikator
 	RencanaAksi      []RincianBelanja
 }

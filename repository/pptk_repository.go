@@ -15,4 +15,5 @@ type PptkRepository interface {
 	KandidatPptkOpd(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.KandidatPptk, error)
 	FindAllByNip(ctx context.Context, tx *sql.Tx, kodeSubkegiatan string, pegawaiId string, tahun string) ([]domain.Pptk, error)
 	KandidatPptkPegawai(ctx context.Context, tx *sql.Tx, pegawaiId string, tahun string) ([]domain.KandidatPptk, error)
+	KandidatAtasanPptk(ctx context.Context, tx *sql.Tx, kodeOpd string, nipBawahan string) (*domain.KandidatAtasanPptk, error)
 }
