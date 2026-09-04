@@ -22,3 +22,9 @@ type KandidatPptk struct {
 	NamaPegawai string
 	Level       string
 }
+
+type KandidatAtasanPptk struct {
+	Nip   string
+	Nama  string
+	Level string
+}
