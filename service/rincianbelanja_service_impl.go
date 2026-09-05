@@ -267,21 +267,20 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-
 	// find kandidat pptk
-	kandidatPptkList, err := service.pptkRepository.KandidatPptkOpd(
-		ctx,
-		tx,
-		kodeOpd,
-		tahun,
-	)
-	if err != nil {
-		return nil, err
-	}
+	// kandidatPptkList, err := service.pptkRepository.KandidatPptkOpd(
+	// 	ctx,
+	// 	tx,
+	// 	kodeOpd,
+	// 	tahun,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
 
-	for _, kandidat := range kandidatPptkList {
+	for _, kandidat := range rincianBelanjaList {
 		kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
 			Nip:   kandidat.PegawaiId,
 			Nama:  kandidat.NamaPegawai,
@@ -367,15 +366,60 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 			kandidatTracker := make(map[string]bool)
 
 			for _, rk := range rb.RencanaKinerja {
-				if kandidat, exists := kandidatPptkMap[rk.PegawaiId]; exists {
-					if !kandidatTracker[rk.PegawaiId] {
-						kandidatPptkResponses = append(
-							kandidatPptkResponses,
-							kandidat,
-						)
+				kandidat, exists := kandidatPptkMap[rk.PegawaiId]
+				if !exists {
+					continue
+				}
 
-						kandidatTracker[rk.PegawaiId] = true
-					}
+				// Jangan query kandidat yang sama berkali-kali
+				if kandidatTracker[kandidat.Nip] {
+					continue
+				}
+
+				kandidatTracker[kandidat.Nip] = true
+
+				// Tambahkan kandidat level 3
+				kandidatPptkResponses = append(
+					kandidatPptkResponses,
+					kandidat,
+				)
+
+				// Cari atasan level 2
+				atasan, err := service.pptkRepository.KandidatAtasanPptk(
+					ctx,
+					tx,
+					kodeOpd,
+					kandidat.Nip,
+				)
+				if err != nil {
+					log.Printf(
+						"Error mencari atasan kandidat %s: %v",
+						kandidat.Nip,
+						err,
+					)
+					continue
+				}
+
+				if atasan == nil {
+					// log.Printf(
+					// 	"Atasan level_2 tidak ditemukan untuk kandidat %s",
+					// 	kandidat.Nip,
+					// )
+					continue
+				}
+
+				// Hindari atasan yang sama masuk berkali-kali
+				if !kandidatTracker[atasan.Nip] {
+					kandidatPptkResponses = append(
+						kandidatPptkResponses,
+						rincianbelanja.KandidatPptkResponse{
+							Nip:   atasan.Nip,
+							Nama:  atasan.Nama,
+							Level: atasan.Level,
+						},
+					)
+
+					kandidatTracker[atasan.Nip] = true
 				}
 			}
 			// -----------------------------------------------------
@@ -509,25 +553,25 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 		return nil, err
 	}
 
-	kandidatPptkList, err := service.pptkRepository.KandidatPptkPegawai(
-		ctx,
-		tx,
-		pegawaiId,
-		tahun,
-	)
-	if err != nil {
-		return nil, err
-	}
+	// kandidatPptkList, err := service.pptkRepository.KandidatPptkPegawai(
+	// 	ctx,
+	// 	tx,
+	// 	pegawaiId,
+	// 	tahun,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
+	// kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
 
-	for _, kandidat := range kandidatPptkList {
-		kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
-			Nip:   kandidat.PegawaiId,
-			Nama:  kandidat.NamaPegawai,
-			Level: kandidat.Level,
-		}
-	}
+	// for _, kandidat := range rincianBelanjaList {
+	// 	kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
+	// 		Nip:   pegawaiId,
+	// 		Nama:  kandidat.NamaPegawai,
+	// 		Level: kandidat.Level,
+	// 	}
+	// }
 
 	// Map untuk mengelompokkan berdasarkan kode OPD dan subkegiatan
 	subkegiatanMap := make(map[string]*rincianbelanja.RincianBelanjaAsnResponse)
@@ -612,15 +656,63 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			kandidatTracker := make(map[string]bool)
 
 			for _, rk := range rb.RencanaKinerja {
-				if kandidat, exists := kandidatPptkMap[rk.PegawaiId]; exists {
-					if !kandidatTracker[rk.PegawaiId] {
-						kandidatPptkResponses = append(
-							kandidatPptkResponses,
-							kandidat,
-						)
 
-						kandidatTracker[rk.PegawaiId] = true
-					}
+				// Hindari kandidat yang sama diproses berkali-kali
+				if kandidatTracker[rk.PegawaiId] {
+					continue
+				}
+
+				kandidatTracker[rk.PegawaiId] = true
+
+				// ==========================================
+				// 1. Tambahkan kandidat level 3
+				// ==========================================
+				kandidatPptkResponses = append(
+					kandidatPptkResponses,
+					rincianbelanja.KandidatPptkResponse{
+						Nip:   rk.PegawaiId,
+						Nama:  rk.NamaPegawai,
+						Level: rk.Level,
+					},
+				)
+
+				// ==========================================
+				// 2. Cari atasan level 2
+				// ==========================================
+				atasan, err := service.pptkRepository.KandidatAtasanPptk(
+					ctx,
+					tx,
+					rb.KodeOpd,
+					rk.PegawaiId,
+				)
+				if err != nil {
+					log.Printf(
+						"Error mencari atasan kandidat %s: %v",
+						rk.PegawaiId,
+						err,
+					)
+					continue
+				}
+
+				// Tidak punya atasan → lanjut kandidat berikutnya
+				if atasan == nil {
+					continue
+				}
+
+				// ==========================================
+				// 3. Tambahkan atasan level 2
+				// ==========================================
+				if !kandidatTracker[atasan.Nip] {
+					kandidatPptkResponses = append(
+						kandidatPptkResponses,
+						rincianbelanja.KandidatPptkResponse{
+							Nip:   atasan.Nip,
+							Nama:  atasan.Nama,
+							Level: atasan.Level,
+						},
+					)
+
+					kandidatTracker[atasan.Nip] = true
 				}
 			}
 
