@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 )
 
 type RincianBelanjaServiceImpl struct {
@@ -341,22 +342,33 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 			// -----------------------------------------------------
 			// Ambil PPTK berdasarkan subkegiatan
 			// -----------------------------------------------------
-			pptkResults, err := service.pptkRepository.FindAll(
-				ctx,
-				tx,
-				rb.KodeSubkegiatan,
-				kodeOpd,
-				tahun,
-			)
-			if err != nil {
-				log.Printf(
-					"Error mengambil PPTK untuk subkegiatan %s: %v",
-					rb.KodeSubkegiatan,
-					err,
-				)
+			// -----------------------------------------------------
+			// Ambil PPTK berdasarkan subkegiatan
+			// -----------------------------------------------------
+			pptkResults := make([]domain.Pptk, 0)
 
-				// Jangan menggagalkan seluruh laporan
-				pptkResults = nil
+			tahunInt, err := strconv.Atoi(tahun)
+			if err != nil {
+				log.Printf("Tahun cari PPTK tidak valid: %s: %v", tahun, err)
+			} else {
+				pptkResult, err := service.pptkRepository.FindPptkAktif(
+					ctx,
+					tx,
+					rb.KodeSubkegiatan,
+					kodeOpd,
+					tahunInt,
+				)
+				if err != nil {
+					log.Printf(
+						"Error mengambil PPTK untuk subkegiatan %s: %v",
+						rb.KodeSubkegiatan,
+						err,
+					)
+				} else if pptkResult.Id != 0 {
+					// Tetap pertahankan struktur response lama:
+					// PPTK tetap berupa array, meskipun repository mengembalikan single data.
+					pptkResults = append(pptkResults, pptkResult)
+				}
 			}
 
 			// -----------------------------------------------------
