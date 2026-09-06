@@ -6,9 +6,9 @@ import (
 	"ekak_kabupaten_madiun/model/web/subkegiatan"
 	"ekak_kabupaten_madiun/service"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
+	"strconv"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -117,11 +117,44 @@ func (controller *SubKegiatanControllerImpl) FindById(writer http.ResponseWriter
 	})
 }
 
+func parseSubKegiatanFindAllFilter(request *http.Request) subkegiatan.SubKegiatanFindAllFilter {
+	q := request.URL.Query()
+	page, _ := strconv.Atoi(strings.TrimSpace(q.Get("page")))
+	limit, _ := strconv.Atoi(strings.TrimSpace(q.Get("limit")))
+	nama := strings.TrimSpace(q.Get("nama_sub_kegiatan"))
+	if nama == "" {
+		nama = strings.TrimSpace(q.Get("nama_subkegiatan"))
+	}
+	return subkegiatan.SubKegiatanFindAllFilter{
+		KodeSubKegiatan: strings.TrimSpace(q.Get("kode_subkegiatan")),
+		NamaSubKegiatan: nama,
+		Page:            page,
+		Limit:           limit,
+	}
+}
+
+// FindAll godoc
+// @Summary      Daftar Sub Kegiatan (Paginasi)
+// @Description  Mengambil daftar sub kegiatan dengan paginasi, filter LIKE, dan info next/previous page.
+// @Tags         Sub Kegiatan
+// @Accept       json
+// @Produce      json
+// @Param        page               query  int     false  "Nomor halaman (default: 1)"                    example(1)
+// @Param        limit              query  int     false  "Jumlah data per halaman (default: 10, max: 100)" example(10)
+// @Param        kode_subkegiatan   query  string  false  "Filter kode sub kegiatan (LIKE %...%)"         example("01.01")
+// @Param        nama_sub_kegiatan  query  string  false  "Filter nama sub kegiatan (LIKE %...%)"         example("pendidikan")
+// @Success      200  {object}  web.WebResponse{data=subkegiatan.SubKegiatanPaginatedResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sub_kegiatan/findall [get]
 func (controller *SubKegiatanControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(request.Context())
+	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(
+		request.Context(),
+		parseSubKegiatanFindAllFilter(request),
+	)
 
 	if err != nil {
-		helper.WriteToResponseBody(writer, web.WebSubKegiatanResponse{
+		helper.WriteToResponseBody(writer, web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: "INTERNAL SERVER ERROR",
 			Data:   err.Error(),
@@ -129,7 +162,7 @@ func (controller *SubKegiatanControllerImpl) FindAll(writer http.ResponseWriter,
 		return
 	}
 
-	helper.WriteToResponseBody(writer, web.WebSubKegiatanResponse{
+	helper.WriteToResponseBody(writer, web.WebResponse{
 		Code:   http.StatusOK,
 		Status: "success get data sub kegiatan",
 		Data:   subKegiatanResponses,
@@ -157,8 +190,10 @@ func (controller *SubKegiatanControllerImpl) Delete(writer http.ResponseWriter, 
 }
 
 func (controller *SubKegiatanControllerImpl) FindAllByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// Panggil service untuk mendapatkan data sub kegiatan
-	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(request.Context())
+	subKegiatanResponses, err := controller.SubKegiatanService.FindAll(
+		request.Context(),
+		parseSubKegiatanFindAllFilter(request),
+	)
 
 	if err != nil {
 		helper.WriteToResponseBody(writer, web.WebSubKegiatanResponse{
@@ -169,43 +204,43 @@ func (controller *SubKegiatanControllerImpl) FindAllByRekin(writer http.Response
 		return
 	}
 
-	host := os.Getenv("host")
-	port := os.Getenv("port")
+	// host := os.Getenv("host")
+	// port := os.Getenv("port")
 
-	buttonActions := []web.ActionButton{
-		{
-			NameAction: "Create Subkegiatan",
-			Method:     "POST",
-			Url:        fmt.Sprintf("%s:%s/subkegiatan/create", host, port),
-		},
-		{
-			NameAction: "Update Subkegiatan",
-			Method:     "PUT",
-			Url:        fmt.Sprintf("%s:%s/sub_kegiatan/update/:id", host, port),
-		},
-		{
-			NameAction: "Delete Subkegiatan",
-			Method:     "DELETE",
-			Url:        fmt.Sprintf("%s:%s/sub_kegiatan/delete/:id", host, port),
-		},
-		{
-			NameAction: "Pilihan Subkegiatan",
-			Method:     "GET",
-			Url:        fmt.Sprintf("%s:%s/sub_kegiatan/pilihan/:kode_opd", host, port),
-		},
-		{
-			NameAction:  "Create Subkegiatan Yang Dipilih",
-			Method:      "POST",
-			Url:         fmt.Sprintf("%s:%s/subkegiatanterpilih/create/:rencana_kinerja_id", host, port),
-			JenisUsulan: "subkegiatan",
-		},
-	}
+	// buttonActions := []web.ActionButton{
+	// 	{
+	// 		NameAction: "Create Subkegiatan",
+	// 		Method:     "POST",
+	// 		Url:        fmt.Sprintf("%s:%s/subkegiatan/create", host, port),
+	// 	},
+	// 	{
+	// 		NameAction: "Update Subkegiatan",
+	// 		Method:     "PUT",
+	// 		Url:        fmt.Sprintf("%s:%s/sub_kegiatan/update/:id", host, port),
+	// 	},
+	// 	{
+	// 		NameAction: "Delete Subkegiatan",
+	// 		Method:     "DELETE",
+	// 		Url:        fmt.Sprintf("%s:%s/sub_kegiatan/delete/:id", host, port),
+	// 	},
+	// 	{
+	// 		NameAction: "Pilihan Subkegiatan",
+	// 		Method:     "GET",
+	// 		Url:        fmt.Sprintf("%s:%s/sub_kegiatan/pilihan/:kode_opd", host, port),
+	// 	},
+	// 	{
+	// 		NameAction:  "Create Subkegiatan Yang Dipilih",
+	// 		Method:      "POST",
+	// 		Url:         fmt.Sprintf("%s:%s/subkegiatanterpilih/create/:rencana_kinerja_id", host, port),
+	// 		JenisUsulan: "subkegiatan",
+	// 	},
+	// }
 
 	helper.WriteToResponseBody(writer, web.WebSubKegiatanResponse{
 		Code:   http.StatusOK,
 		Status: "success get data sub kegiatan",
 		Data:   subKegiatanResponses,
-		Action: buttonActions,
+		// Action: buttonActions,
 	})
 }
 
