@@ -7,21 +7,24 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/pptk"
 	"ekak_kabupaten_madiun/repository"
+	"fmt"
+	"log"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 )
 
 type PptkServiceImpl struct {
-	PptkRepository                  repository.PptkRepository
-	DB                              *sql.DB
-	Validate                        *validator.Validate
+	PptkRepository repository.PptkRepository
+	DB             *sql.DB
+	Validate       *validator.Validate
 }
 
 func NewPptkServiceImpl(pptkRepository repository.PptkRepository, db *sql.DB, validate *validator.Validate) *PptkServiceImpl {
 	return &PptkServiceImpl{
-		PptkRepository:                  pptkRepository,
-		DB:                              db,
-		Validate:                        validate,
+		PptkRepository: pptkRepository,
+		DB:             db,
+		Validate:       validate,
 	}
 }
 
@@ -30,6 +33,22 @@ func (service *PptkServiceImpl) Create(ctx context.Context, request pptk.PptkCre
 	if err != nil {
 		return pptk.PptkResponse{}, err
 	}
+	loc, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		return pptk.PptkResponse{}, err
+	}
+
+	aktifAt, err := time.ParseInLocation(
+		"2006-01-02",
+		request.AktifAt,
+		loc,
+	)
+	if err != nil {
+		return pptk.PptkResponse{}, fmt.Errorf(
+			"format aktif_at tidak valid: %w",
+			err,
+		)
+	}
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -37,17 +56,37 @@ func (service *PptkServiceImpl) Create(ctx context.Context, request pptk.PptkCre
 	}
 	defer helper.CommitOrRollback(tx)
 
+	// find data sebelumnya
+	pptkAktif, err := service.PptkRepository.FindPptkAktif(ctx, tx,
+		request.KodeSubKegiatan,
+		request.KodeOpd,
+		request.Tahun,
+	)
+	if err != nil {
+		return pptk.PptkResponse{}, err
+	}
+	if pptkAktif.Id != 0 {
+		// nonaktifkan pptk aktif
+		pptkAktif.NonAktifAt = &aktifAt
+
+		_, err = service.PptkRepository.Update(ctx, tx, pptkAktif)
+		if err != nil {
+			return pptk.PptkResponse{}, err
+		}
+	}
+	// current pptk aktif
 	datapptk := domain.Pptk{
-		Nip:                     		 request.Nip,
-		KodeOpd:       			 		 request.KodeOpd,
-		Tahun:                   		 request.Tahun,
-		KodeSubKegiatan:                 request.KodeSubKegiatan,
-		NipAtasan:                       request.NipAtasan,
-		NonAktifAt:                      request.NonAktifAt,
+		Nip:             request.Nip,
+		KodeOpd:         request.KodeOpd,
+		Tahun:           request.Tahun,
+		KodeSubKegiatan: request.KodeSubKegiatan,
+		NipAtasan:       request.NipAtasan,
+		AktifAt:         &aktifAt,
 	}
 
 	result, err := service.PptkRepository.Create(ctx, tx, datapptk)
 	if err != nil {
+		log.Printf("ERROR CREATE: %v", err)
 		return pptk.PptkResponse{}, err
 	}
 
@@ -57,16 +96,16 @@ func (service *PptkServiceImpl) Create(ctx context.Context, request pptk.PptkCre
 	}
 
 	return pptk.PptkResponse{
-		Id:                 newData.Id,
-		Nip:                newData.Nip,
-		NamaPegawai:        newData.NamaPegawai,
-		KodeOpd:       	 	newData.KodeOpd,
-		Tahun: 				newData.Tahun,
-		KodeSubKegiatan:    newData.KodeSubKegiatan,
-		NipAtasan:          newData.NipAtasan,
-		NamaAtasan:         newData.NamaAtasan,
-		AktifAt:            newData.AktifAt,
-		NonAktifAt: 	    newData.NonAktifAt,
+		Id:              newData.Id,
+		Nip:             newData.Nip,
+		NamaPegawai:     newData.NamaPegawai,
+		KodeOpd:         newData.KodeOpd,
+		Tahun:           newData.Tahun,
+		KodeSubKegiatan: newData.KodeSubKegiatan,
+		NipAtasan:       newData.NipAtasan,
+		NamaAtasan:      newData.NamaAtasan,
+		AktifAt:         newData.AktifAt,
+		NonAktifAt:      newData.NonAktifAt,
 	}, nil
 }
 
@@ -89,13 +128,13 @@ func (service *PptkServiceImpl) Update(ctx context.Context, request pptk.PptkUpd
 	}
 
 	datapptk := domain.Pptk{
-		Id:                              request.Id,
-		Nip:                     		 request.Nip,
-		KodeOpd:       			 		 request.KodeOpd,
-		Tahun:                   		 request.Tahun,
-		KodeSubKegiatan:                 request.KodeSubKegiatan,
-		NipAtasan:                       request.NipAtasan,
-		NonAktifAt:                      request.NonAktifAt,
+		Id:              request.Id,
+		Nip:             request.Nip,
+		KodeOpd:         request.KodeOpd,
+		Tahun:           request.Tahun,
+		KodeSubKegiatan: request.KodeSubKegiatan,
+		NipAtasan:       request.NipAtasan,
+		NonAktifAt:      request.NonAktifAt,
 	}
 
 	result, err := service.PptkRepository.Update(ctx, tx, datapptk)
@@ -109,16 +148,16 @@ func (service *PptkServiceImpl) Update(ctx context.Context, request pptk.PptkUpd
 	}
 
 	return pptk.PptkResponse{
-		Id:                 updateData.Id,
-		Nip:                updateData.Nip,
-		NamaPegawai:        updateData.NamaPegawai,
-		KodeOpd:       	 	updateData.KodeOpd,
-		Tahun: 				updateData.Tahun,
-		KodeSubKegiatan:    updateData.KodeSubKegiatan,
-		NipAtasan:          updateData.NipAtasan,
-		NamaAtasan:         updateData.NamaAtasan,
-		AktifAt:            updateData.AktifAt,
-		NonAktifAt: 	    updateData.NonAktifAt,
+		Id:              updateData.Id,
+		Nip:             updateData.Nip,
+		NamaPegawai:     updateData.NamaPegawai,
+		KodeOpd:         updateData.KodeOpd,
+		Tahun:           updateData.Tahun,
+		KodeSubKegiatan: updateData.KodeSubKegiatan,
+		NipAtasan:       updateData.NipAtasan,
+		NamaAtasan:      updateData.NamaAtasan,
+		AktifAt:         updateData.AktifAt,
+		NonAktifAt:      updateData.NonAktifAt,
 	}, nil
 }
 
@@ -151,16 +190,16 @@ func (service *PptkServiceImpl) FindById(ctx context.Context, id int) (pptk.Pptk
 	}
 
 	return pptk.PptkResponse{
-		Id:                 result.Id,
-		Nip:                result.Nip,
-		NamaPegawai:        result.NamaPegawai,
-		KodeOpd:       	 	result.KodeOpd,
-		Tahun: 				result.Tahun,
-		KodeSubKegiatan:    result.KodeSubKegiatan,
-		NipAtasan:          result.NipAtasan,
-		NamaAtasan:         result.NamaAtasan,
-		AktifAt:            result.AktifAt,
-		NonAktifAt: 	    result.NonAktifAt,
+		Id:              result.Id,
+		Nip:             result.Nip,
+		NamaPegawai:     result.NamaPegawai,
+		KodeOpd:         result.KodeOpd,
+		Tahun:           result.Tahun,
+		KodeSubKegiatan: result.KodeSubKegiatan,
+		NipAtasan:       result.NipAtasan,
+		NamaAtasan:      result.NamaAtasan,
+		AktifAt:         result.AktifAt,
+		NonAktifAt:      result.NonAktifAt,
 	}, nil
 }
 
@@ -179,19 +218,20 @@ func (service *PptkServiceImpl) FindAll(ctx context.Context, kodeSubkegiatan str
 	var responses []pptk.PptkResponse
 	for _, result := range results {
 		responses = append(responses, pptk.PptkResponse{
-			Id:                 result.Id,
-			Nip:                result.Nip,
-			KodeOpd:       	 	result.KodeOpd,
-			Tahun: 				result.Tahun,
-			KodeSubKegiatan:    result.KodeSubKegiatan,
-			NipAtasan:          result.NipAtasan,
-			AktifAt:            result.AktifAt,
-			NonAktifAt: 	    result.NonAktifAt,
+			Id:              result.Id,
+			Nip:             result.Nip,
+			KodeOpd:         result.KodeOpd,
+			Tahun:           result.Tahun,
+			KodeSubKegiatan: result.KodeSubKegiatan,
+			NipAtasan:       result.NipAtasan,
+			AktifAt:         result.AktifAt,
+			NonAktifAt:      result.NonAktifAt,
 		})
 	}
 
 	return responses, nil
 }
+
 // func (service *PptkServiceImpl) FindAllByNip(ctx context.Context, nip string, tahun string) ([]pptk.PptkResponse, error) {
 // 	tx, err := service.DB.Begin()
 // 	if err != nil {

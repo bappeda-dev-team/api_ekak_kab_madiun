@@ -21,6 +21,7 @@ func NewPptkControllerImpl(pptkService service.PptkService) *PptkControllerImpl 
 		PptkService: pptkService,
 	}
 }
+
 func (controller *PptkControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	pptkCreateRequest := pptk.PptkCreateRequest{}
 	helper.ReadFromRequestBody(request, &pptkCreateRequest)
@@ -167,7 +168,7 @@ func (controller *PptkControllerImpl) FindAll(writer http.ResponseWriter, reques
 	}
 
 	// Panggil service FindAll
-	pptkResponse, err := controller.PptkService.FindAll(request.Context(),kodeSubkegiatan, kodeOpd, tahun)
+	pptkResponse, err := controller.PptkService.FindAll(request.Context(), kodeSubkegiatan, kodeOpd, tahun)
 	if err != nil {
 		// Jika tidak ada data, kembalikan response sukses dengan data null
 		if err == sql.ErrNoRows {
@@ -199,6 +200,7 @@ func (controller *PptkControllerImpl) FindAll(writer http.ResponseWriter, reques
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
 // func (controller *PptkControllerImpl) FindAllByNip(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 // 	nip := params.ByName("nip")
 // 	tahun := params.ByName("tahun")
