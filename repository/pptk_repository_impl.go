@@ -17,7 +17,7 @@ func NewPptkRepositoryImpl() *PptkRepositoryImpl {
 
 func (repository *PptkRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, pptk domain.Pptk) (domain.Pptk, error) {
 	script := `INSERT INTO tb_pptk 
-	(nip, kode_opd, tahun, kode_sub_kegiatan, nip_atasan, nonaktif_at) 
+	(nip, kode_opd, tahun, kode_sub_kegiatan, nip_atasan, aktif_at)
 	VALUES (?, ?, ?, ?, ?, ?)`
 	result, err := tx.ExecContext(ctx, script,
 		pptk.Nip,
@@ -25,7 +25,7 @@ func (repository *PptkRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, pp
 		pptk.Tahun,
 		pptk.KodeSubKegiatan,
 		pptk.NipAtasan,
-		pptk.NonAktifAt)
+		pptk.AktifAt)
 	if err != nil {
 		return domain.Pptk{}, err
 	}
@@ -48,13 +48,13 @@ func (repository *PptkRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, pp
 			   nip_atasan = ?,
 			   nonaktif_at = ?
 			   WHERE id = ?`
-	_, err := tx.ExecContext(ctx, script, 
-		pptk.Nip, 
-		pptk.KodeOpd, 
-		pptk.Tahun, 
-		pptk.KodeSubKegiatan, 
-		pptk.NipAtasan, 
-		pptk.NonAktifAt, 
+	_, err := tx.ExecContext(ctx, script,
+		pptk.Nip,
+		pptk.KodeOpd,
+		pptk.Tahun,
+		pptk.KodeSubKegiatan,
+		pptk.NipAtasan,
+		pptk.NonAktifAt,
 		pptk.Id)
 	if err != nil {
 		return domain.Pptk{}, err
@@ -109,7 +109,7 @@ func (repository *PptkRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, 
 	return Pptk, nil
 }
 
-func (repository *PptkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx,kodeSubkegiatan string, kodeOpd string, tahun string) ([]domain.Pptk, error) {
+func (repository *PptkRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeSubkegiatan string, kodeOpd string, tahun string) ([]domain.Pptk, error) {
 	// Query untuk mengambil program unggulan beserta status aktifnya
 	script := `
         SELECT 
@@ -284,15 +284,15 @@ func (repository *PptkRepositoryImpl) KandidatPptkOpd(ctx context.Context, tx *s
 	for rows.Next() {
 		var (
 			pegawaiId, namaPegawai string
-			level                 sql.NullString
-			kodeSubkegiatan       string
-			namaSubkegiatan       string
-			rekinId               string
-			namaRencanaKinerja    string
-			renaksiId             sql.NullString
-			namaRenaksi           sql.NullString
-			urutan                sql.NullInt64
-			anggaran              int64
+			level                  sql.NullString
+			kodeSubkegiatan        string
+			namaSubkegiatan        string
+			rekinId                string
+			namaRencanaKinerja     string
+			renaksiId              sql.NullString
+			namaRenaksi            sql.NullString
+			urutan                 sql.NullInt64
+			anggaran               int64
 		)
 
 		err := rows.Scan(
@@ -514,4 +514,86 @@ func (repository *PptkRepositoryImpl) KandidatAtasanPptk(
 	}
 
 	return &result, nil
+}
+
+func (repository *PptkRepositoryImpl) FindPptkAktif(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodeSubkegiatan string,
+	kodeOpd string,
+	tahun int,
+) (domain.Pptk, error) {
+
+	const query = `
+		SELECT
+			tp.id,
+			tp.nip,
+			peg.nama,
+			tp.kode_opd,
+			tp.tahun,
+			tp.kode_sub_kegiatan,
+			tp.nip_atasan,
+			tpa.nama,
+			tp.aktif_at,
+			tp.nonaktif_at
+		FROM tb_pptk tp
+		LEFT JOIN tb_pegawai peg ON tp.nip = peg.nip
+		LEFT JOIN tb_pegawai tpa ON tp.nip_atasan = tpa.nip
+		WHERE tp.kode_sub_kegiatan = ?
+		  AND tp.kode_opd = ?
+		  AND tp.tahun = ?
+		  AND tp.nonaktif_at IS NULL
+	`
+
+	rows, err := tx.QueryContext(
+		ctx,
+		query,
+		kodeSubkegiatan,
+		kodeOpd,
+		tahun,
+	)
+	if err != nil {
+		return domain.Pptk{}, err
+	}
+	defer rows.Close()
+
+	var result domain.Pptk
+
+	if rows.Next() {
+		if err := rows.Scan(
+			&result.Id,
+			&result.Nip,
+			&result.NamaPegawai,
+			&result.KodeOpd,
+			&result.Tahun,
+			&result.KodeSubKegiatan,
+			&result.NipAtasan,
+			&result.NamaAtasan,
+			&result.AktifAt,
+			&result.NonAktifAt,
+		); err != nil {
+			return domain.Pptk{}, err
+		}
+	}
+
+	// Tidak ada PPTK aktif
+	if result.Id == 0 {
+		return domain.Pptk{}, nil
+	}
+
+	// Tidak boleh ada lebih dari satu PPTK aktif
+	if rows.Next() {
+		return domain.Pptk{}, fmt.Errorf(
+			"multiple active PPTK found for kode_sub_kegiatan=%s, kode_opd=%s, tahun=%d",
+			kodeSubkegiatan,
+			kodeOpd,
+			tahun,
+		)
+	}
+
+	if err := rows.Err(); err != nil {
+		return domain.Pptk{}, err
+	}
+
+	return result, nil
 }

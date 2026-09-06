@@ -11,7 +11,7 @@ type PptkResponse struct {
 	KodeSubKegiatan string     `json:"kode_sub_kegiatan"`
 	NipAtasan       *string    `json:"nip_atasan"`
 	NamaAtasan      *string    `json:"nama_atasan"`
-	AktifAt         time.Time  `json:"aktif_at"`
+	AktifAt         *time.Time `json:"aktif_at"`
 	NonAktifAt      *time.Time `json:"nonaktif_at"`
 }
 
