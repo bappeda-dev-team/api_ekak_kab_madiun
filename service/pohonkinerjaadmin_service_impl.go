@@ -33,6 +33,7 @@ type PohonKinerjaAdminServiceImpl struct {
 	programUnggulanRepository repository.ProgramUnggulanRepository
 	sasaranOpdRepository      repository.SasaranOpdRepository
 	tujuanOpdRepository       repository.TujuanOpdRepository
+	misiPemdaRepository       repository.MisiPemdaRepository
 }
 
 func NewPohonKinerjaAdminServiceImpl(
@@ -46,6 +47,7 @@ func NewPohonKinerjaAdminServiceImpl(
 	programUnggulanRepository repository.ProgramUnggulanRepository,
 	sasaranOpdRepository repository.SasaranOpdRepository,
 	tujuanOpdRepository repository.TujuanOpdRepository,
+	misiPemdaRepository repository.MisiPemdaRepository,
 ) *PohonKinerjaAdminServiceImpl {
 	return &PohonKinerjaAdminServiceImpl{
 		pohonKinerjaRepository:    pohonKinerjaRepository,
@@ -58,6 +60,7 @@ func NewPohonKinerjaAdminServiceImpl(
 		programUnggulanRepository: programUnggulanRepository,
 		sasaranOpdRepository:      sasaranOpdRepository,
 		tujuanOpdRepository:       tujuanOpdRepository,
+		misiPemdaRepository:       misiPemdaRepository,
 	}
 }
 
@@ -3777,5 +3780,11 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinAdminByIdHierarkiOpdView(c
 	}
 
 	tematikNode := tematikNodes[0]
-	return helper.BuildTematikOpdViewResponse(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, tematikNode), nil
+
+	misiList, err := service.misiPemdaRepository.FindByTematikId(ctx, tx, idPokin)
+	if err != nil {
+		misiList = []domain.MisiPemda{}
+	}
+
+	return helper.BuildTematikOpdViewResponse(pohonMapPemda, pohonMapOpd, pemdaIdToAllOpdStrategics, opdNamaMap, tujuanOpdMap, tematikNode, misiList), nil
 }

@@ -790,6 +790,7 @@ func BuildTematikOpdViewResponse(
 	opdNamaMap map[string]string,
 	tujuanOpdMap map[int]domain.TujuanOpd,
 	tematik domain.PohonKinerja,
+	misiList []domain.MisiPemda,
 ) pohonkinerja.TematikResponse {
 	var childs []interface{}
 
@@ -840,8 +841,23 @@ func BuildTematikOpdViewResponse(
 		IsActive:     tematik.IsActive,
 		Indikators:   uniqueIndikators,
 		TaggingPokin: ConvertToTaggingResponses(tematik.TaggingPokin),
+		Misi:         ConvertToMisiTematikResponses(misiList),
 		Child:        childs,
 	}
+}
+
+func ConvertToMisiTematikResponses(misiList []domain.MisiPemda) []pohonkinerja.MisiTematikResponse {
+	if len(misiList) == 0 {
+		return []pohonkinerja.MisiTematikResponse{}
+	}
+
+	responses := make([]pohonkinerja.MisiTematikResponse, 0, len(misiList))
+	for _, misi := range misiList {
+		responses = append(responses, pohonkinerja.MisiTematikResponse{
+			Misi: misi.Misi,
+		})
+	}
+	return responses
 }
 
 func ConvertToPelaksanaResponses(pelaksanas []domain.PelaksanaPokin) []pohonkinerja.PelaksanaOpdResponse {

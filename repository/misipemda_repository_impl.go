@@ -208,3 +208,50 @@ func (repository *MisiPemdaRepositoryImpl) FindByIdVisi(ctx context.Context, tx 
 
 	return misiPemdaList, nil
 }
+
+func (repository *MisiPemdaRepositoryImpl) FindByTematikId(ctx context.Context, tx *sql.Tx, tematikId int) ([]domain.MisiPemda, error) {
+	script := `
+		SELECT DISTINCT
+			mp.id,
+			mp.id_visi,
+			COALESCE(vp.visi, '') AS visi,
+			mp.misi,
+			mp.urutan,
+			mp.tahun_awal_periode,
+			mp.tahun_akhir_periode,
+			mp.jenis_periode,
+			COALESCE(mp.keterangan, '') AS keterangan
+		FROM tb_tujuan_pemda tp
+		INNER JOIN tb_misi_pemda mp ON tp.id_misi = mp.id
+		LEFT JOIN tb_visi_pemda vp ON mp.id_visi = vp.id
+		WHERE tp.tematik_id = ?
+		  AND tp.id_misi > 0
+		ORDER BY mp.urutan ASC, mp.id ASC`
+
+	rows, err := tx.QueryContext(ctx, script, tematikId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	misiList := make([]domain.MisiPemda, 0)
+	for rows.Next() {
+		var misi domain.MisiPemda
+		if err := rows.Scan(
+			&misi.Id,
+			&misi.IdVisi,
+			&misi.Visi,
+			&misi.Misi,
+			&misi.Urutan,
+			&misi.TahunAwalPeriode,
+			&misi.TahunAkhirPeriode,
+			&misi.JenisPeriode,
+			&misi.Keterangan,
+		); err != nil {
+			return nil, err
+		}
+		misiList = append(misiList, misi)
+	}
+
+	return misiList, rows.Err()
+}
