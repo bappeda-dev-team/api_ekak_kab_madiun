@@ -1622,8 +1622,9 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 					SasaranOpds[idxSasaran].
 					StrategiOpds,
 				strategic.StrategiOpdResponse{
-					StrategiOpd:  s.NamaStrategi,
-					TacticalOpds: []strategic.TacticalOpdResponse{},
+					StrategiOpd:      s.NamaStrategi,
+					TahunStrategiOpd: s.TahunStrategi,
+					TacticalOpds:     []strategic.TacticalOpdResponse{},
 				},
 			)
 
@@ -1662,6 +1663,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 					strategic.TacticalOpdResponse{
 						TacticalOpd:      s.NamaTactical,
 						IdTacticalOpd:    s.IdTactical,
+						TahunTacticalOpd: s.TahunTactical,
 						OperasionalOpds:  []strategic.OperasionalOpdResponse{},
 						ArahKebijakanOpd: []strategic.ArahKebijakanOpdResponse{},
 					},
