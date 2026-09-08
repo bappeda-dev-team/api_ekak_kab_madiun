@@ -622,6 +622,24 @@ var nspkSet = wire.NewSet(
 	),
 )
 
+var jenisinovasiSet = wire.NewSet(
+	repository.NewJenisInovasiRepositoryImpl,
+	wire.Bind(
+		new(repository.JenisInovasiRepository),
+		new(*repository.JenisInovasiRepositoryImpl),
+	),
+	service.NewJenisInovasiServiceImpl,
+	wire.Bind(
+		new(service.JenisInovasiService),
+		new(*service.JenisInovasiServiceImpl),
+	),
+	controller.NewJenisInovasiControllerImpl,
+	wire.Bind(
+		new(controller.JenisInovasiController),
+		new(*controller.JenisInovasiControllerImpl),
+	),
+)
+
 var nspkOpdSet = wire.NewSet(
 	repository.NewNspkOpdRepositoryImpl,
 	wire.Bind(
@@ -742,6 +760,7 @@ func InitializeServer() *http.Server {
 		penetapanClientSet,
 		ppdSet,
 		nspkSet,
+		jenisinovasiSet,
 		nspkOpdSet,
 		arahKebijakanSet,
 		httpClientSet,
