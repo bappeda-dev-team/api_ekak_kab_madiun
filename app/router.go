@@ -75,6 +75,7 @@ func NewRouter(
 	nspkopdController controller.NspkOpdController,
 	arahkebijakanController controller.ArahKebijakanController,
 	pptkController controller.PptkController,
+	jenisinovasiController controller.JenisInovasiController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -562,6 +563,12 @@ func NewRouter(
 	router.PUT("/nspk/update/:id", nspkController.Update)
 	router.DELETE("/nspk/delete/:id", nspkController.Delete)
 	router.GET("/nspk/findall/:kode_opd", nspkController.FindAll)
+	
+	//Master Jenis Inovasi
+	router.POST("/jenis-inovasi/create", jenisinovasiController.Create)
+	router.PUT("/jenis-inovasi/update/:id", jenisinovasiController.Update)
+	router.DELETE("/jenis-inovasi/delete/:id", jenisinovasiController.Delete)
+	router.GET("/jenis-inovasi/findall", jenisinovasiController.FindAll)
 
 	// NSPK Opd
 	router.POST("/nspk-opd/create", nspkopdController.Create)
