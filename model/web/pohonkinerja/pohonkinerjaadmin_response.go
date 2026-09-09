@@ -45,6 +45,7 @@ type TematikResponse struct {
 	// CSF         CSFApiResponse      `json:"csf"`
 	Id           int                 `json:"id"`
 	Parent       *int                `json:"parent"`
+	UrutanPokin  *int                `json:"urutan_pokin"`
 	Tema         string              `json:"tema"`
 	JenisPohon   string              `json:"jenis_pohon"`
 	LevelPohon   int                 `json:"level_pohon"`

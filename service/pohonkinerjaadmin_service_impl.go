@@ -3129,6 +3129,7 @@ func (service *PohonKinerjaAdminServiceImpl) FindAllTematik(ctx context.Context,
 			tematikResp := pohonkinerja.TematikResponse{
 				Id:          pokin.Id,
 				Parent:      nil, // level 0 tidak memiliki parent
+				UrutanPokin: pokin.UrutanPokin,
 				Tema:        pokin.NamaPohon,
 				JenisPohon:  pokin.JenisPohon,
 				LevelPohon:  pokin.LevelPohon,
@@ -3143,6 +3144,19 @@ func (service *PohonKinerjaAdminServiceImpl) FindAllTematik(ctx context.Context,
 			tematiks = append(tematiks, tematikResp)
 		}
 	}
+
+	// urutan pokin
+	sort.SliceStable(tematiks, func(i, j int) bool {
+		if tematiks[i].UrutanPokin == nil {
+			return false
+		}
+
+		if tematiks[j].UrutanPokin == nil {
+			return true
+		}
+
+		return *tematiks[i].UrutanPokin < *tematiks[j].UrutanPokin
+	})
 
 	return pohonkinerja.PohonKinerjaAdminResponse{
 		Tahun:   tahun,

@@ -47,6 +47,7 @@ type PohonKinerja struct {
 	LevelPohonParent     int
 	TaggingPokin         []TaggingPokin
 	KeteranganTahunClone string
+	UrutanPokin          *int
 }
 
 type CSF struct {

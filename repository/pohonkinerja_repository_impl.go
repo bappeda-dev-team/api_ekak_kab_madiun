@@ -1525,6 +1525,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 
 	return pokin, nil
 }
+
 func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Context, tx *sql.Tx, tahun string) ([]domain.PohonKinerja, error) {
 	script := `
         SELECT 
@@ -1536,6 +1537,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Cont
             pk.kode_opd,
             pk.keterangan,
             pk.tahun,
+	    pk.urutan_pokin,
             i.id as indikator_id,
             i.indikator as nama_indikator,
             t.id as target_id,
@@ -1549,8 +1551,9 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Cont
             tb_target t ON i.id = t.indikator_id
         WHERE 
             pk.tahun = ?
-        ORDER BY 
-            pk.level_pohon, pk.id, i.id, t.id
+        ORDER BY
+	    CASE WHEN pk.urutan_pokin IS NULL THEN 1 ELSE 0 END,
+            pk.urutan_pokin, pk.level_pohon, pk.id, i.id, t.id
     `
 
 	rows, err := tx.QueryContext(ctx, script, tahun)
@@ -1569,11 +1572,13 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Cont
 			namaPohon, jenisPohon, kodeOpd, keterangan, tahunPokin string
 			indikatorId, namaIndikator                             sql.NullString
 			targetId, targetValue, targetSatuan                    sql.NullString
+			urutanPokinNI                                          sql.NullInt64
 		)
 
 		err := rows.Scan(
 			&pokinId, &namaPohon, &parent, &jenisPohon, &levelPohon,
 			&kodeOpd, &keterangan, &tahunPokin,
+			&urutanPokinNI,
 			&indikatorId, &namaIndikator,
 			&targetId, &targetValue, &targetSatuan,
 		)
@@ -1581,18 +1586,26 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminAll(ctx context.Cont
 			return nil, err
 		}
 
+		var urutanPokin *int
+
+		if urutanPokinNI.Valid {
+			value := int(urutanPokinNI.Int64)
+			urutanPokin = &value
+		}
+
 		// Proses Pohon Kinerja
 		pokin, exists := pokinMap[pokinId]
 		if !exists {
 			pokin = domain.PohonKinerja{
-				Id:         pokinId,
-				NamaPohon:  namaPohon,
-				Parent:     parent,
-				JenisPohon: jenisPohon,
-				LevelPohon: levelPohon,
-				KodeOpd:    kodeOpd,
-				Keterangan: keterangan,
-				Tahun:      tahunPokin,
+				Id:          pokinId,
+				NamaPohon:   namaPohon,
+				Parent:      parent,
+				JenisPohon:  jenisPohon,
+				LevelPohon:  levelPohon,
+				KodeOpd:     kodeOpd,
+				Keterangan:  keterangan,
+				Tahun:       tahunPokin,
+				UrutanPokin: urutanPokin,
 			}
 			pokinMap[pokinId] = pokin
 		}
