@@ -2100,7 +2100,7 @@ func (repository *PohonKinerjaRepositoryImpl) InsertClonedTarget(ctx context.Con
 
 func (repository *PohonKinerjaRepositoryImpl) FindPokinByJenisPohon(ctx context.Context, tx *sql.Tx, jenisPohon string, levelPohon int, tahun string, kodeOpd string, status string) ([]domain.PohonKinerja, error) {
 	script := `
-SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active
+SELECT id, nama_pohon, jenis_pohon, level_pohon, kode_opd, tahun, keterangan, status, is_active, urutan_pokin
 FROM tb_pohon_kinerja
 WHERE 1=1`
 	parameters := []interface{}{}
@@ -2145,10 +2145,19 @@ WHERE 1=1`
 	var pokins []domain.PohonKinerja
 	for rows.Next() {
 		var pokin domain.PohonKinerja
-		err := rows.Scan(&pokin.Id, &pokin.NamaPohon, &pokin.JenisPohon, &pokin.LevelPohon, &pokin.KodeOpd, &pokin.Tahun, &pokin.Keterangan, &pokin.Status, &pokin.IsActive)
+		var urutanPokinNI sql.NullInt64
+		err := rows.Scan(&pokin.Id, &pokin.NamaPohon, &pokin.JenisPohon, &pokin.LevelPohon, &pokin.KodeOpd, &pokin.Tahun, &pokin.Keterangan, &pokin.Status, &pokin.IsActive, &urutanPokinNI)
 		if err != nil {
 			return nil, err
 		}
+		var urutanPokin *int
+
+		if urutanPokinNI.Valid {
+			value := int(urutanPokinNI.Int64)
+			urutanPokin = &value
+		}
+		pokin.UrutanPokin = urutanPokin
+
 		pokins = append(pokins, pokin)
 	}
 	return pokins, rows.Err()

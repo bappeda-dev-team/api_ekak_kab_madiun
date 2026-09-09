@@ -12,6 +12,7 @@ type PohonKinerjaAdminResponse struct {
 type PohonKinerjaAdminResponseData struct {
 	Id              int                          `json:"id"`
 	Parent          int                          `json:"parent,omitempty"`
+	UrutanPokin     *int                         `json:"urutan_pokin"`
 	NamaPohon       string                       `json:"nama_pohon"`
 	KodeOpd         string                       `json:"kode_opd,omitempty"`
 	NamaOpd         string                       `json:"nama_opd,omitempty"`

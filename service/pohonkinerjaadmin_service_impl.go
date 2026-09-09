@@ -2226,13 +2226,27 @@ func (service *PohonKinerjaAdminServiceImpl) FindPokinByTematik(ctx context.Cont
 	var result []pohonkinerja.PohonKinerjaAdminResponseData
 	for _, pokin := range pokins {
 		result = append(result, pohonkinerja.PohonKinerjaAdminResponseData{
-			Id:         pokin.Id,
-			NamaPohon:  pokin.NamaPohon,
-			JenisPohon: pokin.JenisPohon,
-			LevelPohon: pokin.LevelPohon,
-			Tahun:      pokin.Tahun,
+			Id:          pokin.Id,
+			NamaPohon:   pokin.NamaPohon,
+			JenisPohon:  pokin.JenisPohon,
+			LevelPohon:  pokin.LevelPohon,
+			Tahun:       pokin.Tahun,
+			UrutanPokin: pokin.UrutanPokin,
 		})
 	}
+
+	// urutan pokin
+	sort.SliceStable(result, func(i, j int) bool {
+		if result[i].UrutanPokin == nil {
+			return false
+		}
+
+		if result[j].UrutanPokin == nil {
+			return true
+		}
+
+		return *result[i].UrutanPokin < *result[j].UrutanPokin
+	})
 
 	return result, nil
 }
