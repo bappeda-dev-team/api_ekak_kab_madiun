@@ -258,7 +258,7 @@ func NewRouter(
 	router.GET("/pohon_kinerja/cetak/:id", pohonKinerjaAdminController.CetakPokin)
 
 	//report tematik
-	router.GET("/listOpdTematik/:idPokin", pohonKinerjaAdminController.FindPokinAdminByIdHierarkiOpdView)
+	// router.GET("/listOpdTematik/:idPokin", pohonKinerjaAdminController.FindPokinAdminByIdHierarkiOpdView)
 
 	// isustrategis - csf
 	router.GET("/isustrategis/csfs/:tahun", csfController.AllCsfsByTahun)
