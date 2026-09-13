@@ -14,12 +14,13 @@ import (
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
-	"net/http"
-	"time"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/google/wire"
+	"net/http"
+	"time"
+)
 
+import (
 	_ "ekak_kabupaten_madiun/docs"
 )
 
@@ -211,9 +212,6 @@ func InitializeServer() *http.Server {
 	nspkRepositoryImpl := repository.NewNspkRepositoryImpl()
 	nspkServiceImpl := service.NewNspkServiceImpl(nspkRepositoryImpl, db, validate)
 	nspkControllerImpl := controller.NewNspkControllerImpl(nspkServiceImpl)
-	jenisinovasiRepositoryImpl := repository.NewJenisInovasiRepositoryImpl()
-	jenisinovasiServiceImpl := service.NewJenisInovasiServiceImpl(jenisinovasiRepositoryImpl, db, validate)
-	jenisinovasiControllerImpl := controller.NewJenisInovasiControllerImpl(jenisinovasiServiceImpl)
 	nspkOpdRepositoryImpl := repository.NewNspkOpdRepositoryImpl()
 	nspkOpdServiceImpl := service.NewNspkOpdServiceImpl(nspkOpdRepositoryImpl, db, validate)
 	nspkOpdControllerImpl := controller.NewNspkOpdControllerImpl(nspkOpdServiceImpl)
@@ -222,7 +220,10 @@ func InitializeServer() *http.Server {
 	arahKebijakanControllerImpl := controller.NewArahKebijakanControllerImpl(arahKebijakanServiceImpl)
 	pptkServiceImpl := service.NewPptkServiceImpl(pptkRepositoryImpl, db, validate)
 	pptkControllerImpl := controller.NewPptkControllerImpl(pptkServiceImpl)
-	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, rencanaAksiOpdControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl, nspkControllerImpl, nspkOpdControllerImpl, arahKebijakanControllerImpl, pptkControllerImpl, jenisinovasiControllerImpl)
+	jenisInovasiRepositoryImpl := repository.NewJenisInovasiRepositoryImpl()
+	jenisInovasiServiceImpl := service.NewJenisInovasiServiceImpl(jenisInovasiRepositoryImpl, db, validate)
+	jenisInovasiControllerImpl := controller.NewJenisInovasiControllerImpl(jenisInovasiServiceImpl)
+	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, rencanaAksiOpdControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl, nspkControllerImpl, nspkOpdControllerImpl, arahKebijakanControllerImpl, pptkControllerImpl, jenisInovasiControllerImpl)
 	authMiddleware := middleware.NewAuthMiddleware(router)
 	server := NewServer(authMiddleware)
 	return server
@@ -405,6 +406,18 @@ var nspkSet = wire.NewSet(repository.NewNspkRepositoryImpl, wire.Bind(
 ), controller.NewNspkControllerImpl, wire.Bind(
 	new(controller.NspkController),
 	new(*controller.NspkControllerImpl),
+),
+)
+
+var jenisinovasiSet = wire.NewSet(repository.NewJenisInovasiRepositoryImpl, wire.Bind(
+	new(repository.JenisInovasiRepository),
+	new(*repository.JenisInovasiRepositoryImpl),
+), service.NewJenisInovasiServiceImpl, wire.Bind(
+	new(service.JenisInovasiService),
+	new(*service.JenisInovasiServiceImpl),
+), controller.NewJenisInovasiControllerImpl, wire.Bind(
+	new(controller.JenisInovasiController),
+	new(*controller.JenisInovasiControllerImpl),
 ),
 )
 
