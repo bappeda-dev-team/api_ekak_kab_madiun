@@ -3285,6 +3285,12 @@ func (service *PohonKinerjaAdminServiceImpl) FindAllTematik(ctx context.Context,
 	// Filter hanya level 0 (tematik)
 	for _, pokin := range pokins {
 		if pokin.LevelPohon == 0 {
+			// Misi diambil dari tujuan pemda yang terhubung ke tematik_id pokin ini
+			misiList, err := service.misiPemdaRepository.FindByTematikId(ctx, tx, pokin.Id)
+			if err != nil {
+				misiList = []domain.MisiPemda{}
+			}
+
 			tematikResp := pohonkinerja.TematikResponse{
 				Id:          pokin.Id,
 				Parent:      nil, // level 0 tidak memiliki parent
@@ -3295,6 +3301,7 @@ func (service *PohonKinerjaAdminServiceImpl) FindAllTematik(ctx context.Context,
 				CountReview: pokin.CountReview,
 				IsActive:    pokin.IsActive,
 				Indikators:  helper.ConvertToIndikatorResponses(pokin.Indikator),
+				Misi:        helper.ConvertToMisiTematikResponses(misiList),
 				// Child dikosongkan karena hanya menampilkan level 0
 				Child: []interface{}{},
 			}
