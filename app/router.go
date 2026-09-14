@@ -76,6 +76,7 @@ func NewRouter(
 	arahkebijakanController controller.ArahKebijakanController,
 	pptkController controller.PptkController,
 	jenisinovasiController controller.JenisInovasiController,
+	inovasiRekinController controller.InovasiRekinController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -172,6 +173,14 @@ func NewRouter(
 	router.GET("/gambaran_umum/detail/:id", gambaranUmumController.FindById)
 	router.PUT("/gambaran_umum/update/:id", gambaranUmumController.Update)
 	router.DELETE("/gambaran_umum/delete/:id", gambaranUmumController.Delete)
+	
+	//inovasi rekin
+	router.POST("/inovasi_rekin/create/:rencana_kinerja_id", inovasiRekinController.Create)
+	router.GET("/inovasi_rekin/findall/:rencana_kinerja_id", inovasiRekinController.FindAll)
+	router.GET("/inovasi_rekin/detail/:id", inovasiRekinController.FindById)
+	router.PUT("/inovasi_rekin/update/:id", inovasiRekinController.Update)
+	router.DELETE("/inovasi_rekin/delete/:id", inovasiRekinController.Delete)
+
 
 	//dasar hukum
 	router.POST("/dasar_hukum/create/:rencana_kinerja_id", dasarHukumController.Create)

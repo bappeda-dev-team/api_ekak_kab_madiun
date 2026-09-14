@@ -13,17 +13,17 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-type InvasiRekinControllerImpl struct {
+type InovasiRekinControllerImpl struct {
 	InovasiRekinService service.InovasiRekinService
 }
 
-func NewInvasiRekinControllerImpl(inovasiRekinService service.InovasiRekinService) *InvasiRekinControllerImpl {
-	return &InvasiRekinControllerImpl{
+func NewInovasiRekinControllerImpl(inovasiRekinService service.InovasiRekinService) *InovasiRekinControllerImpl {
+	return &InovasiRekinControllerImpl{
 		InovasiRekinService: inovasiRekinService,
 	}
 }
 
-func (controller *InvasiRekinControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *InovasiRekinControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	// Ambil rekinId dari params URL
 	rekinId := params.ByName("rencana_kinerja_id")
 	if rekinId == "" {
@@ -61,7 +61,7 @@ func (controller *InvasiRekinControllerImpl) Create(writer http.ResponseWriter, 
 	})
 }
 
-func (controller *InvasiRekinControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *InovasiRekinControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	// Ambil id dari params URL
 	id := params.ByName("id")
 	if id == "" {
@@ -107,7 +107,7 @@ func (controller *InvasiRekinControllerImpl) Update(writer http.ResponseWriter, 
 	})
 }
 
-func (controller *InvasiRekinControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *InovasiRekinControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	// Ambil id dari params URL
 	id := params.ByName("id")
 	if id == "" {
@@ -138,7 +138,7 @@ func (controller *InvasiRekinControllerImpl) Delete(writer http.ResponseWriter, 
 	})
 }
 
-func (controller *InvasiRekinControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *InovasiRekinControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	// Ambil rekinId dari params URL
 	rekinId := params.ByName("rencana_kinerja_id")
 	if rekinId == "" {
@@ -169,7 +169,7 @@ func (controller *InvasiRekinControllerImpl) FindAll(writer http.ResponseWriter,
 	})
 }
 
-func (controller *InvasiRekinControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *InovasiRekinControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	// Ambil id dari params URL
 	id := params.ByName("id")
 	if id == "" {
@@ -200,7 +200,7 @@ func (controller *InvasiRekinControllerImpl) FindById(writer http.ResponseWriter
 	})
 }
 
-func (controller *InvasiRekinControllerImpl) FindAllByRekinId(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (controller *InovasiRekinControllerImpl) FindAllByRekinId(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	// Ambil rekinId dari params URL
 	rekinId := params.ByName("rencana_kinerja_id")
 	if rekinId == "" {

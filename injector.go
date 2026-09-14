@@ -100,6 +100,15 @@ var gambaranUmumSet = wire.NewSet(
 	wire.Bind(new(controller.GambaranUmumController), new(*controller.GambaranUmumControllerImpl)),
 )
 
+var inovasiRekinSet = wire.NewSet(
+	repository.NewInovasiRekinRepositoryImpl,
+	wire.Bind(new(repository.InovasiRekinRepository), new(*repository.InovasiRekinRepositoryImpl)),
+	service.NewInovasiRekinServiceImpl,
+	wire.Bind(new(service.InovasiRekinService), new(*service.InovasiRekinServiceImpl)),
+	controller.NewInovasiRekinControllerImpl,
+	wire.Bind(new(controller.InovasiRekinController), new(*controller.InovasiRekinControllerImpl)),
+)
+
 var dasarHukumSet = wire.NewSet(
 	repository.NewDasarHukumRepositoryImpl,
 	wire.Bind(new(repository.DasarHukumRepository), new(*repository.DasarHukumRepositoryImpl)),
@@ -761,6 +770,7 @@ func InitializeServer() *http.Server {
 		ppdSet,
 		nspkSet,
 		jenisinovasiSet,
+		inovasiRekinSet,
 		nspkOpdSet,
 		arahKebijakanSet,
 		httpClientSet,
