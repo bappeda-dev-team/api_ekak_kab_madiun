@@ -2462,3 +2462,17 @@ func (repository *SasaranOpdRepositoryImpl) GetIsHideByPokinIds(ctx context.Cont
 	}
 	return result, rows.Err()
 }
+
+// GetKodeOpdTahunBySasaranId mengambil kode_opd dan tahun_awal dari sasaran OPD.
+// Digunakan untuk validasi lock sebelum delete.
+func (repository *SasaranOpdRepositoryImpl) GetKodeOpdTahunBySasaranId(
+	ctx context.Context, tx *sql.Tx, id string,
+) (kodeOpd, tahunAwal string, err error) {
+	script := `
+		SELECT pk.kode_opd, so.tahun_awal
+		FROM tb_sasaran_opd so
+		JOIN tb_pohon_kinerja pk ON so.pokin_id = pk.id
+		WHERE so.id = ?`
+	err = tx.QueryRowContext(ctx, script, id).Scan(&kodeOpd, &tahunAwal)
+	return
+}
