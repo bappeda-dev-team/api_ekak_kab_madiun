@@ -12,4 +12,5 @@ type InovasiRekin struct {
 	WaktuImplementasi  time.Time
 	Instansi           string
 	Inovator           string
+	CreatedAt          time.Time
 }

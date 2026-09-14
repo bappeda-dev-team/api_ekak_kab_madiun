@@ -27,7 +27,7 @@ func (controller *InovasiRekinControllerImpl) Create(writer http.ResponseWriter,
 	// Ambil rekinId dari params URL
 	rekinId := params.ByName("rencana_kinerja_id")
 	if rekinId == "" {
-		helper.WriteToResponseBody(writer, web.WebGambaranUmumResponse{
+		helper.WriteToResponseBody(writer, web.WebInovasiRekinResponse{
 			Code:   http.StatusBadRequest,
 			Status: "BAD REQUEST",
 			Data:   "RekinId tidak boleh kosong",
@@ -43,7 +43,7 @@ func (controller *InovasiRekinControllerImpl) Create(writer http.ResponseWriter,
 	inovasiRekinCreateRequest.RekinId = rekinId
 
 	// Panggil service untuk membuat gambaran umum
-	gambaranUmumResponse, err := controller.InovasiRekinService.Create(request.Context(), inovasiRekinCreateRequest)
+	inovasiRekinResponse, err := controller.InovasiRekinService.Create(request.Context(), inovasiRekinCreateRequest)
 	if err != nil {
 		helper.WriteToResponseBody(writer, web.WebInovasiRekinResponse{
 			Code:   http.StatusInternalServerError,
@@ -57,7 +57,7 @@ func (controller *InovasiRekinControllerImpl) Create(writer http.ResponseWriter,
 	helper.WriteToResponseBody(writer, web.WebInovasiRekinResponse{
 		Code:   http.StatusCreated,
 		Status: "success create data inovasi",
-		Data:   gambaranUmumResponse,
+		Data:   inovasiRekinResponse,
 	})
 }
 
