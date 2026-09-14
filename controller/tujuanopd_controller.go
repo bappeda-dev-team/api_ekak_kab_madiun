@@ -37,4 +37,9 @@ type TujuanOpdController interface {
 	CreateTargetPenetapanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateTargetPenetapanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeleteTargetPenetapanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	// Lock / Unlock penetapan tujuan OPD
+	LockTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UnlockTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	IsTujuanOpdLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllLockTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

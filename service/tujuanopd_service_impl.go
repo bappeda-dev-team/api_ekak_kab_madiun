@@ -259,9 +259,18 @@ func (service *TujuanOpdServiceImpl) Delete(ctx context.Context, tujuanOpdId int
 	}
 	defer helper.CommitOrRollback(tx)
 
-	_, err = service.TujuanOpdRepository.FindById(ctx, tx, tujuanOpdId)
+	tujuan, err := service.TujuanOpdRepository.FindById(ctx, tx, tujuanOpdId)
 	if err != nil {
 		return err
+	}
+
+	// ── Cek lock penetapan sebelum hapus ─────────────────────
+	locked, err := service.LockDataRepository.IsLocked(ctx, tx, lockJenisTujuanOpd, tujuan.KodeOpd, tujuan.TahunAwal)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return fmt.Errorf("tujuan OPD tidak dapat dihapus karena data penetapan tahun %s sudah dikunci", tujuan.TahunAwal)
 	}
 
 	return service.TujuanOpdRepository.Delete(ctx, tx, tujuanOpdId)
@@ -1549,6 +1558,38 @@ func (service *TujuanOpdServiceImpl) UnlockTujuanOpd(ctx context.Context, kodeOp
 	}
 	defer helper.CommitOrRollback(tx)
 	return service.LockDataRepository.Unlock(ctx, tx, lockJenisTujuanOpd, kodeOpd, tahun)
+}
+
+func (service *TujuanOpdServiceImpl) IsTujuanOpdLocked(ctx context.Context, kodeOpd, tahun string) (bool, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.LockDataRepository.IsLocked(ctx, tx, lockJenisTujuanOpd, kodeOpd, tahun)
+}
+
+func (service *TujuanOpdServiceImpl) FindAllLockTujuanOpd(ctx context.Context, kodeOpd string) ([]tujuanopd.LockDataOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	locks, err := service.LockDataRepository.FindAllByJenisKodeOpd(ctx, tx, lockJenisTujuanOpd, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]tujuanopd.LockDataOpdResponse, 0, len(locks))
+	for _, l := range locks {
+		result = append(result, tujuanopd.LockDataOpdResponse{
+			Id:      l.Id,
+			Jenis:   l.JenisData,
+			KodeOpd: l.KodeOpd,
+			Tahun:   l.Tahun,
+			Locked:  true,
+		})
+	}
+	return result, nil
 }
 
 // rankhiir builder
