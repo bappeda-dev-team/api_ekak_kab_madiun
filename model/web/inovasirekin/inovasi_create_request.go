@@ -3,7 +3,7 @@ package inovasirekin
 import "time"
 
 type InovasiRekinCreateRequest struct {
-	RekinId           string 	  `json:"rekin_id"`
+	RekinId           string 	  `json:"rencana_kinerja_id"`
 	KodeOpd           string 	  `json:"kode_opd"`
 	NamaInovasi       string 	  `json:"nama_inovasi"`
 	JenisInovasiId    int   	  `json:"jenis_inovasi_id"`
