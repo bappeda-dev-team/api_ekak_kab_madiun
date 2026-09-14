@@ -741,6 +741,18 @@ func NewRouter(
 	router.PUT("/tujuan_opd/penetapan/target/update", tujuanOpdController.UpdateTargetPenetapanOpd)
 	router.DELETE("/tujuan_opd/penetapan/target/delete/:kode_indikator/:tahun", tujuanOpdController.DeleteTargetPenetapanOpd)
 
+	// tujuan opd lock
+
+	router.GET("/tujuan_opd/lock/:kode_opd/:tahun", tujuanOpdController.IsTujuanOpdLocked)
+	router.POST("/tujuan_opd/lock/:kode_opd/:tahun", tujuanOpdController.LockTujuanOpd)
+	router.DELETE("/tujuan_opd/lock/:kode_opd/:tahun", tujuanOpdController.UnlockTujuanOpd)
+
+	// sasaran opd lock
+
+	router.GET("/sasaran_opd/lock/:kode_opd/:tahun", sasaranOpdController.IsSasaranOpdLocked)
+	router.POST("/sasaran_opd/lock/:kode_opd/:tahun", sasaranOpdController.LockSasaranOpd)
+	router.DELETE("/sasaran_opd/lock/:kode_opd/:tahun", sasaranOpdController.UnlockSasaranOpd)
+
 	//tujuan pemda lock
 	router.GET("/tujuan_pemda/lock", tujuanPemdaController.FindAllLockTujuanPemda)
 	router.GET("/tujuan_pemda/lock/:tahun", tujuanPemdaController.IsTujuanPemdaLocked)

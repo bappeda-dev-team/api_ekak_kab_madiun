@@ -29,4 +29,9 @@ type SasaranOpdController interface {
 	UpdateIndikatorPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	HideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UnhideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	// Lock / Unlock penetapan sasaran OPD
+	LockSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UnlockSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	IsSasaranOpdLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllLockSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
