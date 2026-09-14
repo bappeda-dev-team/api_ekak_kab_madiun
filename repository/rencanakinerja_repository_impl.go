@@ -2047,3 +2047,66 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByIdRekins(ctx context.Conte
 
 	return rencanaKinerjas, nil
 }
+
+func (repo *RencanaKinerjaRepositoryImpl) FindSubkegiatanRekinByIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinIds []string,
+) (map[string]domain.SubKegiatan, error) {
+	const op = "rencanakinerja_repository.FindSubkegiatanRekinByIds"
+
+	if len(rekinIds) == 0 {
+		return map[string]domain.SubKegiatan{}, nil
+	}
+
+	baseQuery := `
+		SELECT
+			rek.id,
+			sub.kode_subkegiatan,
+			sub.nama_subkegiatan
+		FROM tb_rencana_kinerja rek
+		JOIN tb_subkegiatan_terpilih st
+			ON st.rekin_id = rek.id
+		JOIN tb_subkegiatan sub
+			ON st.kode_subkegiatan = sub.kode_subkegiatan
+		WHERE rek.id IN (?)
+	`
+
+	query, args := helper.BuildInQueryString(baseQuery, rekinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	rekinMap := make(map[string]domain.SubKegiatan, len(rekinIds))
+
+	for rows.Next() {
+		var (
+			rekinID         string
+			kodeSubKegiatan string
+			namaSubKegiatan string
+		)
+
+		if err := rows.Scan(
+			&rekinID,
+			&kodeSubKegiatan,
+			&namaSubKegiatan,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		rekinMap[rekinID] = domain.SubKegiatan{
+			KodeSubKegiatan: kodeSubKegiatan,
+			NamaSubKegiatan: namaSubKegiatan,
+			RekinId:         rekinID,
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows iteration failed: %w", op, err)
+	}
+
+	return rekinMap, nil
+}

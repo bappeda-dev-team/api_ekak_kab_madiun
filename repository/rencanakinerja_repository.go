@@ -47,4 +47,7 @@ type RencanaKinerjaRepository interface {
 	GetByKodeOpdAndTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAsal string) ([]domain.RencanaKinerja, error)
 	CreateBatch(ctx context.Context, tx *sql.Tx, rencanaKinerjas []domain.RencanaKinerja) error
 	FindByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) ([]domain.RencanaKinerja, error)
+
+	// subkegiatan
+	FindSubkegiatanRekinByIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]domain.SubKegiatan, error)
 }
