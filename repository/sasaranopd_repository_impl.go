@@ -1259,10 +1259,11 @@ func (repository *SasaranOpdRepositoryImpl) FindByNipAndOpd(
 			idTujuanOpd                                   sql.NullInt64
 			tahunAwalSasaran, tahunAkhirSasaran           sql.NullString
 			jenisPeriodeSasaran                           sql.NullString
-			indikatorId, kodeIndikator                    sql.NullString
+			kodeIndikator                                 sql.NullString
 			indikatorNama                                 sql.NullString
-			rumusPerhitungan, sumberData                  sql.NullString
 			definisiOperasional, indikatorJenis           sql.NullString
+			indikatorId                                   sql.NullString
+			rumusPerhitungan, sumberData                  sql.NullString
 			targetId, targetTahun                         sql.NullString
 			targetValue, targetSatuan                     sql.NullString
 		)
