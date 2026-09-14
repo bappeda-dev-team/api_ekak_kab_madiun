@@ -36,4 +36,7 @@ type SasaranOpdRepository interface {
 	GetIsHideByPokinIds(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]bool, error)
 	HideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error
 	UnhideSasaranOpdView(ctx context.Context, tx *sql.Tx, idPokin int) error
+	// GetKodeOpdTahunBySasaranId mengambil kode_opd dan tahun_awal dari sasaran OPD berdasarkan ID.
+	// Digunakan untuk validasi lock sebelum delete.
+	GetKodeOpdTahunBySasaranId(ctx context.Context, tx *sql.Tx, id string) (kodeOpd, tahunAwal string, err error)
 }
