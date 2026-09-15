@@ -30,6 +30,7 @@ type RencanaKinerjaOpd struct {
 	Keterangan         *string
 	TotalAnggaran      int64
 	SubKegiatan        []SubKegiatanOpdRenaksi
+	Indikator          []Indikator
 }
 
 type SubKegiatanOpdRenaksi struct {

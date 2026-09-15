@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/renaksiopd"
+	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
 	"math/rand"
@@ -15,13 +16,20 @@ import (
 
 type RencanaAksiOpdServiceImpl struct {
 	RencanaAksiOpdRepository repository.RencanaAksiOpdRepository
+	RencanaKinerjaRepository repository.RencanaKinerjaRepository
 	DB                       *sql.DB
 	validator                *validator.Validate
 }
 
-func NewRencanaAksiOpdServiceImpl(rencanaAksiOpdRepository repository.RencanaAksiOpdRepository, db *sql.DB, validator *validator.Validate) *RencanaAksiOpdServiceImpl {
+func NewRencanaAksiOpdServiceImpl(
+	rencanaAksiOpdRepository repository.RencanaAksiOpdRepository,
+	rencanaKinerjaRepository repository.RencanaKinerjaRepository,
+	db *sql.DB,
+	validator *validator.Validate,
+) *RencanaAksiOpdServiceImpl {
 	return &RencanaAksiOpdServiceImpl{
 		RencanaAksiOpdRepository: rencanaAksiOpdRepository,
+		RencanaKinerjaRepository: rencanaKinerjaRepository,
 		DB:                       db,
 		validator:                validator,
 	}
@@ -37,6 +45,23 @@ func (service *RencanaAksiOpdServiceImpl) FindBySasaranOpdAndTahun(ctx context.C
 	rencanaAksi, err := service.RencanaAksiOpdRepository.FindBySasaranOpdAndTahun(ctx, tx, sasaranOpdId, tahun)
 	if err != nil {
 		return nil, err
+	}
+	rekinIds := make([]string, 0)
+	for _, renaksi := range rencanaAksi {
+		for _, ren := range renaksi.RencanaKinerja {
+			rekinIds = append(rekinIds, ren.RekinId)
+		}
+	}
+	indikatorRekins, err := service.RencanaKinerjaRepository.IndikatorTargetSasaranByRekinIds(ctx, tx, rekinIds)
+	if err != nil {
+		return nil, err
+	}
+	for _, renaksi := range rencanaAksi {
+		for i := range renaksi.RencanaKinerja {
+			ren := &renaksi.RencanaKinerja[i]
+			indikators := indikatorRekins[ren.RekinId]
+			ren.Indikator = append(ren.Indikator, indikators...)
+		}
 	}
 
 	return toRencanaAksiOpdResponses(rencanaAksi), nil
@@ -209,6 +234,25 @@ func toRencanaKinerjaResponse(rk domain.RencanaKinerjaOpd) renaksiopd.RencanaKin
 			Indikator:       indikators,
 		})
 	}
+	indikatorRekins := make([]rencanakinerja.IndikatorResponse, 0)
+	for _, ind := range rk.Indikator {
+		targetInd := make([]rencanakinerja.TargetResponse, 0)
+		for _, tar := range ind.Target {
+			targetInd = append(targetInd, rencanakinerja.TargetResponse{
+				Id:              tar.Id,
+				IndikatorId:     tar.IndikatorId,
+				TargetIndikator: tar.Target,
+				SatuanIndikator: tar.Satuan,
+				Tahun:           tar.Tahun,
+			})
+		}
+		indikatorRekins = append(indikatorRekins, rencanakinerja.IndikatorResponse{
+			Id:               ind.Id,
+			RencanaKinerjaId: ind.RencanaKinerjaId,
+			NamaIndikator:    ind.Indikator,
+			Target:           targetInd,
+		})
+	}
 
 	return renaksiopd.RencanaKinerjaResponse{
 		Id:                 rk.Id,
@@ -224,6 +268,7 @@ func toRencanaKinerjaResponse(rk domain.RencanaKinerjaOpd) renaksiopd.RencanaKin
 		Tw4:                rk.Tw4,
 		Keterangan:         rk.Keterangan,
 		SubKegiatan:        subKegiatan,
+		Indikator:          indikatorRekins,
 	}
 }
 

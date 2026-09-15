@@ -71,11 +71,9 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 			i.pagu_anggaran,
 			t.target,
 			t.satuan,
-			rkd.rekin_id,
-			sd.kode_subkegiatan
+			rkd.rekin_id
 		FROM tb_indikator i
-		JOIN subkegiatan_data sd ON sd.kode_subkegiatan = i.kode
-		JOIN rencana_kinerja_data rkd ON rkd.rekin_id = sd.rekin_id
+		JOIN rencana_kinerja_data rkd ON rkd.rekin_id = i.rencana_kinerja_id
 		LEFT JOIN tb_target t ON t.indikator_id = i.id AND t.tahun = rkd.tahun
 		WHERE i.kode_opd = rkd.kode_opd
 		AND i.tahun = rkd.tahun
@@ -116,7 +114,6 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 	JOIN rencana_kinerja_data rkd ON rkd.rekin_id = rod.rekin_id
 	LEFT JOIN subkegiatan_data sd ON sd.rekin_id = rkd.rekin_id
 	LEFT JOIN indikator_data id ON id.rekin_id = rkd.rekin_id 
-		AND id.kode_subkegiatan = sd.kode_subkegiatan
 	LEFT JOIN renaksi_anggaran ra ON ra.rekin_id = rkd.rekin_id
 	ORDER BY 
 		rkd.rekin_id,
@@ -565,8 +562,8 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindAllSasaranByTahun(ctx contex
         AND so.tahun_akhir = vp.tahun_akhir 
         AND so.jenis_periode = vp.jenis_periode
     )
-    LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id
-    LEFT JOIN target_data t ON i.id = t.indikator_id
+    LEFT JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id AND i.jenis = 'penetapan'
+    LEFT JOIN target_data t ON i.kode_indikator = t.indikator_id
     WHERE pk.kode_opd = ?
     AND ? BETWEEN so.tahun_awal AND so.tahun_akhir
     AND COALESCE(sov.is_hide, 0) = 0

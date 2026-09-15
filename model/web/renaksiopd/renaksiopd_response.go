@@ -1,5 +1,7 @@
 package renaksiopd
 
+import "ekak_kabupaten_madiun/model/web/rencanakinerja"
+
 type RencanaAksiOpdResponse struct {
 	SasaranOpdId   int                      `json:"sasaran_opd_id"`
 	NamaSasaranOpd string                   `json:"nama_sasaran_opd"`
@@ -8,19 +10,20 @@ type RencanaAksiOpdResponse struct {
 }
 
 type RencanaKinerjaResponse struct {
-	Id                 int                   `json:"id_renaksiopd"`
-	RekinId            string                `json:"rekin_id"`
-	NamaRencanaKinerja string                `json:"nama_rencana_kinerja"`
-	NipPegawai         string                `json:"nip_pegawai"`
-	NamaPegawai        string                `json:"nama_pegawai"`
-	KodeOpd            string                `json:"kode_opd"`
-	TotalAnggaran      int64                 `json:"total_anggaran"`
-	Tw1                int                   `json:"tw1"`
-	Tw2                int                   `json:"tw2"`
-	Tw3                int                   `json:"tw3"`
-	Tw4                int                   `json:"tw4"`
-	Keterangan         *string               `json:"keterangan"`
-	SubKegiatan        []SubKegiatanResponse `json:"subkegiatan"`
+	Id                 int                                `json:"id_renaksiopd"`
+	RekinId            string                             `json:"rekin_id"`
+	NamaRencanaKinerja string                             `json:"nama_rencana_kinerja"`
+	NipPegawai         string                             `json:"nip_pegawai"`
+	NamaPegawai        string                             `json:"nama_pegawai"`
+	KodeOpd            string                             `json:"kode_opd"`
+	TotalAnggaran      int64                              `json:"total_anggaran"`
+	Tw1                int                                `json:"tw1"`
+	Tw2                int                                `json:"tw2"`
+	Tw3                int                                `json:"tw3"`
+	Tw4                int                                `json:"tw4"`
+	Keterangan         *string                            `json:"keterangan"`
+	Indikator          []rencanakinerja.IndikatorResponse `json:"indikator_rencana_kinerja"`
+	SubKegiatan        []SubKegiatanResponse              `json:"subkegiatan"`
 }
 
 type SubKegiatanResponse struct {
