@@ -40,6 +40,7 @@ type RencanaKinerjaServiceImpl struct {
 	DasarHukumRepository             repository.DasarHukumRepository
 	GambaranUmumRepository           repository.GambaranUmumRepository
 	InovasiRepository                repository.InovasiRepository
+	InovasiRekinRepository           repository.InovasiRekinRepository
 	PelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository
 	pegawaiRepository                repository.PegawaiRepository
 	pohonKinerjaRepository           repository.PohonKinerjaRepository
@@ -57,7 +58,7 @@ type RencanaKinerjaServiceImpl struct {
 	cloneRecordRepository    repository.CloneRecordRepository
 }
 
-func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository, sasaranOpdRepository repository.SasaranOpdRepository, cascadingOpdService *CascadingOpdServiceImpl, cascadingOpdRepository repository.CascadingOpdRepository, programRepository repository.ProgramRepository, rincianBelanjaRepository repository.RincianBelanjaRepository, rencanaAksiRepository repository.RencanaAksiRepository, cloneRecordRepository repository.CloneRecordRepository,
+func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB, validate *validator.Validate, opdRepository repository.OpdRepository, usulanMusrebangRepository repository.UsulanMusrebangRepository, usulanMandatoriRepository repository.UsulanMandatoriRepository, usulanPokokPikiranRepository repository.UsulanPokokPikiranRepository, usulanInisiatifRepository repository.UsulanInisiatifRepository, subKegiatanRepository repository.SubKegiatanRepository, dasarHukumRepository repository.DasarHukumRepository, gambaranUmumRepository repository.GambaranUmumRepository, inovasiRepository repository.InovasiRepository, inovasiRekinRepository repository.InovasiRekinRepository, pelaksanaanRencanaAksiRepository repository.PelaksanaanRencanaAksiRepository, pegawaiRepository repository.PegawaiRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, manualIKRepository repository.ManualIKRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, subKegiatanTerpilihRepository repository.SubKegiatanTerpilihRepository, subKegiatanService *SubKegiatanServiceImpl, periodeRepository repository.PeriodeRepository, sasaranOpdRepository repository.SasaranOpdRepository, cascadingOpdService *CascadingOpdServiceImpl, cascadingOpdRepository repository.CascadingOpdRepository, programRepository repository.ProgramRepository, rincianBelanjaRepository repository.RincianBelanjaRepository, rencanaAksiRepository repository.RencanaAksiRepository, cloneRecordRepository repository.CloneRecordRepository,
 ) *RencanaKinerjaServiceImpl {
 	return &RencanaKinerjaServiceImpl{
 		rencanaKinerjaRepository:         rencanaKinerjaRepository,
@@ -73,6 +74,7 @@ func NewRencanaKinerjaServiceImpl(rencanaKinerjaRepository repository.RencanaKin
 		DasarHukumRepository:             dasarHukumRepository,
 		GambaranUmumRepository:           gambaranUmumRepository,
 		InovasiRepository:                inovasiRepository,
+		InovasiRekinRepository:           inovasiRekinRepository,
 		PelaksanaanRencanaAksiRepository: pelaksanaanRencanaAksiRepository,
 		pegawaiRepository:                pegawaiRepository,
 		pohonKinerjaRepository:           pohonKinerjaRepository,
@@ -961,6 +963,7 @@ func (service *RencanaKinerjaServiceImpl) FindAllRincianKak(ctx context.Context,
 		dasarHukum, _ := service.DasarHukumRepository.FindAll(ctx, tx, rencanaKinerja.Id)
 		gambaranUmum, _ := service.GambaranUmumRepository.FindAll(ctx, tx, rencanaKinerja.Id)
 		inovasi, _ := service.InovasiRepository.FindAll(ctx, tx, rencanaKinerja.Id)
+		inovasiRekin, _ := service.InovasiRekinRepository.FindAll(ctx, tx, rencanaKinerja.Id)
 
 		// Gabungkan semua usulan
 		var usulanGabungan []rencanakinerja.UsulanGabunganResponse
@@ -1076,6 +1079,7 @@ func (service *RencanaKinerjaServiceImpl) FindAllRincianKak(ctx context.Context,
 			SubKegiatan:    subKegiatanResponses,
 			GambaranUmum:   helper.ToGambaranUmumResponses(gambaranUmum),
 			Inovasi:        helper.ToInovasiResponses(inovasi),
+			InovasiRekin:   helper.ToInovasiRekinResponses(inovasiRekin),
 			Permasalahan:   permasalahanResponses,
 		})
 	}
