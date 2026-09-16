@@ -51,11 +51,14 @@ func (repository *InovasiRekinRepositoryImpl) Delete(ctx context.Context, tx *sq
 
 func (repository *InovasiRekinRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string) (domain.InovasiRekin, error) {
 	query := `SELECT 
-	id, rekin_id, kode_opd, nama_inovasi, jenis_inovasi_id, waktu_implementasi, instansi, inovator 
-	FROM tb_inovasi_rekin WHERE id = ?`
+	tir.id, tir.rekin_id, tir.kode_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator 
+	FROM tb_inovasi_rekin tir
+	LEFT JOIN tb_jenis_inovasi ji
+		ON ji.id = tir.jenis_inovasi_id 
+	WHERE tir.id = ?`
 	row := tx.QueryRowContext(ctx, query, id)
 	var inovasiRekin domain.InovasiRekin
-	err := row.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.KodeOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator)
+	err := row.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.KodeOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi,  &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator)
 	if err != nil {
 		return domain.InovasiRekin{}, err
 	}
