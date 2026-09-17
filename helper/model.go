@@ -319,6 +319,7 @@ func ToInovasiRekinResponse(inovasiRekin domain.InovasiRekin) inovasirekin.Inova
 		KodeOpd:      	 	inovasiRekin.KodeOpd,
 		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
 		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
+		JenisInovasi:  		inovasiRekin.JenisInovasi,
 		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
 		Instansi:           inovasiRekin.Instansi,
 		Inovator:           inovasiRekin.Inovator,

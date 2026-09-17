@@ -25,4 +25,9 @@ type SasaranOpdService interface {
 	DeleteRenjaIndikator(ctx context.Context, kodeIndikator string) error
 	HideSasaranOpd(ctx context.Context, idPokin int) error
 	UnhideSasaranOpd(ctx context.Context, idPokin int) error
+	// Lock / Unlock penetapan sasaran OPD
+	LockSasaranOpd(ctx context.Context, kodeOpd, tahun string) error
+	UnlockSasaranOpd(ctx context.Context, kodeOpd, tahun string) error
+	IsSasaranOpdLocked(ctx context.Context, kodeOpd, tahun string) (bool, error)
+	FindAllLockSasaranOpd(ctx context.Context, kodeOpd string) ([]sasaranopd.LockDataOpdResponse, error)
 }

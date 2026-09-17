@@ -9,7 +9,8 @@ type InovasiRekin struct {
 	NamaInovasi        string
 	JenisInovasiId     int
 	JenisInovasi       string
-	WaktuImplementasi  time.Time
+	WaktuImplementasi  string
 	Instansi           string
 	Inovator           string
+	CreatedAt          time.Time
 }

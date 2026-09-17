@@ -899,3 +899,144 @@ func (controller *TujuanOpdControllerImpl) DeleteTargetPenetapanOpd(writer http.
 		Data:   nil,
 	})
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Lock / Unlock Tujuan OPD Penetapan
+// ─────────────────────────────────────────────────────────────────
+
+// LockTujuanOpd godoc
+// @Summary      Lock Tujuan OPD Penetapan
+// @Description  Mengunci data tujuan OPD untuk kode OPD dan tahun tertentu. Setelah terkunci, tujuan OPD tidak dapat dihapus.
+// @Tags         Tujuan OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun penetapan (4 digit)"
+// @Success      200  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/lock/{kode_opd}/{tahun} [post]
+func (controller *TujuanOpdControllerImpl) LockTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	err := controller.TujuanOpdService.LockTujuanOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success lock tujuan OPD",
+		Data: tujuanopd.LockDataOpdResponse{
+			Jenis:   "tujuan_opd",
+			KodeOpd: kodeOpd,
+			Tahun:   tahun,
+			Locked:  true,
+		},
+	})
+}
+
+// UnlockTujuanOpd godoc
+// @Summary      Unlock Tujuan OPD Penetapan
+// @Description  Membuka kunci data tujuan OPD untuk kode OPD dan tahun tertentu.
+// @Tags         Tujuan OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun penetapan (4 digit)"
+// @Success      200  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/lock/{kode_opd}/{tahun} [delete]
+func (controller *TujuanOpdControllerImpl) UnlockTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	err := controller.TujuanOpdService.UnlockTujuanOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success unlock tujuan OPD",
+		Data: tujuanopd.LockDataOpdResponse{
+			Jenis:   "tujuan_opd",
+			KodeOpd: kodeOpd,
+			Tahun:   tahun,
+			Locked:  false,
+		},
+	})
+}
+
+// IsTujuanOpdLocked godoc
+// @Summary      Cek Status Lock Tujuan OPD
+// @Description  Mengecek apakah data tujuan OPD untuk kode OPD dan tahun tertentu sedang terkunci.
+// @Tags         Tujuan OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun penetapan (4 digit)"
+// @Success      200  {object}  web.WebResponse{data=tujuanopd.LockDataOpdResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/lock/{kode_opd}/{tahun} [get]
+func (controller *TujuanOpdControllerImpl) IsTujuanOpdLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	locked, err := controller.TujuanOpdService.IsTujuanOpdLocked(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data: tujuanopd.LockDataOpdResponse{
+			Jenis:   "tujuan_opd",
+			KodeOpd: kodeOpd,
+			Tahun:   tahun,
+			Locked:  locked,
+		},
+	})
+}
+
+// FindAllLockTujuanOpd godoc
+// @Summary      Daftar Semua Lock Tujuan OPD
+// @Description  Mengambil seluruh daftar tahun yang sedang di-lock untuk tujuan OPD berdasarkan kode OPD.
+// @Tags         Tujuan OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Success      200  {object}  web.WebResponse{data=[]tujuanopd.LockDataOpdResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_opd/lock/{kode_opd} [get]
+func (controller *TujuanOpdControllerImpl) FindAllLockTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	result, err := controller.TujuanOpdService.FindAllLockTujuanOpd(request.Context(), kodeOpd)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   result,
+	})
+}

@@ -1426,6 +1426,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 
 	var pokin domain.PohonKinerja
 	var cloneFromNullInt sql.NullInt64
+	var keteranganNS sql.NullString
 	err := tx.QueryRowContext(ctx, script, id).Scan(
 		&pokin.Id,
 		&pokin.Parent,
@@ -1433,7 +1434,7 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 		&pokin.JenisPohon,
 		&pokin.LevelPohon,
 		&pokin.KodeOpd,
-		&pokin.Keterangan,
+		&keteranganNS,
 		&pokin.Tahun,
 		&pokin.Status,
 		&pokin.IsActive,
@@ -1445,6 +1446,11 @@ func (repository *PohonKinerjaRepositoryImpl) FindPokinAdminById(ctx context.Con
 		}
 		return domain.PohonKinerja{}, err
 	}
+
+	if keteranganNS.Valid {
+		pokin.Keterangan = keteranganNS.String
+	}
+
 	if cloneFromNullInt.Valid {
 		pokin.CloneFrom = int(cloneFromNullInt.Int64)
 	} else {

@@ -43,19 +43,24 @@ type CSFResponse struct {
 
 type TematikResponse struct {
 	// CSF         CSFApiResponse      `json:"csf"`
-	Id           int                 `json:"id"`
-	Parent       *int                `json:"parent"`
-	Tema         string              `json:"tema"`
-	JenisPohon   string              `json:"jenis_pohon"`
-	LevelPohon   int                 `json:"level_pohon"`
-	Keterangan   string              `json:"keterangan"`
-	CountReview  int                 `json:"jumlah_review"`
-	IsActive     bool                `json:"is_active"`
-	TaggingPokin []TaggingResponse   `json:"tagging"`
-	Indikators   []IndikatorResponse `json:"indikator"`
+	Id           int                   `json:"id"`
+	Parent       *int                  `json:"parent"`
+	Tema         string                `json:"tema"`
+	JenisPohon   string                `json:"jenis_pohon"`
+	LevelPohon   int                   `json:"level_pohon"`
+	Keterangan   string                `json:"keterangan"`
+	CountReview  int                   `json:"jumlah_review"`
+	IsActive     bool                  `json:"is_active"`
+	TaggingPokin []TaggingResponse     `json:"tagging"`
+	Indikators   []IndikatorResponse   `json:"indikator"`
+	Misi         []MisiTematikResponse `json:"misi"`
 	// SubTematiks []SubtematikResponse `json:"childs,omitempty"`
 	// Strategics  []StrategicResponse  `json:"strategics,omitempty"`
 	Child []interface{} `json:"childs,omitempty"`
+}
+
+type MisiTematikResponse struct {
+	Misi string `json:"misi"`
 }
 
 type SubtematikResponse struct {

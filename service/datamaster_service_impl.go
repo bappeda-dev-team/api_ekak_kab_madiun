@@ -394,13 +394,19 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 
 	// get pokin yang ada di rekin saja
 	uniquePohonIdsInRekin := make([]int, 0)
+	rekinIds := make([]string, 0)
 	seenPohon := make(map[int]struct{})
 	for _, r := range rekinRes {
+		rekinIds = append(rekinIds, r.Id)
 		if _, ok := seenPohon[r.IdPohon]; ok {
 			continue
 		}
 		seenPohon[r.IdPohon] = struct{}{}
 		uniquePohonIdsInRekin = append(uniquePohonIdsInRekin, r.IdPohon)
+	}
+	subkegiatanRekin, err := service.RencanaKinerjaRepository.FindSubkegiatanRekinByIds(ctx, tx, rekinIds)
+	if err != nil {
+		return nil, err
 	}
 
 	crossRows, err := service.CrosscuttingOpdRepository.FindCrosscuttingByPohonIdsFrom(ctx, tx, uniquePohonIdsInRekin)
@@ -462,6 +468,11 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 		}
 		// tandai sebagai sudah diproses
 		pokinToRekinSet[rekin.IdPohon][rekin.Id] = struct{}{}
+		subkegiatanRekin := subkegiatanRekin[rekin.Id]
+		subkegiatan := datamaster.SubkegiatanRB{
+			KodeSubkegiatan: subkegiatanRekin.KodeSubKegiatan,
+			NamaSubkegiatan: subkegiatanRekin.NamaSubKegiatan,
+		}
 
 		// bangun response RencanaAksiRB dari rekin
 		ra := datamaster.RencanaAksiRB{
@@ -475,6 +486,7 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 			NipPelaksana:    rekin.PegawaiId,
 			NamaPelaksana:   rekin.NamaPegawai,
 			OpdCrosscutting: crossMap[rekin.IdPohon],
+			Subkegiatan:     subkegiatan,
 		}
 
 		// indikator - target, biasa

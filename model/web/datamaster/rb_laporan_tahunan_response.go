@@ -21,7 +21,13 @@ type RencanaAksiRB struct {
 	OpdKoordinator  string                   `json:"opd_koordinator"`
 	NipPelaksana    string                   `json:"nip_pelaksana"`
 	NamaPelaksana   string                   `json:"nama_pelaksana"`
+	Subkegiatan     SubkegiatanRB            `json:"subkegiatan"`
 	OpdCrosscutting []OpdCrosscutting        `json:"opd_crosscuttings"`
+}
+
+type SubkegiatanRB struct {
+	KodeSubkegiatan string `json:"kode_subkegiatan"`
+	NamaSubkegiatan string `json:"nama_subkegiatan"`
 }
 
 type IndikatorRencanaAksiRB struct {

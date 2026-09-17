@@ -27,7 +27,7 @@ func NewInovasiRekinServiceImpl(inovasirekinRepository repository.InovasiRekinRe
 func (service *InovasiRekinServiceImpl) Create(ctx context.Context, request inovasirekin.InovasiRekinCreateRequest) (inovasirekin.InovasiRekinResponse, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
-		return inovasirekin.InovasiRekinResponse{}, err
+		return inovasirekin.InovasiRekinResponse{}, fmt.Errorf("gagal memulai transaksi: %v", err)
 	}
 	defer helper.CommitOrRollback(tx)
 
@@ -35,7 +35,7 @@ func (service *InovasiRekinServiceImpl) Create(ctx context.Context, request inov
 	randomDigits := fmt.Sprintf("%05d", uuid.New().ID()%100000)
 	uuId := fmt.Sprintf("INVS-REKIN-%s", randomDigits)
 
-	inovasiRekin := domain.InovasiRekin{
+	domainInovasiRekin := domain.InovasiRekin{
 		Id:           	   uuId,
 		RekinId:      	   request.RekinId,
 		KodeOpd:      	   request.KodeOpd,
@@ -46,12 +46,13 @@ func (service *InovasiRekinServiceImpl) Create(ctx context.Context, request inov
 		Inovator: 		   request.Inovator,
 	}
 
-	inovasiRekin, err = service.inovasirekinRepository.Create(ctx, tx, inovasiRekin)
+	inovasis, err := service.inovasirekinRepository.Create(ctx, tx, domainInovasiRekin)
 	if err != nil {
 		return inovasirekin.InovasiRekinResponse{}, err
 	}
 
-	return helper.ToInovasiRekinResponse(inovasiRekin), nil
+	response := helper.ToInovasiRekinResponse(inovasis) 
+	return response, nil
 }
 
 func (service *InovasiRekinServiceImpl) Update(ctx context.Context, request inovasirekin.InovasiRekinUpdateRequest) (inovasirekin.InovasiRekinResponse, error) {

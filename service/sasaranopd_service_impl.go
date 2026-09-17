@@ -14,10 +14,13 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
+
+const lockJenisSasaranOpd = "sasaran_opd"
 
 type SasaranOpdServiceImpl struct {
 	sasaranOpdRepository      repository.SasaranOpdRepository
@@ -26,6 +29,7 @@ type SasaranOpdServiceImpl struct {
 	manualIndikatorRepository repository.ManualIKRepository
 	pegawaiRepository         repository.PegawaiRepository
 	pohonkinerjaRepository    repository.PohonKinerjaRepository
+	lockDataRepository        repository.LockDataRepository
 	DB                        *sql.DB
 	validate                  *validator.Validate
 	tujuanOpdRepository       repository.TujuanOpdRepository
@@ -39,6 +43,7 @@ func NewSasaranOpdServiceImpl(
 	pegawaiRepository repository.PegawaiRepository,
 	pohonkinerjaRepository repository.PohonKinerjaRepository,
 	tujuanOpdRepository repository.TujuanOpdRepository,
+	lockDataRepository repository.LockDataRepository,
 	db *sql.DB,
 	validate *validator.Validate,
 ) *SasaranOpdServiceImpl {
@@ -49,6 +54,7 @@ func NewSasaranOpdServiceImpl(
 		manualIndikatorRepository: manualIndikatorRepository,
 		pegawaiRepository:         pegawaiRepository,
 		pohonkinerjaRepository:    pohonkinerjaRepository,
+		lockDataRepository:        lockDataRepository,
 		tujuanOpdRepository:       tujuanOpdRepository,
 		DB:                        db,
 		validate:                  validate,
@@ -520,12 +526,25 @@ func (service *SasaranOpdServiceImpl) Delete(ctx context.Context, id string) err
 	}
 	defer helper.CommitOrRollback(tx)
 
-	err = service.sasaranOpdRepository.Delete(ctx, tx, id)
+	// ── Ambil kode_opd & tahun untuk cek lock ────────────────
+	kodeOpd, tahunAwal, err := service.sasaranOpdRepository.GetKodeOpdTahunBySasaranId(ctx, tx, id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("sasaran OPD dengan id %s tidak ditemukan", id)
+		}
 		return err
 	}
 
-	return nil
+	// ── Cek lock penetapan sebelum hapus ─────────────────────
+	locked, err := service.lockDataRepository.IsLocked(ctx, tx, lockJenisSasaranOpd, kodeOpd, tahunAwal)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return fmt.Errorf("sasaran OPD tidak dapat dihapus karena data penetapan tahun %s sudah dikunci", tahunAwal)
+	}
+
+	return service.sasaranOpdRepository.Delete(ctx, tx, id)
 }
 
 func (service *SasaranOpdServiceImpl) FindByIdPokin(ctx context.Context, idPokin int, tahun string) (*sasaranopd.SasaranOpdResponse, error) {
@@ -1305,4 +1324,64 @@ func (s *SasaranOpdServiceImpl) getIndikatorWithFallback(
 	}
 
 	return mergeIndikator(indikatorBaru, indikatorLama), nil
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Lock / Unlock Sasaran OPD Penetapan
+// ─────────────────────────────────────────────────────────────────
+
+func (service *SasaranOpdServiceImpl) LockSasaranOpd(ctx context.Context, kodeOpd, tahun string) error {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return fmt.Errorf("format tahun tidak valid")
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.lockDataRepository.Lock(ctx, tx, lockJenisSasaranOpd, kodeOpd, tahun)
+}
+
+func (service *SasaranOpdServiceImpl) UnlockSasaranOpd(ctx context.Context, kodeOpd, tahun string) error {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return fmt.Errorf("format tahun tidak valid")
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.lockDataRepository.Unlock(ctx, tx, lockJenisSasaranOpd, kodeOpd, tahun)
+}
+
+func (service *SasaranOpdServiceImpl) IsSasaranOpdLocked(ctx context.Context, kodeOpd, tahun string) (bool, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer helper.CommitOrRollback(tx)
+	return service.lockDataRepository.IsLocked(ctx, tx, lockJenisSasaranOpd, kodeOpd, tahun)
+}
+
+func (service *SasaranOpdServiceImpl) FindAllLockSasaranOpd(ctx context.Context, kodeOpd string) ([]sasaranopd.LockDataOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	locks, err := service.lockDataRepository.FindAllByJenisKodeOpd(ctx, tx, lockJenisSasaranOpd, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]sasaranopd.LockDataOpdResponse, 0, len(locks))
+	for _, l := range locks {
+		result = append(result, sasaranopd.LockDataOpdResponse{
+			Id:      l.Id,
+			Jenis:   l.JenisData,
+			KodeOpd: l.KodeOpd,
+			Tahun:   l.Tahun,
+			Locked:  true,
+		})
+	}
+	return result, nil
 }
