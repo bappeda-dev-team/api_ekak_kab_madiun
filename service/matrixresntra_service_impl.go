@@ -166,9 +166,11 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 	}
 	// Indikator: IndikatorMatrixResponse dengan Target & Satuan flat
 	type indEntry struct {
-		resp programkegiatan.IndikatorMatrixResponse
+		resp    programkegiatan.IndikatorMatrixResponse
+		targets []programkegiatan.TargetResponse
 	}
 	indikatorByKodeTahun := make(map[string]map[string]map[string]*indEntry)
+	indikatorOrderByKodeTahun := make(map[string]map[string][]string)
 	collectIndikator := func(item domain.SubKegiatanQuery) {
 		if item.IndikatorId == "" {
 			return
@@ -180,6 +182,9 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		}
 		if indikatorByKodeTahun[kode][th] == nil {
 			indikatorByKodeTahun[kode][th] = make(map[string]*indEntry)
+		}
+		if indikatorOrderByKodeTahun[kode] == nil {
+			indikatorOrderByKodeTahun[kode] = make(map[string][]string)
 		}
 		ent, exists := indikatorByKodeTahun[kode][th][item.IndikatorId]
 		if !exists {
@@ -193,11 +198,35 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 					Target:        item.Target,
 					Satuan:        item.Satuan,
 				},
+				targets: make([]programkegiatan.TargetResponse, 0),
 			}
 			indikatorByKodeTahun[kode][th][item.IndikatorId] = ent
+			indikatorOrderByKodeTahun[kode][th] = append(indikatorOrderByKodeTahun[kode][th], item.IndikatorId)
 		} else if item.TargetId != "" && ent.resp.Target == "" {
 			ent.resp.Target = item.Target
 			ent.resp.Satuan = item.Satuan
+		}
+		if item.TargetId != "" || item.Target != "" {
+			already := false
+			for _, t := range ent.targets {
+				if t.Id == item.TargetId && item.TargetId != "" {
+					already = true
+					break
+				}
+				if item.TargetId == "" && t.IndikatorId == item.IndikatorId && t.Tahun == th && t.Target == item.Target {
+					already = true
+					break
+				}
+			}
+			if !already {
+				ent.targets = append(ent.targets, programkegiatan.TargetResponse{
+					Id:          item.TargetId,
+					IndikatorId: item.IndikatorId,
+					Tahun:       th,
+					Target:      item.Target,
+					Satuan:      item.Satuan,
+				})
+			}
 		}
 	}
 	getIndikator := func(kode string) []programkegiatan.IndikatorMatrixResponse {
@@ -207,11 +236,69 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 		}
 		result := make([]programkegiatan.IndikatorMatrixResponse, 0)
 		for _, th := range tahunRange {
-			for _, ent := range tahunMap[th] {
-				result = append(result, ent.resp)
+			for _, id := range indikatorOrderByKodeTahun[kode][th] {
+				if ent := tahunMap[th][id]; ent != nil {
+					result = append(result, ent.resp)
+				}
 			}
 		}
 		return result
+	}
+	// indikator_baseline: 1 indikator tahun awal (indikator pertama jika >1).
+	// target_baseline: 1 slot per tahun (tahun_awal s.d. tahun_akhir),
+	// diisi dari target indikator biasa yang sudah ada (indikator pertama tiap tahun).
+	getIndikatorBaseline := func(kode string) []programkegiatan.IndikatorBaselineResponse {
+		tahunMap, ok := indikatorByKodeTahun[kode]
+		if !ok {
+			return []programkegiatan.IndikatorBaselineResponse{}
+		}
+		orderAwal := indikatorOrderByKodeTahun[kode][tahunAwal]
+		if len(orderAwal) == 0 {
+			return []programkegiatan.IndikatorBaselineResponse{}
+		}
+		entAwal := tahunMap[tahunAwal][orderAwal[0]]
+		if entAwal == nil {
+			return []programkegiatan.IndikatorBaselineResponse{}
+		}
+		targets := make([]programkegiatan.TargetResponse, 0, len(tahunRange))
+		for _, th := range tahunRange {
+			tr := programkegiatan.TargetResponse{
+				Tahun: th,
+			}
+			orderTh := indikatorOrderByKodeTahun[kode][th]
+			if len(orderTh) > 0 {
+				if entTh := tahunMap[th][orderTh[0]]; entTh != nil {
+					tr.Id = entTh.resp.KodeIndikator
+					tr.IndikatorId = entTh.resp.KodeIndikator
+					tr.Target = entTh.resp.Target
+					tr.Satuan = entTh.resp.Satuan
+					if len(entTh.targets) > 0 {
+						first := entTh.targets[0]
+						if first.Id != "" {
+							tr.Id = first.Id
+						}
+						if first.Target != "" {
+							tr.Target = first.Target
+							tr.Satuan = first.Satuan
+						}
+						if first.IndikatorId != "" {
+							tr.IndikatorId = first.IndikatorId
+						}
+					}
+				}
+			}
+			targets = append(targets, tr)
+		}
+		return []programkegiatan.IndikatorBaselineResponse{
+			{
+				KodeIndikator:  entAwal.resp.KodeIndikator,
+				Kode:           entAwal.resp.Kode,
+				KodeOpd:        entAwal.resp.KodeOpd,
+				Indikator:      entAwal.resp.Indikator,
+				Tahun:          entAwal.resp.Tahun,
+				TargetBaseline: targets,
+			},
+		}
 	}
 	type subkegMeta struct{ nama, namaPegawai, pegawaiId, kodeKeg string }
 	type kegMeta struct{ nama, kodePrg string }
@@ -338,56 +425,61 @@ func (service *MatrixRenstraServiceImpl) transformToResponse(
 	for _, kodeUrusan := range urusanOrder {
 		paguUrusan := sumPaguSubkeg(allSubkegByUrusan(kodeUrusan))
 		urusanResp := programkegiatan.UrusanResponse{
-			Kode:         kodeUrusan,
-			Nama:         urusanData[kodeUrusan],
-			Jenis:        "urusans",
-			Anggaran:     buildAnggaran(paguUrusan),
-			Indikator:    getIndikator(kodeUrusan),
-			BidangUrusan: make([]programkegiatan.BidangUrusanResponse, 0),
+			Kode:              kodeUrusan,
+			Nama:              urusanData[kodeUrusan],
+			Jenis:             "urusans",
+			Anggaran:          buildAnggaran(paguUrusan),
+			Indikator:         getIndikator(kodeUrusan),
+			IndikatorBaseline: getIndikatorBaseline(kodeUrusan),
+			BidangUrusan:      make([]programkegiatan.BidangUrusanResponse, 0),
 		}
 		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
 			paguBidang := sumPaguSubkeg(allSubkegByBidang(kodeBidang))
 			bd := bidangData[kodeBidang]
 			bidangResp := programkegiatan.BidangUrusanResponse{
-				Kode:      kodeBidang,
-				Nama:      bd.nama,
-				Jenis:     "bidang_urusans",
-				Anggaran:  buildAnggaran(paguBidang),
-				Indikator: getIndikator(kodeBidang),
-				Program:   make([]programkegiatan.ProgramResponse, 0),
+				Kode:              kodeBidang,
+				Nama:              bd.nama,
+				Jenis:             "bidang_urusans",
+				Anggaran:          buildAnggaran(paguBidang),
+				Indikator:         getIndikator(kodeBidang),
+				IndikatorBaseline: getIndikatorBaseline(kodeBidang),
+				Program:           make([]programkegiatan.ProgramResponse, 0),
 			}
 			for _, kodePrg := range prgByBidang[kodeBidang] {
 				paguPrg := sumPaguSubkeg(allSubkegByPrg(kodePrg))
 				pd := prgData[kodePrg]
 				prgResp := programkegiatan.ProgramResponse{
-					Kode:      kodePrg,
-					Nama:      pd.nama,
-					Jenis:     "programs",
-					Anggaran:  buildAnggaran(paguPrg),
-					Indikator: getIndikator(kodePrg),
-					Kegiatan:  make([]programkegiatan.KegiatanResponse, 0),
+					Kode:              kodePrg,
+					Nama:              pd.nama,
+					Jenis:             "programs",
+					Anggaran:          buildAnggaran(paguPrg),
+					Indikator:         getIndikator(kodePrg),
+					IndikatorBaseline: getIndikatorBaseline(kodePrg),
+					Kegiatan:          make([]programkegiatan.KegiatanResponse, 0),
 				}
 				for _, kodeKeg := range kegByPrg[kodePrg] {
 					paguKeg := sumPaguSubkeg(allSubkegByKeg(kodeKeg))
 					kd := kegData[kodeKeg]
 					kegResp := programkegiatan.KegiatanResponse{
-						Kode:        kodeKeg,
-						Nama:        kd.nama,
-						Jenis:       "kegiatans",
-						Anggaran:    buildAnggaran(paguKeg),
-						Indikator:   getIndikator(kodeKeg),
-						SubKegiatan: make([]programkegiatan.SubKegiatanResponse, 0),
+						Kode:              kodeKeg,
+						Nama:              kd.nama,
+						Jenis:             "kegiatans",
+						Anggaran:          buildAnggaran(paguKeg),
+						Indikator:         getIndikator(kodeKeg),
+						IndikatorBaseline: getIndikatorBaseline(kodeKeg),
+						SubKegiatan:       make([]programkegiatan.SubKegiatanResponse, 0),
 					}
 					for _, kodeSubkeg := range subkegByKeg[kodeKeg] {
 						sd := subkegData[kodeSubkeg]
 						subkegResp := programkegiatan.SubKegiatanResponse{
-							Kode:        kodeSubkeg,
-							Nama:        sd.nama,
-							Jenis:       "subkegiatans",
-							PegawaiId:   sd.pegawaiId,
-							NamaPegawai: sd.namaPegawai,
-							Anggaran:    buildAnggaran(paguSubkegByTahun[kodeSubkeg]),
-							Indikator:   getIndikator(kodeSubkeg),
+							Kode:              kodeSubkeg,
+							Nama:              sd.nama,
+							Jenis:             "subkegiatans",
+							PegawaiId:         sd.pegawaiId,
+							NamaPegawai:       sd.namaPegawai,
+							Anggaran:          buildAnggaran(paguSubkegByTahun[kodeSubkeg]),
+							Indikator:         getIndikator(kodeSubkeg),
+							IndikatorBaseline: getIndikatorBaseline(kodeSubkeg),
 						}
 						kegResp.SubKegiatan = append(kegResp.SubKegiatan, subkegResp)
 					}
@@ -598,6 +690,7 @@ func injectIndikator(item domain.SubKegiatanQuery, ind domain.Indikator) domain.
 	item.IndikatorKode = ind.Kode
 	item.Indikator = ind.Indikator
 	for _, tar := range ind.Target {
+		item.TargetId = tar.Id
 		item.Target = tar.Target
 		item.Satuan = tar.Satuan
 	}

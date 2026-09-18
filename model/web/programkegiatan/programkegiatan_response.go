@@ -44,6 +44,17 @@ type TargetResponse struct {
 	Satuan      string `json:"satuan"`
 }
 
+// IndikatorBaselineResponse: 1 indikator tahun awal (indikator pertama jika ada lebih dari satu),
+// beserta target existing di target_baseline.
+type IndikatorBaselineResponse struct {
+	KodeIndikator  string           `json:"kode_indikator"`
+	Kode           string           `json:"kode,omitempty"`
+	KodeOpd        string           `json:"kode_opd,omitempty"`
+	Indikator      string           `json:"indikator"`
+	Tahun          string           `json:"tahun"`
+	TargetBaseline []TargetResponse `json:"target_baseline"`
+}
+
 type UrusanDetailResponse struct {
 	KodeOpd           string                      `json:"kode_opd"`
 	TahunAwal         string                      `json:"tahun_awal"`
@@ -54,51 +65,56 @@ type UrusanDetailResponse struct {
 }
 
 type UrusanResponse struct {
-	Kode         string                      `json:"kode"`
-	Nama         string                      `json:"nama"`
-	Jenis        string                      `json:"jenis"`
-	Anggaran     []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator    []IndikatorMatrixResponse   `json:"indikator"`
-	BidangUrusan []BidangUrusanResponse      `json:"bidang_urusan"`
+	Kode              string                      `json:"kode"`
+	Nama              string                      `json:"nama"`
+	Jenis             string                      `json:"jenis"`
+	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
+	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
+	BidangUrusan      []BidangUrusanResponse      `json:"bidang_urusan"`
 }
 
 type BidangUrusanResponse struct {
-	Kode      string                      `json:"kode"`
-	Nama      string                      `json:"nama"`
-	Jenis     string                      `json:"jenis"`
-	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator []IndikatorMatrixResponse   `json:"indikator"`
-	Program   []ProgramResponse           `json:"program"`
+	Kode              string                      `json:"kode"`
+	Nama              string                      `json:"nama"`
+	Jenis             string                      `json:"jenis"`
+	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
+	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
+	Program           []ProgramResponse           `json:"program"`
 }
 
 type ProgramResponse struct {
-	Kode      string                      `json:"kode"`
-	Nama      string                      `json:"nama"`
-	Jenis     string                      `json:"jenis"`
-	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator []IndikatorMatrixResponse   `json:"indikator"`
-	Kegiatan  []KegiatanResponse          `json:"kegiatan"`
+	Kode              string                      `json:"kode"`
+	Nama              string                      `json:"nama"`
+	Jenis             string                      `json:"jenis"`
+	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
+	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
+	Kegiatan          []KegiatanResponse          `json:"kegiatan"`
 }
 
 type KegiatanResponse struct {
-	Kode        string                      `json:"kode"`
-	Nama        string                      `json:"nama"`
-	Jenis       string                      `json:"jenis"`
-	Anggaran    []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	Indikator   []IndikatorMatrixResponse   `json:"indikator"`
-	SubKegiatan []SubKegiatanResponse       `json:"subkegiatan"`
+	Kode              string                      `json:"kode"`
+	Nama              string                      `json:"nama"`
+	Jenis             string                      `json:"jenis"`
+	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
+	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
+	SubKegiatan       []SubKegiatanResponse       `json:"subkegiatan"`
 }
 
 type SubKegiatanResponse struct {
-	Kode          string                      `json:"kode"`
-	Nama          string                      `json:"nama"`
-	Jenis         string                      `json:"jenis"`
-	Tahun         string                      `json:"tahun,omitempty"`
-	PegawaiId     string                      `json:"pegawai_id"`
-	NamaPegawai   string                      `json:"nama_pegawai"`
-	Anggaran      []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	TotalAnggaran int64                       `json:"total_anggaran,omitempty"`
-	Indikator     []IndikatorMatrixResponse   `json:"indikator"`
+	Kode              string                      `json:"kode"`
+	Nama              string                      `json:"nama"`
+	Jenis             string                      `json:"jenis"`
+	Tahun             string                      `json:"tahun,omitempty"`
+	PegawaiId         string                      `json:"pegawai_id"`
+	NamaPegawai       string                      `json:"nama_pegawai"`
+	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	TotalAnggaran     int64                       `json:"total_anggaran,omitempty"`
+	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
+	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
 }
 
 type PaguAnggaranTotalResponse struct {
