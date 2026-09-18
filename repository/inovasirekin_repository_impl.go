@@ -67,9 +67,13 @@ func (repository *InovasiRekinRepositoryImpl) FindById(ctx context.Context, tx *
 
 func (repository *InovasiRekinRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.InovasiRekin, error) {
 	query := `SELECT 
-	id, rekin_id, kode_opd, nama_inovasi, jenis_inovasi_id, waktu_implementasi, instansi, inovator 
-	FROM tb_inovasi_rekin 
-	WHERE rekin_id = ?`
+	tir.id, tir.rekin_id, tir.kode_opd, od.nama_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator 
+	FROM tb_inovasi_rekin tir
+	LEFT JOIN tb_jenis_inovasi ji
+		ON ji.id = tir.jenis_inovasi_id 
+	LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = tir.kode_opd
+	WHERE tir.rekin_id = ?`
 	rows, err := tx.QueryContext(ctx, query, rekinId)
 	if err != nil {
 		return []domain.InovasiRekin{}, err
@@ -79,7 +83,7 @@ func (repository *InovasiRekinRepositoryImpl) FindAll(ctx context.Context, tx *s
 	var inovasiRekinList []domain.InovasiRekin
 	for rows.Next() {
 		var inovasiRekin domain.InovasiRekin
-		err := rows.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.KodeOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator)
+		err := rows.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.KodeOpd, &inovasiRekin.NamaOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator)
 		if err != nil {
 			return []domain.InovasiRekin{}, err
 		}

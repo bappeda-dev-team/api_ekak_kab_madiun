@@ -6,6 +6,7 @@ type InovasiRekin struct {
 	Id                 string
 	RekinId            string
 	KodeOpd            string
+	NamaOpd            string
 	NamaInovasi        string
 	JenisInovasiId     int
 	JenisInovasi       string
