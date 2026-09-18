@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
@@ -11,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"strconv"
+	"strings"
 )
 
 type MatrixRenstraServiceImpl struct {
@@ -133,6 +135,512 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatan(ctx context.Contex
 	}
 
 	return result, nil
+}
+
+func buildTahunRange(tahunAwal, tahunAkhir string) ([]string, error) {
+	tahunAwalInt, errAwal := strconv.Atoi(tahunAwal)
+	tahunAkhirInt, errAkhir := strconv.Atoi(tahunAkhir)
+	if errAwal != nil || errAkhir != nil {
+		return nil, fmt.Errorf("tahun_awal dan tahun_akhir harus berupa angka")
+	}
+	if tahunAkhirInt < tahunAwalInt {
+		return nil, fmt.Errorf("tahun_akhir tidak boleh lebih kecil dari tahun_awal")
+	}
+	tahunRange := make([]string, 0, tahunAkhirInt-tahunAwalInt+1)
+	for t := tahunAwalInt; t <= tahunAkhirInt; t++ {
+		tahunRange = append(tahunRange, strconv.Itoa(t))
+	}
+	return tahunRange, nil
+}
+
+func fillTargetByTahunRange(tahunRange []string, targets []domain.Target) []programkegiatan.TargetResponse {
+	byTahun := make(map[string]domain.Target, len(targets))
+	for _, t := range targets {
+		if t.Tahun == "" {
+			continue
+		}
+		if _, exists := byTahun[t.Tahun]; !exists {
+			byTahun[t.Tahun] = t
+		}
+	}
+	result := make([]programkegiatan.TargetResponse, 0, len(tahunRange))
+	for _, th := range tahunRange {
+		if t, ok := byTahun[th]; ok {
+			result = append(result, programkegiatan.TargetResponse{
+				Id:          t.Id,
+				IndikatorId: t.IndikatorId,
+				Tahun:       th,
+				Target:      t.Target,
+				Satuan:      t.Satuan,
+			})
+			continue
+		}
+		result = append(result, programkegiatan.TargetResponse{
+			Tahun:  th,
+			Target: "-",
+			Satuan: "-",
+		})
+	}
+	return result
+}
+
+func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx context.Context, kodeOpd string, tahunAwal string, tahunAkhir string) ([]programkegiatan.UrusanDetailV2Response, error) {
+	tahunRange, err := buildTahunRange(tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	data, err := service.MatrixRenstraRepository.GetHierarchyAndPagu(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	indList, err := service.MatrixRenstraRepository.FindIndikatorRenstraPeriod(ctx, tx, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	indByKode := make(map[string][]programkegiatan.IndikatorPeriodResponse, len(indList))
+	for _, ind := range indList {
+		indByKode[ind.Kode] = append(indByKode[ind.Kode], programkegiatan.IndikatorPeriodResponse{
+			KodeIndikator: ind.KodeIndikator,
+			Kode:          ind.Kode,
+			KodeOpd:       ind.KodeOpd,
+			Indikator:     ind.Indikator,
+			Tahun:         ind.Tahun,
+			Target:        fillTargetByTahunRange(tahunRange, ind.Target),
+		})
+	}
+	getIndikator := func(kode string) []programkegiatan.IndikatorPeriodResponse {
+		if list := indByKode[kode]; list != nil {
+			return list
+		}
+		return []programkegiatan.IndikatorPeriodResponse{}
+	}
+
+	buildAnggaran := func(paguByTahun map[string]int64) []programkegiatan.PaguAnggaranTotalResponse {
+		result := make([]programkegiatan.PaguAnggaranTotalResponse, 0, len(tahunRange))
+		for _, th := range tahunRange {
+			result = append(result, programkegiatan.PaguAnggaranTotalResponse{
+				Tahun:        th,
+				PaguAnggaran: paguByTahun[th],
+			})
+		}
+		return result
+	}
+	type subkegMeta struct{ nama, namaPegawai, pegawaiId, kodeKeg string }
+	type kegMeta struct{ nama, kodePrg string }
+	type prgMeta struct{ nama, kodeBidang string }
+	type bidangMeta struct{ nama, kodeUrusan string }
+	subkegData := make(map[string]subkegMeta)
+	kegData := make(map[string]kegMeta)
+	prgData := make(map[string]prgMeta)
+	bidangData := make(map[string]bidangMeta)
+	urusanData := make(map[string]string)
+	paguSubkegByTahun := make(map[string]map[string]int64)
+	seenSubkeg := make(map[string]struct{})
+	seenKeg := make(map[string]struct{})
+	seenPrg := make(map[string]struct{})
+	seenBidang := make(map[string]struct{})
+	seenUrusan := make(map[string]struct{})
+	subkegByKeg := make(map[string][]string)
+	kegByPrg := make(map[string][]string)
+	prgByBidang := make(map[string][]string)
+	bidangByUrusan := make(map[string][]string)
+	var urusanOrder []string
+	for _, item := range data {
+		if item.KodeSubKegiatan == "" {
+			continue
+		}
+		if _, ok := seenSubkeg[item.KodeSubKegiatan]; !ok {
+			seenSubkeg[item.KodeSubKegiatan] = struct{}{}
+			subkegData[item.KodeSubKegiatan] = subkegMeta{
+				nama:        item.NamaSubKegiatan,
+				namaPegawai: item.NamaPegawai,
+				pegawaiId:   item.PegawaiId,
+				kodeKeg:     item.KodeKegiatan,
+			}
+			if item.KodeKegiatan != "" {
+				subkegByKeg[item.KodeKegiatan] = append(subkegByKeg[item.KodeKegiatan], item.KodeSubKegiatan)
+			}
+		}
+		if paguSubkegByTahun[item.KodeSubKegiatan] == nil {
+			paguSubkegByTahun[item.KodeSubKegiatan] = make(map[string]int64)
+		}
+		paguSubkegByTahun[item.KodeSubKegiatan][item.TahunSubKegiatan] = item.PaguSubKegiatan
+		if item.KodeKegiatan != "" {
+			if _, ok := seenKeg[item.KodeKegiatan]; !ok {
+				seenKeg[item.KodeKegiatan] = struct{}{}
+				kegData[item.KodeKegiatan] = kegMeta{nama: item.NamaKegiatan, kodePrg: item.KodeProgram}
+				if item.KodeProgram != "" {
+					kegByPrg[item.KodeProgram] = append(kegByPrg[item.KodeProgram], item.KodeKegiatan)
+				}
+			}
+		}
+		if item.KodeProgram != "" {
+			if _, ok := seenPrg[item.KodeProgram]; !ok {
+				seenPrg[item.KodeProgram] = struct{}{}
+				prgData[item.KodeProgram] = prgMeta{nama: item.NamaProgram, kodeBidang: item.KodeBidangUrusan}
+				if item.KodeBidangUrusan != "" {
+					prgByBidang[item.KodeBidangUrusan] = append(prgByBidang[item.KodeBidangUrusan], item.KodeProgram)
+				}
+			}
+		}
+		if item.KodeBidangUrusan != "" {
+			if _, ok := seenBidang[item.KodeBidangUrusan]; !ok {
+				seenBidang[item.KodeBidangUrusan] = struct{}{}
+				bidangData[item.KodeBidangUrusan] = bidangMeta{nama: item.NamaBidangUrusan, kodeUrusan: item.KodeUrusan}
+				if item.KodeUrusan != "" {
+					bidangByUrusan[item.KodeUrusan] = append(bidangByUrusan[item.KodeUrusan], item.KodeBidangUrusan)
+				}
+			}
+		}
+		if item.KodeUrusan != "" {
+			if _, ok := seenUrusan[item.KodeUrusan]; !ok {
+				seenUrusan[item.KodeUrusan] = struct{}{}
+				urusanData[item.KodeUrusan] = item.NamaUrusan
+				urusanOrder = append(urusanOrder, item.KodeUrusan)
+			}
+		}
+	}
+	sumPaguSubkeg := func(kodeSubkegList []string) map[string]int64 {
+		hasil := make(map[string]int64, len(tahunRange))
+		for _, kodeSubkeg := range kodeSubkegList {
+			for _, th := range tahunRange {
+				hasil[th] += paguSubkegByTahun[kodeSubkeg][th]
+			}
+		}
+		return hasil
+	}
+	allSubkegByKeg := func(kodeKeg string) []string { return subkegByKeg[kodeKeg] }
+	allSubkegByPrg := func(kodePrg string) []string {
+		var result []string
+		for _, kodeKeg := range kegByPrg[kodePrg] {
+			result = append(result, allSubkegByKeg(kodeKeg)...)
+		}
+		return result
+	}
+	allSubkegByBidang := func(kodeBidang string) []string {
+		var result []string
+		for _, kodePrg := range prgByBidang[kodeBidang] {
+			result = append(result, allSubkegByPrg(kodePrg)...)
+		}
+		return result
+	}
+	allSubkegByUrusan := func(kodeUrusan string) []string {
+		var result []string
+		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
+			result = append(result, allSubkegByBidang(kodeBidang)...)
+		}
+		return result
+	}
+	grandPaguByTahun := make(map[string]int64, len(tahunRange))
+	for kodeSubkeg := range paguSubkegByTahun {
+		for _, th := range tahunRange {
+			grandPaguByTahun[th] += paguSubkegByTahun[kodeSubkeg][th]
+		}
+	}
+	detail := programkegiatan.UrusanDetailV2Response{
+		KodeOpd:           kodeOpd,
+		TahunAwal:         tahunAwal,
+		TahunAkhir:        tahunAkhir,
+		PaguAnggaranTotal: buildAnggaran(grandPaguByTahun),
+		Urusan:            make([]programkegiatan.UrusanV2Response, 0, len(urusanOrder)),
+	}
+	for _, kodeUrusan := range urusanOrder {
+		urusanResp := programkegiatan.UrusanV2Response{
+			Kode:         kodeUrusan,
+			Nama:         urusanData[kodeUrusan],
+			Jenis:        "urusans",
+			Anggaran:     buildAnggaran(sumPaguSubkeg(allSubkegByUrusan(kodeUrusan))),
+			Indikator:    getIndikator(kodeUrusan),
+			BidangUrusan: make([]programkegiatan.BidangUrusanV2Response, 0),
+		}
+		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
+			bd := bidangData[kodeBidang]
+			bidangResp := programkegiatan.BidangUrusanV2Response{
+				Kode:      kodeBidang,
+				Nama:      bd.nama,
+				Jenis:     "bidang_urusans",
+				Anggaran:  buildAnggaran(sumPaguSubkeg(allSubkegByBidang(kodeBidang))),
+				Indikator: getIndikator(kodeBidang),
+				Program:   make([]programkegiatan.ProgramV2Response, 0),
+			}
+			for _, kodePrg := range prgByBidang[kodeBidang] {
+				pd := prgData[kodePrg]
+				prgResp := programkegiatan.ProgramV2Response{
+					Kode:      kodePrg,
+					Nama:      pd.nama,
+					Jenis:     "programs",
+					Anggaran:  buildAnggaran(sumPaguSubkeg(allSubkegByPrg(kodePrg))),
+					Indikator: getIndikator(kodePrg),
+					Kegiatan:  make([]programkegiatan.KegiatanV2Response, 0),
+				}
+				for _, kodeKeg := range kegByPrg[kodePrg] {
+					kd := kegData[kodeKeg]
+					kegResp := programkegiatan.KegiatanV2Response{
+						Kode:        kodeKeg,
+						Nama:        kd.nama,
+						Jenis:       "kegiatans",
+						Anggaran:    buildAnggaran(sumPaguSubkeg(allSubkegByKeg(kodeKeg))),
+						Indikator:   getIndikator(kodeKeg),
+						SubKegiatan: make([]programkegiatan.SubKegiatanV2Response, 0),
+					}
+					for _, kodeSubkeg := range subkegByKeg[kodeKeg] {
+						sd := subkegData[kodeSubkeg]
+						kegResp.SubKegiatan = append(kegResp.SubKegiatan, programkegiatan.SubKegiatanV2Response{
+							Kode:        kodeSubkeg,
+							Nama:        sd.nama,
+							Jenis:       "subkegiatans",
+							PegawaiId:   sd.pegawaiId,
+							NamaPegawai: sd.namaPegawai,
+							Anggaran:    buildAnggaran(paguSubkegByTahun[kodeSubkeg]),
+							Indikator:   getIndikator(kodeSubkeg),
+						})
+					}
+					prgResp.Kegiatan = append(prgResp.Kegiatan, kegResp)
+				}
+				bidangResp.Program = append(bidangResp.Program, prgResp)
+			}
+			urusanResp.BidangUrusan = append(urusanResp.BidangUrusan, bidangResp)
+		}
+		detail.Urusan = append(detail.Urusan, urusanResp)
+	}
+	return []programkegiatan.UrusanDetailV2Response{detail}, nil
+}
+
+func minTahunFromTargets(targets []programkegiatan.TargetCreateRequest, fallback string) string {
+	min := fallback
+	for _, t := range targets {
+		th := strings.TrimSpace(t.Tahun)
+		if th == "" {
+			continue
+		}
+		if min == "" || th < min {
+			min = th
+		}
+	}
+	return min
+}
+
+func (service *MatrixRenstraServiceImpl) CreateIndikatorV2(ctx context.Context, requests []programkegiatan.IndikatorRenstraV2CreateRequest) ([]programkegiatan.IndikatorV2UpsertResponse, error) {
+	if len(requests) == 0 {
+		return nil, fmt.Errorf("indikator tidak boleh kosong")
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	prefixCounter := make(map[string]int)
+	responses := make([]programkegiatan.IndikatorV2UpsertResponse, 0, len(requests))
+	for _, req := range requests {
+		if strings.TrimSpace(req.Kode) == "" || strings.TrimSpace(req.KodeOpd) == "" {
+			return nil, fmt.Errorf("kode dan kode_opd wajib diisi")
+		}
+		if strings.TrimSpace(req.Indikator) == "" {
+			return nil, fmt.Errorf("nama indikator wajib diisi")
+		}
+		if len(req.Target) == 0 {
+			return nil, fmt.Errorf("indikator %q harus memiliki minimal 1 target", req.Indikator)
+		}
+		tahunSeen := make(map[string]struct{}, len(req.Target))
+		for i, t := range req.Target {
+			th := strings.TrimSpace(t.Tahun)
+			if th == "" {
+				return nil, fmt.Errorf("target ke-%d pada indikator %q wajib memiliki tahun", i+1, req.Indikator)
+			}
+			if _, dup := tahunSeen[th]; dup {
+				return nil, fmt.Errorf("tahun target %s duplikat pada indikator %q", th, req.Indikator)
+			}
+			tahunSeen[th] = struct{}{}
+			if err := helper.ValidateTargetRawString(t.Target); err != nil {
+				return nil, fmt.Errorf("target tahun %s pada indikator %q: %w", th, req.Indikator, err)
+			}
+		}
+
+		kodeIndikator := strings.TrimSpace(req.KodeIndikator)
+		if kodeIndikator == "" {
+			prefix := fmt.Sprintf("RENS-%s", req.KodeOpd)
+			if _, loaded := prefixCounter[prefix]; !loaded {
+				count, err := service.MatrixRenstraRepository.CountKodeIndikatorByPrefix(ctx, tx, prefix)
+				if err != nil {
+					return nil, err
+				}
+				prefixCounter[prefix] = count
+			}
+			prefixCounter[prefix]++
+			rnd, err := randomUint31()
+			if err != nil {
+				return nil, err
+			}
+			kodeIndikator = fmt.Sprintf("%s-%03d-%d", prefix, prefixCounter[prefix], rnd)
+		} else {
+			_, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+		}
+
+		tahunIndikator := strings.TrimSpace(req.Tahun)
+		tahunIndikator = minTahunFromTargets(req.Target, tahunIndikator)
+		ind := domain.Indikator{
+			KodeIndikator: kodeIndikator,
+			Kode:          req.Kode,
+			KodeOpd:       req.KodeOpd,
+			Indikator:     req.Indikator,
+			Tahun:         tahunIndikator,
+			Jenis:         "renstra",
+		}
+		if err := service.MatrixRenstraRepository.UpsertIndikator(ctx, tx, ind); err != nil {
+			return nil, err
+		}
+
+		targetResp := make([]programkegiatan.TargetResponse, 0, len(req.Target))
+		for _, t := range req.Target {
+			th := strings.TrimSpace(t.Tahun)
+			targetId := strings.TrimSpace(t.Id)
+			if targetId == "" {
+				existingTarget, findErr := service.MatrixRenstraRepository.FindTargetByIndikatorIdAndTahun(ctx, tx, kodeIndikator, th)
+				if findErr != nil && findErr != sql.ErrNoRows {
+					return nil, findErr
+				}
+				if findErr == nil && existingTarget.Id != "" {
+					targetId = existingTarget.Id
+				} else {
+					targetId = fmt.Sprintf("TRG-RNST-%s-%s", kodeIndikator, th)
+				}
+			}
+			target := domain.Target{
+				Id:          targetId,
+				IndikatorId: kodeIndikator,
+				Target:      t.Target,
+				Satuan:      t.Satuan,
+				Tahun:       th,
+			}
+			if err := service.MatrixRenstraRepository.UpsertTarget(ctx, tx, target); err != nil {
+				return nil, err
+			}
+			targetResp = append(targetResp, programkegiatan.TargetResponse{
+				Id:          targetId,
+				IndikatorId: kodeIndikator,
+				Tahun:       th,
+				Target:      t.Target,
+				Satuan:      t.Satuan,
+			})
+		}
+
+		responses = append(responses, programkegiatan.IndikatorV2UpsertResponse{
+			KodeIndikator: kodeIndikator,
+			Kode:          req.Kode,
+			KodeOpd:       req.KodeOpd,
+			Indikator:     req.Indikator,
+			Tahun:         tahunIndikator,
+			Jenis:         "renstra",
+			Target:        targetResp,
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	helper.PublishAuditAfterCommit(ctx, helper.CreateEventRequest{
+		Action:     "CREATE",
+		EntityType: "indikator_matrix_renstra",
+		EntityID:   responses[0].KodeIndikator,
+		After:      responses,
+		Metadata: map[string]any{
+			"count": len(responses),
+		},
+	})
+	return responses, nil
+}
+
+func (service *MatrixRenstraServiceImpl) UpsertTarget(ctx context.Context, request programkegiatan.TargetRenstraUpsertRequest) (programkegiatan.TargetResponse, error) {
+	kodeIndikator := strings.TrimSpace(request.KodeIndikator)
+	tahun := strings.TrimSpace(request.Tahun)
+	if kodeIndikator == "" || tahun == "" {
+		return programkegiatan.TargetResponse{}, fmt.Errorf("kode_indikator dan tahun wajib diisi")
+	}
+	if err := helper.ValidateTargetRawString(request.Target); err != nil {
+		return programkegiatan.TargetResponse{}, err
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.TargetResponse{}, err
+	}
+	defer tx.Rollback()
+
+	ind, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return programkegiatan.TargetResponse{}, fmt.Errorf("indikator %s tidak ditemukan", kodeIndikator)
+		}
+		return programkegiatan.TargetResponse{}, err
+	}
+
+	var before any
+	targetId := strings.TrimSpace(request.Id)
+	existing, findErr := service.MatrixRenstraRepository.FindTargetByIndikatorIdAndTahun(ctx, tx, kodeIndikator, tahun)
+	action := "CREATE"
+	if findErr != nil && findErr != sql.ErrNoRows {
+		return programkegiatan.TargetResponse{}, findErr
+	}
+	if findErr == nil && existing.Id != "" {
+		action = "UPDATE"
+		before = existing
+		if targetId == "" {
+			targetId = existing.Id
+		}
+	}
+	if targetId == "" {
+		targetId = fmt.Sprintf("TRG-RNST-%s-%s", kodeIndikator, tahun)
+	}
+
+	target := domain.Target{
+		Id:          targetId,
+		IndikatorId: kodeIndikator,
+		Target:      request.Target,
+		Satuan:      request.Satuan,
+		Tahun:       tahun,
+	}
+	if err := service.MatrixRenstraRepository.UpsertTarget(ctx, tx, target); err != nil {
+		return programkegiatan.TargetResponse{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return programkegiatan.TargetResponse{}, err
+	}
+
+	resp := programkegiatan.TargetResponse{
+		Id:          targetId,
+		IndikatorId: kodeIndikator,
+		Tahun:       tahun,
+		Target:      request.Target,
+		Satuan:      request.Satuan,
+	}
+	helper.PublishAuditAfterCommit(ctx, helper.CreateEventRequest{
+		Action:     action,
+		EntityType: "target_renstra",
+		EntityID:   targetId,
+		Before:     before,
+		After:      resp,
+		Metadata: map[string]any{
+			"kode_indikator": kodeIndikator,
+			"kode":           ind.Kode,
+			"tahun":          tahun,
+		},
+	})
+	return resp, nil
 }
 
 // transformToResponse membangun hierarki dari data flat hasil query.
@@ -570,12 +1078,23 @@ func (service *MatrixRenstraServiceImpl) UpsertAnggaran(ctx context.Context, req
 	if err = tx.Commit(); err != nil {
 		return programkegiatan.AnggaranRenstraResponse{}, err
 	}
-	return programkegiatan.AnggaranRenstraResponse{
+	resp := programkegiatan.AnggaranRenstraResponse{
 		KodeSubKegiatan: request.KodeSubKegiatan,
 		KodeOpd:         request.KodeOpd,
 		Tahun:           request.Tahun,
 		Pagu:            request.Pagu,
-	}, nil
+	}
+	helper.PublishAuditAfterCommit(ctx, helper.CreateEventRequest{
+		Action:     "UPDATE",
+		EntityType: "pagu_renstra",
+		EntityID:   request.KodeSubKegiatan,
+		After:      resp,
+		Metadata: map[string]any{
+			"kode_opd": request.KodeOpd,
+			"tahun":    request.Tahun,
+		},
+	})
+	return resp, nil
 }
 
 func (service *MatrixRenstraServiceImpl) UpsertBatchIndikator(ctx context.Context, requests []programkegiatan.IndikatorRenstraCreateRequest) ([]programkegiatan.IndikatorUpsertResponse, error) {
@@ -673,6 +1192,17 @@ func (service *MatrixRenstraServiceImpl) UpsertBatchIndikator(ctx context.Contex
 	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
+	}
+	if len(responses) > 0 {
+		helper.PublishAuditAfterCommit(ctx, helper.CreateEventRequest{
+			Action:     "UPDATE",
+			EntityType: "indikator_matrix_renstra",
+			EntityID:   responses[0].KodeIndikator,
+			After:      responses,
+			Metadata: map[string]any{
+				"count": len(responses),
+			},
+		})
 	}
 	return responses, nil
 }

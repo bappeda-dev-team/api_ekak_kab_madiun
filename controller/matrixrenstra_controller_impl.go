@@ -55,6 +55,92 @@ func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatan(writer http.
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// @Summary      Matrix Renstra Versi Kedua
+// @Description  Hierarki matrix renstra. Tiap kode memiliki indikator; 1 indikator berisi target per tahun pada rentang tahun_awal s.d. tahun_akhir. Tahun tanpa target diisi "-".
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun_awal  query     string  true  "Tahun Awal"      example("2025")
+// @Param        tahun_akhir  query     string  true  "Tahun Akhir"      example("2029")
+// @Success      200  {object}  web.WebResponse{data=[]programkegiatan.UrusanDetailV2Response}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renstra/v2/opd/{kode_opd} [get]
+func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatanVersiKedua(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahunAwal := request.URL.Query().Get("tahun_awal")
+	tahunAkhir := request.URL.Query().Get("tahun_akhir")
+
+	matrixRenstraResponses, err := controller.MatrixRenstraService.GetByKodeSubKegiatanVersiKedua(request.Context(), kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   matrixRenstraResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
+
+// @Summary      Create Indikator Renstra (multi target)
+// @Description  Membuat satu atau lebih indikator. Setiap indikator boleh punya banyak target dengan tahun yang berbeda.
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        request  body  []programkegiatan.IndikatorRenstraV2CreateRequest  true  "Array indikator beserta target per tahun"
+// @Success      200  {object}  web.WebResponse{data=[]programkegiatan.IndikatorV2UpsertResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renstra/indikator/create [post]
+func (controller *MatrixRenstraControllerImpl) CreateIndikatorV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	var requests []programkegiatan.IndikatorRenstraV2CreateRequest
+	helper.ReadFromRequestBody(request, &requests)
+	resp, err := controller.MatrixRenstraService.CreateIndikatorV2(request.Context(), requests)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusOK, Status: "success create indikator renstra", Data: resp,
+	})
+}
+
+// @Summary      Upsert Target Renstra
+// @Description  Menambah atau mengubah target pada tahun yang dipilih untuk suatu indikator.
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        request  body  programkegiatan.TargetRenstraUpsertRequest  true  "Target per tahun"
+// @Success      200  {object}  web.WebResponse{data=programkegiatan.TargetResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renstra/target/upsert [post]
+func (controller *MatrixRenstraControllerImpl) UpsertTarget(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	var req programkegiatan.TargetRenstraUpsertRequest
+	helper.ReadFromRequestBody(request, &req)
+	resp, err := controller.MatrixRenstraService.UpsertTarget(request.Context(), req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusOK, Status: "success upsert target renstra", Data: resp,
+	})
+}
+
 // @Summary      Delete Indikator Renstra
 // @Description  Menghapus data indikator renstra yang sudah ada berdasarkan Kode Indikator.
 // @Tags         Matrix Renstra

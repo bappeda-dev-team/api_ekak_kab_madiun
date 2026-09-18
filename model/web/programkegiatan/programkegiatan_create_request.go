@@ -40,6 +40,24 @@ type IndikatorRenstraCreateRequest struct {
 	Satuan        string `json:"satuan"`
 }
 
+// IndikatorRenstraV2CreateRequest: 1 indikator dengan banyak target (tahun harus unik).
+type IndikatorRenstraV2CreateRequest struct {
+	KodeIndikator string                `json:"kode_indikator"`
+	Kode          string                `json:"kode"`
+	KodeOpd       string                `json:"kode_opd"`
+	Indikator     string                `json:"indikator"`
+	Tahun         string                `json:"tahun,omitempty"`
+	Target        []TargetCreateRequest `json:"target"`
+}
+
+type TargetRenstraUpsertRequest struct {
+	KodeIndikator string `json:"kode_indikator"`
+	Id            string `json:"id,omitempty"`
+	Tahun         string `json:"tahun"`
+	Target        string `json:"target"`
+	Satuan        string `json:"satuan"`
+}
+
 // Fungsi khusus anggaran (upsert)
 type AnggaranRenstraRequest struct {
 	KodeSubKegiatan string `json:"kode_subkegiatan" validate:"required"`

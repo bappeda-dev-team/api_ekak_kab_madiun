@@ -151,6 +151,79 @@ type IndikatorRenjaUpsertResponse struct {
 	Target        TargetResponse `json:"target"`
 }
 
+type IndikatorPeriodResponse struct {
+	KodeIndikator string           `json:"kode_indikator"`
+	Kode          string           `json:"kode,omitempty"`
+	KodeOpd       string           `json:"kode_opd,omitempty"`
+	Indikator     string           `json:"indikator"`
+	Tahun         string           `json:"tahun,omitempty"`
+	Target        []TargetResponse `json:"target"`
+}
+
+type UrusanDetailV2Response struct {
+	KodeOpd           string                      `json:"kode_opd"`
+	TahunAwal         string                      `json:"tahun_awal"`
+	TahunAkhir        string                      `json:"tahun_akhir"`
+	PaguAnggaranTotal []PaguAnggaranTotalResponse `json:"pagu_total"`
+	Urusan            []UrusanV2Response          `json:"urusan"`
+}
+
+type UrusanV2Response struct {
+	Kode         string                      `json:"kode"`
+	Nama         string                      `json:"nama"`
+	Jenis        string                      `json:"jenis"`
+	Anggaran     []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator    []IndikatorPeriodResponse   `json:"indikator"`
+	BidangUrusan []BidangUrusanV2Response    `json:"bidang_urusan"`
+}
+
+type BidangUrusanV2Response struct {
+	Kode      string                      `json:"kode"`
+	Nama      string                      `json:"nama"`
+	Jenis     string                      `json:"jenis"`
+	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator []IndikatorPeriodResponse   `json:"indikator"`
+	Program   []ProgramV2Response         `json:"program"`
+}
+
+type ProgramV2Response struct {
+	Kode      string                      `json:"kode"`
+	Nama      string                      `json:"nama"`
+	Jenis     string                      `json:"jenis"`
+	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator []IndikatorPeriodResponse   `json:"indikator"`
+	Kegiatan  []KegiatanV2Response        `json:"kegiatan"`
+}
+
+type KegiatanV2Response struct {
+	Kode        string                      `json:"kode"`
+	Nama        string                      `json:"nama"`
+	Jenis       string                      `json:"jenis"`
+	Anggaran    []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator   []IndikatorPeriodResponse   `json:"indikator"`
+	SubKegiatan []SubKegiatanV2Response     `json:"subkegiatan"`
+}
+
+type SubKegiatanV2Response struct {
+	Kode        string                      `json:"kode"`
+	Nama        string                      `json:"nama"`
+	Jenis       string                      `json:"jenis"`
+	PegawaiId   string                      `json:"pegawai_id"`
+	NamaPegawai string                      `json:"nama_pegawai"`
+	Anggaran    []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	Indikator   []IndikatorPeriodResponse   `json:"indikator"`
+}
+
+type IndikatorV2UpsertResponse struct {
+	KodeIndikator string           `json:"kode_indikator"`
+	Kode          string           `json:"kode"`
+	KodeOpd       string           `json:"kode_opd"`
+	Indikator     string           `json:"indikator"`
+	Tahun         string           `json:"tahun,omitempty"`
+	Jenis         string           `json:"jenis,omitempty"`
+	Target        []TargetResponse `json:"target"`
+}
+
 type IndikatorUpsertResponse struct {
 	KodeIndikator string `json:"kode_indikator"`
 	Kode          string `json:"kode"`
