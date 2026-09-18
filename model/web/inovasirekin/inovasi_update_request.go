@@ -7,4 +7,7 @@ type InovasiRekinUpdateRequest struct {
 	WaktuImplementasi string `json:"waktu_implementasi" validate:"required"`
 	Instansi          string `json:"instansi"`
 	Inovator          string `json:"inovator" validate:"required"`
+	Kebaruan          string `json:"kebaruan" validate:"required"`
+	AsalInovasi       string `json:"asal_inovasi" validate:"required"`
+	NipInovator       string `json:"nip_inovator"`
 }

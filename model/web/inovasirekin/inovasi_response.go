@@ -15,6 +15,11 @@ type InovasiRekinResponse struct {
 	WaktuImplementasi  string	          `json:"waktu_implementasi"`
 	Instansi           string			  `json:"instansi"`
 	Inovator           string		      `json:"inovator"`
+	Kebaruan           string             `json:"kebaruan"`
+	AsalInovasi        string             `json:"asal_inovasi"`
+	Tahun              int                `json:"tahun"`
+	NipInovator        string             `json:"nip_inovator"`
+	NamaNipInovator    string             `json:"nama_nip_inovator"`
 	Action       	   []web.ActionButton `json:"action,omitempty"`
 }
 

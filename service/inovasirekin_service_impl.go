@@ -44,6 +44,10 @@ func (service *InovasiRekinServiceImpl) Create(ctx context.Context, request inov
 		WaktuImplementasi: request.WaktuImplementasi,
 		Instansi: 	       request.Instansi,
 		Inovator: 		   request.Inovator,
+		Kebaruan: 		   request.Kebaruan,
+		AsalInovasi: 	   request.AsalInovasi,
+		Tahun: 	           request.Tahun,
+		NipInovator: 	   request.NipInovator,
 	}
 
 	inovasis, err := service.inovasirekinRepository.Create(ctx, tx, domainInovasiRekin)
@@ -67,6 +71,9 @@ func (service *InovasiRekinServiceImpl) Update(ctx context.Context, request inov
 		WaktuImplementasi: request.WaktuImplementasi,
 		Instansi: 	       request.Instansi,
 		Inovator: 		   request.Inovator,
+		Kebaruan: 		   request.Kebaruan,
+		AsalInovasi: 	   request.AsalInovasi,
+		NipInovator: 	   request.NipInovator,
 	}
 
 	inovasiRekin, err = service.inovasirekinRepository.Update(ctx, tx, inovasiRekin)

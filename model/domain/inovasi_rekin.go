@@ -13,5 +13,10 @@ type InovasiRekin struct {
 	WaktuImplementasi  string
 	Instansi           string
 	Inovator           string
+	Kebaruan           string
+	AsalInovasi        string
+	Tahun              int
+	NipInovator        string
+	NamaNipInovator    string
 	CreatedAt          time.Time
 }
