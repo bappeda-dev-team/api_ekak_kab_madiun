@@ -1345,6 +1345,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/matrix_renstra/indikator/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengubah teks indikator saja (tb_indikator_matrix). Target tidak diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Update Indikator Renstra",
+                "parameters": [
+                    {
+                        "description": "Kode indikator dan teks indikator baru",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.IndikatorRenstraUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.IndikatorRenstraUpdateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renstra/indikator/upsert": {
             "post": {
                 "security": [
@@ -8175,6 +8232,40 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenstraUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenstraUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
                     "type": "string"
                 }
             }

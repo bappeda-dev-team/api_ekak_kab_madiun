@@ -488,6 +488,7 @@ func NewRouter(
 	router.DELETE("/matrix_renstra/indikator/delete/:kode_indikator", matrixRenstraController.DeleteIndikator)
 	router.POST("/matrix_renstra/indikator/upsert", matrixRenstraController.UpsertBatchIndikator)
 	router.POST("/matrix_renstra/indikator/create", matrixRenstraController.CreateIndikatorV2)
+	router.PUT("/matrix_renstra/indikator/update", matrixRenstraController.UpdateIndikatorRenstra)
 	router.POST("/matrix_renstra/target/upsert", matrixRenstraController.UpsertTarget)
 
 	//cascading opd

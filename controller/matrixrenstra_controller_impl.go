@@ -101,9 +101,16 @@ func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatanVersiKedua(wr
 // @Failure      400  {object}  web.WebResponse
 // @Security     BearerAuth
 // @Router       /matrix_renstra/indikator/create [post]
+const matrixRenstraTargetJenis = "renstra"
+
 func (controller *MatrixRenstraControllerImpl) CreateIndikatorV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	var requests []programkegiatan.IndikatorRenstraV2CreateRequest
 	helper.ReadFromRequestBody(request, &requests)
+	for i := range requests {
+		for j := range requests[i].Target {
+			requests[i].Target[j].Jenis = matrixRenstraTargetJenis
+		}
+	}
 	resp, err := controller.MatrixRenstraService.CreateIndikatorV2(request.Context(), requests)
 	if err != nil {
 		helper.WriteToResponseBody(writer, web.WebResponse{
@@ -113,6 +120,31 @@ func (controller *MatrixRenstraControllerImpl) CreateIndikatorV2(writer http.Res
 	}
 	helper.WriteToResponseBody(writer, web.WebResponse{
 		Code: http.StatusOK, Status: "success create indikator renstra", Data: resp,
+	})
+}
+
+// @Summary      Update Indikator Renstra
+// @Description  Mengubah teks indikator saja (tb_indikator_matrix). Target tidak diubah.
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        request  body  programkegiatan.IndikatorRenstraUpdateRequest  true  "Kode indikator dan teks indikator baru"
+// @Success      200  {object}  web.WebResponse{data=programkegiatan.IndikatorRenstraUpdateResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renstra/indikator/update [put]
+func (controller *MatrixRenstraControllerImpl) UpdateIndikatorRenstra(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	var req programkegiatan.IndikatorRenstraUpdateRequest
+	helper.ReadFromRequestBody(request, &req)
+	resp, err := controller.MatrixRenstraService.UpdateIndikatorRenstra(request.Context(), req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusOK, Status: "success update indikator renstra", Data: resp,
 	})
 }
 

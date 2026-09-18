@@ -416,20 +416,6 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 	return []programkegiatan.UrusanDetailV2Response{detail}, nil
 }
 
-func minTahunFromTargets(targets []programkegiatan.TargetCreateRequest, fallback string) string {
-	min := fallback
-	for _, t := range targets {
-		th := strings.TrimSpace(t.Tahun)
-		if th == "" {
-			continue
-		}
-		if min == "" || th < min {
-			min = th
-		}
-	}
-	return min
-}
-
 func (service *MatrixRenstraServiceImpl) CreateIndikatorV2(ctx context.Context, requests []programkegiatan.IndikatorRenstraV2CreateRequest) ([]programkegiatan.IndikatorV2UpsertResponse, error) {
 	if len(requests) == 0 {
 		return nil, fmt.Errorf("indikator tidak boleh kosong")
@@ -490,14 +476,12 @@ func (service *MatrixRenstraServiceImpl) CreateIndikatorV2(ctx context.Context, 
 			}
 		}
 
-		tahunIndikator := strings.TrimSpace(req.Tahun)
-		tahunIndikator = minTahunFromTargets(req.Target, tahunIndikator)
 		ind := domain.Indikator{
 			KodeIndikator: kodeIndikator,
 			Kode:          req.Kode,
 			KodeOpd:       req.KodeOpd,
 			Indikator:     req.Indikator,
-			Tahun:         tahunIndikator,
+			Tahun:         "",
 			Jenis:         "renstra",
 		}
 		if err := service.MatrixRenstraRepository.UpsertIndikator(ctx, tx, ind); err != nil {
@@ -519,12 +503,17 @@ func (service *MatrixRenstraServiceImpl) CreateIndikatorV2(ctx context.Context, 
 					targetId = fmt.Sprintf("TRG-RNST-%s-%s", kodeIndikator, th)
 				}
 			}
+			targetJenis := strings.TrimSpace(t.Jenis)
+			if targetJenis == "" {
+				targetJenis = "renstra"
+			}
 			target := domain.Target{
 				Id:          targetId,
 				IndikatorId: kodeIndikator,
 				Target:      t.Target,
 				Satuan:      t.Satuan,
 				Tahun:       th,
+				Jenis:       targetJenis,
 			}
 			if err := service.MatrixRenstraRepository.UpsertTarget(ctx, tx, target); err != nil {
 				return nil, err
@@ -535,6 +524,7 @@ func (service *MatrixRenstraServiceImpl) CreateIndikatorV2(ctx context.Context, 
 				Tahun:       th,
 				Target:      t.Target,
 				Satuan:      t.Satuan,
+				Jenis:       targetJenis,
 			})
 		}
 
@@ -543,7 +533,6 @@ func (service *MatrixRenstraServiceImpl) CreateIndikatorV2(ctx context.Context, 
 			Kode:          req.Kode,
 			KodeOpd:       req.KodeOpd,
 			Indikator:     req.Indikator,
-			Tahun:         tahunIndikator,
 			Jenis:         "renstra",
 			Target:        targetResp,
 		})
@@ -563,6 +552,63 @@ func (service *MatrixRenstraServiceImpl) CreateIndikatorV2(ctx context.Context, 
 		},
 	})
 	return responses, nil
+}
+
+func (service *MatrixRenstraServiceImpl) UpdateIndikatorRenstra(ctx context.Context, request programkegiatan.IndikatorRenstraUpdateRequest) (programkegiatan.IndikatorRenstraUpdateResponse, error) {
+	kodeIndikator := strings.TrimSpace(request.KodeIndikator)
+	indikator := strings.TrimSpace(request.Indikator)
+	if kodeIndikator == "" {
+		return programkegiatan.IndikatorRenstraUpdateResponse{}, fmt.Errorf("kode_indikator wajib diisi")
+	}
+	if indikator == "" {
+		return programkegiatan.IndikatorRenstraUpdateResponse{}, fmt.Errorf("indikator wajib diisi")
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.IndikatorRenstraUpdateResponse{}, err
+	}
+	defer tx.Rollback()
+
+	existing, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return programkegiatan.IndikatorRenstraUpdateResponse{}, fmt.Errorf("indikator %s tidak ditemukan", kodeIndikator)
+		}
+		return programkegiatan.IndikatorRenstraUpdateResponse{}, err
+	}
+
+	before := programkegiatan.IndikatorRenstraUpdateResponse{
+		KodeIndikator: existing.KodeIndikator,
+		Kode:          existing.Kode,
+		KodeOpd:       existing.KodeOpd,
+		Indikator:     existing.Indikator,
+		Tahun:         existing.Tahun,
+		Jenis:         "renstra",
+	}
+
+	if err := service.MatrixRenstraRepository.UpdateIndikatorRenstra(ctx, tx, kodeIndikator, indikator); err != nil {
+		if err == sql.ErrNoRows {
+			return programkegiatan.IndikatorRenstraUpdateResponse{}, fmt.Errorf("indikator %s tidak ditemukan", kodeIndikator)
+		}
+		return programkegiatan.IndikatorRenstraUpdateResponse{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return programkegiatan.IndikatorRenstraUpdateResponse{}, err
+	}
+
+	after := before
+	after.Indikator = indikator
+
+	helper.PublishAuditAfterCommit(ctx, helper.CreateEventRequest{
+		Action:     "UPDATE",
+		EntityType: "indikator_matrix_renstra",
+		EntityID:   kodeIndikator,
+		Before:     before,
+		After:      after,
+	})
+	return after, nil
 }
 
 func (service *MatrixRenstraServiceImpl) UpsertTarget(ctx context.Context, request programkegiatan.TargetRenstraUpsertRequest) (programkegiatan.TargetResponse, error) {
@@ -607,12 +653,18 @@ func (service *MatrixRenstraServiceImpl) UpsertTarget(ctx context.Context, reque
 		targetId = fmt.Sprintf("TRG-RNST-%s-%s", kodeIndikator, tahun)
 	}
 
+	targetJenis := "renstra"
+	if findErr == nil && existing.Jenis != "" {
+		targetJenis = existing.Jenis
+	}
+
 	target := domain.Target{
 		Id:          targetId,
 		IndikatorId: kodeIndikator,
 		Target:      request.Target,
 		Satuan:      request.Satuan,
 		Tahun:       tahun,
+		Jenis:       targetJenis,
 	}
 	if err := service.MatrixRenstraRepository.UpsertTarget(ctx, tx, target); err != nil {
 		return programkegiatan.TargetResponse{}, err
@@ -627,6 +679,7 @@ func (service *MatrixRenstraServiceImpl) UpsertTarget(ctx context.Context, reque
 		Tahun:       tahun,
 		Target:      request.Target,
 		Satuan:      request.Satuan,
+		Jenis:       targetJenis,
 	}
 	helper.PublishAuditAfterCommit(ctx, helper.CreateEventRequest{
 		Action:     action,

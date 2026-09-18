@@ -1060,6 +1060,28 @@ definitions:
       target:
         type: string
     type: object
+  programkegiatan.IndikatorRenstraUpdateRequest:
+    properties:
+      indikator:
+        type: string
+      kode_indikator:
+        type: string
+    type: object
+  programkegiatan.IndikatorRenstraUpdateResponse:
+    properties:
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+    type: object
   programkegiatan.IndikatorRenstraV2CreateRequest:
     properties:
       indikator:
@@ -3565,6 +3587,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete Indikator Renstra
+      tags:
+      - Matrix Renstra
+  /matrix_renstra/indikator/update:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah teks indikator saja (tb_indikator_matrix). Target tidak
+        diubah.
+      parameters:
+      - description: Kode indikator dan teks indikator baru
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.IndikatorRenstraUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.IndikatorRenstraUpdateResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Indikator Renstra
       tags:
       - Matrix Renstra
   /matrix_renstra/indikator/upsert:

@@ -42,6 +42,7 @@ type TargetResponse struct {
 	Tahun       string `json:"tahun,omitempty"`
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
+	Jenis       string `json:"jenis,omitempty"`
 }
 
 // IndikatorBaselineResponse: 1 indikator tahun awal (indikator pertama jika ada lebih dari satu),
@@ -214,12 +215,20 @@ type SubKegiatanV2Response struct {
 	Indikator   []IndikatorPeriodResponse   `json:"indikator"`
 }
 
+type IndikatorRenstraUpdateResponse struct {
+	KodeIndikator string `json:"kode_indikator"`
+	Kode          string `json:"kode"`
+	KodeOpd       string `json:"kode_opd"`
+	Indikator     string `json:"indikator"`
+	Tahun         string `json:"tahun,omitempty"`
+	Jenis         string `json:"jenis,omitempty"`
+}
+
 type IndikatorV2UpsertResponse struct {
 	KodeIndikator string           `json:"kode_indikator"`
 	Kode          string           `json:"kode"`
 	KodeOpd       string           `json:"kode_opd"`
 	Indikator     string           `json:"indikator"`
-	Tahun         string           `json:"tahun,omitempty"`
 	Jenis         string           `json:"jenis,omitempty"`
 	Target        []TargetResponse `json:"target"`
 }

@@ -702,14 +702,15 @@ func (r *MatrixRenstraRepositoryImpl) FindTargetByIndikatorIdAndTahun(ctx contex
 			COALESCE(indikator_id, ''),
 			COALESCE(target, ''),
 			COALESCE(satuan, ''),
-			COALESCE(tahun, '')
+			COALESCE(tahun, ''),
+			COALESCE(jenis, '')
 		FROM tb_target
 		WHERE indikator_id = ? AND tahun = ?
 		LIMIT 1
 	`
 	var t domain.Target
 	err := tx.QueryRowContext(ctx, query, indikatorId, tahun).Scan(
-		&t.Id, &t.IndikatorId, &t.Target, &t.Satuan, &t.Tahun,
+		&t.Id, &t.IndikatorId, &t.Target, &t.Satuan, &t.Tahun, &t.Jenis,
 	)
 	if err != nil {
 		return domain.Target{}, err
@@ -755,21 +756,46 @@ func (r *MatrixRenstraRepositoryImpl) UpsertIndikator(ctx context.Context, tx *s
 	)
 	return err
 }
+
+func (r *MatrixRenstraRepositoryImpl) UpdateIndikatorRenstra(ctx context.Context, tx *sql.Tx, kodeIndikator, indikator string) error {
+	res, err := tx.ExecContext(ctx, `
+		UPDATE tb_indikator_matrix
+		SET indikator = ?
+		WHERE kode_indikator = ? AND jenis = 'renstra'
+	`, indikator, kodeIndikator)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
 func (r *MatrixRenstraRepositoryImpl) UpsertTarget(ctx context.Context, tx *sql.Tx, t domain.Target) error {
+	jenis := t.Jenis
+	if jenis == "" {
+		jenis = "renstra"
+	}
 	query := `
-        INSERT INTO tb_target (id, indikator_id, target, satuan, tahun)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO tb_target (id, indikator_id, target, satuan, tahun, jenis)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             target  = VALUES(target),
             satuan  = VALUES(satuan),
-            tahun   = VALUES(tahun)
+            tahun   = VALUES(tahun),
+            jenis   = VALUES(jenis)
     `
 	_, err := tx.ExecContext(ctx, query,
 		t.Id,
-		t.IndikatorId, // = kode_indikator dari indikator
+		t.IndikatorId,
 		t.Target,
 		t.Satuan,
 		t.Tahun,
+		jenis,
 	)
 	return err
 }

@@ -9,6 +9,7 @@ type MatrixRenstraService interface {
 	GetByKodeSubKegiatan(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir string) ([]programkegiatan.UrusanDetailResponse, error)
 	GetByKodeSubKegiatanVersiKedua(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir string) ([]programkegiatan.UrusanDetailV2Response, error)
 	CreateIndikatorV2(ctx context.Context, requests []programkegiatan.IndikatorRenstraV2CreateRequest) ([]programkegiatan.IndikatorV2UpsertResponse, error)
+	UpdateIndikatorRenstra(ctx context.Context, request programkegiatan.IndikatorRenstraUpdateRequest) (programkegiatan.IndikatorRenstraUpdateResponse, error)
 	UpsertTarget(ctx context.Context, request programkegiatan.TargetRenstraUpsertRequest) (programkegiatan.TargetResponse, error)
 	UpsertBatchIndikator(ctx context.Context, requests []programkegiatan.IndikatorRenstraCreateRequest) ([]programkegiatan.IndikatorUpsertResponse, error)
 	DeleteIndikator(ctx context.Context, kodeIndikator string) error
