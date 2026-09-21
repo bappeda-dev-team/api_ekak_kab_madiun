@@ -93,6 +93,7 @@ func (repository *InovasiRekinRepositoryImpl) FindAll(ctx context.Context, tx *s
 	LEFT JOIN tb_user_role tur
 		ON tur.user_id = tu.id
 	LEFT JOIN tb_role tro 
+		ON tro.id = tur.role_id
 	WHERE tir.rekin_id = ?`
 	rows, err := tx.QueryContext(ctx, query, rekinId)
 	if err != nil {
