@@ -20,6 +20,7 @@ type InovasiRekinResponse struct {
 	Tahun              int                `json:"tahun"`
 	NipInovator        string             `json:"nip_inovator"`
 	NamaNipInovator    string             `json:"nama_nip_inovator"`
+	Level              string             `json:"level"`
 	Action       	   []web.ActionButton `json:"action,omitempty"`
 }
 

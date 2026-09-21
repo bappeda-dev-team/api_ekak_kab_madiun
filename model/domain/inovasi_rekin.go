@@ -18,5 +18,6 @@ type InovasiRekin struct {
 	Tahun              int
 	NipInovator        string
 	NamaNipInovator    string
+	Level              string
 	CreatedAt          time.Time
 }

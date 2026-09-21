@@ -329,6 +329,7 @@ func ToInovasiRekinResponse(inovasiRekin domain.InovasiRekin) inovasirekin.Inova
 		Tahun:              inovasiRekin.Tahun,
 		NipInovator:        inovasiRekin.NipInovator,
 		NamaNipInovator:    inovasiRekin.NamaNipInovator,
+		Level:              inovasiRekin.Level,
 		Action:             buttonActions,
 	}
 }
