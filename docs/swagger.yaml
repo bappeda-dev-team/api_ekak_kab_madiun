@@ -335,6 +335,11 @@ definitions:
       nama:
         type: string
     type: object
+  pohonkinerja.MisiTematikResponse:
+    properties:
+      misi:
+        type: string
+    type: object
   pohonkinerja.OperationalNOpdResponse:
     properties:
       childs:
@@ -817,6 +822,10 @@ definitions:
         type: string
       level_pohon:
         type: integer
+      misi:
+        items:
+          $ref: '#/definitions/pohonkinerja.MisiTematikResponse'
+        type: array
       parent:
         type: integer
       tagging:
@@ -914,6 +923,10 @@ definitions:
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
+      indikator_baseline:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorBaselineResponse'
+        type: array
       jenis:
         type: string
       kode:
@@ -923,6 +936,44 @@ definitions:
       program:
         items:
           $ref: '#/definitions/programkegiatan.ProgramResponse'
+        type: array
+    type: object
+  programkegiatan.BidangUrusanV2Response:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorPeriodResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      program:
+        items:
+          $ref: '#/definitions/programkegiatan.ProgramV2Response'
+        type: array
+    type: object
+  programkegiatan.IndikatorBaselineResponse:
+    properties:
+      indikator:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+      target_baseline:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetResponse'
         type: array
     type: object
   programkegiatan.IndikatorMatrixResponse:
@@ -948,6 +999,23 @@ definitions:
         type: string
       target:
         type: string
+    type: object
+  programkegiatan.IndikatorPeriodResponse:
+    properties:
+      indikator:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetResponse'
+        type: array
     type: object
   programkegiatan.IndikatorRenjaCreateRequest:
     properties:
@@ -991,6 +1059,45 @@ definitions:
         type: string
       target:
         type: string
+    type: object
+  programkegiatan.IndikatorRenstraUpdateRequest:
+    properties:
+      indikator:
+        type: string
+      kode_indikator:
+        type: string
+    type: object
+  programkegiatan.IndikatorRenstraUpdateResponse:
+    properties:
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+    type: object
+  programkegiatan.IndikatorRenstraV2CreateRequest:
+    properties:
+      indikator:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetCreateRequest'
+        type: array
     type: object
   programkegiatan.IndikatorResponse:
     properties:
@@ -1041,6 +1148,25 @@ definitions:
       target:
         type: string
     type: object
+  programkegiatan.IndikatorV2UpsertResponse:
+    properties:
+      indikator:
+        type: string
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetResponse'
+        type: array
+    type: object
   programkegiatan.KegiatanResponse:
     properties:
       anggaran:
@@ -1051,6 +1177,10 @@ definitions:
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
+      indikator_baseline:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorBaselineResponse'
+        type: array
       jenis:
         type: string
       kode:
@@ -1060,6 +1190,27 @@ definitions:
       subkegiatan:
         items:
           $ref: '#/definitions/programkegiatan.SubKegiatanResponse'
+        type: array
+    type: object
+  programkegiatan.KegiatanV2Response:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorPeriodResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      subkegiatan:
+        items:
+          $ref: '#/definitions/programkegiatan.SubKegiatanV2Response'
         type: array
     type: object
   programkegiatan.PaguAnggaranTotalResponse:
@@ -1081,11 +1232,36 @@ definitions:
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
+      indikator_baseline:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorBaselineResponse'
+        type: array
       jenis:
         type: string
       kegiatan:
         items:
           $ref: '#/definitions/programkegiatan.KegiatanResponse'
+        type: array
+      kode:
+        type: string
+      nama:
+        type: string
+    type: object
+  programkegiatan.ProgramV2Response:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorPeriodResponse'
+        type: array
+      jenis:
+        type: string
+      kegiatan:
+        items:
+          $ref: '#/definitions/programkegiatan.KegiatanV2Response'
         type: array
       kode:
         type: string
@@ -1102,6 +1278,10 @@ definitions:
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
+      indikator_baseline:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorBaselineResponse'
+        type: array
       jenis:
         type: string
       kode:
@@ -1116,6 +1296,53 @@ definitions:
         type: string
       total_anggaran:
         type: integer
+    type: object
+  programkegiatan.SubKegiatanV2Response:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorPeriodResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      nama_pegawai:
+        type: string
+      pegawai_id:
+        type: string
+    type: object
+  programkegiatan.TargetCreateRequest:
+    properties:
+      id:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  programkegiatan.TargetRenstraUpsertRequest:
+    properties:
+      id:
+        type: string
+      kode_indikator:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
     type: object
   programkegiatan.TargetResponse:
     properties:
@@ -1149,6 +1376,23 @@ definitions:
           $ref: '#/definitions/programkegiatan.UrusanResponse'
         type: array
     type: object
+  programkegiatan.UrusanDetailV2Response:
+    properties:
+      kode_opd:
+        type: string
+      pagu_total:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+      urusan:
+        items:
+          $ref: '#/definitions/programkegiatan.UrusanV2Response'
+        type: array
+    type: object
   programkegiatan.UrusanResponse:
     properties:
       anggaran:
@@ -1162,6 +1406,31 @@ definitions:
       indikator:
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
+        type: array
+      indikator_baseline:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorBaselineResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+    type: object
+  programkegiatan.UrusanV2Response:
+    properties:
+      anggaran:
+        items:
+          $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
+        type: array
+      bidang_urusan:
+        items:
+          $ref: '#/definitions/programkegiatan.BidangUrusanV2Response'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorPeriodResponse'
         type: array
       jenis:
         type: string
@@ -1444,6 +1713,19 @@ definitions:
         items:
           $ref: '#/definitions/sasaranopd.TargetUpdateRequest'
         type: array
+    type: object
+  sasaranopd.LockDataOpdResponse:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      kode_opd:
+        type: string
+      locked:
+        type: boolean
+      tahun:
+        type: string
     type: object
   sasaranopd.PelaksanaOpdResponse:
     properties:
@@ -1981,6 +2263,19 @@ definitions:
     - id
     - satuan
     - target
+    type: object
+  tujuanopd.LockDataOpdResponse:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      kode_opd:
+        type: string
+      locked:
+        type: boolean
+      tahun:
+        type: string
     type: object
   tujuanopd.TargetCreateRequest:
     properties:
@@ -3222,6 +3517,44 @@ paths:
       summary: Upsert Anggaran Renstra
       tags:
       - Matrix Renstra
+  /matrix_renstra/indikator/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat satu atau lebih indikator. Setiap indikator boleh punya
+        banyak target dengan tahun yang berbeda.
+      parameters:
+      - description: Array indikator beserta target per tahun
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/programkegiatan.IndikatorRenstraV2CreateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.IndikatorV2UpsertResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Indikator Renstra (multi target)
+      tags:
+      - Matrix Renstra
   /matrix_renstra/indikator/delete/{kode_indikator}:
     delete:
       consumes:
@@ -3254,6 +3587,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete Indikator Renstra
+      tags:
+      - Matrix Renstra
+  /matrix_renstra/indikator/update:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah teks indikator saja (tb_indikator_matrix). Target tidak
+        diubah.
+      parameters:
+      - description: Kode indikator dan teks indikator baru
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.IndikatorRenstraUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.IndikatorRenstraUpdateResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Indikator Renstra
       tags:
       - Matrix Renstra
   /matrix_renstra/indikator/upsert:
@@ -3334,6 +3701,89 @@ paths:
       security:
       - BearerAuth: []
       summary: Matrix Renstra
+      tags:
+      - Matrix Renstra
+  /matrix_renstra/target/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Menambah atau mengubah target pada tahun yang dipilih untuk suatu
+        indikator.
+      parameters:
+      - description: Target per tahun
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetRenstraUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Target Renstra
+      tags:
+      - Matrix Renstra
+  /matrix_renstra/v2/opd/{kode_opd}:
+    get:
+      consumes:
+      - application/json
+      description: Hierarki matrix renstra. Tiap kode memiliki indikator; 1 indikator
+        berisi target per tahun pada rentang tahun_awal s.d. tahun_akhir. Tahun tanpa
+        target diisi "-".
+      parameters:
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun Awal
+        example: '"2025"'
+        in: query
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        example: '"2029"'
+        in: query
+        name: tahun_akhir
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.UrusanDetailV2Response'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renstra Versi Kedua
       tags:
       - Matrix Renstra
   /pohon_kinerja/pilih_parent/{kode_opd}/{tahun}/{level_pohon}:
@@ -3820,6 +4270,142 @@ paths:
       - Sasaran Opd Renja Ranwal
       - Sasaran Opd Renja Rankhir
       - Sasaran Opd Renja Penetapan
+  /sasaran_opd/lock/{kode_opd}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil seluruh daftar tahun yang sedang di-lock untuk sasaran
+        OPD berdasarkan kode OPD.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/sasaranopd.LockDataOpdResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Semua Lock Sasaran OPD
+      tags:
+      - Sasaran OPD Lock
+  /sasaran_opd/lock/{kode_opd}/{tahun}:
+    delete:
+      consumes:
+      - application/json
+      description: Membuka kunci data sasaran OPD untuk kode OPD dan tahun tertentu.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun penetapan (4 digit)
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unlock Sasaran OPD Penetapan
+      tags:
+      - Sasaran OPD Lock
+    get:
+      consumes:
+      - application/json
+      description: Mengecek apakah data sasaran OPD untuk kode OPD dan tahun tertentu
+        sedang terkunci.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun penetapan (4 digit)
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sasaranopd.LockDataOpdResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Cek Status Lock Sasaran OPD
+      tags:
+      - Sasaran OPD Lock
+    post:
+      consumes:
+      - application/json
+      description: Mengunci data sasaran OPD untuk kode OPD dan tahun tertentu. Setelah
+        terkunci, sasaran OPD tidak dapat dihapus.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun penetapan (4 digit)
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Lock Sasaran OPD Penetapan
+      tags:
+      - Sasaran OPD Lock
   /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -4707,6 +5293,142 @@ paths:
       summary: Tujuan Opd Renstra
       tags:
       - Tujuan Opd Renstra
+  /tujuan_opd/lock/{kode_opd}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil seluruh daftar tahun yang sedang di-lock untuk tujuan
+        OPD berdasarkan kode OPD.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/tujuanopd.LockDataOpdResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Semua Lock Tujuan OPD
+      tags:
+      - Tujuan OPD Lock
+  /tujuan_opd/lock/{kode_opd}/{tahun}:
+    delete:
+      consumes:
+      - application/json
+      description: Membuka kunci data tujuan OPD untuk kode OPD dan tahun tertentu.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun penetapan (4 digit)
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unlock Tujuan OPD Penetapan
+      tags:
+      - Tujuan OPD Lock
+    get:
+      consumes:
+      - application/json
+      description: Mengecek apakah data tujuan OPD untuk kode OPD dan tahun tertentu
+        sedang terkunci.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun penetapan (4 digit)
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/tujuanopd.LockDataOpdResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Cek Status Lock Tujuan OPD
+      tags:
+      - Tujuan OPD Lock
+    post:
+      consumes:
+      - application/json
+      description: Mengunci data tujuan OPD untuk kode OPD dan tahun tertentu. Setelah
+        terkunci, tujuan OPD tidak dapat dihapus.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun penetapan (4 digit)
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Lock Tujuan OPD Penetapan
+      tags:
+      - Tujuan OPD Lock
   /tujuan_opd/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:

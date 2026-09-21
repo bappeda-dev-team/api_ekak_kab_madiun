@@ -24,6 +24,8 @@ type TargetCreateRequest struct {
 	Tahun       string `json:"tahun"`
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
+	// Jenis di-set controller matrix renstra (renstra), tidak dari body client.
+	Jenis string `json:"-"`
 }
 
 type BatchIndikatorRenstraCreateRequest struct {
@@ -35,6 +37,28 @@ type IndikatorRenstraCreateRequest struct {
 	Kode          string `json:"kode"`
 	KodeOpd       string `json:"kode_opd"`
 	Indikator     string `json:"indikator"`
+	Tahun         string `json:"tahun"`
+	Target        string `json:"target"`
+	Satuan        string `json:"satuan"`
+}
+
+// IndikatorRenstraV2CreateRequest: 1 indikator dengan banyak target (tahun harus unik).
+type IndikatorRenstraV2CreateRequest struct {
+	KodeIndikator string                `json:"kode_indikator"`
+	Kode          string                `json:"kode"`
+	KodeOpd       string                `json:"kode_opd"`
+	Indikator     string                `json:"indikator"`
+	Target        []TargetCreateRequest `json:"target"`
+}
+
+type IndikatorRenstraUpdateRequest struct {
+	KodeIndikator string `json:"kode_indikator"`
+	Indikator     string `json:"indikator"`
+}
+
+type TargetRenstraUpsertRequest struct {
+	KodeIndikator string `json:"kode_indikator"`
+	Id            string `json:"id,omitempty"`
 	Tahun         string `json:"tahun"`
 	Target        string `json:"target"`
 	Satuan        string `json:"satuan"`
