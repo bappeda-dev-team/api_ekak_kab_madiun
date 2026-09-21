@@ -55,7 +55,7 @@ func (repository *InovasiRekinRepositoryImpl) Delete(ctx context.Context, tx *sq
 func (repository *InovasiRekinRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string) (domain.InovasiRekin, error) {
 	query := `SELECT 
 	tir.id, tir.rekin_id, tir.kode_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator,
-	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, tp.nama
+	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator
 	FROM tb_inovasi_rekin tir
 	LEFT JOIN tb_jenis_inovasi ji
 		ON ji.id = tir.jenis_inovasi_id 
@@ -74,7 +74,7 @@ func (repository *InovasiRekinRepositoryImpl) FindById(ctx context.Context, tx *
 func (repository *InovasiRekinRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.InovasiRekin, error) {
 	query := `SELECT 
 	tir.id, tir.rekin_id, tir.kode_opd, od.nama_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator,
-	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, tp.nama
+	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator
 	FROM tb_inovasi_rekin tir
 	LEFT JOIN tb_jenis_inovasi ji
 		ON ji.id = tir.jenis_inovasi_id 
