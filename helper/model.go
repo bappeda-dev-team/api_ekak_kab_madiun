@@ -317,13 +317,20 @@ func ToInovasiRekinResponse(inovasiRekin domain.InovasiRekin) inovasirekin.Inova
 		Id:           	 	inovasiRekin.Id,
 		RekinId:      	 	inovasiRekin.RekinId,
 		KodeOpd:      	 	inovasiRekin.KodeOpd,
+		NamaOpd:      	 	inovasiRekin.NamaOpd,
 		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
 		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
 		JenisInovasi:  		inovasiRekin.JenisInovasi,
 		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
 		Instansi:           inovasiRekin.Instansi,
 		Inovator:           inovasiRekin.Inovator,
-		Action:       buttonActions,
+		Kebaruan:           inovasiRekin.Kebaruan,
+		AsalInovasi:        inovasiRekin.AsalInovasi,
+		Tahun:              inovasiRekin.Tahun,
+		NipInovator:        inovasiRekin.NipInovator,
+		NamaNipInovator:    inovasiRekin.NamaNipInovator,
+		Level:              inovasiRekin.Level,
+		Action:             buttonActions,
 	}
 }
 
