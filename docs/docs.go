@@ -1226,6 +1226,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/matrix_renstra/indikator/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat satu atau lebih indikator. Setiap indikator boleh punya banyak target dengan tahun yang berbeda.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Create Indikator Renstra (multi target)",
+                "parameters": [
+                    {
+                        "description": "Array indikator beserta target per tahun",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/programkegiatan.IndikatorRenstraV2CreateRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.IndikatorV2UpsertResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renstra/indikator/delete/{kode_indikator}": {
             "delete": {
                 "security": [
@@ -1267,6 +1330,63 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/indikator/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengubah teks indikator saja (tb_indikator_matrix). Target tidak diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Update Indikator Renstra",
+                "parameters": [
+                    {
+                        "description": "Kode indikator dan teks indikator baru",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.IndikatorRenstraUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.IndikatorRenstraUpdateResponse"
                                         }
                                     }
                                 }
@@ -1398,6 +1518,138 @@ const docTemplate = `{
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/definitions/programkegiatan.UrusanDetailResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/target/upsert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menambah atau mengubah target pada tahun yang dipilih untuk suatu indikator.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Upsert Target Renstra",
+                "parameters": [
+                    {
+                        "description": "Target per tahun",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetRenstraUpsertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/v2/opd/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hierarki matrix renstra. Tiap kode memiliki indikator; 1 indikator berisi target per tahun pada rentang tahun_awal s.d. tahun_akhir. Tahun tanpa target diisi \"-\".",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Matrix Renstra Versi Kedua",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun Awal",
+                        "name": "tahun_awal",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2029\"",
+                        "description": "Tahun Akhir",
+                        "name": "tahun_akhir",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.UrusanDetailV2Response"
                                             }
                                         }
                                     }
@@ -2202,6 +2454,222 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/lock/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh daftar tahun yang sedang di-lock untuk sasaran OPD berdasarkan kode OPD.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran OPD Lock"
+                ],
+                "summary": "Daftar Semua Lock Sasaran OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranopd.LockDataOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/lock/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengecek apakah data sasaran OPD untuk kode OPD dan tahun tertentu sedang terkunci.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran OPD Lock"
+                ],
+                "summary": "Cek Status Lock Sasaran OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun penetapan (4 digit)",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sasaranopd.LockDataOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengunci data sasaran OPD untuk kode OPD dan tahun tertentu. Setelah terkunci, sasaran OPD tidak dapat dihapus.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran OPD Lock"
+                ],
+                "summary": "Lock Sasaran OPD Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun penetapan (4 digit)",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuka kunci data sasaran OPD untuk kode OPD dan tahun tertentu.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran OPD Lock"
+                ],
+                "summary": "Unlock Sasaran OPD Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun penetapan (4 digit)",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     },
                     "500": {
@@ -3652,6 +4120,222 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/lock/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh daftar tahun yang sedang di-lock untuk tujuan OPD berdasarkan kode OPD.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan OPD Lock"
+                ],
+                "summary": "Daftar Semua Lock Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/tujuanopd.LockDataOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tujuan_opd/lock/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengecek apakah data tujuan OPD untuk kode OPD dan tahun tertentu sedang terkunci.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan OPD Lock"
+                ],
+                "summary": "Cek Status Lock Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun penetapan (4 digit)",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/tujuanopd.LockDataOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengunci data tujuan OPD untuk kode OPD dan tahun tertentu. Setelah terkunci, tujuan OPD tidak dapat dihapus.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan OPD Lock"
+                ],
+                "summary": "Lock Tujuan OPD Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun penetapan (4 digit)",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuka kunci data tujuan OPD untuk kode OPD dan tahun tertentu.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tujuan OPD Lock"
+                ],
+                "summary": "Unlock Tujuan OPD Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun penetapan (4 digit)",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -6468,6 +7152,14 @@ const docTemplate = `{
                 }
             }
         },
+        "pohonkinerja.MisiTematikResponse": {
+            "type": "object",
+            "properties": {
+                "misi": {
+                    "type": "string"
+                }
+            }
+        },
         "pohonkinerja.OperationalNOpdResponse": {
             "type": "object",
             "properties": {
@@ -7190,6 +7882,12 @@ const docTemplate = `{
                 "level_pohon": {
                     "type": "integer"
                 },
+                "misi": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.MisiTematikResponse"
+                    }
+                },
                 "parent": {
                     "type": "integer"
                 },
@@ -7332,6 +8030,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
+                "indikator_baseline": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -7345,6 +8049,64 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/programkegiatan.ProgramResponse"
+                    }
+                }
+            }
+        },
+        "programkegiatan.BidangUrusanV2Response": {
+            "type": "object",
+            "properties": {
+                "anggaran": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.PaguAnggaranTotalResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorPeriodResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "program": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.ProgramV2Response"
+                    }
+                }
+            }
+        },
+        "programkegiatan.IndikatorBaselineResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target_baseline": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.TargetResponse"
                     }
                 }
             }
@@ -7382,6 +8144,32 @@ const docTemplate = `{
                 },
                 "target": {
                     "type": "string"
+                }
+            }
+        },
+        "programkegiatan.IndikatorPeriodResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.TargetResponse"
+                    }
                 }
             }
         },
@@ -7445,6 +8233,66 @@ const docTemplate = `{
                 },
                 "target": {
                     "type": "string"
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenstraUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenstraUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.IndikatorRenstraV2CreateRequest": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.TargetCreateRequest"
+                    }
                 }
             }
         },
@@ -7522,6 +8370,35 @@ const docTemplate = `{
                 }
             }
         },
+        "programkegiatan.IndikatorV2UpsertResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.TargetResponse"
+                    }
+                }
+            }
+        },
         "programkegiatan.KegiatanResponse": {
             "type": "object",
             "properties": {
@@ -7537,6 +8414,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
+                "indikator_baseline": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -7550,6 +8433,38 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/programkegiatan.SubKegiatanResponse"
+                    }
+                }
+            }
+        },
+        "programkegiatan.KegiatanV2Response": {
+            "type": "object",
+            "properties": {
+                "anggaran": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.PaguAnggaranTotalResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorPeriodResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "subkegiatan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.SubKegiatanV2Response"
                     }
                 }
             }
@@ -7583,6 +8498,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
+                "indikator_baseline": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -7590,6 +8511,38 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/programkegiatan.KegiatanResponse"
+                    }
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.ProgramV2Response": {
+            "type": "object",
+            "properties": {
+                "anggaran": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.PaguAnggaranTotalResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorPeriodResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kegiatan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.KegiatanV2Response"
                     }
                 },
                 "kode": {
@@ -7615,6 +8568,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
+                "indikator_baseline": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -7635,6 +8594,78 @@ const docTemplate = `{
                 },
                 "total_anggaran": {
                     "type": "integer"
+                }
+            }
+        },
+        "programkegiatan.SubKegiatanV2Response": {
+            "type": "object",
+            "properties": {
+                "anggaran": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.PaguAnggaranTotalResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorPeriodResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "pegawai_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.TargetCreateRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.TargetRenstraUpsertRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
                 }
             }
         },
@@ -7687,6 +8718,32 @@ const docTemplate = `{
                 }
             }
         },
+        "programkegiatan.UrusanDetailV2Response": {
+            "type": "object",
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "pagu_total": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.PaguAnggaranTotalResponse"
+                    }
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                },
+                "urusan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.UrusanV2Response"
+                    }
+                }
+            }
+        },
         "programkegiatan.UrusanResponse": {
             "type": "object",
             "properties": {
@@ -7706,6 +8763,44 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_baseline": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.UrusanV2Response": {
+            "type": "object",
+            "properties": {
+                "anggaran": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.PaguAnggaranTotalResponse"
+                    }
+                },
+                "bidang_urusan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.BidangUrusanV2Response"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorPeriodResponse"
                     }
                 },
                 "jenis": {
@@ -8135,6 +9230,26 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/sasaranopd.TargetUpdateRequest"
                     }
+                }
+            }
+        },
+        "sasaranopd.LockDataOpdResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "tahun": {
+                    "type": "string"
                 }
             }
         },
@@ -8940,6 +10055,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "tujuanopd.LockDataOpdResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "tahun": {
                     "type": "string"
                 }
             }

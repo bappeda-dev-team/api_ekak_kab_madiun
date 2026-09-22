@@ -455,6 +455,269 @@ func (repository *MatrixRenstraRepositoryImpl) GetByKodeSubKegiatan(ctx context.
 	return result, nil
 }
 
+func (repository *MatrixRenstraRepositoryImpl) GetHierarchyAndPagu(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.SubKegiatanQuery, error) {
+	checkQuery := `
+    SELECT COUNT(*)
+    FROM tb_subkegiatan_terpilih st
+    JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+    WHERE rk.kode_opd = ?
+    AND rk.tahun BETWEEN ? AND ?
+    `
+	var count int
+	err := tx.QueryRowContext(ctx, checkQuery, kodeOpd, tahunAwal, tahunAkhir).Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, fmt.Errorf("subkegiatan belum dipilih pada periode tahun %s sampai %s", tahunAwal, tahunAkhir)
+	}
+	hierarchyQuery := `
+    WITH hierarchy AS (
+        SELECT DISTINCT
+            u.kode_urusan,
+            u.nama_urusan,
+            bu.kode_bidang_urusan,
+            bu.nama_bidang_urusan,
+            p.kode_program,
+            p.nama_program,
+            k.kode_kegiatan,
+            k.nama_kegiatan,
+            s.kode_subkegiatan,
+            s.nama_subkegiatan,
+            rk.tahun AS tahun_subkegiatan,
+            rk.pegawai_id
+        FROM tb_subkegiatan_terpilih st
+        JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+        JOIN tb_subkegiatan s ON st.kode_subkegiatan = s.kode_subkegiatan
+        JOIN tb_master_kegiatan k
+            ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+        JOIN tb_master_program p
+            ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
+        JOIN tb_bidang_urusan bu
+            ON LEFT(p.kode_program, LENGTH(bu.kode_bidang_urusan)) = bu.kode_bidang_urusan
+        JOIN tb_urusan u
+            ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
+        WHERE rk.kode_opd = ?
+        AND rk.tahun BETWEEN ? AND ?
+    )
+    SELECT
+        h.kode_urusan,
+        h.nama_urusan,
+        h.kode_bidang_urusan,
+        h.nama_bidang_urusan,
+        h.kode_program,
+        h.nama_program,
+        h.kode_kegiatan,
+        h.nama_kegiatan,
+        h.kode_subkegiatan,
+        h.nama_subkegiatan,
+        h.tahun_subkegiatan,
+        h.pegawai_id,
+        COALESCE(pg.nama, '') AS nama_pegawai,
+        COALESCE(tp.pagu, 0)   AS pagu_subkegiatan
+    FROM hierarchy h
+    LEFT JOIN tb_pegawai pg ON pg.nip = h.pegawai_id
+    LEFT JOIN tb_pagu tp
+        ON tp.kode_subkegiatan = h.kode_subkegiatan
+        AND tp.kode_opd = ?
+        AND tp.jenis = 'renstra'
+        AND tp.tahun = h.tahun_subkegiatan
+    ORDER BY
+        h.kode_urusan,
+        h.kode_bidang_urusan,
+        h.kode_program,
+        h.kode_kegiatan,
+        h.kode_subkegiatan,
+        h.tahun_subkegiatan
+    `
+	hRows, err := tx.QueryContext(ctx, hierarchyQuery, kodeOpd, tahunAwal, tahunAkhir, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	defer hRows.Close()
+	var result []domain.SubKegiatanQuery
+	kodeSubSet := make(map[string]struct{})
+	templateBySub := make(map[string]domain.SubKegiatanQuery)
+	seenPair := make(map[string]struct{})
+	for hRows.Next() {
+		var row domain.SubKegiatanQuery
+		if err := hRows.Scan(
+			&row.KodeUrusan,
+			&row.NamaUrusan,
+			&row.KodeBidangUrusan,
+			&row.NamaBidangUrusan,
+			&row.KodeProgram,
+			&row.NamaProgram,
+			&row.KodeKegiatan,
+			&row.NamaKegiatan,
+			&row.KodeSubKegiatan,
+			&row.NamaSubKegiatan,
+			&row.TahunSubKegiatan,
+			&row.PegawaiId,
+			&row.NamaPegawai,
+			&row.PaguSubKegiatan,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, row)
+		if row.KodeSubKegiatan != "" {
+			kodeSubSet[row.KodeSubKegiatan] = struct{}{}
+			seenPair[row.KodeSubKegiatan+"\x00"+row.TahunSubKegiatan] = struct{}{}
+			if _, ok := templateBySub[row.KodeSubKegiatan]; !ok {
+				templateBySub[row.KodeSubKegiatan] = row
+			}
+		}
+	}
+	if err := hRows.Err(); err != nil {
+		return nil, err
+	}
+	if len(kodeSubSet) == 0 {
+		return result, nil
+	}
+	placeholders := make([]string, 0, len(kodeSubSet))
+	args := make([]interface{}, 0, 3+len(kodeSubSet))
+	args = append(args, kodeOpd, tahunAwal, tahunAkhir)
+	for k := range kodeSubSet {
+		placeholders = append(placeholders, "?")
+		args = append(args, k)
+	}
+	paguQuery := fmt.Sprintf(`
+		SELECT kode_subkegiatan, tahun, pagu
+		FROM tb_pagu
+		WHERE kode_opd = ?
+		  AND jenis = 'renstra'
+		  AND tahun BETWEEN ? AND ?
+		  AND kode_subkegiatan IN (%s)
+	`, strings.Join(placeholders, ","))
+	pRows, err := tx.QueryContext(ctx, paguQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer pRows.Close()
+	for pRows.Next() {
+		var kodeSub, tahun string
+		var pagu int64
+		if err := pRows.Scan(&kodeSub, &tahun, &pagu); err != nil {
+			return nil, err
+		}
+		key := kodeSub + "\x00" + tahun
+		if _, ok := seenPair[key]; ok {
+			continue
+		}
+		tmpl, ok := templateBySub[kodeSub]
+		if !ok {
+			continue
+		}
+		synth := tmpl
+		synth.TahunSubKegiatan = tahun
+		synth.PaguSubKegiatan = pagu
+		result = append(result, synth)
+		seenPair[key] = struct{}{}
+	}
+	return result, pRows.Err()
+}
+
+func (repo *MatrixRenstraRepositoryImpl) FindIndikatorRenstraPeriod(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error) {
+	query := `
+		SELECT
+			im.kode_indikator,
+			im.kode,
+			im.kode_opd,
+			im.indikator,
+			COALESCE(im.tahun, '') AS indikator_tahun,
+			COALESCE(t.id, '')     AS target_id,
+			COALESCE(t.target, '') AS target,
+			COALESCE(t.satuan, '') AS satuan,
+			COALESCE(t.tahun, '')  AS target_tahun
+		FROM tb_indikator_matrix im
+		LEFT JOIN tb_target t ON t.indikator_id = im.kode_indikator
+		WHERE im.kode_indikator != ''
+		  AND im.jenis = 'renstra'
+		  AND im.kode_opd = ?
+		  AND (
+			EXISTS (
+				SELECT 1 FROM tb_target tx
+				WHERE tx.indikator_id = im.kode_indikator
+				  AND tx.tahun BETWEEN ? AND ?
+			)
+			OR im.tahun BETWEEN ? AND ?
+		  )
+		ORDER BY im.kode, im.kode_indikator, t.tahun
+	`
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahunAwal, tahunAkhir, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	byID := make(map[string]*domain.Indikator)
+	order := make([]string, 0)
+	for rows.Next() {
+		var (
+			kodeInd, kode, kodeOpdRow, namaInd, indTahun string
+			targetId, targetVal, satuan, targetTahun     string
+		)
+		if err := rows.Scan(
+			&kodeInd, &kode, &kodeOpdRow, &namaInd, &indTahun,
+			&targetId, &targetVal, &satuan, &targetTahun,
+		); err != nil {
+			return nil, err
+		}
+		ind, ok := byID[kodeInd]
+		if !ok {
+			ind = &domain.Indikator{
+				KodeIndikator: kodeInd,
+				Kode:          kode,
+				KodeOpd:       kodeOpdRow,
+				Indikator:     namaInd,
+				Tahun:         indTahun,
+				Jenis:         "renstra",
+			}
+			byID[kodeInd] = ind
+			order = append(order, kodeInd)
+		}
+		if targetId != "" {
+			ind.Target = append(ind.Target, domain.Target{
+				Id:          targetId,
+				IndikatorId: kodeInd,
+				Target:      targetVal,
+				Satuan:      satuan,
+				Tahun:       targetTahun,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]domain.Indikator, 0, len(order))
+	for _, id := range order {
+		result = append(result, *byID[id])
+	}
+	return result, nil
+}
+
+func (r *MatrixRenstraRepositoryImpl) FindTargetByIndikatorIdAndTahun(ctx context.Context, tx *sql.Tx, indikatorId, tahun string) (domain.Target, error) {
+	query := `
+		SELECT
+			COALESCE(id, ''),
+			COALESCE(indikator_id, ''),
+			COALESCE(target, ''),
+			COALESCE(satuan, ''),
+			COALESCE(tahun, ''),
+			COALESCE(jenis, '')
+		FROM tb_target
+		WHERE indikator_id = ? AND tahun = ?
+		LIMIT 1
+	`
+	var t domain.Target
+	err := tx.QueryRowContext(ctx, query, indikatorId, tahun).Scan(
+		&t.Id, &t.IndikatorId, &t.Target, &t.Satuan, &t.Tahun, &t.Jenis,
+	)
+	if err != nil {
+		return domain.Target{}, err
+	}
+	return t, nil
+}
+
 func (r *MatrixRenstraRepositoryImpl) DeleteIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) error {
 	_, err := tx.ExecContext(ctx, `DELETE FROM tb_indikator_matrix WHERE kode_indikator = ?`, kodeIndikator)
 	return err
@@ -493,21 +756,46 @@ func (r *MatrixRenstraRepositoryImpl) UpsertIndikator(ctx context.Context, tx *s
 	)
 	return err
 }
+
+func (r *MatrixRenstraRepositoryImpl) UpdateIndikatorRenstra(ctx context.Context, tx *sql.Tx, kodeIndikator, indikator string) error {
+	res, err := tx.ExecContext(ctx, `
+		UPDATE tb_indikator_matrix
+		SET indikator = ?
+		WHERE kode_indikator = ? AND jenis = 'renstra'
+	`, indikator, kodeIndikator)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
 func (r *MatrixRenstraRepositoryImpl) UpsertTarget(ctx context.Context, tx *sql.Tx, t domain.Target) error {
+	jenis := t.Jenis
+	if jenis == "" {
+		jenis = "renstra"
+	}
 	query := `
-        INSERT INTO tb_target (id, indikator_id, target, satuan, tahun)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO tb_target (id, indikator_id, target, satuan, tahun, jenis)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             target  = VALUES(target),
             satuan  = VALUES(satuan),
-            tahun   = VALUES(tahun)
+            tahun   = VALUES(tahun),
+            jenis   = VALUES(jenis)
     `
 	_, err := tx.ExecContext(ctx, query,
 		t.Id,
-		t.IndikatorId, // = kode_indikator dari indikator
+		t.IndikatorId,
 		t.Target,
 		t.Satuan,
 		t.Tahun,
+		jenis,
 	)
 	return err
 }
