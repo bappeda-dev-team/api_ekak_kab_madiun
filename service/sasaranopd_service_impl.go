@@ -339,14 +339,14 @@ func (service *SasaranOpdServiceImpl) Create(ctx context.Context, request sasara
 
 		// Proses target
 		for _, targetReq := range indReq.Target {
-			if targetReq.Target != "" {
+			if targetReq.Target != 0 {
 				targetId := fmt.Sprintf("TRG-SAR-%d-%s", uuid.New().ID()%100000, targetReq.Tahun)
 
 				target := domain.Target{
 					Id:          targetId,
 					IndikatorId: kodeIndikator,
 					Tahun:       targetReq.Tahun,
-					Target:      targetReq.Target,
+					Target:      strconv.FormatFloat(targetReq.Target, 'f', 2, 64),
 					Satuan:      targetReq.Satuan,
 				}
 				indikator.Target = append(indikator.Target, target)
@@ -453,13 +453,13 @@ func (service *SasaranOpdServiceImpl) Update(ctx context.Context, request sasara
 				Id:          targetId,
 				IndikatorId: kodeIndikator, // referensi ke kode_indikator
 				Tahun:       targetReq.Tahun,
-				Target:      targetReq.Target,
+				Target:      strconv.FormatFloat(targetReq.Target, 'f', 2, 64),
 				Satuan:      targetReq.Satuan,
 			})
 			targetResponses = append(targetResponses, sasaranopd.TargetDetail{
 				Id:     targetId,
 				Tahun:  targetReq.Tahun,
-				Target: targetReq.Target,
+				Target: strconv.FormatFloat(targetReq.Target, 'f', 2, 64),
 				Satuan: targetReq.Satuan,
 			})
 		}
@@ -1132,7 +1132,7 @@ func (service *SasaranOpdServiceImpl) CreateRenjaIndikator(
 		if len(req.Target) != 1 {
 			return nil, fmt.Errorf("setiap indikator harus memiliki tepat 1 target")
 		}
-		if req.Target[0].Target == "" {
+		if req.Target[0].Target == 0 {
 			return nil, fmt.Errorf("nilai target tidak boleh kosong")
 		}
 		if req.Target[0].Satuan == "" {
@@ -1152,7 +1152,7 @@ func (service *SasaranOpdServiceImpl) CreateRenjaIndikator(
 			SumberData:          sql.NullString{String: req.SumberData, Valid: true},
 			Target: []domain.Target{{
 				Id: targetId, IndikatorId: kodeIndikator,
-				Target: req.Target[0].Target, Satuan: req.Target[0].Satuan, Tahun: req.Target[0].Tahun,
+				Target: strconv.FormatFloat(req.Target[0].Target, 'f', 2, 64), Satuan: req.Target[0].Satuan, Tahun: req.Target[0].Tahun,
 			}},
 		}
 		indikatorDomains = append(indikatorDomains, ind)
@@ -1167,7 +1167,7 @@ func (service *SasaranOpdServiceImpl) CreateRenjaIndikator(
 			Target: []sasaranopd.TargetResponse{{
 				Id:     targetId,
 				Tahun:  req.Target[0].Tahun,
-				Target: req.Target[0].Target,
+				Target: strconv.FormatFloat(req.Target[0].Target, 'f', 2, 64),
 				Satuan: req.Target[0].Satuan,
 			}},
 		})
@@ -1197,7 +1197,7 @@ func (service *SasaranOpdServiceImpl) UpdateRenjaIndikator(ctx context.Context, 
 	if len(request.Target) != 1 {
 		return sasaranopd.IndikatorResponse{}, fmt.Errorf("harus memiliki tepat 1 target")
 	}
-	if request.Target[0].Target == "" {
+	if request.Target[0].Target == 0 {
 		return sasaranopd.IndikatorResponse{}, fmt.Errorf("nilai target tidak boleh kosong")
 	}
 	if request.Target[0].Tahun == "" {
@@ -1216,7 +1216,7 @@ func (service *SasaranOpdServiceImpl) UpdateRenjaIndikator(ctx context.Context, 
 		SumberData:          sql.NullString{String: request.SumberData, Valid: true},
 		Target: []domain.Target{{
 			Id: targetId, IndikatorId: kodeIndikator,
-			Target: request.Target[0].Target, Satuan: request.Target[0].Satuan, Tahun: request.Target[0].Tahun,
+			Target: strconv.FormatFloat(request.Target[0].Target, 'f', 2, 64), Satuan: request.Target[0].Satuan, Tahun: request.Target[0].Tahun,
 		}},
 	}
 	if err := service.sasaranOpdRepository.UpdateRenjaIndikator(ctx, tx, []domain.Indikator{ind}); err != nil {
@@ -1233,7 +1233,7 @@ func (service *SasaranOpdServiceImpl) UpdateRenjaIndikator(ctx context.Context, 
 		Target: []sasaranopd.TargetResponse{{
 			Id:     targetId,
 			Tahun:  request.Target[0].Tahun,
-			Target: request.Target[0].Target,
+			Target: strconv.FormatFloat(request.Target[0].Target, 'f', 64, 2),
 			Satuan: request.Target[0].Satuan,
 		}},
 	}, nil
