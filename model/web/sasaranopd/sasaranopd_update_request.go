@@ -21,8 +21,8 @@ type IndikatorUpdateRequest struct {
 }
 
 type TargetUpdateRequest struct {
-	Id     string `json:"id"`
-	Tahun  string `json:"tahun"`
-	Target string `json:"target"`
-	Satuan string `json:"satuan"`
+	Id     string  `json:"id"`
+	Tahun  string  `json:"tahun"`
+	Target float64 `json:"target"`
+	Satuan string  `json:"satuan"`
 }
