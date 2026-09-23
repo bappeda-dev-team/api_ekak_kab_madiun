@@ -1059,7 +1059,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(
 ) ([]domain.RencanaKinerja, error) {
 
 	if len(pokinIds) == 0 {
-		return nil, errors.New("ids tidak boleh kosong")
+		return []domain.RencanaKinerja{}, nil
 	}
 
 	// Build IN clause
