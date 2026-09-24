@@ -189,6 +189,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 				SasaranOpdId:   sasaranId,
 				NamaSasaranOpd: namaSasaranOpd,
 				TahunRenaksi:   tahun,
+				KodeOpd:        kodeOpd,
 				Tw1:            int(tw1.Int32),
 				Tw2:            int(tw2.Int32),
 				Tw3:            int(tw3.Int32),
@@ -373,12 +374,13 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
         WHERE tahun = (SELECT tahun FROM tb_renaksi_opd WHERE id = ?)
     )
     SELECT 
-        ro.id,
-        ro.rekin_id,
-        ro.sasaran_id,
-        ro.tahun,
-        ro.keterangan,
-        rk.nama_rencana_kinerja,
+		ro.id,
+		ro.rekin_id,
+		ro.sasaran_id,
+		ro.tahun,
+		ro.keterangan,
+		rk.kode_opd,
+		rk.nama_rencana_kinerja,
         so.nama_sasaran_opd,
         so.tahun_awal,
         so.tahun_akhir,
@@ -415,6 +417,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
 			rekinId                      string
 			tahun                        string
 			keterangan                   sql.NullString
+			kodeOpd                      string
 			namaRencanaKinerja           string
 			namaSasaranOpd               string
 			tahunAwal, tahunAkhir        string
@@ -431,6 +434,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
 			&sasaranId,
 			&tahun,
 			&keterangan,
+			&kodeOpd,
 			&namaRencanaKinerja,
 			&namaSasaranOpd,
 			&tahunAwal,
@@ -459,6 +463,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
 				RekinId:            rekinId,
 				SasaranOpdId:       sasaranId,
 				TahunRenaksi:       tahun,
+				KodeOpd:            kodeOpd,
 				Keterangan:         keteranganString,
 				NamaRencanaKinerja: namaRencanaKinerja,
 				SasaranOpd: domain.SasaranOpdDetailRenaksi{
@@ -677,4 +682,57 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindAllSasaranByTahun(ctx contex
 	})
 
 	return result, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) FindLockContextByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (string, string, error) {
+	var kodeOpd, tahun string
+	err := tx.QueryRowContext(ctx, `
+		SELECT kode_opd, tahun
+		FROM tb_rencana_kinerja
+		WHERE id = ?
+	`, rekinId).Scan(&kodeOpd, &tahun)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", fmt.Errorf("rencana kinerja %s tidak ditemukan", rekinId)
+		}
+		return "", "", fmt.Errorf("gagal mengambil konteks lock rencana kinerja: %w", err)
+	}
+	return kodeOpd, tahun, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) FindLockContextById(ctx context.Context, tx *sql.Tx, id int) (string, string, int, string, error) {
+	var kodeOpd, tahun, rekinId string
+	var sasaranId int
+	err := tx.QueryRowContext(ctx, `
+		SELECT rk.kode_opd, ro.tahun, ro.sasaran_id, ro.rekin_id
+		FROM tb_renaksi_opd ro
+		JOIN tb_rencana_kinerja rk ON rk.id = ro.rekin_id
+		WHERE ro.id = ?
+	`, id).Scan(&kodeOpd, &tahun, &sasaranId, &rekinId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", 0, "", fmt.Errorf("rencana aksi opd %d tidak ditemukan", id)
+		}
+		return "", "", 0, "", fmt.Errorf("gagal mengambil konteks lock renaksi opd: %w", err)
+	}
+	return kodeOpd, tahun, sasaranId, rekinId, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) FindKodeOpdBySasaranOpdAndTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) (string, error) {
+	var kodeOpd string
+	err := tx.QueryRowContext(ctx, `
+		SELECT pk.kode_opd
+		FROM tb_sasaran_opd so
+		JOIN tb_pohon_kinerja pk ON pk.id = so.pokin_id
+		WHERE so.id = ?
+		  AND ? BETWEEN so.tahun_awal AND so.tahun_akhir
+		LIMIT 1
+	`, sasaranOpdId, tahun).Scan(&kodeOpd)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("sasaran opd %d untuk tahun %s tidak ditemukan", sasaranOpdId, tahun)
+		}
+		return "", fmt.Errorf("gagal mengambil kode opd sasaran: %w", err)
+	}
+	return kodeOpd, nil
 }

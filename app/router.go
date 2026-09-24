@@ -62,6 +62,7 @@ func NewRouter(
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
 	rencanaAksiOpdController controller.RencanaAksiOpdController,
+	lockRenaksiOpdController controller.LockRenaksiOpdController,
 	strategicArahKebijakanController controller.StrategicArahKebijakanPemdaController,
 	indikatorController controller.IndikatorController,
 	ikkController controller.IkkController,
@@ -777,6 +778,11 @@ func NewRouter(
 	router.DELETE("/rencana-aksi-opd/delete/:id", rencanaAksiOpdController.Delete)
 	router.GET("/renaksi-opd/detail/:id", rencanaAksiOpdController.FindById)
 	router.GET("/sasaran_opd/all/:kode_opd/:tahun", rencanaAksiOpdController.FindAllSasaranByTahun)
+	// router.GET("/rencana-aksi-opd/sasaran/:sasaran_opd_id/:tahun", rencanaAksiOpdController.FindBySasaranOpdAndTahun)
+	router.POST("/lock-renaksi-opd/lock/:kode_opd/:tahun", lockRenaksiOpdController.Lock)
+	router.DELETE("/lock-renaksi-opd/lock/:kode_opd/:tahun/:id", lockRenaksiOpdController.Unlock)
+	router.GET("/lock-renaksi-opd/lock/:kode_opd/:tahun/:id", lockRenaksiOpdController.FindById)
+	router.GET("/lock-renaksi-opd/lock/:kode_opd/:tahun", lockRenaksiOpdController.FindAll)
 
 	return router
 }

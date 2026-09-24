@@ -163,6 +163,63 @@ definitions:
           $ref: '#/definitions/iku.TargetResponse'
         type: array
     type: object
+  lockrenaksiopd.LockRenaksiOpdRequest:
+    properties:
+      aksi_kegiatan:
+        type: string
+      anggaran:
+        type: integer
+      nama_pemilik:
+        type: string
+      rekin_id:
+        type: string
+      sasaran_id:
+        type: integer
+      sub_kegiatan:
+        type: string
+      tw1:
+        type: integer
+      tw2:
+        type: integer
+      tw3:
+        type: integer
+      tw4:
+        type: integer
+    required:
+    - rekin_id
+    - sasaran_id
+    type: object
+  lockrenaksiopd.LockRenaksiOpdResponse:
+    properties:
+      aksi_kegiatan:
+        type: string
+      anggaran:
+        type: integer
+      id:
+        type: integer
+      kode_opd:
+        type: string
+      locked:
+        type: boolean
+      nama_pemilik:
+        type: string
+      rekin_id:
+        type: string
+      sasaran_id:
+        type: integer
+      sub_kegiatan:
+        type: string
+      tahun:
+        type: string
+      tw1:
+        type: integer
+      tw2:
+        type: integer
+      tw3:
+        type: integer
+      tw4:
+        type: integer
+    type: object
   opdmaster.OpdResponseForAll:
     properties:
       kode_opd:
@@ -998,6 +1055,8 @@ definitions:
         description: PaguAnggaran  int64  `json:"pagu_anggaran,omitempty"`
         type: string
       target:
+        type: string
+      target_id:
         type: string
     type: object
   programkegiatan.IndikatorPeriodResponse:
@@ -3214,6 +3273,186 @@ paths:
       summary: Find Pokin Admin By Id Hierarki Opd View
       tags:
       - Pohon Kinerja Admin
+  /lock-renaksi-opd/lock/{kode_opd}/{tahun}:
+    get:
+      description: Menampilkan daftar lock Renaksi OPD berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/lockrenaksiopd.LockRenaksiOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Lock Renaksi OPD
+      tags:
+      - Lock Renaksi OPD
+    post:
+      consumes:
+      - application/json
+      description: Membuat snapshot lock Renaksi OPD berdasarkan kode OPD, tahun,
+        sasaran, dan rekin.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: Data lock Renaksi OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/lockrenaksiopd.LockRenaksiOpdRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/lockrenaksiopd.LockRenaksiOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Lock Renaksi OPD
+      tags:
+      - Lock Renaksi OPD
+  /lock-renaksi-opd/lock/{kode_opd}/{tahun}/{id}:
+    delete:
+      description: Menghapus snapshot lock Renaksi OPD berdasarkan kode OPD, tahun,
+        dan ID Renaksi OPD.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: ID Renaksi OPD
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Unlock Renaksi OPD
+      tags:
+      - Lock Renaksi OPD
+    get:
+      description: Menampilkan detail lock Renaksi OPD berdasarkan kode OPD, tahun,
+        dan ID Renaksi OPD.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      - description: ID Renaksi OPD
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/lockrenaksiopd.LockRenaksiOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Detail Lock Renaksi OPD
+      tags:
+      - Lock Renaksi OPD
   /matrix_renja/anggaran_penetapan/upsert:
     post:
       consumes:
