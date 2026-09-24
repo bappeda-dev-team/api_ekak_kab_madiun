@@ -14,4 +14,7 @@ type RencanaAksiOpdRepository interface {
 	Delete(ctx context.Context, tx *sql.Tx, Id int) error
 	FindById(ctx context.Context, tx *sql.Tx, Id int) (domain.RencanaAksiOpd, error)
 	FindAllSasaranByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.SasaranOpdDetailRenaksi, error)
+	FindLockContextByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (string, string, error)
+	FindLockContextById(ctx context.Context, tx *sql.Tx, id int) (string, string, int, string, error)
+	FindKodeOpdBySasaranOpdAndTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) (string, error)
 }

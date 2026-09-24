@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/renaksiopd"
 	"ekak_kabupaten_madiun/service"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -87,12 +88,7 @@ func (controller *RencanaAksiOpdControllerImpl) Create(writer http.ResponseWrite
 	}
 	rencanaAksiOpdResponse, err := controller.RencanaAksiOpdService.Create(request.Context(), rencanaAksiOpdCreateRequest)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		controller.writeMutationError(writer, err)
 		return
 	}
 	webResponse := web.WebResponse{
@@ -130,12 +126,7 @@ func (controller *RencanaAksiOpdControllerImpl) Update(writer http.ResponseWrite
 	}
 	rencanaAksiOpdResponse, err := controller.RencanaAksiOpdService.Update(request.Context(), rencanaAksiOpdUpdateRequest)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		controller.writeMutationError(writer, err)
 		return
 	}
 	webResponse := web.WebResponse{
@@ -160,12 +151,7 @@ func (controller *RencanaAksiOpdControllerImpl) Delete(writer http.ResponseWrite
 	}
 	err = controller.RencanaAksiOpdService.Delete(request.Context(), idInt)
 	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
+		controller.writeMutationError(writer, err)
 		return
 	}
 	webResponse := web.WebResponse{
@@ -225,4 +211,16 @@ func (controller *RencanaAksiOpdControllerImpl) FindAllSasaranByTahun(writer htt
 		Data:   sasaranList,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *RencanaAksiOpdControllerImpl) writeMutationError(writer http.ResponseWriter, err error) {
+	code := http.StatusInternalServerError
+	if errors.Is(err, service.ErrRencanaAksiOpdLocked) {
+		code = http.StatusConflict
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   code,
+		Status: http.StatusText(code),
+		Data:   err.Error(),
+	})
 }

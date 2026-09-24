@@ -8,15 +8,21 @@ import (
 	"ekak_kabupaten_madiun/model/web/renaksiopd"
 	"ekak_kabupaten_madiun/model/web/rencanakinerja"
 	"ekak_kabupaten_madiun/repository"
+	"errors"
 	"fmt"
 	"math/rand"
 
 	"github.com/go-playground/validator/v10"
 )
 
+var (
+	ErrRencanaAksiOpdLocked = errors.New("rencana aksi opd terkunci")
+)
+
 type RencanaAksiOpdServiceImpl struct {
 	RencanaAksiOpdRepository repository.RencanaAksiOpdRepository
 	RencanaKinerjaRepository repository.RencanaKinerjaRepository
+	LockRenaksiOpdRepository repository.LockRenaksiOpdRepository
 	DB                       *sql.DB
 	validator                *validator.Validate
 }
@@ -24,12 +30,14 @@ type RencanaAksiOpdServiceImpl struct {
 func NewRencanaAksiOpdServiceImpl(
 	rencanaAksiOpdRepository repository.RencanaAksiOpdRepository,
 	rencanaKinerjaRepository repository.RencanaKinerjaRepository,
+	lockRenaksiOpdRepository repository.LockRenaksiOpdRepository,
 	db *sql.DB,
 	validator *validator.Validate,
 ) *RencanaAksiOpdServiceImpl {
 	return &RencanaAksiOpdServiceImpl{
 		RencanaAksiOpdRepository: rencanaAksiOpdRepository,
 		RencanaKinerjaRepository: rencanaKinerjaRepository,
+		LockRenaksiOpdRepository: lockRenaksiOpdRepository,
 		DB:                       db,
 		validator:                validator,
 	}
@@ -64,7 +72,8 @@ func (service *RencanaAksiOpdServiceImpl) FindBySasaranOpdAndTahun(ctx context.C
 		}
 	}
 
-	return toRencanaAksiOpdResponses(rencanaAksi), nil
+	responses := toRencanaAksiOpdResponses(rencanaAksi)
+	return responses, nil
 }
 
 func (service *RencanaAksiOpdServiceImpl) SyncJadwalPelaksanaan(ctx context.Context, rekinId string) error {
@@ -88,6 +97,13 @@ func (service *RencanaAksiOpdServiceImpl) Create(ctx context.Context, request re
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
+	kodeOpd, _, err := service.RencanaAksiOpdRepository.FindLockContextByRekinId(ctx, tx, request.RekinId)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUnlocked(ctx, tx, kodeOpd, request.TahunRenaksi, request.SasaranOpdId, request.RekinId); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
 
 	var keterangan *string
 	if request.Keterangan != "" {
@@ -121,6 +137,20 @@ func (service *RencanaAksiOpdServiceImpl) Update(ctx context.Context, request re
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
+	oldKodeOpd, oldTahun, oldSasaranId, oldRekinId, err := service.RencanaAksiOpdRepository.FindLockContextById(ctx, tx, request.Id)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUnlocked(ctx, tx, oldKodeOpd, oldTahun, oldSasaranId, oldRekinId); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	newKodeOpd, _, err := service.RencanaAksiOpdRepository.FindLockContextByRekinId(ctx, tx, request.RekinId)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUnlocked(ctx, tx, newKodeOpd, oldTahun, oldSasaranId, request.RekinId); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
 
 	var keterangan *string
 	if request.Keterangan != "" {
@@ -144,7 +174,13 @@ func (service *RencanaAksiOpdServiceImpl) Delete(ctx context.Context, id int) er
 		return err
 	}
 	defer helper.CommitOrRollback(tx)
-
+	kodeOpd, tahun, sasaranId, rekinId, err := service.RencanaAksiOpdRepository.FindLockContextById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if err := service.ensureUnlocked(ctx, tx, kodeOpd, tahun, sasaranId, rekinId); err != nil {
+		return err
+	}
 	return service.RencanaAksiOpdRepository.Delete(ctx, tx, id)
 }
 
@@ -159,7 +195,6 @@ func (service *RencanaAksiOpdServiceImpl) FindById(ctx context.Context, id int) 
 	if err != nil {
 		return renaksiopd.RencanaAksiOpdByIdResponse{}, err
 	}
-
 	return toRencanaAksiOpdByIdResponse(rencanaAksiOpd), nil
 }
 
@@ -177,10 +212,22 @@ func (service *RencanaAksiOpdServiceImpl) FindAllSasaranByTahun(ctx context.Cont
 
 	responses := make([]renaksiopd.SasaranOpdDetailResponse, 0, len(sasaranList))
 	for _, sasaran := range sasaranList {
-		responses = append(responses, toSasaranOpdDetailResponse(sasaran))
+		response := toSasaranOpdDetailResponse(sasaran)
+		responses = append(responses, response)
 	}
 
 	return responses, nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) ensureUnlocked(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, sasaranId int, rekinId string) error {
+	locked, err := service.LockRenaksiOpdRepository.IsLocked(ctx, tx, kodeOpd, tahun, sasaranId, rekinId)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return fmt.Errorf("%w: data OPD %s tahun %s sasaran %d rekin %s tidak dapat diubah", ErrRencanaAksiOpdLocked, kodeOpd, tahun, sasaranId, rekinId)
+	}
+	return nil
 }
 
 func toRencanaAksiOpdResponses(items []domain.RencanaAksiOpd) []renaksiopd.RencanaAksiOpdResponse {
