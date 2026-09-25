@@ -341,6 +341,54 @@ func ToInovasiRekinResponses(inovasiRekins []domain.InovasiRekin) []inovasirekin
 	}
 	return inovasiRekinResponses
 }
+func ToInovasiLaporanResponse(inovasiRekin domain.InovasiLaporan) inovasirekin.InovasiLaporanResponse {
+	host := os.Getenv("host")
+	port := os.Getenv("port")
+	buttonActions := []web.ActionButton{
+		{
+			NameAction: "Find By Id Inovasi Rekin",
+			Method:     "GET",
+			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/detail/:id", host, port),
+		},
+		{
+			NameAction: "Update Inovasi Rekin",
+			Method:     "PUT",
+			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/update/:id", host, port),
+		},
+		{
+			NameAction: "Delete Inovasi Rekin",
+			Method:     "DELETE",
+			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/delete/:id", host, port),
+		},
+	}
+	return inovasirekin.InovasiLaporanResponse{
+		Id:           	 	inovasiRekin.Id,
+		RekinId:      	 	inovasiRekin.RekinId,
+		KodeOpd:      	 	inovasiRekin.KodeOpd,
+		NamaOpd:      	 	inovasiRekin.NamaOpd,
+		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
+		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
+		JenisInovasi:  		inovasiRekin.JenisInovasi,
+		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
+		Instansi:           inovasiRekin.Instansi,
+		Inovator:           inovasiRekin.Inovator,
+		Kebaruan:           inovasiRekin.Kebaruan,
+		AsalInovasi:        inovasiRekin.AsalInovasi,
+		Tahun:              inovasiRekin.Tahun,
+		NipInovator:        inovasiRekin.NipInovator,
+		NamaNipInovator:    inovasiRekin.NamaNipInovator,
+		Level:              inovasiRekin.Level,
+		Action:             buttonActions,
+	}
+}
+
+func ToInovasiLaporanResponses(inovasiRekins []domain.InovasiLaporan) []inovasirekin.InovasiLaporanResponse {
+	var inovasiRekinResponses []inovasirekin.InovasiLaporanResponse
+	for _, inovasiRekin := range inovasiRekins {
+		inovasiRekinResponses = append(inovasiRekinResponses, ToInovasiLaporanResponse(inovasiRekin))
+	}
+	return inovasiRekinResponses
+}
 
 func ToDasarHukumResponse(dasarHukum domain.DasarHukum) dasarhukum.DasarHukumResponse {
 	host := os.Getenv("host")

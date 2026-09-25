@@ -119,4 +119,46 @@ func (repository *InovasiRekinRepositoryImpl) FindAll(ctx context.Context, tx *s
 
 	return inovasiRekinList, nil
 }
+func (repository *InovasiRekinRepositoryImpl) FindAllKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.InovasiLaporan, error) {
+	query := `SELECT 
+	tir.id, tir.rekin_id, tir.kode_opd, od.nama_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator,
+	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator, COALESCE(tro.role, '') AS level
+	FROM tb_inovasi_rekin tir
+	LEFT JOIN tb_jenis_inovasi ji
+		ON ji.id = tir.jenis_inovasi_id 
+	LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = tir.kode_opd
+	LEFT JOIN tb_pegawai tp
+		ON tp.nip = tir.nip_inovator
+	LEFT JOIN tb_users tu
+		ON tu.nip = tir.nip_inovator
+	LEFT JOIN tb_user_role tur
+		ON tur.user_id = tu.id
+	LEFT JOIN tb_role tro 
+		ON tro.id = tur.role_id
+	WHERE tir.kode_opd = ? AND tir.tahun = ?`
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	if err != nil {
+		return []domain.InovasiLaporan{}, err
+	}
+	defer rows.Close()
+
+	var inovasiRekinList []domain.InovasiLaporan
+	for rows.Next() {
+		var inovasiRekin domain.InovasiLaporan
+		err := rows.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.KodeOpd, &inovasiRekin.NamaOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator, &inovasiRekin.Kebaruan, &inovasiRekin.AsalInovasi, &inovasiRekin.Tahun, &inovasiRekin.NipInovator, &inovasiRekin.NamaNipInovator, &inovasiRekin.Level)
+		if err != nil {
+			return []domain.InovasiLaporan{}, err
+		}
+
+		inovasiRekinList = append(inovasiRekinList, inovasiRekin)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return []domain.InovasiLaporan{}, err
+	}
+
+	return inovasiRekinList, nil
+}
 

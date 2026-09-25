@@ -10,5 +10,6 @@ type InovasiRekinService interface {
 	Update(ctx context.Context, request inovasirekin.InovasiRekinUpdateRequest) (inovasirekin.InovasiRekinResponse, error)
 	FindById(ctx context.Context, id string) (inovasirekin.InovasiRekinResponse, error)
 	FindAll(ctx context.Context, rekinId string) ([]inovasirekin.InovasiRekinResponse, error)
+	FindAllKodeOpdTahun(ctx context.Context, kodeOpd string, tahun string) ([]inovasirekin.InovasiLaporanResponse, error)
 	Delete(ctx context.Context, id string) error
 }
