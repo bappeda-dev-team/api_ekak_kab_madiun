@@ -1,0 +1,1 @@
+ALTER TABLE tb_inovasi_rekin DROP COLUMN pegawai_id;

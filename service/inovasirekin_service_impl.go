@@ -48,6 +48,7 @@ func (service *InovasiRekinServiceImpl) Create(ctx context.Context, request inov
 		AsalInovasi: 	   request.AsalInovasi,
 		Tahun: 	           request.Tahun,
 		NipInovator: 	   request.NipInovator,
+		PegawaiId: 	       request.PegawaiId,
 	}
 
 	inovasis, err := service.inovasirekinRepository.Create(ctx, tx, domainInovasiRekin)

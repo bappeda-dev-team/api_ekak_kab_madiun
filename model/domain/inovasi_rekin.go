@@ -19,12 +19,14 @@ type InovasiRekin struct {
 	NipInovator        string
 	NamaNipInovator    string
 	Level              string
+	PegawaiId          string
 	CreatedAt          time.Time
 }
 
 type InovasiLaporan struct {
 	Id                 string
 	RekinId            string
+	NamaRencanaKinerja string
 	KodeOpd            string
 	NamaOpd            string
 	NamaInovasi        string
@@ -39,5 +41,7 @@ type InovasiLaporan struct {
 	NipInovator        string
 	NamaNipInovator    string
 	Level              string
+	PegawaiId          string
+	NamaPegawai        string
 	CreatedAt          time.Time
 }

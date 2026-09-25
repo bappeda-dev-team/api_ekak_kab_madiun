@@ -330,6 +330,7 @@ func ToInovasiRekinResponse(inovasiRekin domain.InovasiRekin) inovasirekin.Inova
 		NipInovator:        inovasiRekin.NipInovator,
 		NamaNipInovator:    inovasiRekin.NamaNipInovator,
 		Level:              inovasiRekin.Level,
+		PegawaiId:          inovasiRekin.PegawaiId,
 		Action:             buttonActions,
 	}
 }
@@ -342,28 +343,10 @@ func ToInovasiRekinResponses(inovasiRekins []domain.InovasiRekin) []inovasirekin
 	return inovasiRekinResponses
 }
 func ToInovasiLaporanResponse(inovasiRekin domain.InovasiLaporan) inovasirekin.InovasiLaporanResponse {
-	host := os.Getenv("host")
-	port := os.Getenv("port")
-	buttonActions := []web.ActionButton{
-		{
-			NameAction: "Find By Id Inovasi Rekin",
-			Method:     "GET",
-			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/detail/:id", host, port),
-		},
-		{
-			NameAction: "Update Inovasi Rekin",
-			Method:     "PUT",
-			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/update/:id", host, port),
-		},
-		{
-			NameAction: "Delete Inovasi Rekin",
-			Method:     "DELETE",
-			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/delete/:id", host, port),
-		},
-	}
 	return inovasirekin.InovasiLaporanResponse{
 		Id:           	 	inovasiRekin.Id,
 		RekinId:      	 	inovasiRekin.RekinId,
+		NamaRencanaKinerja: inovasiRekin.NamaRencanaKinerja,
 		KodeOpd:      	 	inovasiRekin.KodeOpd,
 		NamaOpd:      	 	inovasiRekin.NamaOpd,
 		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
@@ -378,7 +361,8 @@ func ToInovasiLaporanResponse(inovasiRekin domain.InovasiLaporan) inovasirekin.I
 		NipInovator:        inovasiRekin.NipInovator,
 		NamaNipInovator:    inovasiRekin.NamaNipInovator,
 		Level:              inovasiRekin.Level,
-		Action:             buttonActions,
+		PegawaiId:          inovasiRekin.PegawaiId,
+		NamaPegawai:        inovasiRekin.NamaPegawai,
 	}
 }
 
