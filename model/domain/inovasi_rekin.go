@@ -43,5 +43,6 @@ type InovasiLaporan struct {
 	Level              string
 	PegawaiId          string
 	NamaPegawai        string
+	NamaSubKegiatan    string
 	CreatedAt          time.Time
 }

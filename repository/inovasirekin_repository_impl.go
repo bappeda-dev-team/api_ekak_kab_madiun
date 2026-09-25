@@ -122,7 +122,8 @@ func (repository *InovasiRekinRepositoryImpl) FindAll(ctx context.Context, tx *s
 func (repository *InovasiRekinRepositoryImpl) FindAllKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.InovasiLaporan, error) {
 	query := `SELECT 
 	tir.id, tir.rekin_id, COALESCE(trk.nama_rencana_kinerja, ''), tir.kode_opd, od.nama_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator,
-	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator, COALESCE(tro.role, '') AS level, tir.pegawai_id, COALESCE(tpu.nama, '') AS nama_pegawai
+	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator, COALESCE(tro.role, '') AS level, tir.pegawai_id, COALESCE(tpu.nama, '') AS nama_pegawai,
+	COALESCE(ts.nama_subkegiatan, '')
 	FROM tb_inovasi_rekin tir
 	LEFT JOIN tb_jenis_inovasi ji
 		ON ji.id = tir.jenis_inovasi_id 
@@ -140,6 +141,10 @@ func (repository *InovasiRekinRepositoryImpl) FindAllKodeOpdTahun(ctx context.Co
 		ON trk.id = tir.rekin_id
 	LEFT JOIN tb_pegawai tpu
 		ON tpu.id = tir.pegawai_id
+	LEFT JOIN tb_subkegiatan_terpilih tst
+		ON tst.rekin_id = tir.rekin_id
+	LEFT JOIN tb_subkegiatan ts
+		ON ts.id = tst.subkegiatan_id
 	WHERE tir.kode_opd = ? AND tir.tahun = ?`
 	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
 	if err != nil {
@@ -150,7 +155,7 @@ func (repository *InovasiRekinRepositoryImpl) FindAllKodeOpdTahun(ctx context.Co
 	var inovasiRekinList []domain.InovasiLaporan
 	for rows.Next() {
 		var inovasiRekin domain.InovasiLaporan
-		err := rows.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.NamaRencanaKinerja, &inovasiRekin.KodeOpd, &inovasiRekin.NamaOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator, &inovasiRekin.Kebaruan, &inovasiRekin.AsalInovasi, &inovasiRekin.Tahun, &inovasiRekin.NipInovator, &inovasiRekin.NamaNipInovator, &inovasiRekin.Level, &inovasiRekin.PegawaiId, &inovasiRekin.NamaPegawai)
+		err := rows.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.NamaRencanaKinerja, &inovasiRekin.KodeOpd, &inovasiRekin.NamaOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator, &inovasiRekin.Kebaruan, &inovasiRekin.AsalInovasi, &inovasiRekin.Tahun, &inovasiRekin.NipInovator, &inovasiRekin.NamaNipInovator, &inovasiRekin.Level, &inovasiRekin.PegawaiId, &inovasiRekin.NamaPegawai, &inovasiRekin.NamaSubKegiatan)
 		if err != nil {
 			return []domain.InovasiLaporan{}, err
 		}

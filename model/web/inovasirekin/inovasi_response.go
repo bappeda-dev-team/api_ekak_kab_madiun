@@ -44,5 +44,6 @@ type InovasiLaporanResponse struct {
 	Level              string             `json:"level"`
 	PegawaiId          string			  `json:"pegawai_id"`
 	NamaPegawai        string			  `json:"nama_pegawai"`
+	NamaSubKegiatan    string			  `json:"nama_subkegiatan"`
 }
 

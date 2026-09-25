@@ -363,6 +363,7 @@ func ToInovasiLaporanResponse(inovasiRekin domain.InovasiLaporan) inovasirekin.I
 		Level:              inovasiRekin.Level,
 		PegawaiId:          inovasiRekin.PegawaiId,
 		NamaPegawai:        inovasiRekin.NamaPegawai,
+		NamaSubKegiatan:    inovasiRekin.NamaSubKegiatan,
 	}
 }
 
