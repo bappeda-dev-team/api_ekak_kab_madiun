@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -2063,12 +2064,19 @@ func (repo *RencanaKinerjaRepositoryImpl) FindSubkegiatanRekinByIds(
 		SELECT
 			rek.id,
 			sub.kode_subkegiatan,
-			sub.nama_subkegiatan
+			sub.nama_subkegiatan,
+			pagu.id,
+			pagu.pagu
 		FROM tb_rencana_kinerja rek
 		JOIN tb_subkegiatan_terpilih st
 			ON st.rekin_id = rek.id
 		JOIN tb_subkegiatan sub
 			ON st.kode_subkegiatan = sub.kode_subkegiatan
+		LEFT JOIN tb_pagu pagu
+			ON pagu.kode_subkegiatan = sub.kode_subkegiatan
+			AND pagu.kode_opd = rek.kode_opd
+			AND pagu.tahun = rek.tahun
+			AND pagu.jenis = 'penetapan'
 		WHERE rek.id IN (?)
 	`
 
@@ -2084,23 +2092,41 @@ func (repo *RencanaKinerjaRepositoryImpl) FindSubkegiatanRekinByIds(
 
 	for rows.Next() {
 		var (
-			rekinID         string
-			kodeSubKegiatan string
-			namaSubKegiatan string
+			rekinID           string
+			kodeSubKegiatan   string
+			namaSubKegiatan   string
+			paguIdNi          sql.NullInt64
+			paguSubKegiatanNi sql.NullInt64
+			paguId            string
+			paguSubKegiatan   int
 		)
 
 		if err := rows.Scan(
 			&rekinID,
 			&kodeSubKegiatan,
 			&namaSubKegiatan,
+			&paguIdNi,
+			&paguSubKegiatanNi,
 		); err != nil {
 			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
 		}
+		if paguIdNi.Valid {
+			paguId = strconv.Itoa(int(paguIdNi.Int64))
+			paguSubKegiatan = int(paguSubKegiatanNi.Int64)
+		}
+
+		paguSub := make([]domain.PaguSubKegiatan, 0)
+		paguSub = append(paguSub, domain.PaguSubKegiatan{
+			Id:           paguId,
+			JenisPagu:    "penetapan",
+			PaguAnggaran: paguSubKegiatan,
+		})
 
 		rekinMap[rekinID] = domain.SubKegiatan{
 			KodeSubKegiatan: kodeSubKegiatan,
 			NamaSubKegiatan: namaSubKegiatan,
 			RekinId:         rekinID,
+			PaguSubKegiatan: paguSub,
 		}
 	}
 

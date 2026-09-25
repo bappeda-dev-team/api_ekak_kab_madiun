@@ -518,6 +518,15 @@ var rencanaAksiOpdSet = wire.NewSet(
 	wire.Bind(new(controller.RencanaAksiOpdController), new(*controller.RencanaAksiOpdControllerImpl)),
 )
 
+var lockRenaksiOpdSet = wire.NewSet(
+	repository.NewLockRenaksiOpdRepositoryImpl,
+	wire.Bind(new(repository.LockRenaksiOpdRepository), new(*repository.LockRenaksiOpdRepositoryImpl)),
+	service.NewLockRenaksiOpdServiceImpl,
+	wire.Bind(new(service.LockRenaksiOpdService), new(*service.LockRenaksiOpdServiceImpl)),
+	controller.NewLockRenaksiOpdControllerImpl,
+	wire.Bind(new(controller.LockRenaksiOpdController), new(*controller.LockRenaksiOpdControllerImpl)),
+)
+
 var ikkSet = wire.NewSet(
 	repository.NewIkkRepositoryImpl,
 	wire.Bind(new(repository.IkkRepository), new(*repository.IkkRepositoryImpl)),
@@ -758,6 +767,7 @@ func InitializeServer() *http.Server {
 		lockDataRepository,
 		lockDataPemdaRepository,
 		rencanaAksiOpdSet,
+		lockRenaksiOpdSet,
 		ikkSet,
 		ikdSet,
 		isuRegionalSet,

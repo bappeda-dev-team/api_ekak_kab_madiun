@@ -722,6 +722,291 @@ const docTemplate = `{
                 }
             }
         },
+        "/lock-renaksi-opd/lock/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan daftar lock Renaksi OPD berdasarkan kode OPD dan tahun.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Lock Renaksi OPD"
+                ],
+                "summary": "Daftar Lock Renaksi OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/lockrenaksiopd.LockRenaksiOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat snapshot lock Renaksi OPD berdasarkan kode OPD, tahun, sasaran, dan rekin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Lock Renaksi OPD"
+                ],
+                "summary": "Lock Renaksi OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data lock Renaksi OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/lockrenaksiopd.LockRenaksiOpdRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/lockrenaksiopd.LockRenaksiOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/lock-renaksi-opd/lock/{kode_opd}/{tahun}/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan detail lock Renaksi OPD berdasarkan kode OPD, tahun, dan ID Renaksi OPD.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Lock Renaksi OPD"
+                ],
+                "summary": "Detail Lock Renaksi OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID Renaksi OPD",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/lockrenaksiopd.LockRenaksiOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus snapshot lock Renaksi OPD berdasarkan kode OPD, tahun, dan ID Renaksi OPD.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Lock Renaksi OPD"
+                ],
+                "summary": "Unlock Renaksi OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID Renaksi OPD",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -6894,6 +7179,92 @@ const docTemplate = `{
                 }
             }
         },
+        "lockrenaksiopd.LockRenaksiOpdRequest": {
+            "type": "object",
+            "required": [
+                "rekin_id",
+                "sasaran_id"
+            ],
+            "properties": {
+                "aksi_kegiatan": {
+                    "type": "string"
+                },
+                "anggaran": {
+                    "type": "integer"
+                },
+                "nama_pemilik": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "sasaran_id": {
+                    "type": "integer"
+                },
+                "sub_kegiatan": {
+                    "type": "string"
+                },
+                "tw1": {
+                    "type": "integer"
+                },
+                "tw2": {
+                    "type": "integer"
+                },
+                "tw3": {
+                    "type": "integer"
+                },
+                "tw4": {
+                    "type": "integer"
+                }
+            }
+        },
+        "lockrenaksiopd.LockRenaksiOpdResponse": {
+            "type": "object",
+            "properties": {
+                "aksi_kegiatan": {
+                    "type": "string"
+                },
+                "anggaran": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "nama_pemilik": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "sasaran_id": {
+                    "type": "integer"
+                },
+                "sub_kegiatan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tw1": {
+                    "type": "integer"
+                },
+                "tw2": {
+                    "type": "integer"
+                },
+                "tw3": {
+                    "type": "integer"
+                },
+                "tw4": {
+                    "type": "integer"
+                }
+            }
+        },
         "opdmaster.OpdResponseForAll": {
             "type": "object",
             "properties": {
@@ -8143,6 +8514,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                },
+                "target_id": {
                     "type": "string"
                 }
             }

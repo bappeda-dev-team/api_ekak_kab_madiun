@@ -6,6 +6,7 @@ type RencanaAksiOpd struct {
 	SasaranOpdId       int
 	NamaSasaranOpd     string
 	TahunRenaksi       string
+	KodeOpd            string
 	Tw1                int
 	Tw2                int
 	Tw3                int

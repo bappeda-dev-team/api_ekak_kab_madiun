@@ -474,14 +474,21 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 			NamaSubkegiatan: subkegiatanRekin.NamaSubKegiatan,
 		}
 
+		var anggaranSubkegiatanPenetapan int
+		for _, sub := range subkegiatanRekin.PaguSubKegiatan {
+			if sub.JenisPagu == "penetapan" {
+				anggaranSubkegiatanPenetapan = sub.PaguAnggaran
+			}
+		}
+
 		// bangun response RencanaAksiRB dari rekin
 		ra := datamaster.RencanaAksiRB{
 			IdRencanaAksi:   rekin.Id,
 			RencanaAksi:     rekin.NamaRencanaKinerja,
 			IndikatorOutput: make([]datamaster.IndikatorRencanaAksiRB, 0, len(rekin.Indikator)),
-			Anggaran:        0,
+			Anggaran:        anggaranSubkegiatanPenetapan,
 			Realisasi:       0,
-			Capaian:         "0%",
+			Capaian:         "-",
 			OpdKoordinator:  rekin.NamaOpd,
 			NipPelaksana:    rekin.PegawaiId,
 			NamaPelaksana:   rekin.NamaPegawai,
