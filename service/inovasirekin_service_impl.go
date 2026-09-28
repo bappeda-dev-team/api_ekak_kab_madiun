@@ -8,18 +8,21 @@ import (
 	"ekak_kabupaten_madiun/model/web/inovasirekin"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 )
 
 type InovasiRekinServiceImpl struct {
 	inovasirekinRepository repository.InovasiRekinRepository
+	rencanaKinerjaRepository         repository.RencanaKinerjaRepository
 	DB                     *sql.DB
 }
 
-func NewInovasiRekinServiceImpl(inovasirekinRepository repository.InovasiRekinRepository, DB *sql.DB) *InovasiRekinServiceImpl {
+func NewInovasiRekinServiceImpl(inovasirekinRepository repository.InovasiRekinRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB) *InovasiRekinServiceImpl {
 	return &InovasiRekinServiceImpl{
 		inovasirekinRepository: inovasirekinRepository,
+		rencanaKinerjaRepository:         rencanaKinerjaRepository,
 		DB:                     DB,
 	}
 }
@@ -135,16 +138,71 @@ func (service *InovasiRekinServiceImpl) FindAllKodeOpdTahun(ctx context.Context,
 		return nil, fmt.Errorf("gagal mengambil data: %v", err)
 	}
 
-	// if len(inovasiRekins) == 0 {
-	// 	return nil, fmt.Errorf("tidak ada gambaran umum untuk rekin dengan ID %s", rekinId)
-	// }
+	var responses []inovasirekin.InovasiLaporanResponse
+	for _, rencana := range inovasiRekins {
+		log.Printf("Memproses RencanaKinerja dengan ID: %s", rencana.Id)
 
-	// Commit transaksi jika berhasil
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("gagal melakukan commit transaksi: %v", err)
+		indikators, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rencana.RekinId)
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("Gagal mencari Indikator: %v", err)
+			return nil, fmt.Errorf("gagal mencari Indikator: %v", err)
+		}
+
+		var indikatorResponses []inovasirekin.IndikatorResponse
+		for _, indikator := range indikators {
+			targets, err := service.rencanaKinerjaRepository.FindTargetByIndikatorId(ctx, tx, indikator.Id)
+			if err != nil && err != sql.ErrNoRows {
+				log.Printf("Gagal mencari Target: %v", err)
+				return nil, fmt.Errorf("gagal mencari Target: %v", err)
+			}
+
+			var targetResponses []inovasirekin.TargetResponse
+			for _, target := range targets {
+				targetResponses = append(targetResponses, inovasirekin.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
+				})
+			}
+
+			indikatorResponses = append(indikatorResponses, inovasirekin.IndikatorResponse{
+				Id:               indikator.Id,
+				RencanaKinerjaId: indikator.RencanaKinerjaId,
+				NamaIndikator:    indikator.Indikator,
+				Target:           targetResponses,
+			})
+		}
+
+		responses = append(responses, inovasirekin.InovasiLaporanResponse{
+			Id:           	 	rencana.Id,
+			RekinId:      	 	rencana.RekinId,
+			NamaRencanaKinerja: rencana.NamaRencanaKinerja,
+			Indikator:          indikatorResponses,
+			KodeOpd:      	 	rencana.KodeOpd,
+			NamaOpd:      	 	rencana.NamaOpd,
+			NamaInovasi:  	 	rencana.NamaInovasi,
+			JenisInovasiId:  	rencana.JenisInovasiId,
+			JenisInovasi:  		rencana.JenisInovasi,
+			WaktuImplementasi:  rencana.WaktuImplementasi,
+			Instansi:           rencana.Instansi,
+			Inovator:           rencana.Inovator,
+			Kebaruan:           rencana.Kebaruan,
+			AsalInovasi:        rencana.AsalInovasi,
+			Tahun:              rencana.Tahun,
+			NipInovator:        rencana.NipInovator,
+			NamaNipInovator:    rencana.NamaNipInovator,
+			Level:              rencana.Level,
+			PegawaiId:          rencana.PegawaiId,
+			NamaPegawai:        rencana.NamaPegawai,
+			NamaSubKegiatan:    rencana.NamaSubKegiatan,
+		})
+		log.Printf("RencanaKinerja Response ditambahkan untuk ID: %s", rencana.Id)
 	}
+	
+	return responses, nil
 
-	return helper.ToInovasiLaporanResponses(inovasiRekins), nil
+	// return helper.ToInovasiLaporanResponses(inovasiRekins), nil
 }
 
 func (service *InovasiRekinServiceImpl) FindById(ctx context.Context, id string) (inovasirekin.InovasiRekinResponse, error) {
