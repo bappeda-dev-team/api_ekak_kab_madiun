@@ -151,7 +151,7 @@ func (service *InovasiRekinServiceImpl) FindAllKodeOpdTahun(ctx context.Context,
 	for _, rencana := range inovasiRekins {
 		log.Printf("Memproses RencanaKinerja dengan ID: %s", rencana.Id)
 
-		indikators, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rencana.Id)
+		indikators, err := service.rencanaKinerjaRepository.FindIndikatorbyRekinId(ctx, tx, rencana.RekinId)
 		if err != nil && err != sql.ErrNoRows {
 			log.Printf("Gagal mencari Indikator: %v", err)
 			return nil, fmt.Errorf("gagal mencari Indikator: %v", err)
