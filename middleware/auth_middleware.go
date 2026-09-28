@@ -39,6 +39,7 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		{"/isu-global/find-by-ids", "^/isu-global/find-by-ids$"},
 		{"/isu-nasional/find-by-ids", "^/isu-nasional/find-by-ids$"},
 		{"/isu-regional/find-by-ids", "^/isu-regional/find-by-ids$"},
+		{"/lock-renaksi-opd/lock", "^/lock-renaksi-opd/lock$"},
 	}
 
 	currentPath := request.URL.Path

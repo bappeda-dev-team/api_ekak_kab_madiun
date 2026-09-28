@@ -219,10 +219,70 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 		})
 	}
 	getIndikator := func(kode string) []programkegiatan.IndikatorPeriodResponse {
-		if list := indByKode[kode]; list != nil {
-			return list
+		indikators := indByKode[kode]
+		if len(indikators) == 0 {
+			return []programkegiatan.IndikatorPeriodResponse{}
 		}
-		return []programkegiatan.IndikatorPeriodResponse{}
+
+		// Indikator baseline sebagai master.
+		baseline := make(map[string]programkegiatan.IndikatorPeriodResponse)
+
+		for _, indikator := range indikators {
+			// if indikator.Tahun != tahunAwal {
+			// 	continue
+			// }
+
+			key := strings.TrimSpace(indikator.Indikator)
+			if key == "" {
+				continue
+			}
+
+			baseline[key] = indikator
+		}
+
+		// Kumpulkan target berdasarkan nama indikator.
+		targetsByIndikator := make(
+			map[string][]programkegiatan.TargetResponse,
+		)
+
+		for _, indikator := range indikators {
+			key := strings.TrimSpace(indikator.Indikator)
+			if key == "" {
+				continue
+			}
+
+			for _, target := range indikator.Target {
+				if strings.TrimSpace(target.IndikatorId) == "" {
+					continue
+				}
+
+				if strings.TrimSpace(target.Target) == "-" {
+					continue
+				}
+
+				targetsByIndikator[key] = append(
+					targetsByIndikator[key],
+					target,
+				)
+			}
+		}
+
+		// Inject seluruh target lintas tahun ke indikator baseline.
+		result := make(
+			[]programkegiatan.IndikatorPeriodResponse,
+			0,
+			len(baseline),
+		)
+
+		for _, indikator := range baseline {
+			key := strings.TrimSpace(indikator.Indikator)
+			indikator.Indikator = key
+			indikator.Target = targetsByIndikator[key]
+
+			result = append(result, indikator)
+		}
+
+		return result
 	}
 
 	buildAnggaran := func(paguByTahun map[string]int64) []programkegiatan.PaguAnggaranTotalResponse {
