@@ -218,7 +218,6 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			Target:        fillTargetByTahunRange(tahunRange, ind.Target),
 		})
 	}
-	tahunBase := tahunAwal
 
 	getIndikator := func(kode string) []programkegiatan.IndikatorPeriodResponse {
 		indikators := indByKode[kode]
@@ -242,10 +241,6 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			}
 
 			namaByKode[indikator.KodeIndikator] = nama
-
-			if indikator.Tahun != tahunBase {
-				continue
-			}
 
 			if _, exists := indikatorByNama[nama]; exists {
 				continue
