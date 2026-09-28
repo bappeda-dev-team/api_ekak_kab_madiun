@@ -234,8 +234,6 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 		// Pertahankan urutan indikator baseline.
 		urutanNama := make([]string, 0)
 
-		tahunBase := tahunAwal
-
 		for _, indikator := range indikators {
 			nama := strings.TrimSpace(indikator.Indikator)
 			if nama == "" {
