@@ -48,6 +48,7 @@ func (service *InovasiRekinServiceImpl) Create(ctx context.Context, request inov
 		AsalInovasi: 	   request.AsalInovasi,
 		Tahun: 	           request.Tahun,
 		NipInovator: 	   request.NipInovator,
+		PegawaiId: 	       request.PegawaiId,
 	}
 
 	inovasis, err := service.inovasirekinRepository.Create(ctx, tx, domainInovasiRekin)
@@ -118,6 +119,32 @@ func (service *InovasiRekinServiceImpl) FindAll(ctx context.Context, rekinId str
 	}
 
 	return helper.ToInovasiRekinResponses(inovasiRekins), nil
+}
+func (service *InovasiRekinServiceImpl) FindAllKodeOpdTahun(ctx context.Context, kodeOpd string, tahun string) ([]inovasirekin.InovasiLaporanResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer tx.Rollback() // Hanya melakukan rollback jika belum di-commit
+
+	inovasiRekins, err := service.inovasirekinRepository.FindAllKodeOpdTahun(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("rekin dengan ID %s tidak ditemukan", kodeOpd)
+		}
+		return nil, fmt.Errorf("gagal mengambil data: %v", err)
+	}
+
+	// if len(inovasiRekins) == 0 {
+	// 	return nil, fmt.Errorf("tidak ada gambaran umum untuk rekin dengan ID %s", rekinId)
+	// }
+
+	// Commit transaksi jika berhasil
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("gagal melakukan commit transaksi: %v", err)
+	}
+
+	return helper.ToInovasiLaporanResponses(inovasiRekins), nil
 }
 
 func (service *InovasiRekinServiceImpl) FindById(ctx context.Context, id string) (inovasirekin.InovasiRekinResponse, error) {

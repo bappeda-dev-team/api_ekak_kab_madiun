@@ -182,6 +182,9 @@ func NewRouter(
 	router.PUT("/inovasi_rekin/update/:id", inovasiRekinController.Update)
 	router.DELETE("/inovasi_rekin/delete/:id", inovasiRekinController.Delete)
 
+	//laporan inovasi 
+	router.GET("/laporan-inovasi/findall/:kode_opd/:tahun", inovasiRekinController.FindAllKodeOpdTahun)
+
 	//dasar hukum
 	router.POST("/dasar_hukum/create/:rencana_kinerja_id", dasarHukumController.Create)
 	router.GET("/dasar_hukum/findall/:rencana_kinerja_id", dasarHukumController.FindAll)

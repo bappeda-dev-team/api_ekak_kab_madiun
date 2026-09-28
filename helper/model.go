@@ -330,6 +330,7 @@ func ToInovasiRekinResponse(inovasiRekin domain.InovasiRekin) inovasirekin.Inova
 		NipInovator:        inovasiRekin.NipInovator,
 		NamaNipInovator:    inovasiRekin.NamaNipInovator,
 		Level:              inovasiRekin.Level,
+		PegawaiId:          inovasiRekin.PegawaiId,
 		Action:             buttonActions,
 	}
 }
@@ -338,6 +339,38 @@ func ToInovasiRekinResponses(inovasiRekins []domain.InovasiRekin) []inovasirekin
 	var inovasiRekinResponses []inovasirekin.InovasiRekinResponse
 	for _, inovasiRekin := range inovasiRekins {
 		inovasiRekinResponses = append(inovasiRekinResponses, ToInovasiRekinResponse(inovasiRekin))
+	}
+	return inovasiRekinResponses
+}
+func ToInovasiLaporanResponse(inovasiRekin domain.InovasiLaporan) inovasirekin.InovasiLaporanResponse {
+	return inovasirekin.InovasiLaporanResponse{
+		Id:           	 	inovasiRekin.Id,
+		RekinId:      	 	inovasiRekin.RekinId,
+		NamaRencanaKinerja: inovasiRekin.NamaRencanaKinerja,
+		KodeOpd:      	 	inovasiRekin.KodeOpd,
+		NamaOpd:      	 	inovasiRekin.NamaOpd,
+		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
+		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
+		JenisInovasi:  		inovasiRekin.JenisInovasi,
+		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
+		Instansi:           inovasiRekin.Instansi,
+		Inovator:           inovasiRekin.Inovator,
+		Kebaruan:           inovasiRekin.Kebaruan,
+		AsalInovasi:        inovasiRekin.AsalInovasi,
+		Tahun:              inovasiRekin.Tahun,
+		NipInovator:        inovasiRekin.NipInovator,
+		NamaNipInovator:    inovasiRekin.NamaNipInovator,
+		Level:              inovasiRekin.Level,
+		PegawaiId:          inovasiRekin.PegawaiId,
+		NamaPegawai:        inovasiRekin.NamaPegawai,
+		NamaSubKegiatan:    inovasiRekin.NamaSubKegiatan,
+	}
+}
+
+func ToInovasiLaporanResponses(inovasiRekins []domain.InovasiLaporan) []inovasirekin.InovasiLaporanResponse {
+	var inovasiRekinResponses []inovasirekin.InovasiLaporanResponse
+	for _, inovasiRekin := range inovasiRekins {
+		inovasiRekinResponses = append(inovasiRekinResponses, ToInovasiLaporanResponse(inovasiRekin))
 	}
 	return inovasiRekinResponses
 }

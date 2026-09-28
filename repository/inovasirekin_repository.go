@@ -12,4 +12,5 @@ type InovasiRekinRepository interface {
 	Delete(ctx context.Context, tx *sql.Tx, id string) error
 	FindById(ctx context.Context, tx *sql.Tx, id string) (domain.InovasiRekin, error)
 	FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.InovasiRekin, error)
+	FindAllKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.InovasiLaporan, error)
 }

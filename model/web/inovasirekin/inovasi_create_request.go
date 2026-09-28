@@ -12,4 +12,5 @@ type InovasiRekinCreateRequest struct {
 	AsalInovasi       string `json:"asal_inovasi" validate:"required"`
 	Tahun             int    `json:"tahun" validate:"required"`
 	NipInovator       string `json:"nip_inovator"`
+	PegawaiId         string `json:"pegawai_id" validate:"required"`
 }

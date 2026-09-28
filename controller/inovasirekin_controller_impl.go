@@ -168,6 +168,28 @@ func (controller *InovasiRekinControllerImpl) FindAll(writer http.ResponseWriter
 		Data:   inovasiRekinResponses,
 	})
 }
+func (controller *InovasiRekinControllerImpl) FindAllKodeOpdTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	// Ambil rekinId dari params URL
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	// Panggil service untuk mendapatkan semua gambaran umum
+	inovasiRekinResponses, err := controller.InovasiRekinService.FindAllKodeOpdTahun(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   inovasiRekinResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}
 
 func (controller *InovasiRekinControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	// Ambil id dari params URL

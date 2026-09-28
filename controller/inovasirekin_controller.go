@@ -12,5 +12,6 @@ type InovasiRekinController interface {
 	Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllKodeOpdTahun(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllByRekinId(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
