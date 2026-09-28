@@ -528,6 +528,10 @@ func (r *SasaranPemdaRepositoryImpl) FindAllByTahun(
 			COALESCE(t.jenis,'renstra')
 		FROM tb_sasaran_pemda sp
 		INNER JOIN tb_periode p ON sp.periode_id=p.id
+		INNER JOIN tb_pohon_kinerja pk_sub ON pk_sub.id=sp.subtema_id
+		LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id=pk_sub.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id=pk_anc1.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id=pk_anc2.parent
 		LEFT JOIN tb_indikator_matrix_pemda i
 			ON sp.id=i.sasaran_pemda_id
 			AND (i.jenis='renstra' OR i.jenis='' OR i.jenis IS NULL)
@@ -537,6 +541,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAllByTahun(
 			AND %s
 		WHERE CAST(? AS SIGNED) BETWEEN CAST(p.tahun_awal AS SIGNED) AND CAST(p.tahun_akhir AS SIGNED)
 		  AND p.jenis_periode=?
+		  AND (pk_anc1.level_pohon=0 OR pk_anc2.level_pohon=0 OR pk_anc3.level_pohon=0)
 		ORDER BY sp.id, i.id`, jenisClause)
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -973,7 +978,10 @@ func (r *SasaranPemdaRepositoryImpl) FindRanwalByTahun(
 			CASE WHEN tr.id IS NOT NULL THEN 'ranwal' ELSE COALESCE(tren.jenis,'renstra') END AS target_jenis
 		FROM tb_sasaran_pemda sp
 		INNER JOIN tb_periode p ON sp.periode_id=p.id
-		LEFT JOIN tb_pohon_kinerja pk ON sp.subtema_id=pk.id
+		INNER JOIN tb_pohon_kinerja pk ON pk.id=sp.subtema_id
+		LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id=pk.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id=pk_anc1.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id=pk_anc2.parent
 		LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id=tp.id
 		LEFT JOIN tb_indikator_matrix_pemda i
 			ON sp.id=i.sasaran_pemda_id
@@ -988,6 +996,7 @@ func (r *SasaranPemdaRepositoryImpl) FindRanwalByTahun(
 			AND tr.jenis='ranwal'
 		WHERE CAST(? AS SIGNED) BETWEEN CAST(p.tahun_awal AS SIGNED) AND CAST(p.tahun_akhir AS SIGNED)
 		  AND p.jenis_periode=?
+		  AND (pk_anc1.level_pohon=0 OR pk_anc2.level_pohon=0 OR pk_anc3.level_pohon=0)
 		ORDER BY sp.id, i.id`
 	rows, err := tx.QueryContext(ctx, query, tahun, tahun, tahun, jenisPeriode)
 	if err != nil {
