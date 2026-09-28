@@ -236,7 +236,7 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			index, exists := groups[nama]
 
 			if !exists {
-				if indikator.Tahun != tahunBase {
+				if indikator.Tahun != tahunAwal {
 					continue
 				}
 
