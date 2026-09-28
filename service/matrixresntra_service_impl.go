@@ -224,62 +224,42 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			return []programkegiatan.IndikatorPeriodResponse{}
 		}
 
-		// Indikator baseline sebagai master.
-		baseline := make(map[string]programkegiatan.IndikatorPeriodResponse)
+		groups := make(map[string]int)
+		result := make([]programkegiatan.IndikatorPeriodResponse, 0)
 
 		for _, indikator := range indikators {
-			// if indikator.Tahun != tahunAwal {
-			// 	continue
-			// }
-
-			key := strings.TrimSpace(indikator.Indikator)
-			if key == "" {
+			nama := strings.TrimSpace(indikator.Indikator)
+			if nama == "" {
 				continue
 			}
 
-			baseline[key] = indikator
-		}
+			index, exists := groups[nama]
 
-		// Kumpulkan target berdasarkan nama indikator.
-		targetsByIndikator := make(
-			map[string][]programkegiatan.TargetResponse,
-		)
+			if !exists {
+				if indikator.Tahun != tahunBase {
+					continue
+				}
 
-		for _, indikator := range indikators {
-			key := strings.TrimSpace(indikator.Indikator)
-			if key == "" {
-				continue
+				indikator.Indikator = nama
+				indikator.Target = nil
+
+				groups[nama] = len(result)
+				result = append(result, indikator)
+
+				index = len(result) - 1
 			}
 
 			for _, target := range indikator.Target {
-				if strings.TrimSpace(target.IndikatorId) == "" {
+				if strings.TrimSpace(target.IndikatorId) == "" ||
+					strings.TrimSpace(target.Target) == "-" {
 					continue
 				}
 
-				if strings.TrimSpace(target.Target) == "-" {
-					continue
-				}
-
-				targetsByIndikator[key] = append(
-					targetsByIndikator[key],
+				result[index].Target = append(
+					result[index].Target,
 					target,
 				)
 			}
-		}
-
-		// Inject seluruh target lintas tahun ke indikator baseline.
-		result := make(
-			[]programkegiatan.IndikatorPeriodResponse,
-			0,
-			len(baseline),
-		)
-
-		for _, indikator := range baseline {
-			key := strings.TrimSpace(indikator.Indikator)
-			indikator.Indikator = key
-			indikator.Target = targetsByIndikator[key]
-
-			result = append(result, indikator)
 		}
 
 		return result
