@@ -736,3 +736,19 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindKodeOpdBySasaranOpdAndTahun(
 	}
 	return kodeOpd, nil
 }
+
+// IsRekinUsedInSasaran memastikan satu rekin hanya terdaftar sekali pada satu sasaran opd.
+func (repository *RencanaAksiOpdRepositoryImpl) IsRekinUsedInSasaran(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) (bool, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM tb_renaksi_opd
+		WHERE sasaran_id = ?
+		  AND rekin_id = ?
+		  AND id <> ?
+	`, sasaranId, rekinId, excludeId).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("gagal memeriksa penggunaan rencana kinerja pada sasaran: %w", err)
+	}
+	return count > 0, nil
+}

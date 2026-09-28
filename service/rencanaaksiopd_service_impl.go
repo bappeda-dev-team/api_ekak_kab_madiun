@@ -17,6 +17,7 @@ import (
 
 var (
 	ErrRencanaAksiOpdLocked = errors.New("rencana aksi opd terkunci")
+	ErrRekinSudahDigunakan  = errors.New("rencana kinerja sudah digunakan pada sasaran opd ini")
 )
 
 type RencanaAksiOpdServiceImpl struct {
@@ -104,6 +105,9 @@ func (service *RencanaAksiOpdServiceImpl) Create(ctx context.Context, request re
 	if err := service.ensureUnlocked(ctx, tx, kodeOpd, request.TahunRenaksi, request.SasaranOpdId, request.RekinId); err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
+	if err := service.ensureRekinBelumDigunakan(ctx, tx, request.SasaranOpdId, request.RekinId, 0); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
 
 	var keterangan *string
 	if request.Keterangan != "" {
@@ -149,6 +153,9 @@ func (service *RencanaAksiOpdServiceImpl) Update(ctx context.Context, request re
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
 	if err := service.ensureUnlocked(ctx, tx, newKodeOpd, oldTahun, oldSasaranId, request.RekinId); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureRekinBelumDigunakan(ctx, tx, oldSasaranId, request.RekinId, request.Id); err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
 
@@ -226,6 +233,17 @@ func (service *RencanaAksiOpdServiceImpl) ensureUnlocked(ctx context.Context, tx
 	}
 	if locked {
 		return fmt.Errorf("%w: data OPD %s tahun %s sasaran %d rekin %s tidak dapat diubah", ErrRencanaAksiOpdLocked, kodeOpd, tahun, sasaranId, rekinId)
+	}
+	return nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) ensureRekinBelumDigunakan(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) error {
+	used, err := service.RencanaAksiOpdRepository.IsRekinUsedInSasaran(ctx, tx, sasaranId, rekinId, excludeId)
+	if err != nil {
+		return err
+	}
+	if used {
+		return fmt.Errorf("%w: rekin %s sudah terdaftar pada sasaran %d", ErrRekinSudahDigunakan, rekinId, sasaranId)
 	}
 	return nil
 }

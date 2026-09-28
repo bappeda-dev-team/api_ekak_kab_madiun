@@ -17,4 +17,5 @@ type RencanaAksiOpdRepository interface {
 	FindLockContextByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (string, string, error)
 	FindLockContextById(ctx context.Context, tx *sql.Tx, id int) (string, string, int, string, error)
 	FindKodeOpdBySasaranOpdAndTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) (string, error)
+	IsRekinUsedInSasaran(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) (bool, error)
 }
