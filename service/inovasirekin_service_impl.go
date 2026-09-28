@@ -16,13 +16,15 @@ import (
 type InovasiRekinServiceImpl struct {
 	inovasirekinRepository repository.InovasiRekinRepository
 	rencanaKinerjaRepository         repository.RencanaKinerjaRepository
+	rincianBelanjaRepository repository.RincianBelanjaRepository
 	DB                     *sql.DB
 }
 
-func NewInovasiRekinServiceImpl(inovasirekinRepository repository.InovasiRekinRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, DB *sql.DB) *InovasiRekinServiceImpl {
+func NewInovasiRekinServiceImpl(inovasirekinRepository repository.InovasiRekinRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, rincianBelanjaRepository repository.RincianBelanjaRepository, DB *sql.DB) *InovasiRekinServiceImpl {
 	return &InovasiRekinServiceImpl{
 		inovasirekinRepository: inovasirekinRepository,
 		rencanaKinerjaRepository:         rencanaKinerjaRepository,
+		rincianBelanjaRepository: rincianBelanjaRepository,
 		DB:                     DB,
 	}
 }
@@ -138,6 +140,17 @@ func (service *InovasiRekinServiceImpl) FindAllKodeOpdTahun(ctx context.Context,
 		return nil, fmt.Errorf("gagal mengambil data: %v", err)
 	}
 
+	var rekinIds []string
+	for _, rencana := range inovasiRekins {
+		rekinIds = append(rekinIds, rencana.RekinId)
+	}
+
+	totalAnggaranByRekin, err := service.rincianBelanjaRepository.TotalAnggaranByIdRekins(ctx, tx, rekinIds)
+	if err != nil {
+		log.Printf("Gagal mengambil total anggaran: %v", err)
+		return nil, fmt.Errorf("gagal mengambil total anggaran: %v", err)
+	}
+
 	var responses []inovasirekin.InovasiLaporanResponse
 	for _, rencana := range inovasiRekins {
 		log.Printf("Memproses RencanaKinerja dengan ID: %s", rencana.Id)
@@ -173,6 +186,8 @@ func (service *InovasiRekinServiceImpl) FindAllKodeOpdTahun(ctx context.Context,
 				Target:           targetResponses,
 			})
 		}
+		
+		paguAnggaran := totalAnggaranByRekin[rencana.RekinId]
 
 		responses = append(responses, inovasirekin.InovasiLaporanResponse{
 			Id:           	 	rencana.Id,
@@ -196,6 +211,7 @@ func (service *InovasiRekinServiceImpl) FindAllKodeOpdTahun(ctx context.Context,
 			PegawaiId:          rencana.PegawaiId,
 			NamaPegawai:        rencana.NamaPegawai,
 			NamaSubKegiatan:    rencana.NamaSubKegiatan,
+			PaguAnggaran:       paguAnggaran,
 		})
 		log.Printf("RencanaKinerja Response ditambahkan untuk ID: %s", rencana.Id)
 	}

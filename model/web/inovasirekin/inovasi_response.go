@@ -46,6 +46,7 @@ type InovasiLaporanResponse struct {
 	PegawaiId          string			  `json:"pegawai_id"`
 	NamaPegawai        string			  `json:"nama_pegawai"`
 	NamaSubKegiatan    string			  `json:"nama_subkegiatan"`
+	PaguAnggaran       int64			      `json:"pagu_anggaran"`
 }
 
 type IndikatorResponse struct {
