@@ -218,14 +218,22 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			Target:        fillTargetByTahunRange(tahunRange, ind.Target),
 		})
 	}
+	tahunBase := tahunAwal
+
 	getIndikator := func(kode string) []programkegiatan.IndikatorPeriodResponse {
 		indikators := indByKode[kode]
 		if len(indikators) == 0 {
 			return []programkegiatan.IndikatorPeriodResponse{}
 		}
 
-		groups := make(map[string]int)
-		result := make([]programkegiatan.IndikatorPeriodResponse, 0)
+		// kode_indikator -> nama indikator normalized
+		namaByKode := make(map[string]string)
+
+		// nama indikator -> response indikator baseline
+		indikatorByNama := make(map[string]programkegiatan.IndikatorPeriodResponse)
+
+		// Pertahankan urutan indikator baseline.
+		urutanNama := make([]string, 0)
 
 		for _, indikator := range indikators {
 			nama := strings.TrimSpace(indikator.Indikator)
@@ -233,33 +241,66 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 				continue
 			}
 
-			index, exists := groups[nama]
+			namaByKode[indikator.KodeIndikator] = nama
 
-			if !exists {
-				if indikator.Tahun != tahunAwal {
-					continue
-				}
+			if indikator.Tahun != tahunBase {
+				continue
+			}
 
-				indikator.Indikator = nama
-				indikator.Target = nil
+			if _, exists := indikatorByNama[nama]; exists {
+				continue
+			}
 
-				groups[nama] = len(result)
-				result = append(result, indikator)
+			indikator.Indikator = nama
+			indikator.Target = nil
 
-				index = len(result) - 1
+			indikatorByNama[nama] = indikator
+			urutanNama = append(urutanNama, nama)
+		}
+
+		// Kumpulkan target berdasarkan nama indikator.
+		targetsByNama := make(map[string][]programkegiatan.TargetResponse)
+
+		for _, indikator := range indikators {
+			nama := strings.TrimSpace(indikator.Indikator)
+			if nama == "" {
+				continue
 			}
 
 			for _, target := range indikator.Target {
-				if strings.TrimSpace(target.IndikatorId) == "" ||
-					strings.TrimSpace(target.Target) == "-" {
+				if strings.TrimSpace(target.IndikatorId) == "" {
 					continue
 				}
 
-				result[index].Target = append(
-					result[index].Target,
+				if strings.TrimSpace(target.Target) == "-" {
+					continue
+				}
+
+				// Pastikan target memang berasal dari indikator
+				// yang memiliki nama tersebut.
+				targetNama, exists := namaByKode[target.IndikatorId]
+				if !exists || targetNama != nama {
+					continue
+				}
+
+				targetsByNama[nama] = append(
+					targetsByNama[nama],
 					target,
 				)
 			}
+		}
+
+		result := make(
+			[]programkegiatan.IndikatorPeriodResponse,
+			0,
+			len(urutanNama),
+		)
+
+		for _, nama := range urutanNama {
+			indikator := indikatorByNama[nama]
+			indikator.Target = targetsByNama[nama]
+
+			result = append(result, indikator)
 		}
 
 		return result
