@@ -14,12 +14,13 @@ import (
 	"ekak_kabupaten_madiun/middleware"
 	"ekak_kabupaten_madiun/repository"
 	"ekak_kabupaten_madiun/service"
-	"net/http"
-	"time"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/google/wire"
+	"net/http"
+	"time"
+)
 
+import (
 	_ "ekak_kabupaten_madiun/docs"
 )
 
@@ -39,6 +40,7 @@ func InitializeServer() *http.Server {
 	dasarHukumRepositoryImpl := repository.NewDasarHukumRepositoryImpl()
 	gambaranUmumRepositoryImpl := repository.NewGambaranUmumRepositoryImpl()
 	inovasiRepositoryImpl := repository.NewInovasiRepositoryImpl()
+	inovasiRekinRepositoryImpl := repository.NewInovasiRekinRepositoryImpl()
 	pelaksanaanRencanaAksiRepositoryImpl := repository.NewPelaksanaanRencanaAksiRepositoryImpl()
 	pegawaiRepositoryImpl := repository.NewPegawaiRepositoryImpl()
 	pohonKinerjaRepositoryImpl := repository.NewPohonKinerjaRepositoryImpl()
@@ -57,7 +59,6 @@ func InitializeServer() *http.Server {
 	client := app.GetRedisClient()
 	cascadingOpdServiceImpl := service.NewCascadingOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, rencanaKinerjaRepositoryImpl, db, programRepositoryImpl, cascadingOpdRepositoryImpl, bidangUrusanRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl, client)
 	cloneRecordRepositoryImpl := repository.NewCloneRecordRepositoryImpl()
-	inovasiRekinRepositoryImpl := repository.NewInovasiRekinRepositoryImpl()
 	rencanaKinerjaServiceImpl := service.NewRencanaKinerjaServiceImpl(rencanaKinerjaRepositoryImpl, db, validate, opdRepositoryImpl, usulanMusrebangRepositoryImpl, usulanMandatoriRepositoryImpl, usulanPokokPikiranRepositoryImpl, usulanInisiatifRepositoryImpl, subKegiatanRepositoryImpl, dasarHukumRepositoryImpl, gambaranUmumRepositoryImpl, inovasiRepositoryImpl, inovasiRekinRepositoryImpl, pelaksanaanRencanaAksiRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, manualIKRepositoryImpl, permasalahanRekinRepositoryImpl, subKegiatanTerpilihRepositoryImpl, subKegiatanServiceImpl, periodeRepositoryImpl, sasaranOpdRepositoryImpl, cascadingOpdServiceImpl, cascadingOpdRepositoryImpl, programRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl, cloneRecordRepositoryImpl)
 	rencanaKinerjaControllerImpl := controller.NewRencanaKinerjaControllerImpl(rencanaKinerjaServiceImpl)
 	rencanaAksiServiceImpl := service.NewRencanaAksiServiceImpl(rencanaAksiRepositoryImpl, db, validate, pelaksanaanRencanaAksiRepositoryImpl)
@@ -226,7 +227,7 @@ func InitializeServer() *http.Server {
 	jenisInovasiRepositoryImpl := repository.NewJenisInovasiRepositoryImpl()
 	jenisInovasiServiceImpl := service.NewJenisInovasiServiceImpl(jenisInovasiRepositoryImpl, db, validate)
 	jenisInovasiControllerImpl := controller.NewJenisInovasiControllerImpl(jenisInovasiServiceImpl)
-	inovasiRekinServiceImpl := service.NewInovasiRekinServiceImpl(inovasiRekinRepositoryImpl, db)
+	inovasiRekinServiceImpl := service.NewInovasiRekinServiceImpl(inovasiRekinRepositoryImpl, rencanaKinerjaRepositoryImpl, db)
 	inovasiRekinControllerImpl := controller.NewInovasiRekinControllerImpl(inovasiRekinServiceImpl)
 	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, rencanaAksiOpdControllerImpl, lockRenaksiOpdControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl, nspkControllerImpl, nspkOpdControllerImpl, arahKebijakanControllerImpl, pptkControllerImpl, jenisInovasiControllerImpl, inovasiRekinControllerImpl)
 	authMiddleware := middleware.NewAuthMiddleware(router)

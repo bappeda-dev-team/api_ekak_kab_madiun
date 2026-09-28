@@ -28,6 +28,7 @@ type InovasiLaporanResponse struct {
 	Id           	   string             `json:"id"`
 	RekinId      	   string             `json:"rencana_kinerja_id"`
 	NamaRencanaKinerja string             `json:"nama_rencana_kinerja"`
+	Indikator          []IndikatorResponse             `json:"indikator,omitempty"`
 	KodeOpd      	   string             `json:"kode_opd"`
 	NamaOpd      	   string             `json:"nama_opd"`
 	NamaInovasi        string			  `json:"nama_inovasi"`
@@ -45,5 +46,22 @@ type InovasiLaporanResponse struct {
 	PegawaiId          string			  `json:"pegawai_id"`
 	NamaPegawai        string			  `json:"nama_pegawai"`
 	NamaSubKegiatan    string			  `json:"nama_subkegiatan"`
+}
+
+type IndikatorResponse struct {
+	Id               string           `json:"id_indikator,omitempty"`
+	RencanaKinerjaId string           `json:"rencana_kinerja_id,omitempty"`
+	NamaIndikator    string           `json:"nama_indikator,omitempty"`
+	Target           []TargetResponse `json:"targets,omitempty"`
+	// ManualIK         *DataOutput      `json:"data_output,omitempty"`
+	ManualIKExist    bool             `json:"manual_ik_exist"`
+}
+
+type TargetResponse struct {
+	Id              string `json:"id_target,omitempty"`
+	IndikatorId     string `json:"indikator_id"`
+	TargetIndikator string `json:"target"`
+	SatuanIndikator string `json:"satuan"`
+	Tahun           string `json:"tahun,omitempty"`
 }
 
