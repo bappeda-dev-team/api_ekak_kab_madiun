@@ -138,15 +138,6 @@ func (service *InovasiRekinServiceImpl) FindAllKodeOpdTahun(ctx context.Context,
 		return nil, fmt.Errorf("gagal mengambil data: %v", err)
 	}
 
-	// if len(inovasiRekins) == 0 {
-	// 	return nil, fmt.Errorf("tidak ada gambaran umum untuk rekin dengan ID %s", rekinId)
-	// }
-
-	// Commit transaksi jika berhasil
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("gagal melakukan commit transaksi: %v", err)
-	}
-
 	var responses []inovasirekin.InovasiLaporanResponse
 	for _, rencana := range inovasiRekins {
 		log.Printf("Memproses RencanaKinerja dengan ID: %s", rencana.Id)
