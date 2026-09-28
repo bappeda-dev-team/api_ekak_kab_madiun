@@ -227,6 +227,8 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 		groups := make(map[string]int)
 		result := make([]programkegiatan.IndikatorPeriodResponse, 0)
 
+		tahunBase := tahunAwal
+
 		for _, indikator := range indikators {
 			nama := strings.TrimSpace(indikator.Indikator)
 			if nama == "" {
