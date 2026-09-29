@@ -16,12 +16,13 @@ func NewLockRenaksiOpdRepositoryImpl() *LockRenaksiOpdRepositoryImpl {
 func (repository *LockRenaksiOpdRepositoryImpl) Lock(ctx context.Context, tx *sql.Tx, lock domain.LockRenaksiOpd) (domain.LockRenaksiOpd, error) {
 	query := `
 		INSERT INTO tb_lock_renaksi_opd (
-			kode_opd, tahun, sasaran_id, rekin_id, aksi_kegiatan, sub_kegiatan,
+			kode_opd, tahun, sasaran_id, rekin_id, aksi_kegiatan, kode_subkegiatan, nama_subkegiatan,
 			anggaran, nama_pemilik, tw1, tw2, tw3, tw4
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON DUPLICATE KEY UPDATE
 			aksi_kegiatan = VALUES(aksi_kegiatan),
-			sub_kegiatan = VALUES(sub_kegiatan),
+			kode_subkegiatan = VALUES(kode_subkegiatan),
+			nama_subkegiatan = VALUES(nama_subkegiatan),
 			anggaran = VALUES(anggaran),
 			nama_pemilik = VALUES(nama_pemilik),
 			tw1 = VALUES(tw1),
@@ -36,7 +37,8 @@ func (repository *LockRenaksiOpdRepositoryImpl) Lock(ctx context.Context, tx *sq
 		lock.SasaranId,
 		lock.RekinId,
 		lock.AksiKegiatan,
-		lock.SubKegiatan,
+		lock.KodeSubKegiatan,
+		lock.NamaSubKegiatan,
 		lock.Anggaran,
 		lock.NamaPemilik,
 		lock.Tw1,
@@ -70,8 +72,10 @@ func (repository *LockRenaksiOpdRepositoryImpl) Unlock(ctx context.Context, tx *
 
 func (repository *LockRenaksiOpdRepositoryImpl) FindByContext(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, sasaranId int, rekinId string) (domain.LockRenaksiOpd, error) {
 	var lock domain.LockRenaksiOpd
+	var aksiKegiatan, kodeSubKegiatan, namaSubKegiatan, namaPemilik sql.NullString
+	var anggaran, tw1, tw2, tw3, tw4 sql.NullInt64
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, kode_opd, tahun, sasaran_id, rekin_id, aksi_kegiatan, sub_kegiatan,
+		SELECT id, kode_opd, tahun, sasaran_id, rekin_id, aksi_kegiatan, kode_subkegiatan, nama_subkegiatan,
 		       anggaran, nama_pemilik, tw1, tw2, tw3, tw4
 		FROM tb_lock_renaksi_opd
 		WHERE kode_opd = ? AND tahun = ? AND sasaran_id = ? AND rekin_id = ?
@@ -81,24 +85,34 @@ func (repository *LockRenaksiOpdRepositoryImpl) FindByContext(ctx context.Contex
 		&lock.Tahun,
 		&lock.SasaranId,
 		&lock.RekinId,
-		&lock.AksiKegiatan,
-		&lock.SubKegiatan,
-		&lock.Anggaran,
-		&lock.NamaPemilik,
-		&lock.Tw1,
-		&lock.Tw2,
-		&lock.Tw3,
-		&lock.Tw4,
+		&aksiKegiatan,
+		&kodeSubKegiatan,
+		&namaSubKegiatan,
+		&anggaran,
+		&namaPemilik,
+		&tw1,
+		&tw2,
+		&tw3,
+		&tw4,
 	)
 	if err != nil {
 		return domain.LockRenaksiOpd{}, fmt.Errorf("LockRenaksiOpdRepository.FindByContext: %w", err)
 	}
+	lock.AksiKegiatan = aksiKegiatan.String
+	lock.KodeSubKegiatan = kodeSubKegiatan.String
+	lock.NamaSubKegiatan = namaSubKegiatan.String
+	lock.Anggaran = anggaran.Int64
+	lock.NamaPemilik = namaPemilik.String
+	lock.Tw1 = int(tw1.Int64)
+	lock.Tw2 = int(tw2.Int64)
+	lock.Tw3 = int(tw3.Int64)
+	lock.Tw4 = int(tw4.Int64)
 	return lock, nil
 }
 
 func (repository *LockRenaksiOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.LockRenaksiOpd, error) {
 	rows, err := tx.QueryContext(ctx, `
-		SELECT id, kode_opd, tahun, sasaran_id, rekin_id, aksi_kegiatan, sub_kegiatan,
+		SELECT id, kode_opd, tahun, sasaran_id, rekin_id, aksi_kegiatan, kode_subkegiatan, nama_subkegiatan,
 		       anggaran, nama_pemilik, tw1, tw2, tw3, tw4
 		FROM tb_lock_renaksi_opd
 		WHERE kode_opd = ? AND tahun = ?
@@ -112,23 +126,35 @@ func (repository *LockRenaksiOpdRepositoryImpl) FindAll(ctx context.Context, tx 
 	result := make([]domain.LockRenaksiOpd, 0)
 	for rows.Next() {
 		var lock domain.LockRenaksiOpd
+		var aksiKegiatan, kodeSubKegiatan, namaSubKegiatan, namaPemilik sql.NullString
+		var anggaran, tw1, tw2, tw3, tw4 sql.NullInt64
 		if err := rows.Scan(
 			&lock.Id,
 			&lock.KodeOpd,
 			&lock.Tahun,
 			&lock.SasaranId,
 			&lock.RekinId,
-			&lock.AksiKegiatan,
-			&lock.SubKegiatan,
-			&lock.Anggaran,
-			&lock.NamaPemilik,
-			&lock.Tw1,
-			&lock.Tw2,
-			&lock.Tw3,
-			&lock.Tw4,
+			&aksiKegiatan,
+			&kodeSubKegiatan,
+			&namaSubKegiatan,
+			&anggaran,
+			&namaPemilik,
+			&tw1,
+			&tw2,
+			&tw3,
+			&tw4,
 		); err != nil {
 			return nil, fmt.Errorf("LockRenaksiOpdRepository.FindAll scan: %w", err)
 		}
+		lock.AksiKegiatan = aksiKegiatan.String
+		lock.KodeSubKegiatan = kodeSubKegiatan.String
+		lock.NamaSubKegiatan = namaSubKegiatan.String
+		lock.Anggaran = anggaran.Int64
+		lock.NamaPemilik = namaPemilik.String
+		lock.Tw1 = int(tw1.Int64)
+		lock.Tw2 = int(tw2.Int64)
+		lock.Tw3 = int(tw3.Int64)
+		lock.Tw4 = int(tw4.Int64)
 		result = append(result, lock)
 	}
 	return result, rows.Err()

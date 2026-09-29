@@ -2408,6 +2408,369 @@ const docTemplate = `{
                 }
             }
         },
+        "/renaksi-opd/detail/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan detail satu rencana aksi OPD beserta data sasaran OPD dan indikatornya.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renaksi Opd"
+                ],
+                "summary": "Detail Rencana Aksi OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Rencana Aksi OPD",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/renaksiopd.RencanaAksiOpdByIdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana-aksi-opd/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menautkan satu rencana kinerja ke satu sasaran OPD. Satu rekin hanya boleh terdaftar satu kali dalam satu sasaran OPD, sehingga permintaan yang bentrok akan gagal dengan 409.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renaksi Opd"
+                ],
+                "summary": "Tambah Rencana Aksi OPD",
+                "parameters": [
+                    {
+                        "description": "Data rencana aksi OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/renaksiopd.RencanaAksiOpdCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/renaksiopd.RencanaAksiOpdRequestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana-aksi-opd/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus satu rencana aksi OPD berdasarkan ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renaksi Opd"
+                ],
+                "summary": "Hapus Rencana Aksi OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Rencana Aksi OPD",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana-aksi-opd/sync_jadwal/{rekin_id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghitung ulang bobot triwulan (TW1-TW4) dari rencana aksi lalu menyimpannya pada data renaksi OPD untuk rekin terkait.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renaksi Opd"
+                ],
+                "summary": "Sinkronisasi Jadwal Pelaksanaan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Rencana Kinerja",
+                        "name": "rekin_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana-aksi-opd/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengganti rencana kinerja dan keterangan pada satu rencana aksi OPD. Sasaran OPD dan tahun tidak dapat diubah. Duplikasi rekin pada sasaran yang sama akan gagal dengan 409.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renaksi Opd"
+                ],
+                "summary": "Ubah Rencana Aksi OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID Rencana Aksi OPD",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data rencana aksi OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/renaksiopd.RencanaAksiOpdUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/renaksiopd.RencanaAksiOpdRequestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana-aksi-opd/{sasaran_opd_id}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan seluruh rencana aksi pada satu sasaran OPD untuk tahun tertentu, lengkap dengan rencana kinerja, subkegiatan, dan indikatornya.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renaksi Opd"
+                ],
+                "summary": "Daftar Rencana Aksi OPD per Sasaran",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Sasaran OPD",
+                        "name": "sasaran_opd_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/renaksiopd.RencanaAksiOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/rencana_kinerja/create_level1": {
             "post": {
                 "security": [
@@ -2532,6 +2895,68 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sasaran_opd/all/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menampilkan daftar sasaran OPD milik satu OPD pada tahun tertentu yang dapat dipilih untuk ditambahkan rencana aksi.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renaksi Opd"
+                ],
+                "summary": "Daftar Sasaran OPD untuk Rencana Aksi",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/renaksiopd.SasaranOpdDetailResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     }
                 }
@@ -7187,21 +7612,25 @@ const docTemplate = `{
             ],
             "properties": {
                 "aksi_kegiatan": {
+                    "description": "AksiKegiatan, KodeSubKegiatan, dan NamaSubKegiatan diabaikan server.\nKodeSubKegiatan dan NamaSubKegiatan selalu diturunkan dari subkegiatan\nterpilih pada rencana kinerja terkait.",
                     "type": "string"
                 },
                 "anggaran": {
                     "type": "integer"
                 },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
                 "nama_pemilik": {
+                    "type": "string"
+                },
+                "nama_subkegiatan": {
                     "type": "string"
                 },
                 "rekin_id": {
                     "type": "string"
                 },
                 "sasaran_id": {
-                    "type": "integer"
-                },
-                "sub_kegiatan": {
                     "type": "string"
                 },
                 "tw1": {
@@ -7233,19 +7662,22 @@ const docTemplate = `{
                 "kode_opd": {
                     "type": "string"
                 },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
                 "locked": {
                     "type": "boolean"
                 },
                 "nama_pemilik": {
                     "type": "string"
                 },
+                "nama_subkegiatan": {
+                    "type": "string"
+                },
                 "rekin_id": {
                     "type": "string"
                 },
                 "sasaran_id": {
-                    "type": "integer"
-                },
-                "sub_kegiatan": {
                     "type": "string"
                 },
                 "tahun": {
@@ -9184,6 +9616,284 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nama": {
+                    "type": "string"
+                }
+            }
+        },
+        "renaksiopd.IndikatorResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "renaksiopd.IndikatorSasaranOpdResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/renaksiopd.TargetResponse"
+                }
+            }
+        },
+        "renaksiopd.RencanaAksiOpdByIdResponse": {
+            "type": "object",
+            "properties": {
+                "id_renaksiopd": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "nama_rencana_kinerja": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "sasaran_opd": {
+                    "$ref": "#/definitions/renaksiopd.SasaranOpdDetailResponse"
+                },
+                "tahun_renaksi": {
+                    "type": "string"
+                },
+                "urutan": {
+                    "type": "integer"
+                }
+            }
+        },
+        "renaksiopd.RencanaAksiOpdCreateRequest": {
+            "type": "object",
+            "required": [
+                "rekin_id",
+                "sasaranopd_id",
+                "tahun"
+            ],
+            "properties": {
+                "keterangan": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "sasaranopd_id": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "renaksiopd.RencanaAksiOpdRequestResponse": {
+            "type": "object",
+            "properties": {
+                "keterangan": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "sasaran_opd_id": {
+                    "type": "string"
+                },
+                "tahun_renaksi": {
+                    "type": "string"
+                },
+                "tw1": {
+                    "type": "integer"
+                },
+                "tw2": {
+                    "type": "integer"
+                },
+                "tw3": {
+                    "type": "integer"
+                },
+                "tw4": {
+                    "type": "integer"
+                },
+                "urutan": {
+                    "type": "integer"
+                }
+            }
+        },
+        "renaksiopd.RencanaAksiOpdResponse": {
+            "type": "object",
+            "properties": {
+                "nama_sasaran_opd": {
+                    "type": "string"
+                },
+                "rencana_kinerja": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renaksiopd.RencanaKinerjaResponse"
+                    }
+                },
+                "sasaran_opd_id": {
+                    "type": "string"
+                },
+                "tahun_renaksi": {
+                    "type": "string"
+                }
+            }
+        },
+        "renaksiopd.RencanaAksiOpdUpdateRequest": {
+            "type": "object",
+            "required": [
+                "rekin_id",
+                "urutan"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "urutan": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "renaksiopd.RencanaKinerjaResponse": {
+            "type": "object",
+            "properties": {
+                "id_renaksiopd": {
+                    "type": "integer"
+                },
+                "indikator_rencana_kinerja": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanakinerja.IndikatorResponse"
+                    }
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "nama_rencana_kinerja": {
+                    "type": "string"
+                },
+                "nip_pegawai": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "subkegiatan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renaksiopd.SubKegiatanResponse"
+                    }
+                },
+                "total_anggaran": {
+                    "type": "integer"
+                },
+                "tw1": {
+                    "type": "integer"
+                },
+                "tw2": {
+                    "type": "integer"
+                },
+                "tw3": {
+                    "type": "integer"
+                },
+                "tw4": {
+                    "type": "integer"
+                },
+                "urutan": {
+                    "type": "integer"
+                }
+            }
+        },
+        "renaksiopd.SasaranOpdDetailResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renaksiopd.IndikatorSasaranOpdResponse"
+                    }
+                },
+                "jenis_periode": {
+                    "type": "string"
+                },
+                "nama_sasaran_opd": {
+                    "type": "string"
+                },
+                "tahun_akhir": {
+                    "type": "string"
+                },
+                "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "renaksiopd.SubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renaksiopd.IndikatorResponse"
+                    }
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "nama_subkegiatan": {
+                    "type": "string"
+                }
+            }
+        },
+        "renaksiopd.TargetResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
                     "type": "string"
                 }
             }

@@ -166,16 +166,22 @@ definitions:
   lockrenaksiopd.LockRenaksiOpdRequest:
     properties:
       aksi_kegiatan:
+        description: |-
+          AksiKegiatan, KodeSubKegiatan, dan NamaSubKegiatan diabaikan server.
+          KodeSubKegiatan dan NamaSubKegiatan selalu diturunkan dari subkegiatan
+          terpilih pada rencana kinerja terkait.
         type: string
       anggaran:
         type: integer
+      kode_subkegiatan:
+        type: string
       nama_pemilik:
+        type: string
+      nama_subkegiatan:
         type: string
       rekin_id:
         type: string
       sasaran_id:
-        type: integer
-      sub_kegiatan:
         type: string
       tw1:
         type: integer
@@ -199,15 +205,17 @@ definitions:
         type: integer
       kode_opd:
         type: string
+      kode_subkegiatan:
+        type: string
       locked:
         type: boolean
       nama_pemilik:
         type: string
+      nama_subkegiatan:
+        type: string
       rekin_id:
         type: string
       sasaran_id:
-        type: integer
-      sub_kegiatan:
         type: string
       tahun:
         type: string
@@ -1496,6 +1504,189 @@ definitions:
       kode:
         type: string
       nama:
+        type: string
+    type: object
+  renaksiopd.IndikatorResponse:
+    properties:
+      id:
+        type: string
+      indikator:
+        type: string
+      satuan:
+        type: string
+      target:
+        type: string
+    type: object
+  renaksiopd.IndikatorSasaranOpdResponse:
+    properties:
+      id:
+        type: string
+      indikator:
+        type: string
+      rumus_perhitungan:
+        type: string
+      sumber_data:
+        type: string
+      target:
+        $ref: '#/definitions/renaksiopd.TargetResponse'
+    type: object
+  renaksiopd.RencanaAksiOpdByIdResponse:
+    properties:
+      id_renaksiopd:
+        type: integer
+      keterangan:
+        type: string
+      nama_rencana_kinerja:
+        type: string
+      rekin_id:
+        type: string
+      sasaran_opd:
+        $ref: '#/definitions/renaksiopd.SasaranOpdDetailResponse'
+      tahun_renaksi:
+        type: string
+      urutan:
+        type: integer
+    type: object
+  renaksiopd.RencanaAksiOpdCreateRequest:
+    properties:
+      keterangan:
+        type: string
+      rekin_id:
+        type: string
+      sasaranopd_id:
+        type: string
+      tahun:
+        type: string
+    required:
+    - rekin_id
+    - sasaranopd_id
+    - tahun
+    type: object
+  renaksiopd.RencanaAksiOpdRequestResponse:
+    properties:
+      keterangan:
+        type: string
+      rekin_id:
+        type: string
+      sasaran_opd_id:
+        type: string
+      tahun_renaksi:
+        type: string
+      tw1:
+        type: integer
+      tw2:
+        type: integer
+      tw3:
+        type: integer
+      tw4:
+        type: integer
+      urutan:
+        type: integer
+    type: object
+  renaksiopd.RencanaAksiOpdResponse:
+    properties:
+      nama_sasaran_opd:
+        type: string
+      rencana_kinerja:
+        items:
+          $ref: '#/definitions/renaksiopd.RencanaKinerjaResponse'
+        type: array
+      sasaran_opd_id:
+        type: string
+      tahun_renaksi:
+        type: string
+    type: object
+  renaksiopd.RencanaAksiOpdUpdateRequest:
+    properties:
+      id:
+        type: integer
+      keterangan:
+        type: string
+      rekin_id:
+        type: string
+      urutan:
+        minimum: 1
+        type: integer
+    required:
+    - rekin_id
+    - urutan
+    type: object
+  renaksiopd.RencanaKinerjaResponse:
+    properties:
+      id_renaksiopd:
+        type: integer
+      indikator_rencana_kinerja:
+        items:
+          $ref: '#/definitions/rencanakinerja.IndikatorResponse'
+        type: array
+      keterangan:
+        type: string
+      kode_opd:
+        type: string
+      nama_pegawai:
+        type: string
+      nama_rencana_kinerja:
+        type: string
+      nip_pegawai:
+        type: string
+      rekin_id:
+        type: string
+      subkegiatan:
+        items:
+          $ref: '#/definitions/renaksiopd.SubKegiatanResponse'
+        type: array
+      total_anggaran:
+        type: integer
+      tw1:
+        type: integer
+      tw2:
+        type: integer
+      tw3:
+        type: integer
+      tw4:
+        type: integer
+      urutan:
+        type: integer
+    type: object
+  renaksiopd.SasaranOpdDetailResponse:
+    properties:
+      id:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/renaksiopd.IndikatorSasaranOpdResponse'
+        type: array
+      jenis_periode:
+        type: string
+      nama_sasaran_opd:
+        type: string
+      tahun_akhir:
+        type: string
+      tahun_awal:
+        type: string
+    type: object
+  renaksiopd.SubKegiatanResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/renaksiopd.IndikatorResponse'
+        type: array
+      kode_subkegiatan:
+        type: string
+      nama_subkegiatan:
+        type: string
+    type: object
+  renaksiopd.TargetResponse:
+    properties:
+      id:
+        type: string
+      indikator_id:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
         type: string
     type: object
   rencanakinerja.DataOutput:
@@ -4303,6 +4494,233 @@ paths:
       summary: Update Parent Pohon Kinerja Opd Clone
       tags:
       - Clone Pohon Kinerja Opd
+  /renaksi-opd/detail/{id}:
+    get:
+      description: Menampilkan detail satu rencana aksi OPD beserta data sasaran OPD
+        dan indikatornya.
+      parameters:
+      - description: ID Rencana Aksi OPD
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/renaksiopd.RencanaAksiOpdByIdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Detail Rencana Aksi OPD
+      tags:
+      - Renaksi Opd
+  /rencana-aksi-opd/{sasaran_opd_id}/{tahun}:
+    get:
+      description: Menampilkan seluruh rencana aksi pada satu sasaran OPD untuk tahun
+        tertentu, lengkap dengan rencana kinerja, subkegiatan, dan indikatornya.
+      parameters:
+      - description: ID Sasaran OPD
+        in: path
+        name: sasaran_opd_id
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/renaksiopd.RencanaAksiOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Rencana Aksi OPD per Sasaran
+      tags:
+      - Renaksi Opd
+  /rencana-aksi-opd/create:
+    post:
+      consumes:
+      - application/json
+      description: Menautkan satu rencana kinerja ke satu sasaran OPD. Satu rekin
+        hanya boleh terdaftar satu kali dalam satu sasaran OPD, sehingga permintaan
+        yang bentrok akan gagal dengan 409.
+      parameters:
+      - description: Data rencana aksi OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/renaksiopd.RencanaAksiOpdCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/renaksiopd.RencanaAksiOpdRequestResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Tambah Rencana Aksi OPD
+      tags:
+      - Renaksi Opd
+  /rencana-aksi-opd/delete/{id}:
+    delete:
+      description: Menghapus satu rencana aksi OPD berdasarkan ID.
+      parameters:
+      - description: ID Rencana Aksi OPD
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hapus Rencana Aksi OPD
+      tags:
+      - Renaksi Opd
+  /rencana-aksi-opd/sync_jadwal/{rekin_id}:
+    post:
+      description: Menghitung ulang bobot triwulan (TW1-TW4) dari rencana aksi lalu
+        menyimpannya pada data renaksi OPD untuk rekin terkait.
+      parameters:
+      - description: ID Rencana Kinerja
+        in: path
+        name: rekin_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Sinkronisasi Jadwal Pelaksanaan
+      tags:
+      - Renaksi Opd
+  /rencana-aksi-opd/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Mengganti rencana kinerja dan keterangan pada satu rencana aksi
+        OPD. Sasaran OPD dan tahun tidak dapat diubah. Duplikasi rekin pada sasaran
+        yang sama akan gagal dengan 409.
+      parameters:
+      - description: ID Rencana Aksi OPD
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data rencana aksi OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/renaksiopd.RencanaAksiOpdUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/renaksiopd.RencanaAksiOpdRequestResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Ubah Rencana Aksi OPD
+      tags:
+      - Renaksi Opd
   /rencana_kinerja/create_level1:
     post:
       consumes:
@@ -4380,6 +4798,44 @@ paths:
       summary: Find All Rekin Level 1
       tags:
       - Rencana Kinerja
+  /sasaran_opd/all/{kode_opd}/{tahun}:
+    get:
+      description: Menampilkan daftar sasaran OPD milik satu OPD pada tahun tertentu
+        yang dapat dipilih untuk ditambahkan rencana aksi.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/renaksiopd.SasaranOpdDetailResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Sasaran OPD untuk Rencana Aksi
+      tags:
+      - Renaksi Opd
   /sasaran_opd/create:
     post:
       consumes:

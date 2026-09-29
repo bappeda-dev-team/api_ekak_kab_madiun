@@ -11,6 +11,7 @@ type RencanaAksiOpd struct {
 	Tw2                int
 	Tw3                int
 	Tw4                int
+	Urutan             int
 	Keterangan         *string
 	RencanaKinerja     []RencanaKinerjaOpd
 	NamaRencanaKinerja string
@@ -28,6 +29,7 @@ type RencanaKinerjaOpd struct {
 	Tw2                int
 	Tw3                int
 	Tw4                int
+	Urutan             int
 	Keterangan         *string
 	TotalAnggaran      int64
 	SubKegiatan        []SubKegiatanOpdRenaksi
