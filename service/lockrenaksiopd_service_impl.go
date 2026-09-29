@@ -49,6 +49,10 @@ func (service *LockRenaksiOpdServiceImpl) Lock(ctx context.Context, kodeOpd, tah
 	if err := service.validator.Struct(request); err != nil {
 		return lockrenaksiopd.LockRenaksiOpdResponse{}, err
 	}
+	sasaranId, err := request.SasaranId.Int()
+	if err != nil {
+		return lockrenaksiopd.LockRenaksiOpdResponse{}, fmt.Errorf("%w: sasaran_id %s", ErrLockRenaksiOpdInvalidParameter, err)
+	}
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -56,19 +60,25 @@ func (service *LockRenaksiOpdServiceImpl) Lock(ctx context.Context, kodeOpd, tah
 	}
 	defer helper.CommitOrRollback(tx)
 
+	kodeSubKegiatan, namaSubKegiatan, err := service.RencanaAksiOpdRepository.GetSubKegiatanByRekinId(ctx, tx, request.RekinId)
+	if err != nil {
+		return lockrenaksiopd.LockRenaksiOpdResponse{}, err
+	}
+
 	lock, err := service.LockRenaksiOpdRepository.Lock(ctx, tx, domain.LockRenaksiOpd{
-		KodeOpd:      kodeOpd,
-		Tahun:        tahun,
-		SasaranId:    request.SasaranId,
-		RekinId:      request.RekinId,
-		AksiKegiatan: request.AksiKegiatan,
-		SubKegiatan:  request.SubKegiatan,
-		Anggaran:     request.Anggaran,
-		NamaPemilik:  request.NamaPemilik,
-		Tw1:          request.Tw1,
-		Tw2:          request.Tw2,
-		Tw3:          request.Tw3,
-		Tw4:          request.Tw4,
+		KodeOpd:         kodeOpd,
+		Tahun:           tahun,
+		SasaranId:       sasaranId,
+		RekinId:         request.RekinId,
+		AksiKegiatan:    request.AksiKegiatan,
+		KodeSubKegiatan: kodeSubKegiatan,
+		NamaSubKegiatan: namaSubKegiatan,
+		Anggaran:        request.Anggaran,
+		NamaPemilik:     request.NamaPemilik,
+		Tw1:             request.Tw1,
+		Tw2:             request.Tw2,
+		Tw3:             request.Tw3,
+		Tw4:             request.Tw4,
 	})
 	if err != nil {
 		return lockrenaksiopd.LockRenaksiOpdResponse{}, err
@@ -181,19 +191,20 @@ func validateLockRenaksiOpdParams(kodeOpd, tahun string) (string, string, error)
 
 func toLockRenaksiOpdResponse(lock domain.LockRenaksiOpd) lockrenaksiopd.LockRenaksiOpdResponse {
 	return lockrenaksiopd.LockRenaksiOpdResponse{
-		Id:           lock.Id,
-		KodeOpd:      lock.KodeOpd,
-		Tahun:        lock.Tahun,
-		SasaranId:    lock.SasaranId,
-		RekinId:      lock.RekinId,
-		AksiKegiatan: lock.AksiKegiatan,
-		SubKegiatan:  lock.SubKegiatan,
-		Anggaran:     lock.Anggaran,
-		NamaPemilik:  lock.NamaPemilik,
-		Tw1:          lock.Tw1,
-		Tw2:          lock.Tw2,
-		Tw3:          lock.Tw3,
-		Tw4:          lock.Tw4,
-		Locked:       true,
+		Id:              lock.Id,
+		KodeOpd:         lock.KodeOpd,
+		Tahun:           lock.Tahun,
+		SasaranId:       strconv.Itoa(lock.SasaranId),
+		RekinId:         lock.RekinId,
+		AksiKegiatan:    lock.AksiKegiatan,
+		KodeSubKegiatan: lock.KodeSubKegiatan,
+		NamaSubKegiatan: lock.NamaSubKegiatan,
+		Anggaran:        lock.Anggaran,
+		NamaPemilik:     lock.NamaPemilik,
+		Tw1:             lock.Tw1,
+		Tw2:             lock.Tw2,
+		Tw3:             lock.Tw3,
+		Tw4:             lock.Tw4,
+		Locked:          true,
 	}
 }
