@@ -2465,7 +2465,7 @@
                 "summary": "Daftar Rencana Aksi OPD per Sasaran",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "ID Sasaran OPD",
                         "name": "sasaran_opd_id",
                         "in": "path",
@@ -7357,21 +7357,25 @@
             ],
             "properties": {
                 "aksi_kegiatan": {
+                    "description": "AksiKegiatan, KodeSubKegiatan, dan NamaSubKegiatan diabaikan server.\nKodeSubKegiatan dan NamaSubKegiatan selalu diturunkan dari subkegiatan\nterpilih pada rencana kinerja terkait.",
                     "type": "string"
                 },
                 "anggaran": {
                     "type": "integer"
                 },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
                 "nama_pemilik": {
+                    "type": "string"
+                },
+                "nama_subkegiatan": {
                     "type": "string"
                 },
                 "rekin_id": {
                     "type": "string"
                 },
                 "sasaran_id": {
-                    "type": "integer"
-                },
-                "sub_kegiatan": {
                     "type": "string"
                 },
                 "tw1": {
@@ -7403,19 +7407,22 @@
                 "kode_opd": {
                     "type": "string"
                 },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
                 "locked": {
                     "type": "boolean"
                 },
                 "nama_pemilik": {
                     "type": "string"
                 },
+                "nama_subkegiatan": {
+                    "type": "string"
+                },
                 "rekin_id": {
                     "type": "string"
                 },
                 "sasaran_id": {
-                    "type": "integer"
-                },
-                "sub_kegiatan": {
                     "type": "string"
                 },
                 "tahun": {
@@ -9018,6 +9025,9 @@
                 },
                 "tahun_renaksi": {
                     "type": "string"
+                },
+                "urutan": {
+                    "type": "integer"
                 }
             }
         },
@@ -9036,7 +9046,7 @@
                     "type": "string"
                 },
                 "sasaranopd_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "tahun": {
                     "type": "string"
@@ -9053,7 +9063,7 @@
                     "type": "string"
                 },
                 "sasaran_opd_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "tahun_renaksi": {
                     "type": "string"
@@ -9068,6 +9078,9 @@
                     "type": "integer"
                 },
                 "tw4": {
+                    "type": "integer"
+                },
+                "urutan": {
                     "type": "integer"
                 }
             }
@@ -9085,7 +9098,7 @@
                     }
                 },
                 "sasaran_opd_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "tahun_renaksi": {
                     "type": "string"
@@ -9095,7 +9108,8 @@
         "renaksiopd.RencanaAksiOpdUpdateRequest": {
             "type": "object",
             "required": [
-                "rekin_id"
+                "rekin_id",
+                "urutan"
             ],
             "properties": {
                 "id": {
@@ -9106,6 +9120,10 @@
                 },
                 "rekin_id": {
                     "type": "string"
+                },
+                "urutan": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
@@ -9159,6 +9177,9 @@
                 },
                 "tw4": {
                     "type": "integer"
+                },
+                "urutan": {
+                    "type": "integer"
                 }
             }
         },
@@ -9166,7 +9187,7 @@
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "indikator": {
                     "type": "array",

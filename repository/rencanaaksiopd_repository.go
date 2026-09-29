@@ -10,12 +10,15 @@ type RencanaAksiOpdRepository interface {
 	FindBySasaranOpdAndTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) ([]domain.RencanaAksiOpd, error)
 	SyncJadwalPelaksanaan(ctx context.Context, tx *sql.Tx, rekinId string) error
 	Create(ctx context.Context, tx *sql.Tx, rencanaAksiOpd domain.RencanaAksiOpd) (domain.RencanaAksiOpd, error)
-	Update(ctx context.Context, tx *sql.Tx, rencanaAksiOpd domain.RencanaAksiOpd) domain.RencanaAksiOpd
+	Update(ctx context.Context, tx *sql.Tx, rencanaAksiOpd domain.RencanaAksiOpd) (domain.RencanaAksiOpd, error)
 	Delete(ctx context.Context, tx *sql.Tx, Id int) error
 	FindById(ctx context.Context, tx *sql.Tx, Id int) (domain.RencanaAksiOpd, error)
 	FindAllSasaranByTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.SasaranOpdDetailRenaksi, error)
 	FindLockContextByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (string, string, error)
+	GetSubKegiatanByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (string, string, error)
 	FindLockContextById(ctx context.Context, tx *sql.Tx, id int) (string, string, int, string, error)
 	FindKodeOpdBySasaranOpdAndTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) (string, error)
 	IsRekinUsedInSasaran(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) (bool, error)
+	GetLastUrutanBySasaranAndTahun(ctx context.Context, tx *sql.Tx, sasaranId int, tahun string) (int, error)
+	IsUrutanUsed(ctx context.Context, tx *sql.Tx, sasaranId int, tahun string, urutan int, excludeId int) (bool, error)
 }

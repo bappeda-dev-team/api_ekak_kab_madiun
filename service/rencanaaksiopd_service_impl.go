@@ -11,13 +11,17 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/go-sql-driver/mysql"
 )
 
 var (
-	ErrRencanaAksiOpdLocked = errors.New("rencana aksi opd terkunci")
-	ErrRekinSudahDigunakan  = errors.New("rencana kinerja sudah digunakan pada sasaran opd ini")
+	ErrRencanaAksiOpdInvalidParameter = errors.New("parameter rencana aksi opd tidak valid")
+	ErrRencanaAksiOpdLocked           = errors.New("rencana aksi opd terkunci")
+	ErrRekinSudahDigunakan            = errors.New("rencana kinerja sudah digunakan pada sasaran opd ini")
+	ErrUrutanSudahDigunakan           = errors.New("urutan sudah digunakan pada sasaran opd ini")
 )
 
 type RencanaAksiOpdServiceImpl struct {
@@ -92,6 +96,10 @@ func (service *RencanaAksiOpdServiceImpl) Create(ctx context.Context, request re
 	if err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
+	sasaranOpdId, err := request.SasaranOpdId.Int()
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, fmt.Errorf("%w: sasaranopd_id %s", ErrRencanaAksiOpdInvalidParameter, err)
+	}
 
 	tx, err := service.DB.Begin()
 	if err != nil {
@@ -102,10 +110,19 @@ func (service *RencanaAksiOpdServiceImpl) Create(ctx context.Context, request re
 	if err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
-	if err := service.ensureUnlocked(ctx, tx, kodeOpd, request.TahunRenaksi, request.SasaranOpdId, request.RekinId); err != nil {
+	if err := service.ensureUnlocked(ctx, tx, kodeOpd, request.TahunRenaksi, sasaranOpdId, request.RekinId); err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
-	if err := service.ensureRekinBelumDigunakan(ctx, tx, request.SasaranOpdId, request.RekinId, 0); err != nil {
+	if err := service.ensureRekinNotUsed(ctx, tx, sasaranOpdId, request.RekinId, 0); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+
+	lastUrutan, err := service.RencanaAksiOpdRepository.GetLastUrutanBySasaranAndTahun(ctx, tx, sasaranOpdId, request.TahunRenaksi)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	urutan := lastUrutan + 1
+	if err := service.ensureUrutanNotUsed(ctx, tx, sasaranOpdId, request.TahunRenaksi, urutan, 0); err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
 
@@ -117,13 +134,17 @@ func (service *RencanaAksiOpdServiceImpl) Create(ctx context.Context, request re
 	rencanaAksiOpdDomain := domain.RencanaAksiOpd{
 		Id:           rand.Intn(10000000),
 		RekinId:      request.RekinId,
-		SasaranOpdId: request.SasaranOpdId,
+		SasaranOpdId: sasaranOpdId,
 		TahunRenaksi: request.TahunRenaksi,
+		Urutan:       urutan,
 		Keterangan:   keterangan,
 	}
 
 	rencanaAksiOpd, err := service.RencanaAksiOpdRepository.Create(ctx, tx, rencanaAksiOpdDomain)
 	if err != nil {
+		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == 1062 {
+			return renaksiopd.RencanaAksiOpdRequestResponse{}, fmt.Errorf("%w: urutan %d sudah digunakan pada sasaran opd ini", ErrUrutanSudahDigunakan, urutan)
+		}
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
 
@@ -155,7 +176,10 @@ func (service *RencanaAksiOpdServiceImpl) Update(ctx context.Context, request re
 	if err := service.ensureUnlocked(ctx, tx, newKodeOpd, oldTahun, oldSasaranId, request.RekinId); err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
-	if err := service.ensureRekinBelumDigunakan(ctx, tx, oldSasaranId, request.RekinId, request.Id); err != nil {
+	if err := service.ensureRekinNotUsed(ctx, tx, oldSasaranId, request.RekinId, request.Id); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUrutanNotUsed(ctx, tx, oldSasaranId, oldTahun, request.Urutan, request.Id); err != nil {
 		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
 	}
 
@@ -167,10 +191,17 @@ func (service *RencanaAksiOpdServiceImpl) Update(ctx context.Context, request re
 	rencanaAksiOpdDomain := domain.RencanaAksiOpd{
 		Id:         request.Id,
 		RekinId:    request.RekinId,
+		Urutan:     request.Urutan,
 		Keterangan: keterangan,
 	}
 
-	rencanaAksiOpd := service.RencanaAksiOpdRepository.Update(ctx, tx, rencanaAksiOpdDomain)
+	rencanaAksiOpd, err := service.RencanaAksiOpdRepository.Update(ctx, tx, rencanaAksiOpdDomain)
+	if err != nil {
+		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == 1062 {
+			return renaksiopd.RencanaAksiOpdRequestResponse{}, fmt.Errorf("%w: urutan %d sudah digunakan pada sasaran opd ini", ErrUrutanSudahDigunakan, request.Urutan)
+		}
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
 
 	return toRencanaAksiOpdRequestResponse(rencanaAksiOpd), nil
 }
@@ -237,13 +268,24 @@ func (service *RencanaAksiOpdServiceImpl) ensureUnlocked(ctx context.Context, tx
 	return nil
 }
 
-func (service *RencanaAksiOpdServiceImpl) ensureRekinBelumDigunakan(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) error {
+func (service *RencanaAksiOpdServiceImpl) ensureRekinNotUsed(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) error {
 	used, err := service.RencanaAksiOpdRepository.IsRekinUsedInSasaran(ctx, tx, sasaranId, rekinId, excludeId)
 	if err != nil {
 		return err
 	}
 	if used {
 		return fmt.Errorf("%w: rekin %s sudah terdaftar pada sasaran %d", ErrRekinSudahDigunakan, rekinId, sasaranId)
+	}
+	return nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) ensureUrutanNotUsed(ctx context.Context, tx *sql.Tx, sasaranId int, tahun string, urutan int, excludeId int) error {
+	used, err := service.RencanaAksiOpdRepository.IsUrutanUsed(ctx, tx, sasaranId, tahun, urutan, excludeId)
+	if err != nil {
+		return err
+	}
+	if used {
+		return fmt.Errorf("%w: urutan %d sudah terdaftar pada sasaran %d tahun %s", ErrUrutanSudahDigunakan, urutan, sasaranId, tahun)
 	}
 	return nil
 }
@@ -259,7 +301,7 @@ func toRencanaAksiOpdResponses(items []domain.RencanaAksiOpd) []renaksiopd.Renca
 		resp, exists := grouped[key]
 		if !exists {
 			grouped[key] = &renaksiopd.RencanaAksiOpdResponse{
-				SasaranOpdId:   item.SasaranOpdId,
+				SasaranOpdId:   strconv.Itoa(item.SasaranOpdId),
 				NamaSasaranOpd: item.NamaSasaranOpd,
 				TahunRenaksi:   item.TahunRenaksi,
 				RencanaKinerja: []renaksiopd.RencanaKinerjaResponse{},
@@ -331,6 +373,7 @@ func toRencanaKinerjaResponse(rk domain.RencanaKinerjaOpd) renaksiopd.RencanaKin
 		Tw2:                rk.Tw2,
 		Tw3:                rk.Tw3,
 		Tw4:                rk.Tw4,
+		Urutan:             rk.Urutan,
 		Keterangan:         rk.Keterangan,
 		SubKegiatan:        subKegiatan,
 		Indikator:          indikatorRekins,
@@ -339,13 +382,14 @@ func toRencanaKinerjaResponse(rk domain.RencanaKinerjaOpd) renaksiopd.RencanaKin
 
 func toRencanaAksiOpdRequestResponse(item domain.RencanaAksiOpd) renaksiopd.RencanaAksiOpdRequestResponse {
 	return renaksiopd.RencanaAksiOpdRequestResponse{
-		SasaranOpdId: item.SasaranOpdId,
+		SasaranOpdId: strconv.Itoa(item.SasaranOpdId),
 		RekinId:      item.RekinId,
 		TahunRenaksi: item.TahunRenaksi,
 		Tw1:          item.Tw1,
 		Tw2:          item.Tw2,
 		Tw3:          item.Tw3,
 		Tw4:          item.Tw4,
+		Urutan:       item.Urutan,
 		Keterangan:   item.Keterangan,
 	}
 }
@@ -355,6 +399,7 @@ func toRencanaAksiOpdByIdResponse(item domain.RencanaAksiOpd) renaksiopd.Rencana
 		Id:                 item.Id,
 		RekinId:            item.RekinId,
 		TahunRenaksi:       item.TahunRenaksi,
+		Urutan:             item.Urutan,
 		Keterangan:         item.Keterangan,
 		NamaRencanaKinerja: item.NamaRencanaKinerja,
 		SasaranOpd:         toSasaranOpdDetailResponse(item.SasaranOpd),
@@ -380,7 +425,7 @@ func toSasaranOpdDetailResponse(item domain.SasaranOpdDetailRenaksi) renaksiopd.
 	}
 
 	return renaksiopd.SasaranOpdDetailResponse{
-		Id:             item.Id,
+		Id:             strconv.Itoa(item.Id),
 		NamaSasaranOpd: item.NamaSasaranOpd,
 		TahunAwal:      item.TahunAwal,
 		TahunAkhir:     item.TahunAkhir,

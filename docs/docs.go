@@ -2468,7 +2468,7 @@ const docTemplate = `{
                 "summary": "Daftar Rencana Aksi OPD per Sasaran",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "ID Sasaran OPD",
                         "name": "sasaran_opd_id",
                         "in": "path",
@@ -7360,21 +7360,25 @@ const docTemplate = `{
             ],
             "properties": {
                 "aksi_kegiatan": {
+                    "description": "AksiKegiatan, KodeSubKegiatan, dan NamaSubKegiatan diabaikan server.\nKodeSubKegiatan dan NamaSubKegiatan selalu diturunkan dari subkegiatan\nterpilih pada rencana kinerja terkait.",
                     "type": "string"
                 },
                 "anggaran": {
                     "type": "integer"
                 },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
                 "nama_pemilik": {
+                    "type": "string"
+                },
+                "nama_subkegiatan": {
                     "type": "string"
                 },
                 "rekin_id": {
                     "type": "string"
                 },
                 "sasaran_id": {
-                    "type": "integer"
-                },
-                "sub_kegiatan": {
                     "type": "string"
                 },
                 "tw1": {
@@ -7406,19 +7410,22 @@ const docTemplate = `{
                 "kode_opd": {
                     "type": "string"
                 },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
                 "locked": {
                     "type": "boolean"
                 },
                 "nama_pemilik": {
                     "type": "string"
                 },
+                "nama_subkegiatan": {
+                    "type": "string"
+                },
                 "rekin_id": {
                     "type": "string"
                 },
                 "sasaran_id": {
-                    "type": "integer"
-                },
-                "sub_kegiatan": {
                     "type": "string"
                 },
                 "tahun": {
@@ -9021,6 +9028,9 @@ const docTemplate = `{
                 },
                 "tahun_renaksi": {
                     "type": "string"
+                },
+                "urutan": {
+                    "type": "integer"
                 }
             }
         },
@@ -9039,7 +9049,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sasaranopd_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "tahun": {
                     "type": "string"
@@ -9056,7 +9066,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sasaran_opd_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "tahun_renaksi": {
                     "type": "string"
@@ -9071,6 +9081,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "tw4": {
+                    "type": "integer"
+                },
+                "urutan": {
                     "type": "integer"
                 }
             }
@@ -9088,7 +9101,7 @@ const docTemplate = `{
                     }
                 },
                 "sasaran_opd_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "tahun_renaksi": {
                     "type": "string"
@@ -9098,7 +9111,8 @@ const docTemplate = `{
         "renaksiopd.RencanaAksiOpdUpdateRequest": {
             "type": "object",
             "required": [
-                "rekin_id"
+                "rekin_id",
+                "urutan"
             ],
             "properties": {
                 "id": {
@@ -9109,6 +9123,10 @@ const docTemplate = `{
                 },
                 "rekin_id": {
                     "type": "string"
+                },
+                "urutan": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
@@ -9162,6 +9180,9 @@ const docTemplate = `{
                 },
                 "tw4": {
                     "type": "integer"
+                },
+                "urutan": {
+                    "type": "integer"
                 }
             }
         },
@@ -9169,7 +9190,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "indikator": {
                     "type": "array",

@@ -28,7 +28,7 @@ func NewRencanaAksiOpdControllerImpl(rencanaAksiOpdService service.RencanaAksiOp
 // @Description  Menampilkan seluruh rencana aksi pada satu sasaran OPD untuk tahun tertentu, lengkap dengan rencana kinerja, subkegiatan, dan indikatornya.
 // @Tags         Renaksi Opd
 // @Produce      json
-// @Param        sasaran_opd_id  path      int     true  "ID Sasaran OPD"
+// @Param        sasaran_opd_id  path      string  true  "ID Sasaran OPD"
 // @Param        tahun           path      string  true  "Tahun"
 // @Success      200             {object}  web.WebResponse{data=[]renaksiopd.RencanaAksiOpdResponse}
 // @Failure      400             {object}  web.WebResponse
@@ -298,7 +298,10 @@ func (controller *RencanaAksiOpdControllerImpl) FindAllSasaranByTahun(writer htt
 
 func (controller *RencanaAksiOpdControllerImpl) writeMutationError(writer http.ResponseWriter, err error) {
 	code := http.StatusInternalServerError
-	if errors.Is(err, service.ErrRencanaAksiOpdLocked) || errors.Is(err, service.ErrRekinSudahDigunakan) {
+	if errors.Is(err, service.ErrRencanaAksiOpdInvalidParameter) {
+		code = http.StatusBadRequest
+	}
+	if errors.Is(err, service.ErrRencanaAksiOpdLocked) || errors.Is(err, service.ErrRekinSudahDigunakan) || errors.Is(err, service.ErrUrutanSudahDigunakan) {
 		code = http.StatusConflict
 	}
 	helper.WriteToResponseBody(writer, web.WebResponse{

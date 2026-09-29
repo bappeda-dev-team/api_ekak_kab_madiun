@@ -166,16 +166,22 @@ definitions:
   lockrenaksiopd.LockRenaksiOpdRequest:
     properties:
       aksi_kegiatan:
+        description: |-
+          AksiKegiatan, KodeSubKegiatan, dan NamaSubKegiatan diabaikan server.
+          KodeSubKegiatan dan NamaSubKegiatan selalu diturunkan dari subkegiatan
+          terpilih pada rencana kinerja terkait.
         type: string
       anggaran:
         type: integer
+      kode_subkegiatan:
+        type: string
       nama_pemilik:
+        type: string
+      nama_subkegiatan:
         type: string
       rekin_id:
         type: string
       sasaran_id:
-        type: integer
-      sub_kegiatan:
         type: string
       tw1:
         type: integer
@@ -199,15 +205,17 @@ definitions:
         type: integer
       kode_opd:
         type: string
+      kode_subkegiatan:
+        type: string
       locked:
         type: boolean
       nama_pemilik:
         type: string
+      nama_subkegiatan:
+        type: string
       rekin_id:
         type: string
       sasaran_id:
-        type: integer
-      sub_kegiatan:
         type: string
       tahun:
         type: string
@@ -1276,6 +1284,8 @@ definitions:
         $ref: '#/definitions/renaksiopd.SasaranOpdDetailResponse'
       tahun_renaksi:
         type: string
+      urutan:
+        type: integer
     type: object
   renaksiopd.RencanaAksiOpdCreateRequest:
     properties:
@@ -1284,7 +1294,7 @@ definitions:
       rekin_id:
         type: string
       sasaranopd_id:
-        type: integer
+        type: string
       tahun:
         type: string
     required:
@@ -1299,7 +1309,7 @@ definitions:
       rekin_id:
         type: string
       sasaran_opd_id:
-        type: integer
+        type: string
       tahun_renaksi:
         type: string
       tw1:
@@ -1309,6 +1319,8 @@ definitions:
       tw3:
         type: integer
       tw4:
+        type: integer
+      urutan:
         type: integer
     type: object
   renaksiopd.RencanaAksiOpdResponse:
@@ -1320,7 +1332,7 @@ definitions:
           $ref: '#/definitions/renaksiopd.RencanaKinerjaResponse'
         type: array
       sasaran_opd_id:
-        type: integer
+        type: string
       tahun_renaksi:
         type: string
     type: object
@@ -1332,8 +1344,12 @@ definitions:
         type: string
       rekin_id:
         type: string
+      urutan:
+        minimum: 1
+        type: integer
     required:
     - rekin_id
+    - urutan
     type: object
   renaksiopd.RencanaKinerjaResponse:
     properties:
@@ -1369,11 +1385,13 @@ definitions:
         type: integer
       tw4:
         type: integer
+      urutan:
+        type: integer
     type: object
   renaksiopd.SasaranOpdDetailResponse:
     properties:
       id:
-        type: integer
+        type: string
       indikator:
         items:
           $ref: '#/definitions/renaksiopd.IndikatorSasaranOpdResponse'
@@ -4105,7 +4123,7 @@ paths:
         in: path
         name: sasaran_opd_id
         required: true
-        type: integer
+        type: string
       - description: Tahun
         in: path
         name: tahun
