@@ -36,4 +36,9 @@ type TujuanPemdaService interface {
 	// hide/unhide tujuan pemda
 	HideTujuanPemda(ctx context.Context, tujuanPemdaId int) error
 	UnhideTujuanPemda(ctx context.Context, tujuanPemdaId int) error
+
+	// v2 — filter berdasarkan tahun di tematik
+	FindTujuanPemdaRanwalV2(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaResponse, error)
+	FindTujuanPemdaRankhirDualV2(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaRankhirDualResponse, error)
+	FindTujuanPemdaPenetapanDualV2(ctx context.Context, tahun, jenisPeriode string) ([]tujuanpemda.TujuanPemdaPenetapanDualResponse, error)
 }
