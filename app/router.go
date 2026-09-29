@@ -405,6 +405,10 @@ func NewRouter(
 	// router.GET("/tujuan_pemda/penetapan/:tahun/:jenis_periode", tujuanPemdaController.FindTujuanPemdaPenetapan)
 	router.GET("/tujuan_pemda/rankhir/:tahun", tujuanPemdaController.FindTujuanPemdaRankhirDual)
 	router.GET("/tujuan_pemda/penetapan/:tahun", tujuanPemdaController.FindTujuanPemdaPenetapanDual)
+	// v2 — filter tematik.tahun
+	router.GET("/tujuan_pemda/v2/ranwal/:tahun", tujuanPemdaController.FindTujuanPemdaRanwalV2)
+	router.GET("/tujuan_pemda/v2/rankhir/:tahun", tujuanPemdaController.FindTujuanPemdaRankhirDualV2)
+	router.GET("/tujuan_pemda/v2/penetapan/:tahun", tujuanPemdaController.FindTujuanPemdaPenetapanDualV2)
 	// router.POST("/tujuan_pemda/target/upsert/:jenis", tujuanPemdaController.UpsertTargetPemdaLayer)
 	router.POST("/tujuan_pemda/target/rankhir/create", tujuanPemdaController.CreateTargetRankhir)
 	router.POST("/tujuan_pemda/target/penetapan/create", tujuanPemdaController.CreateTargetPenetapan)
@@ -423,6 +427,10 @@ func NewRouter(
 	router.GET("/sasaran_pemda/ranwal/:tahun", sasaranPemdaController.FindSasaranPemdaRanwal)
 	router.GET("/sasaran_pemda/rankhir/:tahun", sasaranPemdaController.FindSasaranPemdaRankhirDual)
 	router.GET("/sasaran_pemda/penetapan/:tahun", sasaranPemdaController.FindSasaranPemdaPenetapanDual)
+	// v2 — filter tematik.tahun
+	router.GET("/sasaran_pemda/v2/ranwal/:tahun", sasaranPemdaController.FindSasaranPemdaRanwalV2)
+	router.GET("/sasaran_pemda/v2/rankhir/:tahun", sasaranPemdaController.FindSasaranPemdaRankhirDualV2)
+	router.GET("/sasaran_pemda/v2/penetapan/:tahun", sasaranPemdaController.FindSasaranPemdaPenetapanDualV2)
 	router.POST("/sasaran_pemda/target/rankhir/create", sasaranPemdaController.CreateTargetRankhir)
 	router.PUT("/sasaran_pemda/target/rankhir/update", sasaranPemdaController.UpdateTargetRankhir)
 	router.POST("/sasaran_pemda/target/penetapan/create", sasaranPemdaController.CreateTargetPenetapan)
@@ -444,6 +452,10 @@ func NewRouter(
 	router.GET("/indikator_utama/opd/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", ikuController.FindAllIkuOpd)
 	router.PUT("/indikator_utama/status/:indikator_id", ikuController.UpdateIkuActive)
 	router.PUT("/indikator_utama/opd/status/:kode_indikator", ikuController.UpdateIkuOpdActive)
+	// v2 — IKU Pemda filter tematik.tahun (3 jenis)
+	router.GET("/iku_pemda/v2/ranwal/:tahun", ikuController.FindIkuPemdaRanwalV2)
+	router.GET("/iku_pemda/v2/rankhir/:tahun", ikuController.FindIkuPemdaRankhirDualV2)
+	router.GET("/iku_pemda/v2/penetapan/:tahun", ikuController.FindIkuPemdaPenetapanDualV2)
 
 	//sasaran opd
 	// router.GET("/sasaran_opd/findall/:kode_opd/:tahun_awal/:tahun_akhir/:jenis_periode", sasaranOpdController.FindAll)
@@ -481,10 +493,15 @@ func NewRouter(
 	router.GET("/subkegiatanopd/bidangurusan/:kode_opd", subKegiatanTerpilihController.FindAllSubkegiatanByBidangUrusanOpd)
 
 	//matrix renstra
+	//sudah ditambahkan audited event
 	router.GET("/matrix_renstra/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
+	router.GET("/matrix_renstra/v2/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKedua)
 	router.POST("/matrix_renstra/upsert_anggaran", matrixRenstraController.UpsertAnggaran)
 	router.DELETE("/matrix_renstra/indikator/delete/:kode_indikator", matrixRenstraController.DeleteIndikator)
 	router.POST("/matrix_renstra/indikator/upsert", matrixRenstraController.UpsertBatchIndikator)
+	router.POST("/matrix_renstra/indikator/create", matrixRenstraController.CreateIndikatorV2)
+	router.PUT("/matrix_renstra/indikator/update", matrixRenstraController.UpdateIndikatorRenstra)
+	router.POST("/matrix_renstra/target/upsert", matrixRenstraController.UpsertTarget)
 
 	//cascading opd
 	router.GET("/cascading_opd/findall/:kode_opd/:tahun", cascadingOpdController.FindAll)

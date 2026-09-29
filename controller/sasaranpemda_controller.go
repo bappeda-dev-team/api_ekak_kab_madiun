@@ -28,4 +28,9 @@ type SasaranPemdaController interface {
 	UnlockSasaranPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	IsSasaranPemdaLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllLockSasaranPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	// v2 — filter tematik.tahun
+	FindSasaranPemdaRanwalV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindSasaranPemdaRankhirDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindSasaranPemdaPenetapanDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
