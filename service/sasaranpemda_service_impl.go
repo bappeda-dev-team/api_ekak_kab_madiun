@@ -189,37 +189,43 @@ func (s *SasaranPemdaServiceImpl) assertSasaranNotLocked(
 	}
 	if locked {
 		return fmt.Errorf(
-			"data sasaran pemda terkunci untuk tahun %s (periode %s-%s). Penghapusan tidak diizinkan",
+			"data sasaran pemda terkunci untuk tahun %s (periode %s-%s). Penambahan/penghapusan sasaran tidak diizinkan",
 			tahun, tahunAwal, tahunAkhir,
 		)
 	}
 	return nil
 }
 
-// assertSasaranIndikatorRemovalNotLocked — saat lock overlap, indikator tidak boleh dihapus via update.
-func (s *SasaranPemdaServiceImpl) assertSasaranIndikatorRemovalNotLocked(
+// assertSasaranHeaderUpdateAllowedWhenLocked — saat lock overlap (renstra), hanya indikator dan target renstra yang boleh diubah.
+func (s *SasaranPemdaServiceImpl) assertSasaranHeaderUpdateAllowedWhenLocked(
 	ctx context.Context, tx *sql.Tx,
-	tahunAwal, tahunAkhir string,
-	existing []domain.IndikatorPemda,
-	request []sasaranpemda.IndikatorUpdateRequest,
+	existing domain.SasaranPemda,
+	request sasaranpemda.SasaranPemdaUpdateRequest,
 ) error {
-	locked, lockTahun, err := s.isPeriodeOverlapLockSasaran(ctx, tx, tahunAwal, tahunAkhir)
+	locked, lockTahun, err := s.isPeriodeOverlapLockSasaran(
+		ctx, tx, existing.Periode.TahunAwal, existing.Periode.TahunAkhir,
+	)
 	if err != nil || !locked {
 		return err
 	}
-	kept := make(map[int]bool, len(request))
-	for _, req := range request {
-		if req.IdIndikator > 0 {
-			kept[req.IdIndikator] = true
-		}
+	periodeLabel := fmt.Sprintf("%s-%s", existing.Periode.TahunAwal, existing.Periode.TahunAkhir)
+	if request.TujuanPemdaId != existing.TujuanPemdaId {
+		return fmt.Errorf(
+			"tujuan pemda tidak dapat diubah karena data sasaran pemda terkunci untuk tahun %s (periode %s)",
+			lockTahun, periodeLabel,
+		)
 	}
-	for _, ind := range existing {
-		if !kept[ind.Id] {
-			return fmt.Errorf(
-				"indikator id %d tidak dapat dihapus karena data sasaran pemda terkunci untuk tahun %s (periode %s-%s)",
-				ind.Id, lockTahun, tahunAwal, tahunAkhir,
-			)
-		}
+	if request.SubtemaId != existing.SubtemaId {
+		return fmt.Errorf(
+			"subtema tidak dapat diubah karena data sasaran pemda terkunci untuk tahun %s (periode %s)",
+			lockTahun, periodeLabel,
+		)
+	}
+	if strings.TrimSpace(request.SasaranPemda) != strings.TrimSpace(existing.SasaranPemda) {
+		return fmt.Errorf(
+			"teks sasaran pemda tidak dapat diubah karena data terkunci untuk tahun %s (periode %s). Hanya indikator dan target renstra yang boleh diubah",
+			lockTahun, periodeLabel,
+		)
 	}
 	return nil
 }
@@ -351,10 +357,7 @@ func (s *SasaranPemdaServiceImpl) Update(
 	if err != nil {
 		return sasaranpemda.SasaranPemdaResponse{}, err
 	}
-	if err := s.assertSasaranIndikatorRemovalNotLocked(
-		ctx, tx, existing.Periode.TahunAwal, existing.Periode.TahunAkhir,
-		existing.Indikator, request.Indikator,
-	); err != nil {
+	if err := s.assertSasaranHeaderUpdateAllowedWhenLocked(ctx, tx, existing, request); err != nil {
 		return sasaranpemda.SasaranPemdaResponse{}, err
 	}
 	if !s.TujuanPemdaRepository.IsIdExists(ctx, tx, request.TujuanPemdaId) {
