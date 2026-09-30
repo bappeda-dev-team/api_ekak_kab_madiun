@@ -40,6 +40,7 @@ func InitializeServer() *http.Server {
 	dasarHukumRepositoryImpl := repository.NewDasarHukumRepositoryImpl()
 	gambaranUmumRepositoryImpl := repository.NewGambaranUmumRepositoryImpl()
 	inovasiRepositoryImpl := repository.NewInovasiRepositoryImpl()
+	inovasiRekinRepositoryImpl := repository.NewInovasiRekinRepositoryImpl()
 	pelaksanaanRencanaAksiRepositoryImpl := repository.NewPelaksanaanRencanaAksiRepositoryImpl()
 	pegawaiRepositoryImpl := repository.NewPegawaiRepositoryImpl()
 	pohonKinerjaRepositoryImpl := repository.NewPohonKinerjaRepositoryImpl()
@@ -58,7 +59,7 @@ func InitializeServer() *http.Server {
 	client := app.GetRedisClient()
 	cascadingOpdServiceImpl := service.NewCascadingOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, rencanaKinerjaRepositoryImpl, db, programRepositoryImpl, cascadingOpdRepositoryImpl, bidangUrusanRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl, client)
 	cloneRecordRepositoryImpl := repository.NewCloneRecordRepositoryImpl()
-	rencanaKinerjaServiceImpl := service.NewRencanaKinerjaServiceImpl(rencanaKinerjaRepositoryImpl, db, validate, opdRepositoryImpl, usulanMusrebangRepositoryImpl, usulanMandatoriRepositoryImpl, usulanPokokPikiranRepositoryImpl, usulanInisiatifRepositoryImpl, subKegiatanRepositoryImpl, dasarHukumRepositoryImpl, gambaranUmumRepositoryImpl, inovasiRepositoryImpl, pelaksanaanRencanaAksiRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, manualIKRepositoryImpl, permasalahanRekinRepositoryImpl, subKegiatanTerpilihRepositoryImpl, subKegiatanServiceImpl, periodeRepositoryImpl, sasaranOpdRepositoryImpl, cascadingOpdServiceImpl, cascadingOpdRepositoryImpl, programRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl, cloneRecordRepositoryImpl)
+	rencanaKinerjaServiceImpl := service.NewRencanaKinerjaServiceImpl(rencanaKinerjaRepositoryImpl, db, validate, opdRepositoryImpl, usulanMusrebangRepositoryImpl, usulanMandatoriRepositoryImpl, usulanPokokPikiranRepositoryImpl, usulanInisiatifRepositoryImpl, subKegiatanRepositoryImpl, dasarHukumRepositoryImpl, gambaranUmumRepositoryImpl, inovasiRepositoryImpl, inovasiRekinRepositoryImpl, pelaksanaanRencanaAksiRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, manualIKRepositoryImpl, permasalahanRekinRepositoryImpl, subKegiatanTerpilihRepositoryImpl, subKegiatanServiceImpl, periodeRepositoryImpl, sasaranOpdRepositoryImpl, cascadingOpdServiceImpl, cascadingOpdRepositoryImpl, programRepositoryImpl, rincianBelanjaRepositoryImpl, rencanaAksiRepositoryImpl, cloneRecordRepositoryImpl)
 	rencanaKinerjaControllerImpl := controller.NewRencanaKinerjaControllerImpl(rencanaKinerjaServiceImpl)
 	rencanaAksiServiceImpl := service.NewRencanaAksiServiceImpl(rencanaAksiRepositoryImpl, db, validate, pelaksanaanRencanaAksiRepositoryImpl)
 	rencanaAksiControllerImpl := controller.NewRencanaAksiControllerImpl(rencanaAksiServiceImpl)
@@ -88,12 +89,12 @@ func InitializeServer() *http.Server {
 	reviewRepositoryImpl := repository.NewReviewRepositoryImpl()
 	programUnggulanRepositoryImpl := repository.NewProgramUnggulanRepositoryImpl()
 	dataMasterRepositoryImpl := repository.NewDataMasterRepositoryImpl()
-	csfRepository := repository.NewCSFRepositoryImpl()
+	csfRepositoryImpl := repository.NewCSFRepositoryImpl()
 	ikkRepositoryImpl := repository.NewIkkRepositoryImpl()
 	ikkServiceImpl := service.NewIkkServiceImpl(ikkRepositoryImpl, db, validate)
 	httpClient := ProvideHTTPClient()
 	isustrategicClientImpl := internal.NewIsuStrategicClient(httpClient)
-	pohonKinerjaOpdServiceImpl := service.NewPohonKinerjaOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, crosscuttingOpdRepositoryImpl, reviewRepositoryImpl, db, validate, programUnggulanRepositoryImpl, dataMasterRepositoryImpl, client, csfRepository, sasaranOpdRepositoryImpl, ikkServiceImpl, ikkRepositoryImpl, isustrategicClientImpl)
+	pohonKinerjaOpdServiceImpl := service.NewPohonKinerjaOpdServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, pegawaiRepositoryImpl, tujuanOpdRepositoryImpl, crosscuttingOpdRepositoryImpl, reviewRepositoryImpl, db, validate, programUnggulanRepositoryImpl, dataMasterRepositoryImpl, client, csfRepositoryImpl, sasaranOpdRepositoryImpl, ikkServiceImpl, ikkRepositoryImpl, isustrategicClientImpl)
 	pohonKinerjaOpdControllerImpl := controller.NewPohonKinerjaOpdControllerImpl(pohonKinerjaOpdServiceImpl)
 	jabatanPegawaiRepositoryImpl := repository.NewJabatanPegawaiRepositoryImpl()
 	pegawaiServiceImpl := service.NewPegawaiServiceImpl(pegawaiRepositoryImpl, opdRepositoryImpl, jabatanPegawaiRepositoryImpl, db)
@@ -104,7 +105,8 @@ func InitializeServer() *http.Server {
 	jabatanRepositoryImpl := repository.NewJabatanRepositoryImpl()
 	jabatanServiceImpl := service.NewJabatanServiceImpl(jabatanRepositoryImpl, opdRepositoryImpl, db)
 	jabatanControllerImpl := controller.NewJabatanControllerImpl(jabatanServiceImpl)
-	pohonKinerjaAdminServiceImpl := service.NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, csfRepository, dataMasterRepositoryImpl, db, pegawaiRepositoryImpl, reviewRepositoryImpl, programUnggulanRepositoryImpl)
+	misiPemdaRepositoryImpl := repository.NewMisiPemdaRepositoryImpl()
+	pohonKinerjaAdminServiceImpl := service.NewPohonKinerjaAdminServiceImpl(pohonKinerjaRepositoryImpl, opdRepositoryImpl, csfRepositoryImpl, dataMasterRepositoryImpl, db, pegawaiRepositoryImpl, reviewRepositoryImpl, programUnggulanRepositoryImpl, sasaranOpdRepositoryImpl, tujuanOpdRepositoryImpl, misiPemdaRepositoryImpl)
 	pohonKinerjaAdminControllerImpl := controller.NewPohonKinerjaAdminControllerImpl(pohonKinerjaAdminServiceImpl)
 	opdServiceImpl := service.NewOpdServiceImpl(opdRepositoryImpl, lembagaRepositoryImpl, db, validate)
 	opdControllerImpl := controller.NewOpdControllerImpl(opdServiceImpl)
@@ -137,7 +139,6 @@ func InitializeServer() *http.Server {
 	periodeControllerImpl := controller.NewPeriodeControllerImpl(periodeServiceImpl)
 	tujuanPemdaRepositoryImpl := repository.NewTujuanPemdaRepositoryImpl()
 	visiPemdaRepositoryImpl := repository.NewVisiPemdaRepositoryImpl()
-	misiPemdaRepositoryImpl := repository.NewMisiPemdaRepositoryImpl()
 	lockDataPemdaRepositoryImpl := repository.NewLockDataPemdaRepositoryImpl()
 	tujuanPemdaServiceImpl := service.NewTujuanPemdaServiceImpl(tujuanPemdaRepositoryImpl, periodeRepositoryImpl, pohonKinerjaRepositoryImpl, visiPemdaRepositoryImpl, misiPemdaRepositoryImpl, lockDataPemdaRepositoryImpl, db, validate)
 	tujuanPemdaControllerImpl := controller.NewTujuanPemdaControllerImpl(tujuanPemdaServiceImpl)
@@ -149,7 +150,7 @@ func InitializeServer() *http.Server {
 	ikuRepositoryImpl := repository.NewIkuRepositoryImpl()
 	ikuServiceImpl := service.NewIkuServiceImpl(ikuRepositoryImpl, db)
 	ikuControllerImpl := controller.NewIkuControllerImpl(ikuServiceImpl)
-	sasaranOpdServiceImpl := service.NewSasaranOpdServiceImpl(sasaranOpdRepositoryImpl, opdRepositoryImpl, rencanaKinerjaRepositoryImpl, manualIKRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, tujuanOpdRepositoryImpl, db, validate)
+	sasaranOpdServiceImpl := service.NewSasaranOpdServiceImpl(sasaranOpdRepositoryImpl, opdRepositoryImpl, rencanaKinerjaRepositoryImpl, manualIKRepositoryImpl, pegawaiRepositoryImpl, pohonKinerjaRepositoryImpl, tujuanOpdRepositoryImpl, lockDataRepositoryImpl, db, validate)
 	sasaranOpdControllerImpl := controller.NewSasaranOpdControllerImpl(sasaranOpdServiceImpl)
 	visiPemdaServiceImpl := service.NewVisiPemdaServiceImpl(visiPemdaRepositoryImpl, validate, db)
 	visiPemdaControllerImpl := controller.NewVisiPemdaControllerImpl(visiPemdaServiceImpl)
@@ -159,12 +160,13 @@ func InitializeServer() *http.Server {
 	matrixRenstraServiceImpl := service.NewMatrixRenstraServiceImpl(matrixRenstraRepositoryImpl, periodeRepositoryImpl, pegawaiRepositoryImpl, db)
 	matrixRenstraControllerImpl := controller.NewMatrixRenstraControllerImpl(matrixRenstraServiceImpl)
 	cascadingOpdControllerImpl := controller.NewCascadingOpdControllerImpl(cascadingOpdServiceImpl)
-	rincianBelanjaServiceImpl := service.NewRincianBelanjaServiceImpl(rincianBelanjaRepositoryImpl, pegawaiRepositoryImpl, db)
+	pptkRepositoryImpl := repository.NewPptkRepositoryImpl()
+	rincianBelanjaServiceImpl := service.NewRincianBelanjaServiceImpl(rincianBelanjaRepositoryImpl, pegawaiRepositoryImpl, pptkRepositoryImpl, db)
 	rincianBelanjaControllerImpl := controller.NewRincianBelanjaControllerImpl(rincianBelanjaServiceImpl)
 	kelompokAnggaranRepositoryImpl := repository.NewKelompokAnggaranRepositoryImpl()
 	kelompokAnggaranServiceImpl := service.NewKelompokAnggaranServiceImpl(kelompokAnggaranRepositoryImpl, db, validate)
 	kelompokAnggaranControllerImpl := controller.NewKelompokAnggaranControllerImpl(kelompokAnggaranServiceImpl)
-	csfService := service.NewCSFService(csfRepository, db)
+	csfService := service.NewCSFService(csfRepositoryImpl, db)
 	csfController := controller.NewCSFControllerImpl(csfService)
 	programUnggulanServiceImpl := service.NewProgramUnggulanServiceImpl(programUnggulanRepositoryImpl, db, validate)
 	programUnggulanControllerImpl := controller.NewProgramUnggulanControllerImpl(programUnggulanServiceImpl)
@@ -181,7 +183,13 @@ func InitializeServer() *http.Server {
 	penetapanClientImpl := internal.NewPenetapanClient(httpClient)
 	pkServiceImpl := service.NewPkServiceImpl(pkRepositoryImpl, pegawaiServiceImpl, rencanaKinerjaServiceImpl, opdServiceImpl, strukturOrganisasiRepositoryImpl, penetapanClientImpl, validate, db)
 	pkControllerImpl := controller.NewPkControllerImpl(pkServiceImpl)
-	strategicArahKebijakanPemdaServiceImpl := service.NewStrategicArahKebijakanPemdaServiceImpl(opdRepositoryImpl, csfRepository, db, tujuanPemdaRepositoryImpl, sasaranPemdaRepositoryImpl)
+	rencanaAksiOpdRepositoryImpl := repository.NewRencanaAksiOpdRepositoryImpl()
+	lockRenaksiOpdRepositoryImpl := repository.NewLockRenaksiOpdRepositoryImpl()
+	rencanaAksiOpdServiceImpl := service.NewRencanaAksiOpdServiceImpl(rencanaAksiOpdRepositoryImpl, rencanaKinerjaRepositoryImpl, lockRenaksiOpdRepositoryImpl, db, validate)
+	rencanaAksiOpdControllerImpl := controller.NewRencanaAksiOpdControllerImpl(rencanaAksiOpdServiceImpl)
+	lockRenaksiOpdServiceImpl := service.NewLockRenaksiOpdServiceImpl(lockRenaksiOpdRepositoryImpl, rencanaAksiOpdRepositoryImpl, db, validate)
+	lockRenaksiOpdControllerImpl := controller.NewLockRenaksiOpdControllerImpl(lockRenaksiOpdServiceImpl)
+	strategicArahKebijakanPemdaServiceImpl := service.NewStrategicArahKebijakanPemdaServiceImpl(opdRepositoryImpl, csfRepositoryImpl, db, tujuanPemdaRepositoryImpl, sasaranPemdaRepositoryImpl)
 	strategicArahKebijakanPemdaControllerImpl := controller.NewStrategicArahKebijakanPemdaControllerImpl(strategicArahKebijakanPemdaServiceImpl, isustrategicClientImpl)
 	ikmRepositoryImpl := repository.NewIkmRepositoryImpl()
 	ikmServiceImpl := service.NewIkmServiceImpl(ikmRepositoryImpl, db, validate)
@@ -211,7 +219,17 @@ func InitializeServer() *http.Server {
 	nspkOpdRepositoryImpl := repository.NewNspkOpdRepositoryImpl()
 	nspkOpdServiceImpl := service.NewNspkOpdServiceImpl(nspkOpdRepositoryImpl, db, validate)
 	nspkOpdControllerImpl := controller.NewNspkOpdControllerImpl(nspkOpdServiceImpl)
-	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl, nspkControllerImpl, nspkOpdControllerImpl)
+	arahKebijakanRepositoryImpl := repository.NewArahKebijakanRepositoryImpl()
+	arahKebijakanServiceImpl := service.NewArahKebijakanServiceImpl(arahKebijakanRepositoryImpl, db, validate)
+	arahKebijakanControllerImpl := controller.NewArahKebijakanControllerImpl(arahKebijakanServiceImpl)
+	pptkServiceImpl := service.NewPptkServiceImpl(pptkRepositoryImpl, db, validate)
+	pptkControllerImpl := controller.NewPptkControllerImpl(pptkServiceImpl)
+	jenisInovasiRepositoryImpl := repository.NewJenisInovasiRepositoryImpl()
+	jenisInovasiServiceImpl := service.NewJenisInovasiServiceImpl(jenisInovasiRepositoryImpl, db, validate)
+	jenisInovasiControllerImpl := controller.NewJenisInovasiControllerImpl(jenisInovasiServiceImpl)
+	inovasiRekinServiceImpl := service.NewInovasiRekinServiceImpl(inovasiRekinRepositoryImpl, rencanaKinerjaRepositoryImpl, rincianBelanjaRepositoryImpl, db)
+	inovasiRekinControllerImpl := controller.NewInovasiRekinControllerImpl(inovasiRekinServiceImpl)
+	router := app.NewRouter(rencanaKinerjaControllerImpl, rencanaAksiControllerImpl, pelaksanaanRencanaAksiControllerImpl, usulanMusrebangControllerImpl, usulanMandatoriControllerImpl, usulanPokokPikiranControllerImpl, usulanInisiatifControllerImpl, usulanTerpilihControllerImpl, gambaranUmumControllerImpl, dasarHukumControllerImpl, inovasiControllerImpl, subKegiatanControllerImpl, subKegiatanTerpilihControllerImpl, pohonKinerjaOpdControllerImpl, pegawaiControllerImpl, lembagaControllerImpl, jabatanControllerImpl, pohonKinerjaAdminControllerImpl, opdControllerImpl, programControllerImpl, urusanControllerImpl, bidangUrusanControllerImpl, kegiatanControllerImpl, userControllerImpl, roleControllerImpl, tujuanOpdControllerImpl, crosscuttingOpdControllerImpl, manualIKControllerImpl, reviewControllerImpl, periodeControllerImpl, tujuanPemdaControllerImpl, sasaranPemdaControllerImpl, permasalahanRekinControllerImpl, ikuControllerImpl, sasaranOpdControllerImpl, visiPemdaControllerImpl, misiPemdaControllerImpl, matrixRenstraControllerImpl, cascadingOpdControllerImpl, rincianBelanjaControllerImpl, kelompokAnggaranControllerImpl, csfController, programUnggulanControllerImpl, programPrioritasPusatControllerImpl, matrixRenjaControllerImpl, dataMasterControllerImpl, pkControllerImpl, rencanaAksiOpdControllerImpl, lockRenaksiOpdControllerImpl, strategicArahKebijakanPemdaControllerImpl, indikatorControllerImpl, ikkControllerImpl, ikdControllerImpl, isuGlobalControllerImpl, isuKlhsControllerImpl, isuNasionalControllerImpl, isuRegionalControllerImpl, ppdControllerImpl, nspkControllerImpl, nspkOpdControllerImpl, arahKebijakanControllerImpl, pptkControllerImpl, jenisInovasiControllerImpl, inovasiRekinControllerImpl)
 	authMiddleware := middleware.NewAuthMiddleware(router)
 	server := NewServer(authMiddleware)
 	return server
@@ -252,6 +270,8 @@ var usulanInisiatifSet = wire.NewSet(repository.NewUsulanInisiatifRepositoryImpl
 var usulanTerpilihSet = wire.NewSet(repository.NewUsulanTerpilihRepositoryImpl, wire.Bind(new(repository.UsulanTerpilihRepository), new(*repository.UsulanTerpilihRepositoryImpl)), service.NewUsulanTerpilihServiceImpl, wire.Bind(new(service.UsulanTerpilihService), new(*service.UsulanTerpilihServiceImpl)), controller.NewUsulanTerpilihControllerImpl, wire.Bind(new(controller.UsulanTerpilihController), new(*controller.UsulanTerpilihControllerImpl)))
 
 var gambaranUmumSet = wire.NewSet(repository.NewGambaranUmumRepositoryImpl, wire.Bind(new(repository.GambaranUmumRepository), new(*repository.GambaranUmumRepositoryImpl)), service.NewGambaranUmumServiceImpl, wire.Bind(new(service.GambaranUmumService), new(*service.GambaranUmumServiceImpl)), controller.NewGambaranUmumControllerImpl, wire.Bind(new(controller.GambaranUmumController), new(*controller.GambaranUmumControllerImpl)))
+
+var inovasiRekinSet = wire.NewSet(repository.NewInovasiRekinRepositoryImpl, wire.Bind(new(repository.InovasiRekinRepository), new(*repository.InovasiRekinRepositoryImpl)), service.NewInovasiRekinServiceImpl, wire.Bind(new(service.InovasiRekinService), new(*service.InovasiRekinServiceImpl)), controller.NewInovasiRekinControllerImpl, wire.Bind(new(controller.InovasiRekinController), new(*controller.InovasiRekinControllerImpl)))
 
 var dasarHukumSet = wire.NewSet(repository.NewDasarHukumRepositoryImpl, wire.Bind(new(repository.DasarHukumRepository), new(*repository.DasarHukumRepositoryImpl)), service.NewDasarHukumServiceImpl, wire.Bind(new(service.DasarHukumService), new(*service.DasarHukumServiceImpl)), controller.NewDasarHukumControllerImpl, wire.Bind(new(controller.DasarHukumController), new(*controller.DasarHukumControllerImpl)))
 
@@ -319,7 +339,7 @@ var rincianBelanjaSet = wire.NewSet(repository.NewRincianBelanjaRepositoryImpl, 
 
 var kelompokAnggaranSet = wire.NewSet(repository.NewKelompokAnggaranRepositoryImpl, wire.Bind(new(repository.KelompokAnggaranRepository), new(*repository.KelompokAnggaranRepositoryImpl)), service.NewKelompokAnggaranServiceImpl, wire.Bind(new(service.KelompokAnggaranService), new(*service.KelompokAnggaranServiceImpl)), controller.NewKelompokAnggaranControllerImpl, wire.Bind(new(controller.KelompokAnggaranController), new(*controller.KelompokAnggaranControllerImpl)))
 
-var isustrategisSet = wire.NewSet(repository.NewCSFRepositoryImpl, service.NewCSFService, controller.NewCSFControllerImpl)
+var isustrategisSet = wire.NewSet(service.NewCSFService, controller.NewCSFControllerImpl)
 
 var programUnggulanSet = wire.NewSet(repository.NewProgramUnggulanRepositoryImpl, wire.Bind(new(repository.ProgramUnggulanRepository), new(*repository.ProgramUnggulanRepositoryImpl)), service.NewProgramUnggulanServiceImpl, wire.Bind(new(service.ProgramUnggulanService), new(*service.ProgramUnggulanServiceImpl)), controller.NewProgramUnggulanControllerImpl, wire.Bind(new(controller.ProgramUnggulanController), new(*controller.ProgramUnggulanControllerImpl)))
 
@@ -329,19 +349,27 @@ var dataMasterSet = wire.NewSet(repository.NewDataMasterRepositoryImpl, wire.Bin
 
 var pkOpdSet = wire.NewSet(repository.NewPkRepositoryImpl, wire.Bind(new(repository.PkRepository), new(*repository.PkRepositoryImpl)), service.NewPkServiceImpl, wire.Bind(new(service.PkService), new(*service.PkServiceImpl)), controller.NewPkControllerImpl, wire.Bind(new(controller.PkController), new(*controller.PkControllerImpl)))
 
+var pptkSet = wire.NewSet(repository.NewPptkRepositoryImpl, wire.Bind(new(repository.PptkRepository), new(*repository.PptkRepositoryImpl)), service.NewPptkServiceImpl, wire.Bind(new(service.PptkService), new(*service.PptkServiceImpl)), controller.NewPptkControllerImpl, wire.Bind(new(controller.PptkController), new(*controller.PptkControllerImpl)))
+
+var strategicArahKebijakanPemdaSet = wire.NewSet(repository.NewCSFRepositoryImpl, wire.Bind(new(repository.CSFRepository), new(*repository.CSFRepositoryImpl)), service.NewStrategicArahKebijakanPemdaServiceImpl, wire.Bind(new(service.StrategicArahKebijakanPemdaService), new(*service.StrategicArahKebijakanPemdaServiceImpl)), controller.NewStrategicArahKebijakanPemdaControllerImpl, wire.Bind(new(controller.StrategicArahKebijakanPemdaController), new(*controller.StrategicArahKebijakanPemdaControllerImpl)))
+
+var programPrioritasPusatSet = wire.NewSet(repository.NewProgramPrioritasPusatRepositoryImpl, wire.Bind(new(repository.ProgramPrioritasPusatRepository), new(*repository.ProgramPrioritasPusatRepositoryImpl)), service.NewProgramPrioritasPusatServiceImpl, wire.Bind(new(service.ProgramPrioritasPusatService), new(*service.ProgramPrioritasPusatServiceImpl)), controller.NewProgramPrioritasPusatControllerImpl, wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)))
+
 var strukturOrganisasiSet = wire.NewSet(repository.NewStrukturOrganisasiRepositoryImpl, wire.Bind(new(repository.StrukturOrganisasiRepository), new(*repository.StrukturOrganisasiRepositoryImpl)))
 
 var jabatanPegawaiSet = wire.NewSet(repository.NewJabatanPegawaiRepositoryImpl, wire.Bind(new(repository.JabatanPegawaiRepository), new(*repository.JabatanPegawaiRepositoryImpl)))
 
 var cloneRecordSet = wire.NewSet(repository.NewCloneRecordRepositoryImpl, wire.Bind(new(repository.CloneRecordRepository), new(*repository.CloneRecordRepositoryImpl)))
 
-var programPrioritasPusatSet = wire.NewSet(repository.NewProgramPrioritasPusatRepositoryImpl, wire.Bind(new(repository.ProgramPrioritasPusatRepository), new(*repository.ProgramPrioritasPusatRepositoryImpl)), service.NewProgramPrioritasPusatServiceImpl, wire.Bind(new(service.ProgramPrioritasPusatService), new(*service.ProgramPrioritasPusatServiceImpl)), controller.NewProgramPrioritasPusatControllerImpl, wire.Bind(new(controller.ProgramPrioritasPusatController), new(*controller.ProgramPrioritasPusatControllerImpl)))
-
 var indikatorSet = wire.NewSet(repository.NewIkmRepositoryImpl, wire.Bind(new(repository.IkmRepository), new(*repository.IkmRepositoryImpl)), service.NewIkmServiceImpl, wire.Bind(new(service.IkmService), new(*service.IkmServiceImpl)), controller.NewIndikatorControllerImpl, wire.Bind(new(controller.IndikatorController), new(*controller.IndikatorControllerImpl)))
 
 var lockDataRepository = wire.NewSet(repository.NewLockDataRepositoryImpl, wire.Bind(new(repository.LockDataRepository), new(*repository.LockDataRepositoryImpl)))
 
 var lockDataPemdaRepository = wire.NewSet(repository.NewLockDataPemdaRepositoryImpl, wire.Bind(new(repository.LockDataPemdaRepository), new(*repository.LockDataPemdaRepositoryImpl)))
+
+var rencanaAksiOpdSet = wire.NewSet(repository.NewRencanaAksiOpdRepositoryImpl, wire.Bind(new(repository.RencanaAksiOpdRepository), new(*repository.RencanaAksiOpdRepositoryImpl)), service.NewRencanaAksiOpdServiceImpl, wire.Bind(new(service.RencanaAksiOpdService), new(*service.RencanaAksiOpdServiceImpl)), controller.NewRencanaAksiOpdControllerImpl, wire.Bind(new(controller.RencanaAksiOpdController), new(*controller.RencanaAksiOpdControllerImpl)))
+
+var lockRenaksiOpdSet = wire.NewSet(repository.NewLockRenaksiOpdRepositoryImpl, wire.Bind(new(repository.LockRenaksiOpdRepository), new(*repository.LockRenaksiOpdRepositoryImpl)), service.NewLockRenaksiOpdServiceImpl, wire.Bind(new(service.LockRenaksiOpdService), new(*service.LockRenaksiOpdServiceImpl)), controller.NewLockRenaksiOpdControllerImpl, wire.Bind(new(controller.LockRenaksiOpdController), new(*controller.LockRenaksiOpdControllerImpl)))
 
 var ikkSet = wire.NewSet(repository.NewIkkRepositoryImpl, wire.Bind(new(repository.IkkRepository), new(*repository.IkkRepositoryImpl)), service.NewIkkServiceImpl, wire.Bind(new(service.IkkService), new(*service.IkkServiceImpl)), controller.NewIkkControllerImpl, wire.Bind(new(controller.IkkController), new(*controller.IkkControllerImpl)))
 
@@ -354,8 +382,6 @@ var isuNasionalSet = wire.NewSet(repository.NewIsuNasionalRepositoryImpl, wire.B
 var isuGlobalSet = wire.NewSet(repository.NewIsuGlobalRepositoryImpl, wire.Bind(new(repository.IsuGlobalRepository), new(*repository.IsuGlobalRepositoryImpl)), service.NewIsuGlobalServiceImpl, wire.Bind(new(service.IsuGlobalService), new(*service.IsuGlobalServiceImpl)), controller.NewIsuGlobalControllerImpl, wire.Bind(new(controller.IsuGlobalController), new(*controller.IsuGlobalControllerImpl)))
 
 var isuKlhsSet = wire.NewSet(repository.NewIsuKlhsRepositoryImpl, wire.Bind(new(repository.IsuKlhsRepository), new(*repository.IsuKlhsRepositoryImpl)), service.NewIsuKlhsServiceImpl, wire.Bind(new(service.IsuKlhsService), new(*service.IsuKlhsServiceImpl)), controller.NewIsuKlhsControllerImpl, wire.Bind(new(controller.IsuKlhsController), new(*controller.IsuKlhsControllerImpl)))
-
-var strategicArahPemdaSet = wire.NewSet(service.NewStrategicArahKebijakanPemdaServiceImpl, wire.Bind(new(service.StrategicArahKebijakanPemdaService), new(*service.StrategicArahKebijakanPemdaServiceImpl)), controller.NewStrategicArahKebijakanPemdaControllerImpl, wire.Bind(new(controller.SrategicArahKebijakanPemdaController), new(*controller.StrategicArahKebijakanPemdaControllerImpl)))
 
 var isuStrategicClientSet = wire.NewSet(internal.NewIsuStrategicClient, wire.Bind(
 	new(internal.IsustrategicClient),
@@ -393,6 +419,18 @@ var nspkSet = wire.NewSet(repository.NewNspkRepositoryImpl, wire.Bind(
 ),
 )
 
+var jenisinovasiSet = wire.NewSet(repository.NewJenisInovasiRepositoryImpl, wire.Bind(
+	new(repository.JenisInovasiRepository),
+	new(*repository.JenisInovasiRepositoryImpl),
+), service.NewJenisInovasiServiceImpl, wire.Bind(
+	new(service.JenisInovasiService),
+	new(*service.JenisInovasiServiceImpl),
+), controller.NewJenisInovasiControllerImpl, wire.Bind(
+	new(controller.JenisInovasiController),
+	new(*controller.JenisInovasiControllerImpl),
+),
+)
+
 var nspkOpdSet = wire.NewSet(repository.NewNspkOpdRepositoryImpl, wire.Bind(
 	new(repository.NspkOpdRepository),
 	new(*repository.NspkOpdRepositoryImpl),
@@ -402,6 +440,18 @@ var nspkOpdSet = wire.NewSet(repository.NewNspkOpdRepositoryImpl, wire.Bind(
 ), controller.NewNspkOpdControllerImpl, wire.Bind(
 	new(controller.NspkOpdController),
 	new(*controller.NspkOpdControllerImpl),
+),
+)
+
+var arahKebijakanSet = wire.NewSet(repository.NewArahKebijakanRepositoryImpl, wire.Bind(
+	new(repository.ArahKebijakanRepository),
+	new(*repository.ArahKebijakanRepositoryImpl),
+), service.NewArahKebijakanServiceImpl, wire.Bind(
+	new(service.ArahKebijakanService),
+	new(*service.ArahKebijakanServiceImpl),
+), controller.NewArahKebijakanControllerImpl, wire.Bind(
+	new(controller.ArahKebijakanController),
+	new(*controller.ArahKebijakanControllerImpl),
 ),
 )
 

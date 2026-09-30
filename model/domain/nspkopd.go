@@ -10,7 +10,7 @@ type NspkOpd struct {
 	NSPK             string
 	IdTujuanOpd      int
 	TujuanOpd        string
-	IdSasaranOpd     int
+	IdSasaranOpd     string
 	SasaranOpd       string
 	Tahun            int
 	CreatedAt        time.Time

@@ -29,6 +29,7 @@ type Indikator struct {
 	TahunAkhir          string
 	JenisPeriode        string
 	Target              []Target
+	TargetRenstra       []Target
 	RencanaKinerja      RencanaKinerja
 	RumusPerhitungan    sql.NullString
 	SumberData          sql.NullString
@@ -40,6 +41,7 @@ type Indikator struct {
 	Jenis               string
 	DefinisiOperasional sql.NullString
 	KodeIndikator       string
+	IsHide              bool
 }
 type IndikatorPemda struct {
 	Id                  int

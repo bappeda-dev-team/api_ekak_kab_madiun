@@ -61,7 +61,9 @@ func NewRouter(
 	matrixRenjaController controller.MatrixRenjaController,
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
-	strategicArahKebijakanController controller.SrategicArahKebijakanPemdaController,
+	rencanaAksiOpdController controller.RencanaAksiOpdController,
+	lockRenaksiOpdController controller.LockRenaksiOpdController,
+	strategicArahKebijakanController controller.StrategicArahKebijakanPemdaController,
 	indikatorController controller.IndikatorController,
 	ikkController controller.IkkController,
 	ikdController controller.IkdController,
@@ -72,6 +74,10 @@ func NewRouter(
 	ppdController controller.PpdController,
 	nspkController controller.NspkController,
 	nspkopdController controller.NspkOpdController,
+	arahkebijakanController controller.ArahKebijakanController,
+	pptkController controller.PptkController,
+	jenisinovasiController controller.JenisInovasiController,
+	inovasiRekinController controller.InovasiRekinController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -94,8 +100,9 @@ func NewRouter(
 	router.DELETE("/rencana_kinerja/delete/:id", rencanaKinerjaController.Delete)
 	router.GET("/rencana_kinerja_pokin/pokin_by_pelaksana/:pegawai_id/:tahun", pohonKinerjaOpdController.FindPokinByPelaksana)
 	router.POST("/rencana_kinerja/create_level1", rencanaKinerjaController.CreateRekinLevel1)
-	router.PUT("/rencana_kinerja/update_level1/:id", rencanaKinerjaController.UpdateRekinLevel1)
+	// router.PUT("/rencana_kinerja/update_level1/:id", rencanaKinerjaController.UpdateRekinLevel1)
 	router.GET("/rencana_kinerja_level1/:id", rencanaKinerjaController.FindIdRekinLevel1)
+	router.GET("/rencanakinerja/pegawai_level_1/:pegawai_id/:kode_opd/:tahun", rencanaKinerjaController.FindAllRekinLevel1)
 	router.GET("/rencana_kinerja_level3/:kode_opd/:tahun", rencanaKinerjaController.FindRekinLevel3)
 	router.GET("/rencana_kinerja_opd/findall", rencanaKinerjaController.FindAll)
 	// router.GET("/rencana_kinerja_sasaran_opd/pegawai_level1/:pegawai_id/tahun/:tahun", rencanaKinerjaController.FindRekinSasaranOpd)
@@ -168,6 +175,16 @@ func NewRouter(
 	router.PUT("/gambaran_umum/update/:id", gambaranUmumController.Update)
 	router.DELETE("/gambaran_umum/delete/:id", gambaranUmumController.Delete)
 
+	//inovasi rekin
+	router.POST("/inovasi_rekin/create/:rencana_kinerja_id", inovasiRekinController.Create)
+	router.GET("/inovasi_rekin/findall/:rencana_kinerja_id", inovasiRekinController.FindAll)
+	router.GET("/inovasi_rekin/detail/:id", inovasiRekinController.FindById)
+	router.PUT("/inovasi_rekin/update/:id", inovasiRekinController.Update)
+	router.DELETE("/inovasi_rekin/delete/:id", inovasiRekinController.Delete)
+
+	//laporan inovasi 
+	router.GET("/laporan-inovasi/findall/:kode_opd/:tahun", inovasiRekinController.FindAllKodeOpdTahun)
+
 	//dasar hukum
 	router.POST("/dasar_hukum/create/:rencana_kinerja_id", dasarHukumController.Create)
 	router.GET("/dasar_hukum/findall/:rencana_kinerja_id", dasarHukumController.FindAll)
@@ -215,6 +232,10 @@ func NewRouter(
 	// strategic arah kebijakan opd
 	router.GET("/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.FindAllArah)
 	router.GET("/export/strategi_arah_kebijakan_opd/:kode_opd/:tahun", pohonKinerjaOpdController.ExportExcel)
+
+	// arah kebijakan opd
+	router.POST("/arah-kebijakan/create", arahkebijakanController.Create)
+	router.PUT("/arah-kebijakan/update/:id", arahkebijakanController.Update)
 
 	// strategic arah kebijakan pemda
 	router.GET("/strategi_arah_kebijakan_pemda/:tahun_awal/:tahun_akhir", strategicArahKebijakanController.FindAll)
@@ -443,6 +464,7 @@ func NewRouter(
 	router.DELETE("/sasaran_opd/delete/:id", sasaranOpdController.Delete)
 	router.GET("/sasaran_opd/pokin/:id_pokin/tahun/:tahun", sasaranOpdController.FindByIdPokin)
 	router.GET("/sasaran_opd/renja/:kode_opd/:tahun/:jenis_periode", sasaranOpdController.FindByTahun)
+	router.GET("/sasaran_opd/pegawai_level_1/:nip/:kode_opd/:tahun", sasaranOpdController.FindByNipAndOpd)
 
 	//visi pemda
 	router.POST("/visi_pemda/create", visiPemdaController.Create)
@@ -470,10 +492,15 @@ func NewRouter(
 	router.GET("/subkegiatanopd/bidangurusan/:kode_opd", subKegiatanTerpilihController.FindAllSubkegiatanByBidangUrusanOpd)
 
 	//matrix renstra
+	//sudah ditambahkan audited event
 	router.GET("/matrix_renstra/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
+	router.GET("/matrix_renstra/v2/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKedua)
 	router.POST("/matrix_renstra/upsert_anggaran", matrixRenstraController.UpsertAnggaran)
 	router.DELETE("/matrix_renstra/indikator/delete/:kode_indikator", matrixRenstraController.DeleteIndikator)
 	router.POST("/matrix_renstra/indikator/upsert", matrixRenstraController.UpsertBatchIndikator)
+	router.POST("/matrix_renstra/indikator/create", matrixRenstraController.CreateIndikatorV2)
+	router.PUT("/matrix_renstra/indikator/update", matrixRenstraController.UpdateIndikatorRenstra)
+	router.POST("/matrix_renstra/target/upsert", matrixRenstraController.UpsertTarget)
 
 	//cascading opd
 	router.GET("/cascading_opd/findall/:kode_opd/:tahun", cascadingOpdController.FindAll)
@@ -547,13 +574,19 @@ func NewRouter(
 	router.DELETE("/ppd/delete/:id", ppdController.Delete)
 	router.GET("/ppd/findall/:kode_opd", ppdController.FindAll)
 	router.POST("/ppd/find-by-ids", ppdController.FindByIds)
-	
+
 	//Master NSPK
 	router.POST("/nspk/create", nspkController.Create)
 	router.PUT("/nspk/update/:id", nspkController.Update)
 	router.DELETE("/nspk/delete/:id", nspkController.Delete)
 	router.GET("/nspk/findall/:kode_opd", nspkController.FindAll)
-	
+
+	//Master Jenis Inovasi
+	router.POST("/jenis-inovasi/create", jenisinovasiController.Create)
+	router.PUT("/jenis-inovasi/update/:id", jenisinovasiController.Update)
+	router.DELETE("/jenis-inovasi/delete/:id", jenisinovasiController.Delete)
+	router.GET("/jenis-inovasi/findall", jenisinovasiController.FindAll)
+
 	// NSPK Opd
 	router.POST("/nspk-opd/create", nspkopdController.Create)
 	router.PUT("/nspk-opd/update/:id", nspkopdController.Update)
@@ -668,6 +701,8 @@ func NewRouter(
 	router.GET("/sasaran_opd/ranwal/:kode_opd/:tahun", sasaranOpdController.FindSasaranRanwal)
 	router.GET("/sasaran_opd/rankhir/:kode_opd/:tahun", sasaranOpdController.FindSasaranRankhir)
 	router.GET("/sasaran_opd/penetapan/:kode_opd/:tahun", sasaranOpdController.FindSasaranPenetapan)
+	router.POST("/sasaran_opd/hide/:id_pokin", sasaranOpdController.HideSasaranOpd)
+	router.DELETE("/sasaran_opd/unhide/:id_pokin", sasaranOpdController.UnhideSasaranOpd)
 
 	//sasaran renja
 	router.POST("/sasaran_opd/renja/ranwal/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorRanwal)
@@ -677,6 +712,14 @@ func NewRouter(
 	router.PUT("/sasaran_opd/renja/rankhir/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorRankhir)
 	router.POST("/sasaran_opd/renja/penetapan/indikator/create/:sasaranopdId", sasaranOpdController.CreateIndikatorPenetapan)
 	router.PUT("/sasaran_opd/renja/penetapan/indikator/update/:kodeIndikator", sasaranOpdController.UpdateIndikatorPenetapan)
+
+	// PPTK
+	router.GET("/pptk/findall/:kode_opd/:tahun", pptkController.FindAll)
+	// router.GET("/pptk/findall-nip/:nip/:tahun", pptkController.FindAllByNip)
+	router.GET("/pptk/detail/:id", pptkController.FindById)
+	router.POST("/pptk/create", pptkController.Create)
+	router.PUT("/pptk/update/:id", pptkController.Update)
+	router.DELETE("/pptk/delete/:id", pptkController.Delete)
 
 	// IKU Renja Opd
 	router.GET("/iku_renja_opd/ranwal/:kode_opd/:tahun", ikuController.FindAllIkuRenjaOpdRanwal)
@@ -700,6 +743,26 @@ func NewRouter(
 	//tujuan opd penetapan
 	router.GET("/tujuan_opd/penetapan/:kode_opd/:tahun", tujuanOpdController.TujuanOpdPenetapan)
 
+	// tujuan opd layer target CRUD (target-only, indikator dari renstra)
+	router.POST("/tujuan_opd/rankhir/target/create", tujuanOpdController.CreateTargetRankhirOpdLayer)
+	router.PUT("/tujuan_opd/rankhir/target/update", tujuanOpdController.UpdateTargetRankhirOpdLayer)
+	router.DELETE("/tujuan_opd/rankhir/target/delete/:kode_indikator/:tahun", tujuanOpdController.DeleteTargetRankhirOpdLayer)
+	router.POST("/tujuan_opd/penetapan/target/create", tujuanOpdController.CreateTargetPenetapanOpd)
+	router.PUT("/tujuan_opd/penetapan/target/update", tujuanOpdController.UpdateTargetPenetapanOpd)
+	router.DELETE("/tujuan_opd/penetapan/target/delete/:kode_indikator/:tahun", tujuanOpdController.DeleteTargetPenetapanOpd)
+
+	// tujuan opd lock
+
+	router.GET("/tujuan_opd/lock/:kode_opd/:tahun", tujuanOpdController.IsTujuanOpdLocked)
+	router.POST("/tujuan_opd/lock/:kode_opd/:tahun", tujuanOpdController.LockTujuanOpd)
+	router.DELETE("/tujuan_opd/lock/:kode_opd/:tahun", tujuanOpdController.UnlockTujuanOpd)
+
+	// sasaran opd lock
+
+	router.GET("/sasaran_opd/lock/:kode_opd/:tahun", sasaranOpdController.IsSasaranOpdLocked)
+	router.POST("/sasaran_opd/lock/:kode_opd/:tahun", sasaranOpdController.LockSasaranOpd)
+	router.DELETE("/sasaran_opd/lock/:kode_opd/:tahun", sasaranOpdController.UnlockSasaranOpd)
+
 	//tujuan pemda lock
 	router.GET("/tujuan_pemda/lock", tujuanPemdaController.FindAllLockTujuanPemda)
 	router.GET("/tujuan_pemda/lock/:tahun", tujuanPemdaController.IsTujuanPemdaLocked)
@@ -708,6 +771,22 @@ func NewRouter(
 
 	// report tematik (opd in tematik)
 	router.GET("/listOpdTematik/:idPokin", pohonKinerjaAdminController.FindPokinAdminByIdHierarkiOpdView)
+	//tujuan pemda hide/unhide
+	router.POST("/tujuan_pemda/hide/:id", tujuanPemdaController.HideTujuanPemda)
+	router.DELETE("/tujuan_pemda/unhide/:id", tujuanPemdaController.UnhideTujuanPemda)
+
+	router.GET("/rencana-aksi-opd/:sasaran_opd_id/:tahun", rencanaAksiOpdController.FindBySasaranOpdAndTahun)
+	router.POST("/rencana-aksi-opd/sync_jadwal/:rekin_id", rencanaAksiOpdController.SyncJadwalPelaksanaan)
+	router.POST("/rencana-aksi-opd/create", rencanaAksiOpdController.Create)
+	router.PUT("/rencana-aksi-opd/update/:id", rencanaAksiOpdController.Update)
+	router.DELETE("/rencana-aksi-opd/delete/:id", rencanaAksiOpdController.Delete)
+	router.GET("/renaksi-opd/detail/:id", rencanaAksiOpdController.FindById)
+	router.GET("/sasaran_opd/all/:kode_opd/:tahun", rencanaAksiOpdController.FindAllSasaranByTahun)
+	// router.GET("/rencana-aksi-opd/sasaran/:sasaran_opd_id/:tahun", rencanaAksiOpdController.FindBySasaranOpdAndTahun)
+	router.POST("/lock-renaksi-opd/lock/:kode_opd/:tahun", lockRenaksiOpdController.Lock)
+	router.DELETE("/lock-renaksi-opd/lock/:kode_opd/:tahun/:id", lockRenaksiOpdController.Unlock)
+	router.GET("/lock-renaksi-opd/lock/:kode_opd/:tahun/:id", lockRenaksiOpdController.FindById)
+	router.GET("/lock-renaksi-opd/lock/:kode_opd/:tahun", lockRenaksiOpdController.FindAll)
 
 	return router
 }

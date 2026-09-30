@@ -12,6 +12,7 @@ type TujuanPemdaResponse struct {
 	JenisPohon  string              `json:"jenis_pohon,omitempty"`
 	PeriodeId   int                 `json:"periode_id,omitempty"`
 	Periode     PeriodeResponse     `json:"periode"`
+	IsHide      bool                `json:"is_hide"`
 	Indikator   []IndikatorResponse `json:"indikator"`
 }
 type IndikatorResponse struct {
@@ -114,6 +115,7 @@ type TujuanPemdaRankhirDualResponse struct {
 	TematikId   int                            `json:"tematik_id,omitempty"`
 	NamaTematik string                         `json:"nama_tematik,omitempty"`
 	Periode     PeriodeResponse                `json:"periode"`
+	IsHide      bool                           `json:"is_hide"`
 	Indikator   []IndikatorRankhirDualResponse `json:"indikator"`
 }
 type IndikatorPenetapanDualResponse struct {
@@ -137,6 +139,7 @@ type TujuanPemdaPenetapanDualResponse struct {
 	TematikId   int                              `json:"tematik_id,omitempty"`
 	NamaTematik string                           `json:"nama_tematik,omitempty"`
 	IsLock      bool                             `json:"is_lock"`
+	IsHide      bool                             `json:"is_hide"`
 	Periode     PeriodeResponse                  `json:"periode"`
 	Indikator   []IndikatorPenetapanDualResponse `json:"indikator"`
 }

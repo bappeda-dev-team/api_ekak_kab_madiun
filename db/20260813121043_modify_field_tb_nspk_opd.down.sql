@@ -1,0 +1,1 @@
+ALTER TABLE tb_nspk_opd MODIFY COLUMN id_sasaran_opd INT(50);

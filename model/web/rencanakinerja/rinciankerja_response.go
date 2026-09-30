@@ -4,6 +4,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/dasarhukum"
 	"ekak_kabupaten_madiun/model/web/gambaranumum"
 	"ekak_kabupaten_madiun/model/web/inovasi"
+	"ekak_kabupaten_madiun/model/web/inovasirekin"
 	"ekak_kabupaten_madiun/model/web/permasalahan"
 	"ekak_kabupaten_madiun/model/web/rencanaaksi"
 	"ekak_kabupaten_madiun/model/web/subkegiatan"
@@ -18,6 +19,7 @@ type DataRincianKerja struct {
 	DasarHukum     []dasarhukum.DasarHukumResponse          `json:"dasar_hukum"`
 	GambaranUmum   []gambaranumum.GambaranUmumResponse      `json:"gambaran_umum"`
 	Inovasi        []inovasi.InovasiResponse                `json:"inovasi"`
+	InovasiRekin   []inovasirekin.InovasiRekinResponse      `json:"inovasi_rekin"`
 }
 
 type UsulanGabunganResponse struct {

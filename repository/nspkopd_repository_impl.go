@@ -190,7 +190,7 @@ func (repository *NspkOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 			   isu.id_nspk, 
 			   mn.nspk, 
 			   isu.id_tujuan_opd, 
-			   to.tujuan, 
+			   tto.tujuan, 
 			   isu.id_sasaran_opd, 
 			   so.nama_sasaran_opd, 
 			   isu.tahun
@@ -202,8 +202,8 @@ func (repository *NspkOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 		LEFT JOIN tb_master_nspk mn
 		ON mn.id = isu.id_nspk
 
-		LEFT JOIN tb_tujuan_opd to
-		ON to.id = isu.id_tujuan_opd
+		LEFT JOIN tb_tujuan_opd tto
+		ON tto.id = isu.id_tujuan_opd
 
 		LEFT JOIN tb_sasaran_opd so
 		ON so.id = isu.id_sasaran_opd
@@ -227,21 +227,36 @@ func (repository *NspkOpdRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx
 
 	for rows.Next() {
 		var item domain.NspkOpd
+		var nspk sql.NullString
+		var tujuanOpd sql.NullString
+		var sasaranOpd sql.NullString
 
 		err := rows.Scan(
 			&item.ID,
 			&item.KodeOpd,
 			&item.NamaOpd,
 			&item.IdNspk,
-			&item.NSPK,
+			&nspk,
 			&item.IdTujuanOpd,
-			&item.TujuanOpd,
+			&tujuanOpd,
 			&item.IdSasaranOpd,
-			&item.SasaranOpd,
+			&sasaranOpd,
 			&item.Tahun,
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		if nspk.Valid {
+			item.NSPK = nspk.String
+		}
+
+		if tujuanOpd.Valid {
+			item.TujuanOpd = tujuanOpd.String
+		}
+
+		if sasaranOpd.Valid {
+			item.SasaranOpd = sasaranOpd.String
 		}
 
 		copyItem := item

@@ -781,6 +781,16 @@ func (service *PkServiceImpl) KunciPK(
 		return pkopd.KunciPKResponse{}, err
 	}
 
+	// update pk_opd
+	if err := service.syncRekinPemilikPk(
+		ctx,
+		tx,
+		kunciPK,
+	); err != nil {
+		log.Printf("pkRepository.KunciPK error sync rekin: %v", err)
+		return pkopd.KunciPKResponse{}, err
+	}
+
 	if err = tx.Commit(); err != nil {
 		log.Printf("commit failed: %v", err)
 		return pkopd.KunciPKResponse{}, err
@@ -845,10 +855,27 @@ func (service *PkServiceImpl) BukaKunciPK(
 		return pkopd.KunciPKResponse{}, err
 	}
 
+	// update pk_opd
+	if err := service.syncRekinPemilikPk(
+		ctx,
+		tx,
+		kunciPK,
+	); err != nil {
+		log.Printf("pkRepository.KunciPK error sync rekin: %v", err)
+		return pkopd.KunciPKResponse{}, err
+	}
+
 	if err = tx.Commit(); err != nil {
 		log.Printf("commit failed: %v", err)
 		return pkopd.KunciPKResponse{}, err
 	}
+
+	if err := service.penetapanClient.UpdateStatusPenetapanPkPegawai(context.Background(), kunciPK.IdPegawai, kunciPK.KodeOpd, kunciPK.Tahun); err != nil {
+		log.Printf("update status penetapan gagal: %v", err)
+
+		return pkopd.KunciPKResponse{}, fmt.Errorf("sync ke penetapan gagal: %w", err)
+	}
+	log.Print("sync penetapan berhasil")
 
 	return pkopd.KunciPKResponse{
 		IdKunci:    idKunci,
@@ -1323,6 +1350,91 @@ func (service *PkServiceImpl) FindPkPenetapan(
 		})
 	}
 	return result, nil
+}
+
+func (service *PkServiceImpl) syncRekinPemilikPk(
+	ctx context.Context,
+	tx *sql.Tx,
+	kunciPK domain.KunciPK,
+) error {
+	if kunciPK.StatusPk == "TERBUKA" {
+
+	}
+	pkPegawais, err := service.pkRepository.FindPkPegawaiPenetapan(
+		ctx,
+		tx,
+		kunciPK.IdPegawai,
+		kunciPK.KodeOpd,
+		kunciPK.Tahun,
+	)
+	if err != nil {
+		return fmt.Errorf("find pk pegawai: %w", err)
+	}
+
+	if len(pkPegawais) == 0 {
+		return nil
+	}
+
+	idRekinSet := make(map[string]struct{})
+
+	for _, pkPeg := range pkPegawais {
+		if pkPeg.IdRekinPemilikPk != "" {
+			idRekinSet[pkPeg.IdRekinPemilikPk] = struct{}{}
+		}
+
+		if pkPeg.IdRekinAtasan != "" {
+			idRekinSet[pkPeg.IdRekinAtasan] = struct{}{}
+		}
+	}
+
+	if len(idRekinSet) == 0 {
+		return nil
+	}
+
+	idRekins := make([]string, 0, len(idRekinSet))
+	for idRekin := range idRekinSet {
+		idRekins = append(idRekins, idRekin)
+	}
+
+	rekinPegawais, err := service.rekinService.FindByIdRekins(
+		ctx,
+		idRekins,
+	)
+	if err != nil {
+		return fmt.Errorf("find rekin pegawai: %w", err)
+	}
+
+	rekinMap := make(map[string]rencanakinerja.RencanaKinerjaResponse, len(rekinPegawais))
+
+	for _, rekin := range rekinPegawais {
+		rekinMap[rekin.Id] = rekin
+	}
+
+	newPkPegawais := make([]domain.PkOpd, len(pkPegawais))
+
+	for i, pkPeg := range pkPegawais {
+		newPkPegawais[i] = pkPeg
+
+		if rekin, ok := rekinMap[pkPeg.IdRekinPemilikPk]; ok {
+			newPkPegawais[i].RekinPemilikPk =
+				rekin.NamaRencanaKinerja
+		}
+
+		if rekin, ok := rekinMap[pkPeg.IdRekinAtasan]; ok {
+			newPkPegawais[i].RekinAtasan =
+				rekin.NamaRencanaKinerja
+		}
+	}
+
+	if err := service.pkRepository.UpdatePkPegawais(
+		ctx,
+		tx,
+		newPkPegawais,
+	); err != nil {
+		return fmt.Errorf("update pk pegawais: %w", err)
+	}
+
+	return nil
 }
 
 func (service *PkServiceImpl) FindPkPenetapanRenja(

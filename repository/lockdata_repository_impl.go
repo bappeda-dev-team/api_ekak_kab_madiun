@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 )
 
@@ -48,4 +49,26 @@ func (r *LockDataRepositoryImpl) Unlock(
 		return fmt.Errorf("LockDataRepository.Unlock: %w", err)
 	}
 	return nil
+}
+
+func (r *LockDataRepositoryImpl) FindAllByJenisKodeOpd(
+	ctx context.Context, tx *sql.Tx, jenisData, kodeOpd string,
+) ([]domain.LockData, error) {
+	rows, err := tx.QueryContext(ctx,
+		`SELECT id, jenis_data, kode_opd, tahun FROM tb_lock_data WHERE jenis_data=? AND kode_opd=? ORDER BY tahun`,
+		jenisData, kodeOpd,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("LockDataRepository.FindAllByJenisKodeOpd: %w", err)
+	}
+	defer rows.Close()
+	var result []domain.LockData
+	for rows.Next() {
+		var d domain.LockData
+		if err := rows.Scan(&d.Id, &d.JenisData, &d.KodeOpd, &d.Tahun); err != nil {
+			return nil, fmt.Errorf("LockDataRepository.FindAllByJenisKodeOpd scan: %w", err)
+		}
+		result = append(result, d)
+	}
+	return result, rows.Err()
 }

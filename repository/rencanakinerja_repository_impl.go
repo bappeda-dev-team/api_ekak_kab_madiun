@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,8 +23,8 @@ func NewRencanaKinerjaRepositoryImpl() *RencanaKinerjaRepositoryImpl {
 }
 
 func (repository *RencanaKinerjaRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error) {
-	script := "INSERT INTO tb_rencana_kinerja (id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode, periode_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, script, rencanaKinerja.Id, rencanaKinerja.IdPohon, rencanaKinerja.NamaRencanaKinerja, rencanaKinerja.Tahun, rencanaKinerja.StatusRencanaKinerja, rencanaKinerja.Catatan, rencanaKinerja.KodeOpd, rencanaKinerja.PegawaiId, rencanaKinerja.KodeSubKegiatan, rencanaKinerja.TahunAwal, rencanaKinerja.TahunAkhir, rencanaKinerja.JenisPeriode, rencanaKinerja.PeriodeId)
+	script := "INSERT INTO tb_rencana_kinerja (id, id_pohon, sasaranopd_id, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, kode_subkegiatan, tahun_awal, tahun_akhir, jenis_periode, periode_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, rencanaKinerja.Id, rencanaKinerja.IdPohon, rencanaKinerja.SasaranOpdId, rencanaKinerja.NamaRencanaKinerja, rencanaKinerja.Tahun, rencanaKinerja.StatusRencanaKinerja, rencanaKinerja.Catatan, rencanaKinerja.KodeOpd, rencanaKinerja.PegawaiId, rencanaKinerja.KodeSubKegiatan, rencanaKinerja.TahunAwal, rencanaKinerja.TahunAkhir, rencanaKinerja.JenisPeriode, rencanaKinerja.PeriodeId)
 	if err != nil {
 		return domain.RencanaKinerja{}, fmt.Errorf("error saat menyimpan rencana kinerja: %v", err)
 	}
@@ -348,6 +349,76 @@ func (repository *RencanaKinerjaRepositoryImpl) RekinsasaranOpd(ctx context.Cont
 			seenIds[rencanaKinerja.Id] = true
 			rencanaKinerjas = append(rencanaKinerjas, rencanaKinerja)
 		}
+	}
+
+	return rencanaKinerjas, nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindAllRekinLevel1(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error) {
+	script := `
+        SELECT
+            rk.id,
+            COALESCE(rk.id_pohon, 0),
+            COALESCE(rk.sasaranopd_id, 0),
+            COALESCE(so.nama_sasaran_opd, ''),
+            COALESCE(sov.is_hide, 0),
+            rk.nama_rencana_kinerja,
+            rk.tahun,
+            COALESCE(rk.status_rencana_kinerja, ''),
+            COALESCE(rk.catatan, ''),
+            COALESCE(rk.kode_opd, ''),
+            COALESCE(rk.pegawai_id, ''),
+            rk.created_at
+        FROM tb_rencana_kinerja rk
+        LEFT JOIN tb_sasaran_opd so ON so.id = rk.sasaranopd_id AND rk.sasaranopd_id > 0
+        LEFT JOIN tb_pohon_kinerja pk ON pk.id = so.pokin_id
+        LEFT JOIN tb_sasaran_opd_view sov ON sov.id_pokin = pk.id
+        WHERE 1=1`
+	params := []interface{}{}
+
+	if pegawaiId != "" {
+		script += " AND rk.pegawai_id = ?"
+		params = append(params, pegawaiId)
+	}
+	if kodeOPD != "" {
+		script += " AND rk.kode_opd = ?"
+		params = append(params, kodeOPD)
+	}
+	if tahun != "" {
+		script += " AND rk.tahun = ?"
+		params = append(params, tahun)
+	}
+
+	script += " ORDER BY rk.created_at ASC"
+
+	rows, err := tx.QueryContext(ctx, script, params...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rencanaKinerjas []domain.RencanaKinerja
+
+	for rows.Next() {
+		var rk domain.RencanaKinerja
+		err := rows.Scan(
+			&rk.Id,
+			&rk.IdPohon,
+			&rk.SasaranOpdId,
+			&rk.NamaSasaranOpd,
+			&rk.IsHideSasaranOpd,
+			&rk.NamaRencanaKinerja,
+			&rk.Tahun,
+			&rk.StatusRencanaKinerja,
+			&rk.Catatan,
+			&rk.KodeOpd,
+			&rk.PegawaiId,
+			&rk.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		rencanaKinerjas = append(rencanaKinerjas, rk)
 	}
 
 	return rencanaKinerjas, nil
@@ -989,7 +1060,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(
 ) ([]domain.RencanaKinerja, error) {
 
 	if len(pokinIds) == 0 {
-		return nil, errors.New("ids tidak boleh kosong")
+		return []domain.RencanaKinerja{}, nil
 	}
 
 	// Build IN clause
@@ -1941,4 +2012,127 @@ func (repository *RencanaKinerjaRepositoryImpl) batchInsertTarget(
 	}
 
 	return nil
+}
+
+func (repository *RencanaKinerjaRepositoryImpl) FindByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) ([]domain.RencanaKinerja, error) {
+	const op = "rencanakineraj_repository.FindByIdRekins"
+
+	if len(idRekins) == 0 {
+		return []domain.RencanaKinerja{}, nil
+	}
+
+	baseQuery := `
+	SELECT id, id_pohon, nama_rencana_kinerja, tahun, status_rencana_kinerja, catatan, kode_opd, pegawai_id, created_at
+	FROM tb_rencana_kinerja
+	WHERE id IN (?)
+	`
+
+	query, args := helper.BuildInQueryString(baseQuery, idRekins)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	var rencanaKinerjas []domain.RencanaKinerja
+
+	for rows.Next() {
+		var rencanaKinerja domain.RencanaKinerja
+		err := rows.Scan(&rencanaKinerja.Id, &rencanaKinerja.IdPohon, &rencanaKinerja.NamaRencanaKinerja, &rencanaKinerja.Tahun, &rencanaKinerja.StatusRencanaKinerja, &rencanaKinerja.Catatan, &rencanaKinerja.KodeOpd, &rencanaKinerja.PegawaiId, &rencanaKinerja.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		rencanaKinerjas = append(rencanaKinerjas, rencanaKinerja)
+	}
+
+	return rencanaKinerjas, nil
+}
+
+func (repo *RencanaKinerjaRepositoryImpl) FindSubkegiatanRekinByIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinIds []string,
+) (map[string]domain.SubKegiatan, error) {
+	const op = "rencanakinerja_repository.FindSubkegiatanRekinByIds"
+
+	if len(rekinIds) == 0 {
+		return map[string]domain.SubKegiatan{}, nil
+	}
+
+	baseQuery := `
+		SELECT
+			rek.id,
+			sub.kode_subkegiatan,
+			sub.nama_subkegiatan,
+			pagu.id,
+			pagu.pagu
+		FROM tb_rencana_kinerja rek
+		JOIN tb_subkegiatan_terpilih st
+			ON st.rekin_id = rek.id
+		JOIN tb_subkegiatan sub
+			ON st.kode_subkegiatan = sub.kode_subkegiatan
+		LEFT JOIN tb_pagu pagu
+			ON pagu.kode_subkegiatan = sub.kode_subkegiatan
+			AND pagu.kode_opd = rek.kode_opd
+			AND pagu.tahun = rek.tahun
+			AND pagu.jenis = 'penetapan'
+		WHERE rek.id IN (?)
+	`
+
+	query, args := helper.BuildInQueryString(baseQuery, rekinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	rekinMap := make(map[string]domain.SubKegiatan, len(rekinIds))
+
+	for rows.Next() {
+		var (
+			rekinID           string
+			kodeSubKegiatan   string
+			namaSubKegiatan   string
+			paguIdNi          sql.NullInt64
+			paguSubKegiatanNi sql.NullInt64
+			paguId            string
+			paguSubKegiatan   int
+		)
+
+		if err := rows.Scan(
+			&rekinID,
+			&kodeSubKegiatan,
+			&namaSubKegiatan,
+			&paguIdNi,
+			&paguSubKegiatanNi,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+		if paguIdNi.Valid {
+			paguId = strconv.Itoa(int(paguIdNi.Int64))
+			paguSubKegiatan = int(paguSubKegiatanNi.Int64)
+		}
+
+		paguSub := make([]domain.PaguSubKegiatan, 0)
+		paguSub = append(paguSub, domain.PaguSubKegiatan{
+			Id:           paguId,
+			JenisPagu:    "penetapan",
+			PaguAnggaran: paguSubKegiatan,
+		})
+
+		rekinMap[rekinID] = domain.SubKegiatan{
+			KodeSubKegiatan: kodeSubKegiatan,
+			NamaSubKegiatan: namaSubKegiatan,
+			RekinId:         rekinID,
+			PaguSubKegiatan: paguSub,
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows iteration failed: %w", op, err)
+	}
+
+	return rekinMap, nil
 }

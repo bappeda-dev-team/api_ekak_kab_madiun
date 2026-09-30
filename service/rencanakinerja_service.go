@@ -20,6 +20,7 @@ type RencanaKinerjaService interface {
 	CreateRekinLevel1(ctx context.Context, request rencanakinerja.RencanaKinerjaCreateRequest) (rencanakinerja.RencanaKinerjaResponse, error)
 	UpdateRekinLevel1(ctx context.Context, request rencanakinerja.RencanaKinerjaUpdateRequest) (rencanakinerja.RencanaKinerjaResponse, error)
 	FindIdRekinLevel1(ctx context.Context, id string) (rencanakinerja.RencanaKinerjaLevel1Response, error)
+	FindAllRekinLevel1(ctx context.Context, pegawaiId string, kodeOPD string, tahun string) ([]rencanakinerja.RencanaKinerjaLevel1Response, error)
 
 	//rencana kinerja level 3
 	FindRekinLevel3(ctx context.Context, kodeOpd string, tahun string) ([]rencanakinerja.RencanaKinerjaResponse, error)
@@ -31,4 +32,5 @@ type RencanaKinerjaService interface {
 
 	FindByFilter(ctx context.Context, filter domain.FilterParams) ([]rencanakinerja.RencanaKinerjaResponse, error)
 	CloneRekinByKodeOpdAndTahun(ctx context.Context, cloneRequest rencanakinerja.RekinByOpdCloneRequest) error
+	FindByIdRekins(ctx context.Context, idRekins []string) ([]rencanakinerja.RencanaKinerjaResponse, error)
 }

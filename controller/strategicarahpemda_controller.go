@@ -6,7 +6,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-type SrategicArahKebijakanPemdaController interface {
+type StrategicArahKebijakanPemdaController interface {
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindIsu(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	ExportExcel(writer http.ResponseWriter, request *http.Request, params httprouter.Params)

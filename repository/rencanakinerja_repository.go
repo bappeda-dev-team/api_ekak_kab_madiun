@@ -24,6 +24,7 @@ type RencanaKinerjaRepository interface {
 	UpdateRekinLevel1(ctx context.Context, tx *sql.Tx, rencanaKinerja domain.RencanaKinerja) (domain.RencanaKinerja, error)
 	FindIdRekinLevel1(ctx context.Context, tx *sql.Tx, id string) (domain.RencanaKinerja, error)
 	RekinsasaranOpd(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error)
+	FindAllRekinLevel1(ctx context.Context, tx *sql.Tx, pegawaiId string, kodeOPD string, tahun string) ([]domain.RencanaKinerja, error)
 	FindIndikatorSasaranbyRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.Indikator, error)
 	FindTargetByIndikatorIdAndTahun(ctx context.Context, tx *sql.Tx, indikatorId string, tahun string) ([]domain.Target, error)
 	FindByPokinId(ctx context.Context, tx *sql.Tx, pokinId int) ([]domain.RencanaKinerja, error)
@@ -45,4 +46,8 @@ type RencanaKinerjaRepository interface {
 	IndikatorTargetSasaranByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string][]domain.Indikator, error)
 	GetByKodeOpdAndTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAsal string) ([]domain.RencanaKinerja, error)
 	CreateBatch(ctx context.Context, tx *sql.Tx, rencanaKinerjas []domain.RencanaKinerja) error
+	FindByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) ([]domain.RencanaKinerja, error)
+
+	// subkegiatan
+	FindSubkegiatanRekinByIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]domain.SubKegiatan, error)
 }

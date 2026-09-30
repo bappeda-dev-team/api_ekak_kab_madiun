@@ -18,6 +18,7 @@ type RencanaKinerjaController interface {
 	CreateRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpdateRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindIdRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllRekinLevel1(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindRekinLevel3(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindRekinAtasan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	CloneRencanaKinerja(writer http.ResponseWriter, request *http.Request, params httprouter.Params)

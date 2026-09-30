@@ -768,7 +768,6 @@ func (controller *PohonKinerjaAdminControllerImpl) ClonePokinPemda(writer http.R
 }
 
 func (controller *PohonKinerjaAdminControllerImpl) CetakPokin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-
 	tematikIdQ := params.ByName("id")
 	tematikId, err := strconv.Atoi(tematikIdQ)
 	if err != nil {
@@ -780,19 +779,6 @@ func (controller *PohonKinerjaAdminControllerImpl) CetakPokin(writer http.Respon
 		helper.WriteToResponseBody(writer, webResponse)
 		return
 	}
-
-	// q := request.URL.Query()
-	// tahunQ := q.Get("tahun")
-	// tahun, err := strconv.Atoi(tahunQ)
-	// if err != nil {
-	// 	webResponse := web.WebResponse{
-	// 		Code:   http.StatusBadRequest,
-	// 		Status: http.StatusText(http.StatusBadRequest),
-	// 		Data:   "tahun tidak valid",
-	// 	}
-	// 	helper.WriteToResponseBody(writer, webResponse)
-	// 	return
-	// }
 
 	result, err := controller.pohonKinerjaAdminService.CetakPokinByTematik(request.Context(), tematikId)
 	if err != nil {

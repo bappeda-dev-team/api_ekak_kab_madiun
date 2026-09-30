@@ -1,0 +1,435 @@
+package service
+
+import (
+	"context"
+	"database/sql"
+	"ekak_kabupaten_madiun/helper"
+	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/renaksiopd"
+	"ekak_kabupaten_madiun/model/web/rencanakinerja"
+	"ekak_kabupaten_madiun/repository"
+	"errors"
+	"fmt"
+	"math/rand"
+	"strconv"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/go-sql-driver/mysql"
+)
+
+var (
+	ErrRencanaAksiOpdInvalidParameter = errors.New("parameter rencana aksi opd tidak valid")
+	ErrRencanaAksiOpdLocked           = errors.New("rencana aksi opd terkunci")
+	ErrRekinSudahDigunakan            = errors.New("rencana kinerja sudah digunakan pada sasaran opd ini")
+	ErrUrutanSudahDigunakan           = errors.New("urutan sudah digunakan pada sasaran opd ini")
+)
+
+type RencanaAksiOpdServiceImpl struct {
+	RencanaAksiOpdRepository repository.RencanaAksiOpdRepository
+	RencanaKinerjaRepository repository.RencanaKinerjaRepository
+	LockRenaksiOpdRepository repository.LockRenaksiOpdRepository
+	DB                       *sql.DB
+	validator                *validator.Validate
+}
+
+func NewRencanaAksiOpdServiceImpl(
+	rencanaAksiOpdRepository repository.RencanaAksiOpdRepository,
+	rencanaKinerjaRepository repository.RencanaKinerjaRepository,
+	lockRenaksiOpdRepository repository.LockRenaksiOpdRepository,
+	db *sql.DB,
+	validator *validator.Validate,
+) *RencanaAksiOpdServiceImpl {
+	return &RencanaAksiOpdServiceImpl{
+		RencanaAksiOpdRepository: rencanaAksiOpdRepository,
+		RencanaKinerjaRepository: rencanaKinerjaRepository,
+		LockRenaksiOpdRepository: lockRenaksiOpdRepository,
+		DB:                       db,
+		validator:                validator,
+	}
+}
+
+func (service *RencanaAksiOpdServiceImpl) FindBySasaranOpdAndTahun(ctx context.Context, sasaranOpdId int, tahun string) ([]renaksiopd.RencanaAksiOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	rencanaAksi, err := service.RencanaAksiOpdRepository.FindBySasaranOpdAndTahun(ctx, tx, sasaranOpdId, tahun)
+	if err != nil {
+		return nil, err
+	}
+	rekinIds := make([]string, 0)
+	for _, renaksi := range rencanaAksi {
+		for _, ren := range renaksi.RencanaKinerja {
+			rekinIds = append(rekinIds, ren.RekinId)
+		}
+	}
+	indikatorRekins, err := service.RencanaKinerjaRepository.IndikatorTargetSasaranByRekinIds(ctx, tx, rekinIds)
+	if err != nil {
+		return nil, err
+	}
+	for _, renaksi := range rencanaAksi {
+		for i := range renaksi.RencanaKinerja {
+			ren := &renaksi.RencanaKinerja[i]
+			indikators := indikatorRekins[ren.RekinId]
+			ren.Indikator = append(ren.Indikator, indikators...)
+		}
+	}
+
+	responses := toRencanaAksiOpdResponses(rencanaAksi)
+	return responses, nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) SyncJadwalPelaksanaan(ctx context.Context, rekinId string) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	return service.RencanaAksiOpdRepository.SyncJadwalPelaksanaan(ctx, tx, rekinId)
+}
+
+func (service *RencanaAksiOpdServiceImpl) Create(ctx context.Context, request renaksiopd.RencanaAksiOpdCreateRequest) (renaksiopd.RencanaAksiOpdRequestResponse, error) {
+	err := service.validator.Struct(request)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	sasaranOpdId, err := request.SasaranOpdId.Int()
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, fmt.Errorf("%w: sasaranopd_id %s", ErrRencanaAksiOpdInvalidParameter, err)
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+	kodeOpd, _, err := service.RencanaAksiOpdRepository.FindLockContextByRekinId(ctx, tx, request.RekinId)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUnlocked(ctx, tx, kodeOpd, request.TahunRenaksi, sasaranOpdId, request.RekinId); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureRekinNotUsed(ctx, tx, sasaranOpdId, request.RekinId, 0); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+
+	lastUrutan, err := service.RencanaAksiOpdRepository.GetLastUrutanBySasaranAndTahun(ctx, tx, sasaranOpdId, request.TahunRenaksi)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	urutan := lastUrutan + 1
+	if err := service.ensureUrutanNotUsed(ctx, tx, sasaranOpdId, request.TahunRenaksi, urutan, 0); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+
+	var keterangan *string
+	if request.Keterangan != "" {
+		keterangan = &request.Keterangan
+	}
+
+	rencanaAksiOpdDomain := domain.RencanaAksiOpd{
+		Id:           rand.Intn(10000000),
+		RekinId:      request.RekinId,
+		SasaranOpdId: sasaranOpdId,
+		TahunRenaksi: request.TahunRenaksi,
+		Urutan:       urutan,
+		Keterangan:   keterangan,
+	}
+
+	rencanaAksiOpd, err := service.RencanaAksiOpdRepository.Create(ctx, tx, rencanaAksiOpdDomain)
+	if err != nil {
+		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == 1062 {
+			return renaksiopd.RencanaAksiOpdRequestResponse{}, fmt.Errorf("%w: urutan %d sudah digunakan pada sasaran opd ini", ErrUrutanSudahDigunakan, urutan)
+		}
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+
+	return toRencanaAksiOpdRequestResponse(rencanaAksiOpd), nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) Update(ctx context.Context, request renaksiopd.RencanaAksiOpdUpdateRequest) (renaksiopd.RencanaAksiOpdRequestResponse, error) {
+	err := service.validator.Struct(request)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+	oldKodeOpd, oldTahun, oldSasaranId, oldRekinId, err := service.RencanaAksiOpdRepository.FindLockContextById(ctx, tx, request.Id)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUnlocked(ctx, tx, oldKodeOpd, oldTahun, oldSasaranId, oldRekinId); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	newKodeOpd, _, err := service.RencanaAksiOpdRepository.FindLockContextByRekinId(ctx, tx, request.RekinId)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUnlocked(ctx, tx, newKodeOpd, oldTahun, oldSasaranId, request.RekinId); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureRekinNotUsed(ctx, tx, oldSasaranId, request.RekinId, request.Id); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+	if err := service.ensureUrutanNotUsed(ctx, tx, oldSasaranId, oldTahun, request.Urutan, request.Id); err != nil {
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+
+	var keterangan *string
+	if request.Keterangan != "" {
+		keterangan = &request.Keterangan
+	}
+
+	rencanaAksiOpdDomain := domain.RencanaAksiOpd{
+		Id:         request.Id,
+		RekinId:    request.RekinId,
+		Urutan:     request.Urutan,
+		Keterangan: keterangan,
+	}
+
+	rencanaAksiOpd, err := service.RencanaAksiOpdRepository.Update(ctx, tx, rencanaAksiOpdDomain)
+	if err != nil {
+		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == 1062 {
+			return renaksiopd.RencanaAksiOpdRequestResponse{}, fmt.Errorf("%w: urutan %d sudah digunakan pada sasaran opd ini", ErrUrutanSudahDigunakan, request.Urutan)
+		}
+		return renaksiopd.RencanaAksiOpdRequestResponse{}, err
+	}
+
+	return toRencanaAksiOpdRequestResponse(rencanaAksiOpd), nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) Delete(ctx context.Context, id int) error {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer helper.CommitOrRollback(tx)
+	kodeOpd, tahun, sasaranId, rekinId, err := service.RencanaAksiOpdRepository.FindLockContextById(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if err := service.ensureUnlocked(ctx, tx, kodeOpd, tahun, sasaranId, rekinId); err != nil {
+		return err
+	}
+	return service.RencanaAksiOpdRepository.Delete(ctx, tx, id)
+}
+
+func (service *RencanaAksiOpdServiceImpl) FindById(ctx context.Context, id int) (renaksiopd.RencanaAksiOpdByIdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdByIdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	rencanaAksiOpd, err := service.RencanaAksiOpdRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return renaksiopd.RencanaAksiOpdByIdResponse{}, err
+	}
+	return toRencanaAksiOpdByIdResponse(rencanaAksiOpd), nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) FindAllSasaranByTahun(ctx context.Context, kodeOpd string, tahun string) ([]renaksiopd.SasaranOpdDetailResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	sasaranList, err := service.RencanaAksiOpdRepository.FindAllSasaranByTahun(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]renaksiopd.SasaranOpdDetailResponse, 0, len(sasaranList))
+	for _, sasaran := range sasaranList {
+		response := toSasaranOpdDetailResponse(sasaran)
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) ensureUnlocked(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, sasaranId int, rekinId string) error {
+	locked, err := service.LockRenaksiOpdRepository.IsLocked(ctx, tx, kodeOpd, tahun, sasaranId, rekinId)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return fmt.Errorf("%w: data OPD %s tahun %s sasaran %d rekin %s tidak dapat diubah", ErrRencanaAksiOpdLocked, kodeOpd, tahun, sasaranId, rekinId)
+	}
+	return nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) ensureRekinNotUsed(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) error {
+	used, err := service.RencanaAksiOpdRepository.IsRekinUsedInSasaran(ctx, tx, sasaranId, rekinId, excludeId)
+	if err != nil {
+		return err
+	}
+	if used {
+		return fmt.Errorf("%w: rekin %s sudah terdaftar pada sasaran %d", ErrRekinSudahDigunakan, rekinId, sasaranId)
+	}
+	return nil
+}
+
+func (service *RencanaAksiOpdServiceImpl) ensureUrutanNotUsed(ctx context.Context, tx *sql.Tx, sasaranId int, tahun string, urutan int, excludeId int) error {
+	used, err := service.RencanaAksiOpdRepository.IsUrutanUsed(ctx, tx, sasaranId, tahun, urutan, excludeId)
+	if err != nil {
+		return err
+	}
+	if used {
+		return fmt.Errorf("%w: urutan %d sudah terdaftar pada sasaran %d tahun %s", ErrUrutanSudahDigunakan, urutan, sasaranId, tahun)
+	}
+	return nil
+}
+
+func toRencanaAksiOpdResponses(items []domain.RencanaAksiOpd) []renaksiopd.RencanaAksiOpdResponse {
+	if len(items) == 0 {
+		return []renaksiopd.RencanaAksiOpdResponse{}
+	}
+
+	grouped := make(map[string]*renaksiopd.RencanaAksiOpdResponse)
+	for _, item := range items {
+		key := fmt.Sprintf("%d-%s", item.SasaranOpdId, item.TahunRenaksi)
+		resp, exists := grouped[key]
+		if !exists {
+			grouped[key] = &renaksiopd.RencanaAksiOpdResponse{
+				SasaranOpdId:   strconv.Itoa(item.SasaranOpdId),
+				NamaSasaranOpd: item.NamaSasaranOpd,
+				TahunRenaksi:   item.TahunRenaksi,
+				RencanaKinerja: []renaksiopd.RencanaKinerjaResponse{},
+			}
+			resp = grouped[key]
+		}
+
+		for _, rk := range item.RencanaKinerja {
+			resp.RencanaKinerja = append(resp.RencanaKinerja, toRencanaKinerjaResponse(rk))
+		}
+	}
+
+	responses := make([]renaksiopd.RencanaAksiOpdResponse, 0, len(grouped))
+	for _, resp := range grouped {
+		responses = append(responses, *resp)
+	}
+
+	return responses
+}
+
+func toRencanaKinerjaResponse(rk domain.RencanaKinerjaOpd) renaksiopd.RencanaKinerjaResponse {
+	subKegiatan := make([]renaksiopd.SubKegiatanResponse, 0, len(rk.SubKegiatan))
+	for _, sk := range rk.SubKegiatan {
+		indikators := make([]renaksiopd.IndikatorResponse, 0, len(sk.Indikator))
+		for _, ind := range sk.Indikator {
+			indikators = append(indikators, renaksiopd.IndikatorResponse{
+				Id:        ind.Id,
+				Indikator: ind.Indikator,
+				Target:    ind.Target,
+				Satuan:    ind.Satuan,
+			})
+		}
+
+		subKegiatan = append(subKegiatan, renaksiopd.SubKegiatanResponse{
+			KodeSubKegiatan: sk.KodeSubKegiatan,
+			NamaSubKegiatan: sk.NamaSubKegiatan,
+			Indikator:       indikators,
+		})
+	}
+	indikatorRekins := make([]rencanakinerja.IndikatorResponse, 0)
+	for _, ind := range rk.Indikator {
+		targetInd := make([]rencanakinerja.TargetResponse, 0)
+		for _, tar := range ind.Target {
+			targetInd = append(targetInd, rencanakinerja.TargetResponse{
+				Id:              tar.Id,
+				IndikatorId:     tar.IndikatorId,
+				TargetIndikator: tar.Target,
+				SatuanIndikator: tar.Satuan,
+				Tahun:           tar.Tahun,
+			})
+		}
+		indikatorRekins = append(indikatorRekins, rencanakinerja.IndikatorResponse{
+			Id:               ind.Id,
+			RencanaKinerjaId: ind.RencanaKinerjaId,
+			NamaIndikator:    ind.Indikator,
+			Target:           targetInd,
+		})
+	}
+
+	return renaksiopd.RencanaKinerjaResponse{
+		Id:                 rk.Id,
+		RekinId:            rk.RekinId,
+		NamaRencanaKinerja: rk.NamaRencanaKinerja,
+		NipPegawai:         rk.NipPegawai,
+		NamaPegawai:        rk.NamaPegawai,
+		KodeOpd:            rk.KodeOpd,
+		TotalAnggaran:      rk.TotalAnggaran,
+		Tw1:                rk.Tw1,
+		Tw2:                rk.Tw2,
+		Tw3:                rk.Tw3,
+		Tw4:                rk.Tw4,
+		Urutan:             rk.Urutan,
+		Keterangan:         rk.Keterangan,
+		SubKegiatan:        subKegiatan,
+		Indikator:          indikatorRekins,
+	}
+}
+
+func toRencanaAksiOpdRequestResponse(item domain.RencanaAksiOpd) renaksiopd.RencanaAksiOpdRequestResponse {
+	return renaksiopd.RencanaAksiOpdRequestResponse{
+		SasaranOpdId: strconv.Itoa(item.SasaranOpdId),
+		RekinId:      item.RekinId,
+		TahunRenaksi: item.TahunRenaksi,
+		Tw1:          item.Tw1,
+		Tw2:          item.Tw2,
+		Tw3:          item.Tw3,
+		Tw4:          item.Tw4,
+		Urutan:       item.Urutan,
+		Keterangan:   item.Keterangan,
+	}
+}
+
+func toRencanaAksiOpdByIdResponse(item domain.RencanaAksiOpd) renaksiopd.RencanaAksiOpdByIdResponse {
+	return renaksiopd.RencanaAksiOpdByIdResponse{
+		Id:                 item.Id,
+		RekinId:            item.RekinId,
+		TahunRenaksi:       item.TahunRenaksi,
+		Urutan:             item.Urutan,
+		Keterangan:         item.Keterangan,
+		NamaRencanaKinerja: item.NamaRencanaKinerja,
+		SasaranOpd:         toSasaranOpdDetailResponse(item.SasaranOpd),
+	}
+}
+
+func toSasaranOpdDetailResponse(item domain.SasaranOpdDetailRenaksi) renaksiopd.SasaranOpdDetailResponse {
+	indikators := make([]renaksiopd.IndikatorSasaranOpdResponse, 0, len(item.Indikator))
+	for _, ind := range item.Indikator {
+		indikators = append(indikators, renaksiopd.IndikatorSasaranOpdResponse{
+			Id:               ind.Id,
+			Indikator:        ind.Indikator,
+			RumusPerhitungan: ind.RumusPerhitungan,
+			SumberData:       ind.SumberData,
+			Target: renaksiopd.TargetResponse{
+				Id:          ind.Target.Id,
+				IndikatorId: ind.Target.IndikatorId,
+				Tahun:       ind.Target.Tahun,
+				Target:      ind.Target.Target,
+				Satuan:      ind.Target.Satuan,
+			},
+		})
+	}
+
+	return renaksiopd.SasaranOpdDetailResponse{
+		Id:             strconv.Itoa(item.Id),
+		NamaSasaranOpd: item.NamaSasaranOpd,
+		TahunAwal:      item.TahunAwal,
+		TahunAkhir:     item.TahunAkhir,
+		JenisPeriode:   item.JenisPeriode,
+		Indikator:      indikators,
+	}
+}

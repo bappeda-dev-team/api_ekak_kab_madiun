@@ -1553,6 +1553,7 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 	tujuanIndex := make(map[string]int)
 	sasaranIndex := make(map[string]int)
 	strategiIndex := make(map[string]int)
+	tacticalIndex := make(map[string]int)
 
 	for _, s := range rows {
 
@@ -1621,8 +1622,9 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 					SasaranOpds[idxSasaran].
 					StrategiOpds,
 				strategic.StrategiOpdResponse{
-					StrategiOpd:       s.NamaStrategi,
-					ArahKebijakanOpds: []strategic.ArahKebijakanOpdResponse{},
+					StrategiOpd:      s.NamaStrategi,
+					TahunStrategiOpd: s.TahunStrategi,
+					TacticalOpds:     []strategic.TacticalOpdResponse{},
 				},
 			)
 
@@ -1636,10 +1638,53 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 		}
 
 		// ==================================
-		// ARAH KEBIJAKAN
+		// TACTICAL
 		// ==================================
 
-		if s.NamaArahKebijakan != "" {
+		idxTactical := -1
+
+		if s.NamaTactical != "" {
+			keyTactical := keyStrategi + "|" + s.NamaTactical
+
+			var ok bool
+			idxTactical, ok = tacticalIndex[keyTactical]
+
+			if !ok {
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds = append(
+					response.
+						StrategiArahKebijakanOpds[idxTujuan].
+						SasaranOpds[idxSasaran].
+						StrategiOpds[idxStrategi].
+						TacticalOpds,
+					strategic.TacticalOpdResponse{
+						TacticalOpd:      s.NamaTactical,
+						IdTacticalOpd:    s.IdTactical,
+						TahunTacticalOpd: s.TahunTactical,
+						OperasionalOpds:  []strategic.OperasionalOpdResponse{},
+						ArahKebijakanOpd: []strategic.ArahKebijakanOpdResponse{},
+					},
+				)
+
+				idxTactical = len(
+					response.
+						StrategiArahKebijakanOpds[idxTujuan].
+						SasaranOpds[idxSasaran].
+						StrategiOpds[idxStrategi].
+						TacticalOpds,
+				) - 1
+
+				tacticalIndex[keyTactical] = idxTactical
+			}
+		}
+		// ==================================
+		// OPERASIONAL
+		// ==================================
+
+		if s.NamaOperasional != "" && s.NamaTactical != "" {
 
 			sudahAda := false
 
@@ -1647,30 +1692,72 @@ func (service *PohonKinerjaOpdServiceImpl) buildStrategicArahKebijakanOpd(
 				StrategiArahKebijakanOpds[idxTujuan].
 				SasaranOpds[idxSasaran].
 				StrategiOpds[idxStrategi].
-				ArahKebijakanOpds {
+				TacticalOpds[idxTactical].
+				OperasionalOpds {
 
-				if arah.ArahKebijakanOpd == s.NamaArahKebijakan {
+				if arah.OperasionalOpd == s.NamaOperasional {
 					sudahAda = true
 					break
 				}
 			}
 
 			if !sudahAda {
-
 				response.
 					StrategiArahKebijakanOpds[idxTujuan].
 					SasaranOpds[idxSasaran].
 					StrategiOpds[idxStrategi].
-					ArahKebijakanOpds = append(
-
+					TacticalOpds[idxTactical].
+					OperasionalOpds = append(
 					response.
 						StrategiArahKebijakanOpds[idxTujuan].
 						SasaranOpds[idxSasaran].
 						StrategiOpds[idxStrategi].
-						ArahKebijakanOpds,
+						TacticalOpds[idxTactical].
+						OperasionalOpds,
+					strategic.OperasionalOpdResponse{
+						OperasionalOpd:      s.NamaOperasional,
+						TahunOperasionalOpd: s.TahunOperasional,
+					},
+				)
+			}
+		}
 
+		// ==================================
+		// ARAH KEBIJAKAN
+		// ==================================
+
+		if s.ArahKebijakan.ID != 0 &&
+			s.ArahKebijakan.PokinId == s.IdTactical {
+
+			arahList :=
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds[idxTactical].
+					ArahKebijakanOpd
+
+			sudahAda := false
+
+			for _, arah := range arahList {
+				if arah.Id == s.ArahKebijakan.ID {
+					sudahAda = true
+					break
+				}
+			}
+
+			if !sudahAda {
+				response.
+					StrategiArahKebijakanOpds[idxTujuan].
+					SasaranOpds[idxSasaran].
+					StrategiOpds[idxStrategi].
+					TacticalOpds[idxTactical].
+					ArahKebijakanOpd = append(
+					arahList,
 					strategic.ArahKebijakanOpdResponse{
-						ArahKebijakanOpd: s.NamaArahKebijakan,
+						Id:      s.ArahKebijakan.ID,
+						PokinId: s.ArahKebijakan.PokinId,
+						Arah:    s.ArahKebijakan.Arah,
 					},
 				)
 			}
@@ -1985,7 +2072,7 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 				strategiStartRow := row
 
 				// jika tidak memiliki arah kebijakan
-				if len(strategi.ArahKebijakanOpds) == 0 {
+				if len(strategi.TacticalOpds) == 0 {
 
 					f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
 					f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
@@ -2000,13 +2087,13 @@ func (service *PohonKinerjaOpdServiceImpl) ExportExcel(
 
 				} else {
 
-					for _, arah := range strategi.ArahKebijakanOpds {
+					for _, arah := range strategi.TacticalOpds {
 
 						f.SetCellValue(sheet, fmt.Sprintf("A%d", row), no)
 						f.SetCellValue(sheet, fmt.Sprintf("B%d", row), tujuan.TujuanOpd)
 						f.SetCellValue(sheet, fmt.Sprintf("C%d", row), sasaran.SasaranOpd)
 						f.SetCellValue(sheet, fmt.Sprintf("D%d", row), strategi.StrategiOpd)
-						f.SetCellValue(sheet, fmt.Sprintf("E%d", row), arah.ArahKebijakanOpd)
+						f.SetCellValue(sheet, fmt.Sprintf("E%d", row), arah.TacticalOpd)
 
 						f.SetCellStyle(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), noStyle)
 						f.SetCellStyle(sheet, fmt.Sprintf("B%d", row), fmt.Sprintf("E%d", row), bodyStyle)
@@ -3724,11 +3811,126 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 		return pohonkinerja.ControlPokinOpdResponse{}, err
 	}
 
-	tematikNodes, err := service.pohonKinerjaOpdRepository.FindControlPokinTematikNodes(ctx, tx, kodeOpd, tahun)
+	// all pokin pemda in tahun
+	pokinPemdas, err := service.pohonKinerjaOpdRepository.FindPokinPemdaByTahun(ctx, tx, tahun)
 	if err != nil {
 		return pohonkinerja.ControlPokinOpdResponse{}, err
 	}
-	tematikTree := buildLeaderboardTematikTree(tematikNodes)
+	pokinById := make(map[int]domain.PohonKinerja)
+
+	for _, p := range pokinPemdas {
+
+		pokinById[p.Id] = p
+
+	}
+	type nodeWithRoot struct {
+		Node domain.PohonKinerja
+		Root domain.PohonKinerja // pemda asal
+	}
+	current := make([]nodeWithRoot, 0)
+
+	for _, root := range pokinPemdas {
+		current = append(current, nodeWithRoot{
+			Node: root,
+			Root: root,
+		})
+	}
+
+	resultPemda := make(map[string][]domain.PohonKinerja)
+	visited := make(map[int]bool)
+
+	for len(current) > 0 {
+
+		ids := make([]int, 0, len(current))
+		for _, c := range current {
+			ids = append(ids, c.Node.Id)
+		}
+
+		children, err := service.pohonKinerjaOpdRepository.
+			FindPokinOpdByParentIdsAndTahun(ctx, tx, ids, tahun)
+		if err != nil {
+			return pohonkinerja.ControlPokinOpdResponse{}, err
+		}
+
+		next := make([]nodeWithRoot, 0)
+
+		for _, child := range children {
+
+			if visited[child.Id] {
+				continue
+			}
+			visited[child.Id] = true
+
+			// FIX parent lookup
+			var parent nodeWithRoot
+			found := false
+
+			for _, c := range current {
+				if c.Node.Id == child.Parent {
+					parent = c
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[WARN] parent not found: child=%d parent=%d", child.Id, child.Parent)
+				continue
+			}
+
+			// mapping opd → tematik
+			if child.KodeOpd != "" {
+				resultPemda[child.KodeOpd] =
+					append(resultPemda[child.KodeOpd], parent.Root)
+			}
+
+			next = append(next, nodeWithRoot{
+				Node: child,
+				Root: parent.Root,
+			})
+		}
+
+		current = next
+	}
+
+	expanded := make(map[string][]domain.PohonKinerja)
+	for kodeOpd, pokins := range resultPemda {
+		for _, pok := range pokins {
+
+			chain := buildFullChain(pok, pokinById)
+
+			for _, c := range chain {
+
+				expanded[kodeOpd] = append(expanded[kodeOpd], c)
+
+			}
+
+		}
+	}
+	// 🔹 mapping ke tematik nodes
+	byOpd := make(map[string][]repository.LeaderboardTematikNode)
+
+	for kodeOpd, pokins := range expanded {
+
+		seen := make(map[int]bool)
+
+		for _, pok := range pokins {
+			if seen[pok.Id] {
+				continue
+			}
+			seen[pok.Id] = true
+
+			byOpd[kodeOpd] = append(byOpd[kodeOpd],
+				repository.LeaderboardTematikNode{
+					Id:         pok.Id,
+					Parent:     pok.Parent,
+					NamaPohon:  pok.NamaPohon,
+					KodeOpd:    kodeOpd,
+					JenisPohon: pok.JenisPohon,
+					LevelPohon: pok.LevelPohon,
+				})
+		}
+	}
 
 	// Cari level maksimum yang ada di data
 	maxLevel := 6 // Minimal sampai Operational (level 6)
@@ -3737,6 +3939,8 @@ func (service *PohonKinerjaOpdServiceImpl) ControlPokinOpd(ctx context.Context, 
 			maxLevel = level
 		}
 	}
+
+	tematikTree := buildLeaderboardTematikTree(byOpd[kodeOpd])
 
 	// Map nama level
 	levelNames := map[int]string{

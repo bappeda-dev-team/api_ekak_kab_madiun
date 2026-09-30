@@ -90,7 +90,15 @@ func (controller *IkuControllerImpl) UpdateIkuActive(writer http.ResponseWriter,
 	ikuUpdateActiveRequest := iku.IkuUpdateActiveRequest{}
 	helper.ReadFromRequestBody(request, &ikuUpdateActiveRequest)
 
-	id := params.ByName("indikator_id")
+	id := ikuUpdateActiveRequest.IndikatorId
+	if id == "" {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "indikator_id tidak boleh kosong",
+		})
+		return
+	}
 
 	err := controller.IkuService.UpdateIkuActive(request.Context(), id, ikuUpdateActiveRequest)
 	if err != nil {

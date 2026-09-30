@@ -754,3 +754,85 @@ func (controller *TujuanPemdaControllerImpl) FindAllLockTujuanPemda(
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+// HideTujuanPemda godoc
+// @Summary      Hide Tujuan Pemda
+// @Description  Sembunyikan tujuan pemda berdasarkan ID
+// @Tags         Tujuan Pemda
+// @Accept       json
+// @Produce      json
+// @Param        id  path  int  true  "ID Tujuan Pemda"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_pemda/hide/{id} [post]
+func (controller *TujuanPemdaControllerImpl) HideTujuanPemda(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id tidak valid",
+		})
+		return
+	}
+	err = controller.TujuanPemdaService.HideTujuanPemda(request.Context(), id)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   "tujuan pemda berhasil disembunyikan",
+	})
+}
+
+// UnhideTujuanPemda godoc
+// @Summary      Unhide Tujuan Pemda
+// @Description  Tampilkan kembali tujuan pemda yang disembunyikan berdasarkan ID
+// @Tags         Tujuan Pemda
+// @Accept       json
+// @Produce      json
+// @Param        id  path  int  true  "ID Tujuan Pemda"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /tujuan_pemda/unhide/{id} [delete]
+func (controller *TujuanPemdaControllerImpl) UnhideTujuanPemda(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	idStr := params.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id tidak valid",
+		})
+		return
+	}
+	err = controller.TujuanPemdaService.UnhideTujuanPemda(request.Context(), id)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   "tujuan pemda berhasil ditampilkan kembali",
+	})
+}

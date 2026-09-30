@@ -295,6 +295,39 @@ func (controller *SasaranOpdControllerImpl) FindByTahun(writer http.ResponseWrit
 	}
 }
 
+// @Summary      Find Sasaran Opd by Nip and Opd
+// @Description  Mendapatkan data sasaran opd berdasarkan nip dan kode opd.
+// @Tags         Sasaran Opd Level 1
+// @Accept       json
+// @Produce      json
+// @Param        nip  path     string  true  "NIP"   example("1234567890")
+// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path     string  true  "Tahun"      example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]sasaranopd.SasaranOpdByNipResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/pegawai_level_1/{nip}/{kode_opd}/{tahun} [get]
+func (controller *SasaranOpdControllerImpl) FindByNipAndOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	nip := params.ByName("nip")
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	responses, err := controller.SasaranOpdService.FindByNipAndOpd(request.Context(), nip, kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   200,
+		Status: "success find sasaran opd by nip and opd",
+		Data:   responses,
+	})
+}
+
 // GetRenjaRanwal godoc
 // @Summary      Sasaran Opd Renstra
 // @Description  Mendapatkan data sasaran opd renstra berdasarkan kode OPD dan tahun.
@@ -705,5 +738,226 @@ func (controller *SasaranOpdControllerImpl) UpdateIndikatorPenetapan(writer http
 		Code:   http.StatusOK,
 		Status: "success update indikator",
 		Data:   indikatorUpdateResponses,
+	})
+}
+
+// @Summary      Hide Sasaran OPD
+// @Description  Menyembunyikan sasaran OPD berdasarkan id pohon kinerja (strategic level 4).
+// @Tags         Sasaran Opd View
+// @Accept       json
+// @Produce      json
+// @Param        id_pokin  path  int  true  "ID Pohon Kinerja"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/hide/{id_pokin} [post]
+func (controller *SasaranOpdControllerImpl) HideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokin, err := strconv.Atoi(params.ByName("id_pokin"))
+	if err != nil || idPokin <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id_pokin tidak valid",
+		})
+		return
+	}
+
+	if err := controller.SasaranOpdService.HideSasaranOpd(request.Context(), idPokin); err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed hide sasaran opd",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success hide sasaran opd",
+		Data: map[string]interface{}{
+			"id_pokin": idPokin,
+			"is_hide":  true,
+		},
+	})
+}
+
+// @Summary      Unhide Sasaran OPD
+// @Description  Menampilkan kembali sasaran OPD berdasarkan id pohon kinerja (strategic level 4).
+// @Tags         Sasaran Opd View
+// @Accept       json
+// @Produce      json
+// @Param        id_pokin  path  int  true  "ID Pohon Kinerja"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/unhide/{id_pokin} [delete]
+func (controller *SasaranOpdControllerImpl) UnhideSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	idPokin, err := strconv.Atoi(params.ByName("id_pokin"))
+	if err != nil || idPokin <= 0 {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "id_pokin tidak valid",
+		})
+		return
+	}
+
+	if err := controller.SasaranOpdService.UnhideSasaranOpd(request.Context(), idPokin); err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "failed unhide sasaran opd",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success unhide sasaran opd",
+		Data: map[string]interface{}{
+			"id_pokin": idPokin,
+			"is_hide":  false,
+		},
+	})
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Lock / Unlock Sasaran OPD Penetapan
+// ─────────────────────────────────────────────────────────────────
+
+// LockSasaranOpd godoc
+// @Summary      Lock Sasaran OPD Penetapan
+// @Description  Mengunci data sasaran OPD untuk kode OPD dan tahun tertentu. Setelah terkunci, sasaran OPD tidak dapat dihapus.
+// @Tags         Sasaran OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun penetapan (4 digit)"
+// @Success      200  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/lock/{kode_opd}/{tahun} [post]
+func (controller *SasaranOpdControllerImpl) LockSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	err := controller.SasaranOpdService.LockSasaranOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success lock sasaran OPD",
+		Data: sasaranopd.LockDataOpdResponse{
+			Jenis:   "sasaran_opd",
+			KodeOpd: kodeOpd,
+			Tahun:   tahun,
+			Locked:  true,
+		},
+	})
+}
+
+// UnlockSasaranOpd godoc
+// @Summary      Unlock Sasaran OPD Penetapan
+// @Description  Membuka kunci data sasaran OPD untuk kode OPD dan tahun tertentu.
+// @Tags         Sasaran OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun penetapan (4 digit)"
+// @Success      200  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/lock/{kode_opd}/{tahun} [delete]
+func (controller *SasaranOpdControllerImpl) UnlockSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	err := controller.SasaranOpdService.UnlockSasaranOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success unlock sasaran OPD",
+		Data: sasaranopd.LockDataOpdResponse{
+			Jenis:   "sasaran_opd",
+			KodeOpd: kodeOpd,
+			Tahun:   tahun,
+			Locked:  false,
+		},
+	})
+}
+
+// IsSasaranOpdLocked godoc
+// @Summary      Cek Status Lock Sasaran OPD
+// @Description  Mengecek apakah data sasaran OPD untuk kode OPD dan tahun tertentu sedang terkunci.
+// @Tags         Sasaran OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun penetapan (4 digit)"
+// @Success      200  {object}  web.WebResponse{data=sasaranopd.LockDataOpdResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/lock/{kode_opd}/{tahun} [get]
+func (controller *SasaranOpdControllerImpl) IsSasaranOpdLocked(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+	locked, err := controller.SasaranOpdService.IsSasaranOpdLocked(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data: sasaranopd.LockDataOpdResponse{
+			Jenis:   "sasaran_opd",
+			KodeOpd: kodeOpd,
+			Tahun:   tahun,
+			Locked:  locked,
+		},
+	})
+}
+
+// FindAllLockSasaranOpd godoc
+// @Summary      Daftar Semua Lock Sasaran OPD
+// @Description  Mengambil seluruh daftar tahun yang sedang di-lock untuk sasaran OPD berdasarkan kode OPD.
+// @Tags         Sasaran OPD Lock
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Success      200  {object}  web.WebResponse{data=[]sasaranopd.LockDataOpdResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_opd/lock/{kode_opd} [get]
+func (controller *SasaranOpdControllerImpl) FindAllLockSasaranOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	result, err := controller.SasaranOpdService.FindAllLockSasaranOpd(request.Context(), kodeOpd)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   result,
 	})
 }
