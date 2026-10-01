@@ -1239,7 +1239,10 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDualV2(
 	if err != nil {
 		return nil, err
 	}
-	type dualKey struct{ sasaranId int; kodeIndikator string }
+	type dualKey struct {
+		sasaranId     int
+		kodeIndikator string
+	}
 	rankhirMap := make(map[dualKey][]domain.TargetPemda)
 	for _, sp := range rankhirList {
 		for _, ind := range sp.Indikator {
@@ -1274,8 +1277,14 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaRankhirDualV2(
 func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDualV2(
 	ctx context.Context, tahun, jenisPeriode string,
 ) ([]sasaranpemda.SasaranPemdaPenetapanDualResponse, error) {
-	if len(strings.TrimSpace(tahun)) != 4 {
-		return nil, fmt.Errorf("format tahun tidak valid, contoh: 2025")
+	tahun = strings.TrimSpace(tahun)
+
+	if len(tahun) != 4 {
+		return nil, helper.ErrInvalidYear
+	}
+
+	if _, err := strconv.Atoi(tahun); err != nil {
+		return nil, helper.ErrInvalidYear
 	}
 	tx, err := s.DB.Begin()
 	if err != nil {
@@ -1294,7 +1303,10 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDualV2(
 	if err != nil {
 		return nil, err
 	}
-	type dualKey struct{ sasaranId int; kodeIndikator string }
+	type dualKey struct {
+		sasaranId     int
+		kodeIndikator string
+	}
 	penetapanMap := make(map[dualKey][]domain.TargetPemda)
 	for _, sp := range penetapanList {
 		for _, ind := range sp.Indikator {
@@ -1303,7 +1315,9 @@ func (s *SasaranPemdaServiceImpl) FindSasaranPemdaPenetapanDualV2(
 		}
 	}
 	baseList := rankhirList
-	if len(baseList) == 0 { baseList = renstraList }
+	if len(baseList) == 0 {
+		baseList = renstraList
+	}
 	responses := make([]sasaranpemda.SasaranPemdaPenetapanDualResponse, 0, len(baseList))
 	for _, sp := range baseList {
 		resp := sasaranpemda.SasaranPemdaPenetapanDualResponse{
