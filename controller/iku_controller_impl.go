@@ -229,3 +229,35 @@ func (controller *IkuControllerImpl) FindAllIkuRenjaOpdPenetapan(writer http.Res
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+// ── V2: IKU Pemda filter tematik.tahun ───────────────────────────
+
+func (controller *IkuControllerImpl) FindIkuPemdaRanwalV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+	resp, err := controller.IkuService.FindIkuPemdaRanwalV2(request.Context(), tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{Code: 500, Status: "INTERNAL SERVER ERROR", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{Code: 200, Status: "OK", Data: resp})
+}
+
+func (controller *IkuControllerImpl) FindIkuPemdaRankhirDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+	resp, err := controller.IkuService.FindIkuPemdaRankhirDualV2(request.Context(), tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{Code: 500, Status: "INTERNAL SERVER ERROR", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{Code: 200, Status: "OK", Data: resp})
+}
+
+func (controller *IkuControllerImpl) FindIkuPemdaPenetapanDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	tahun := params.ByName("tahun")
+	resp, err := controller.IkuService.FindIkuPemdaPenetapanDualV2(request.Context(), tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{Code: 500, Status: "INTERNAL SERVER ERROR", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{Code: 200, Status: "OK", Data: resp})
+}

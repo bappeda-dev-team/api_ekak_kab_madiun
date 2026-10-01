@@ -37,4 +37,9 @@ type TujuanPemdaController interface {
 	// hide/unhide
 	HideTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UnhideTujuanPemda(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	// v2 — filter tematik.tahun
+	FindTujuanPemdaRanwalV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindTujuanPemdaRankhirDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindTujuanPemdaPenetapanDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
