@@ -528,6 +528,10 @@ func (r *SasaranPemdaRepositoryImpl) FindAllByTahun(
 			COALESCE(t.jenis,'renstra')
 		FROM tb_sasaran_pemda sp
 		INNER JOIN tb_periode p ON sp.periode_id=p.id
+		INNER JOIN tb_pohon_kinerja pk_sub ON pk_sub.id=sp.subtema_id
+		LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id=pk_sub.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id=pk_anc1.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id=pk_anc2.parent
 		LEFT JOIN tb_indikator_matrix_pemda i
 			ON sp.id=i.sasaran_pemda_id
 			AND (i.jenis='renstra' OR i.jenis='' OR i.jenis IS NULL)
@@ -537,6 +541,7 @@ func (r *SasaranPemdaRepositoryImpl) FindAllByTahun(
 			AND %s
 		WHERE CAST(? AS SIGNED) BETWEEN CAST(p.tahun_awal AS SIGNED) AND CAST(p.tahun_akhir AS SIGNED)
 		  AND p.jenis_periode=?
+		  AND (pk_anc1.level_pohon=0 OR pk_anc2.level_pohon=0 OR pk_anc3.level_pohon=0)
 		ORDER BY sp.id, i.id`, jenisClause)
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -973,7 +978,10 @@ func (r *SasaranPemdaRepositoryImpl) FindRanwalByTahun(
 			CASE WHEN tr.id IS NOT NULL THEN 'ranwal' ELSE COALESCE(tren.jenis,'renstra') END AS target_jenis
 		FROM tb_sasaran_pemda sp
 		INNER JOIN tb_periode p ON sp.periode_id=p.id
-		LEFT JOIN tb_pohon_kinerja pk ON sp.subtema_id=pk.id
+		INNER JOIN tb_pohon_kinerja pk ON pk.id=sp.subtema_id
+		LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id=pk.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id=pk_anc1.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id=pk_anc2.parent
 		LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id=tp.id
 		LEFT JOIN tb_indikator_matrix_pemda i
 			ON sp.id=i.sasaran_pemda_id
@@ -988,6 +996,7 @@ func (r *SasaranPemdaRepositoryImpl) FindRanwalByTahun(
 			AND tr.jenis='ranwal'
 		WHERE CAST(? AS SIGNED) BETWEEN CAST(p.tahun_awal AS SIGNED) AND CAST(p.tahun_akhir AS SIGNED)
 		  AND p.jenis_periode=?
+		  AND (pk_anc1.level_pohon=0 OR pk_anc2.level_pohon=0 OR pk_anc3.level_pohon=0)
 		ORDER BY sp.id, i.id`
 	rows, err := tx.QueryContext(ctx, query, tahun, tahun, tahun, jenisPeriode)
 	if err != nil {
@@ -1152,4 +1161,258 @@ func (r *SasaranPemdaRepositoryImpl) FindStrategicArahKebijakanPemda(ctx context
 	}
 
 	return results, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V2 — filter berdasarkan tahun di tematik (level_pohon=0)
+//
+// FindRanwalByTematikTahun: indikator renstra + target ranwal,
+// hanya sasaran yang subtema-nya terhubung ke tematik.tahun=tahun.
+// FindAllByTematikTahun: generic layer (rankhir / penetapan).
+// ═══════════════════════════════════════════════════════════════════
+
+func (r *SasaranPemdaRepositoryImpl) FindRanwalByTematikTahun(
+	ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string,
+) ([]domain.SasaranPemda, error) {
+	query := `
+		SELECT
+			sp.id, sp.tujuan_pemda_id, sp.subtema_id, sp.sasaran_pemda, sp.periode_id,
+			COALESCE(p.tahun_awal,''), COALESCE(p.tahun_akhir,''), COALESCE(p.jenis_periode,''),
+			COALESCE(pk.nama_pohon,'')   AS nama_subtema,
+			COALESCE(tp.tujuan_pemda,'') AS tujuan_text,
+			COALESCE(i.id, 0),
+			COALESCE(i.kode_indikator,''),
+			COALESCE(i.indikator,''),
+			COALESCE(i.rumus_perhitungan,''),
+			COALESCE(i.sumber_data,''),
+			COALESCE(i.definisi_operasional,''),
+			COALESCE(tr.id, tren.id, 0)                              AS target_id,
+			COALESCE(tr.target, tren.target, '')                     AS target_value,
+			COALESCE(tr.satuan, tren.satuan, '')                     AS target_satuan,
+			CASE WHEN tr.id IS NOT NULL THEN 'ranwal' ELSE COALESCE(tren.jenis,'renstra') END AS target_jenis
+		FROM tb_sasaran_pemda sp
+		INNER JOIN tb_periode p ON sp.periode_id=p.id
+		INNER JOIN tb_pohon_kinerja pk ON pk.id=sp.subtema_id
+		LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id=pk.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id=pk_anc1.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id=pk_anc2.parent
+		LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id=tp.id
+		LEFT JOIN tb_indikator_matrix_pemda i
+			ON sp.id=i.sasaran_pemda_id
+			AND (i.jenis='renstra' OR i.jenis='' OR i.jenis IS NULL)
+		LEFT JOIN tb_target_pemda tren
+			ON tren.kode_indikator=i.kode_indikator
+			AND tren.tahun=?
+			AND (tren.jenis='renstra' OR tren.jenis='' OR tren.jenis IS NULL)
+		LEFT JOIN tb_target_pemda tr
+			ON tr.kode_indikator=i.kode_indikator
+			AND tr.tahun=?
+			AND tr.jenis='ranwal'
+		WHERE p.jenis_periode=?
+		  AND (
+		    (pk_anc1.level_pohon=0 AND pk_anc1.tahun=?)
+		    OR (pk_anc2.level_pohon=0 AND pk_anc2.tahun=?)
+		    OR (pk_anc3.level_pohon=0 AND pk_anc3.tahun=?)
+		  )
+		ORDER BY sp.id, i.id`
+	rows, err := tx.QueryContext(ctx, query, tahun, tahun, jenisPeriode, tahun, tahun, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("FindRanwalByTematikTahun: %w", err)
+	}
+	defer rows.Close()
+	sasaranMap := make(map[int]*domain.SasaranPemda)
+	indMap := make(map[string]*domain.IndikatorPemda)
+	for rows.Next() {
+		var (
+			spId, tujuanPemdaId, subtemaId, periodeId           int
+			sasaranText, tahunAwal, tahunAkhir, jenisPeriodeCol string
+			namaSubtema, tujuanText                             string
+			indDbId                                             int
+			kodeIndikator, indText, rumus, sumber, definisi     string
+			targetDbId                                          int
+			targetValue, targetSatuan, targetJenis              string
+		)
+		if err := rows.Scan(
+			&spId, &tujuanPemdaId, &subtemaId, &sasaranText,
+			&periodeId, &tahunAwal, &tahunAkhir, &jenisPeriodeCol,
+			&namaSubtema, &tujuanText,
+			&indDbId, &kodeIndikator, &indText, &rumus, &sumber, &definisi,
+			&targetDbId, &targetValue, &targetSatuan, &targetJenis,
+		); err != nil {
+			return nil, err
+		}
+		if _, exists := sasaranMap[spId]; !exists {
+			sasaranMap[spId] = &domain.SasaranPemda{
+				Id: spId, TujuanPemdaId: tujuanPemdaId,
+				SubtemaId: subtemaId, SasaranPemda: sasaranText,
+				NamaSubtema: namaSubtema, TujuanPemdaText: tujuanText,
+				PeriodeId: periodeId,
+				Periode:   domain.Periode{TahunAwal: tahunAwal, TahunAkhir: tahunAkhir, JenisPeriode: jenisPeriodeCol},
+				Indikator: []domain.IndikatorPemda{},
+			}
+		}
+		sp := sasaranMap[spId]
+		if indDbId == 0 || kodeIndikator == "" {
+			continue
+		}
+		mapKey := fmt.Sprintf("%d:%d", spId, indDbId)
+		if _, exists := indMap[mapKey]; !exists {
+			ind := domain.IndikatorPemda{
+				Id: indDbId, SasaranPemdaId: spId,
+				KodeIndikator:       kodeIndikator,
+				Indikator:           sql.NullString{String: indText, Valid: true},
+				RumusPerhitungan:    sql.NullString{String: rumus, Valid: rumus != ""},
+				SumberData:          sql.NullString{String: sumber, Valid: sumber != ""},
+				DefinisiOperasional: sql.NullString{String: definisi, Valid: definisi != ""},
+				Target:              []domain.TargetPemda{},
+			}
+			sp.Indikator = append(sp.Indikator, ind)
+			indMap[mapKey] = &sp.Indikator[len(sp.Indikator)-1]
+		}
+		if targetDbId > 0 {
+			cur := indMap[mapKey]
+			cur.Target = []domain.TargetPemda{{
+				Id: targetDbId, KodeIndikator: kodeIndikator,
+				Target: targetValue, Satuan: targetSatuan,
+				Tahun: tahun, Jenis: targetJenis,
+			}}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]domain.SasaranPemda, 0, len(sasaranMap))
+	for _, sp := range sasaranMap {
+		result = append(result, *sp)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Id < result[j].Id })
+	return result, nil
+}
+
+func (r *SasaranPemdaRepositoryImpl) FindAllByTematikTahun(
+	ctx context.Context, tx *sql.Tx, tahun, jenisPeriode, jenis string,
+) ([]domain.SasaranPemda, error) {
+	var jenisClause string
+	var args []interface{}
+	if jenis == "renstra" {
+		jenisClause = "(t.jenis='renstra' OR t.jenis='' OR t.jenis IS NULL)"
+		args = []interface{}{
+			tahun,        // t.tahun
+			jenisPeriode, // p.jenis_periode
+			tahun,        // pk_anc1.tahun
+			tahun,        // pk_anc2.tahun
+			tahun,        // pk_anc3.tahun
+		}
+	} else {
+		jenisClause = "t.jenis=?"
+		args = []interface{}{
+			tahun,        // t.tahun
+			jenis,        // t.jenis
+			jenisPeriode, // p.jenis_periode
+			tahun,        // pk_anc1.tahun
+			tahun,        // pk_anc2.tahun
+			tahun,        // pk_anc3.tahun
+		}
+	}
+	query := fmt.Sprintf(`
+		SELECT
+			sp.id, sp.tujuan_pemda_id, sp.subtema_id, sp.sasaran_pemda, sp.periode_id,
+			COALESCE(p.tahun_awal,''), COALESCE(p.tahun_akhir,''), COALESCE(p.jenis_periode,''),
+			COALESCE(i.id, 0),
+			COALESCE(i.kode_indikator,''),
+			COALESCE(i.indikator,''),
+			COALESCE(i.rumus_perhitungan,''), COALESCE(i.sumber_data,''),
+			COALESCE(i.definisi_operasional,''),
+			COALESCE(t.id, 0),
+			COALESCE(t.target,''), COALESCE(t.satuan,''), COALESCE(t.tahun,''),
+			COALESCE(t.jenis,'renstra')
+		FROM tb_sasaran_pemda sp
+		INNER JOIN tb_periode p ON sp.periode_id=p.id
+		INNER JOIN tb_pohon_kinerja pk_sub ON pk_sub.id=sp.subtema_id
+		LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id=pk_sub.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id=pk_anc1.parent
+		LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id=pk_anc2.parent
+		LEFT JOIN tb_indikator_matrix_pemda i
+			ON sp.id=i.sasaran_pemda_id
+			AND (i.jenis='renstra' OR i.jenis='' OR i.jenis IS NULL)
+		LEFT JOIN tb_target_pemda t
+			ON t.kode_indikator=i.kode_indikator
+			AND t.tahun=?
+			AND %s
+		WHERE p.jenis_periode=?
+		  AND (
+		    (pk_anc1.level_pohon=0 AND pk_anc1.tahun=?)
+		    OR (pk_anc2.level_pohon=0 AND pk_anc2.tahun=?)
+		    OR (pk_anc3.level_pohon=0 AND pk_anc3.tahun=?)
+		  )
+		ORDER BY sp.id, i.id`, jenisClause)
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("FindAllByTematikTahun: %w", err)
+	}
+	defer rows.Close()
+	sasaranMap := make(map[int]*domain.SasaranPemda)
+	indMap := make(map[string]*domain.IndikatorPemda)
+	for rows.Next() {
+		var (
+			spId, tujuanPemdaId, subtemaId, periodeId           int
+			sasaranText, tahunAwal, tahunAkhir, jenisPeriodeCol string
+			indDbId                                             int
+			kodeIndikator, indText, rumus, sumber, definisi     string
+			targetDbId                                          int
+			targetValue, targetSatuan, targetTahun, targetJenis string
+		)
+		if err := rows.Scan(
+			&spId, &tujuanPemdaId, &subtemaId, &sasaranText,
+			&periodeId, &tahunAwal, &tahunAkhir, &jenisPeriodeCol,
+			&indDbId, &kodeIndikator, &indText, &rumus, &sumber, &definisi,
+			&targetDbId, &targetValue, &targetSatuan, &targetTahun, &targetJenis,
+		); err != nil {
+			return nil, err
+		}
+		if _, exists := sasaranMap[spId]; !exists {
+			sasaranMap[spId] = &domain.SasaranPemda{
+				Id: spId, TujuanPemdaId: tujuanPemdaId,
+				SubtemaId: subtemaId, SasaranPemda: sasaranText,
+				PeriodeId: periodeId,
+				Periode:   domain.Periode{TahunAwal: tahunAwal, TahunAkhir: tahunAkhir, JenisPeriode: jenisPeriodeCol},
+				Indikator: []domain.IndikatorPemda{},
+			}
+		}
+		sp := sasaranMap[spId]
+		if indDbId == 0 || kodeIndikator == "" {
+			continue
+		}
+		mapKey := fmt.Sprintf("%d:%d", spId, indDbId)
+		if _, exists := indMap[mapKey]; !exists {
+			ind := domain.IndikatorPemda{
+				Id: indDbId, SasaranPemdaId: spId,
+				KodeIndikator:       kodeIndikator,
+				Indikator:           sql.NullString{String: indText, Valid: true},
+				RumusPerhitungan:    sql.NullString{String: rumus, Valid: rumus != ""},
+				SumberData:          sql.NullString{String: sumber, Valid: sumber != ""},
+				DefinisiOperasional: sql.NullString{String: definisi, Valid: definisi != ""},
+				Target:              []domain.TargetPemda{},
+			}
+			sp.Indikator = append(sp.Indikator, ind)
+			indMap[mapKey] = &sp.Indikator[len(sp.Indikator)-1]
+		}
+		if targetDbId > 0 {
+			cur := indMap[mapKey]
+			cur.Target = []domain.TargetPemda{{
+				Id: targetDbId, KodeIndikator: kodeIndikator,
+				Target: targetValue, Satuan: targetSatuan,
+				Tahun: targetTahun, Jenis: targetJenis,
+			}}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]domain.SasaranPemda, 0, len(sasaranMap))
+	for _, sp := range sasaranMap {
+		result = append(result, *sp)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Id < result[j].Id })
+	return result, nil
 }

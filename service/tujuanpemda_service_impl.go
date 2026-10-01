@@ -1380,6 +1380,183 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDual(
 	return responses, nil
 }
 
+// ═════════════════════════════════════════════════════════════════
+// V2 — filter berdasarkan tahun di tematik (bukan range periode)
+// ═════════════════════════════════════════════════════════════════
+
+func (s *TujuanPemdaServiceImpl) loadLayerRenstraV2(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string) ([]domain.TujuanPemda, error) {
+	return s.TujuanPemdaRepository.FindAllByTematikTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+}
+func (s *TujuanPemdaServiceImpl) loadLayerRanwalV2(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string) ([]domain.TujuanPemda, error) {
+	base, err := s.loadLayerRenstraV2(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	ov, err := s.TujuanPemdaRepository.FindAllByTematikTahun(ctx, tx, tahun, jenisPeriode, "ranwal")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return applyTargetOverrideTujuanPemda(base, ov), nil
+}
+func (s *TujuanPemdaServiceImpl) loadLayerRankhirV2(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string) ([]domain.TujuanPemda, error) {
+	base, err := s.loadLayerRanwalV2(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	ov, err := s.TujuanPemdaRepository.FindAllByTematikTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return applyTargetOverrideTujuanPemda(base, ov), nil
+}
+func (s *TujuanPemdaServiceImpl) loadLayerPenetapanV2(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string) ([]domain.TujuanPemda, error) {
+	base, err := s.loadLayerRankhirV2(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	ov, err := s.TujuanPemdaRepository.FindAllByTematikTahun(ctx, tx, tahun, jenisPeriode, "penetapan")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return applyTargetOverrideTujuanPemda(base, ov), nil
+}
+
+func (s *TujuanPemdaServiceImpl) FindTujuanPemdaRanwalV2(
+	ctx context.Context, tahun, jenisPeriode string,
+) ([]tujuanpemda.TujuanPemdaResponse, error) {
+	return s.findByLayerTahun(ctx, tahun, jenisPeriode, s.loadLayerRanwalV2)
+}
+
+func (s *TujuanPemdaServiceImpl) FindTujuanPemdaRankhirDualV2(
+	ctx context.Context, tahun, jenisPeriode string,
+) ([]tujuanpemda.TujuanPemdaRankhirDualResponse, error) {
+	if len(strings.TrimSpace(tahun)) != 4 {
+		return nil, fmt.Errorf("format tahun tidak valid, contoh: 2025")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	renstraList, err := s.loadLayerRenstraV2(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	rankhirList, err := s.TujuanPemdaRepository.FindAllByTematikTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	type dKey struct {
+		tujuanId int
+		kodeInd  string
+	}
+	rankhirMap := make(map[dKey][]domain.TargetPemda)
+	for _, tp := range rankhirList {
+		for _, ind := range tp.IndikatorPemda {
+			k := dKey{tp.Id, ind.KodeIndikator}
+			rankhirMap[k] = append(rankhirMap[k], ind.Target...)
+		}
+	}
+	ids := make([]int, 0, len(renstraList))
+	for _, tp := range renstraList {
+		ids = append(ids, tp.Id)
+	}
+	isHideMap, _ := s.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, ids)
+	responses := make([]tujuanpemda.TujuanPemdaRankhirDualResponse, 0, len(renstraList))
+	for _, tp := range renstraList {
+		resp, err := s.toTujuanPemdaRankhirDualResponse(ctx, tx, tp)
+		if err != nil {
+			return nil, err
+		}
+		resp.IsHide = isHideMap[tp.Id]
+		// patch target rankhir dari rankhirMap
+		for i, ind := range resp.Indikator {
+			k := dKey{tp.Id, ind.KodeIndikator}
+			resp.Indikator[i].TargetRankhir = firstTargetDualFromSlice(rankhirMap[k])
+		}
+		responses = append(responses, resp)
+	}
+	return responses, nil
+}
+
+func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDualV2(
+	ctx context.Context, tahun, jenisPeriode string,
+) ([]tujuanpemda.TujuanPemdaPenetapanDualResponse, error) {
+	tahun = strings.TrimSpace(tahun)
+
+	if len(tahun) != 4 {
+		return nil, helper.ErrInvalidYear
+	}
+
+	if _, err := strconv.Atoi(tahun); err != nil {
+		return nil, helper.ErrInvalidYear
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	isLocked, err := s.LockDataPemdaRepository.IsLocked(ctx, tx, lockJenisTujuanPemda, tahun)
+	if err != nil {
+		return nil, err
+	}
+	rankhirList, err := s.TujuanPemdaRepository.FindAllByTematikTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	penetapanList, err := s.TujuanPemdaRepository.FindAllByTematikTahun(ctx, tx, tahun, jenisPeriode, "penetapan")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	renstraList, err := s.loadLayerRenstraV2(ctx, tx, tahun, jenisPeriode)
+	if err != nil {
+		return nil, err
+	}
+	type dKey struct {
+		tujuanId int
+		kodeInd  string
+	}
+	penetapanMap := make(map[dKey][]domain.TargetPemda)
+	for _, tp := range penetapanList {
+		for _, ind := range tp.IndikatorPemda {
+			k := dKey{tp.Id, ind.KodeIndikator}
+			penetapanMap[k] = append(penetapanMap[k], ind.Target...)
+		}
+	}
+	baseList := rankhirList
+	if len(baseList) == 0 {
+		baseList = renstraList
+	}
+	ids := make([]int, 0, len(baseList))
+	for _, tp := range baseList {
+		ids = append(ids, tp.Id)
+	}
+	isHideMap, _ := s.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, ids)
+	responses := make([]tujuanpemda.TujuanPemdaPenetapanDualResponse, 0, len(baseList))
+	for _, tp := range baseList {
+		resp, err := s.toTujuanPemdaPenetapanDualResponse(ctx, tx, tp, isLocked)
+		if err != nil {
+			return nil, err
+		}
+		resp.IsHide = isHideMap[tp.Id]
+		for i, ind := range resp.Indikator {
+			k := dKey{tp.Id, ind.KodeIndikator}
+			resp.Indikator[i].TargetPenetapan = firstTargetDualFromSlice(penetapanMap[k])
+		}
+		responses = append(responses, resp)
+	}
+	return responses, nil
+}
+
+// firstTargetDualFromSlice mengambil elemen pertama dari slice TargetPemda dan konversi ke TargetDualResponse.
+// Jika slice kosong, kembalikan slice dengan satu elemen kosong.
+func firstTargetDualFromSlice(targets []domain.TargetPemda) []tujuanpemda.TargetDualResponse {
+	if len(targets) == 0 {
+		return []tujuanpemda.TargetDualResponse{{}}
+	}
+	return toTargetDualSlice(targets[0])
+}
+
 // lock pemda
 const lockJenisTujuanPemda = "tujuan_pemda"
 

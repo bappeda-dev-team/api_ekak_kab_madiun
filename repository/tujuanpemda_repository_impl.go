@@ -1328,6 +1328,158 @@ func (r *TujuanPemdaRepositoryImpl) FindAllByTahun(
 }
 
 // ─────────────────────────────────────────────────────────────────
+// V2 — FindAllByTematikTahun
+// Filter: tematik.tahun = tahun (bukan range periode).
+// ─────────────────────────────────────────────────────────────────
+func (r *TujuanPemdaRepositoryImpl) FindAllByTematikTahun(
+	ctx context.Context, tx *sql.Tx,
+	tahun, jenisPeriode, targetJenis string,
+) ([]domain.TujuanPemda, error) {
+	var targetJenisClause string
+	var args []interface{}
+	if targetJenis == "renstra" {
+		targetJenisClause = "(tg.jenis = 'renstra' OR tg.jenis = '' OR tg.jenis IS NULL)"
+		args = []interface{}{tahun, tahun, jenisPeriode}
+	} else {
+		targetJenisClause = "tg.jenis = ?"
+		args = []interface{}{tahun, targetJenis, tahun, jenisPeriode}
+	}
+	query := fmt.Sprintf(`
+		SELECT
+			tp.id,
+			tp.tujuan_pemda,
+			tp.tematik_id,
+			tp.id_visi,
+			tp.id_misi,
+			tp.tahun_awal_periode,
+			tp.tahun_akhir_periode,
+			tp.jenis_periode,
+			im_tg.indikator_id,
+			im_tg.kode_indikator,
+			im_tg.indikator,
+			im_tg.rumus_perhitungan,
+			im_tg.sumber_data,
+			im_tg.definisi_operasional,
+			im_tg.indikator_jenis,
+			im_tg.target_id,
+			im_tg.target_value,
+			im_tg.satuan,
+			im_tg.tahun_target,
+			im_tg.target_jenis
+		FROM tb_tujuan_pemda tp
+		INNER JOIN tb_pohon_kinerja pk
+			ON tp.tematik_id = pk.id
+			AND pk.level_pohon = 0
+			AND pk.tahun = ?
+		LEFT JOIN (
+			SELECT
+				im.id             AS indikator_id,
+				im.kode_indikator,
+				im.tujuan_pemda_id,
+				im.indikator,
+				im.rumus_perhitungan,
+				im.sumber_data,
+				im.definisi_operasional,
+				COALESCE(im.jenis, 'renstra') AS indikator_jenis,
+				tg.id             AS target_id,
+				tg.target         AS target_value,
+				tg.satuan,
+				tg.tahun          AS tahun_target,
+				tg.jenis          AS target_jenis
+			FROM tb_indikator_matrix_pemda im
+			LEFT JOIN tb_target_pemda tg
+				ON im.kode_indikator = tg.kode_indikator
+				AND tg.tahun = ?
+				AND %s
+			WHERE im.jenis = 'renstra' OR im.jenis = '' OR im.jenis IS NULL
+		) im_tg ON tp.id = im_tg.tujuan_pemda_id
+		WHERE tp.jenis_periode = ?
+		ORDER BY tp.id, im_tg.indikator_id`, targetJenisClause)
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("FindAllByTematikTahun error: %v", err)
+	}
+	defer rows.Close()
+	tujuanMap := make(map[int]*domain.TujuanPemda)
+	tujuanOrder := []int{}
+	indikatorSeen := make(map[string]bool)
+	for rows.Next() {
+		var (
+			tujuanId, tematikId, idVisi, idMisi                int
+			tujuanText, tahunAwal, tahunAkhir, jenisPeriodeVal string
+			indikatorId                                        sql.NullInt64
+			kodeIndikator, indikatorText                       sql.NullString
+			rumus, sumber, definisi, indikatorJenis            sql.NullString
+			targetId                                           sql.NullInt64
+			targetVal, satuan, tahunTarget, targetJenisVal     sql.NullString
+		)
+		if err := rows.Scan(
+			&tujuanId, &tujuanText, &tematikId, &idVisi, &idMisi,
+			&tahunAwal, &tahunAkhir, &jenisPeriodeVal,
+			&indikatorId, &kodeIndikator, &indikatorText,
+			&rumus, &sumber, &definisi, &indikatorJenis,
+			&targetId, &targetVal, &satuan, &tahunTarget, &targetJenisVal,
+		); err != nil {
+			return nil, fmt.Errorf("scan FindAllByTematikTahun: %v", err)
+		}
+		if _, ok := tujuanMap[tujuanId]; !ok {
+			tujuanMap[tujuanId] = &domain.TujuanPemda{
+				Id: tujuanId, TujuanPemda: tujuanText, TematikId: tematikId,
+				IdVisi: idVisi, IdMisi: idMisi,
+				TahunAwalPeriode: tahunAwal, TahunAkhirPeriode: tahunAkhir,
+				JenisPeriode: jenisPeriodeVal, IndikatorPemda: []domain.IndikatorPemda{},
+			}
+			tujuanOrder = append(tujuanOrder, tujuanId)
+		}
+		if !indikatorId.Valid {
+			continue
+		}
+		indKey := fmt.Sprintf("%d-%d", tujuanId, indikatorId.Int64)
+		if !indikatorSeen[indKey] {
+			indikatorSeen[indKey] = true
+			tujuanMap[tujuanId].IndikatorPemda = append(tujuanMap[tujuanId].IndikatorPemda, domain.IndikatorPemda{
+				Id: int(indikatorId.Int64), KodeIndikator: kodeIndikator.String,
+				TujuanPemdaId: tujuanId, Indikator: indikatorText,
+				RumusPerhitungan: rumus, SumberData: sumber, DefinisiOperasional: definisi,
+				Jenis: indikatorJenis.String, Target: []domain.TargetPemda{},
+			})
+		}
+		if targetId.Valid {
+			tg := domain.TargetPemda{
+				Id: int(targetId.Int64), KodeIndikator: kodeIndikator.String,
+				Target: targetVal.String, Satuan: satuan.String,
+				Tahun: tahunTarget.String, Jenis: targetJenisVal.String,
+			}
+			for i := range tujuanMap[tujuanId].IndikatorPemda {
+				if tujuanMap[tujuanId].IndikatorPemda[i].Id == int(indikatorId.Int64) {
+					tujuanMap[tujuanId].IndikatorPemda[i].Target = append(
+						tujuanMap[tujuanId].IndikatorPemda[i].Target, tg,
+					)
+					break
+				}
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]domain.TujuanPemda, 0, len(tujuanOrder))
+	for _, id := range tujuanOrder {
+		tp := tujuanMap[id]
+		for i := range tp.IndikatorPemda {
+			if len(tp.IndikatorPemda[i].Target) == 0 {
+				tp.IndikatorPemda[i].Target = []domain.TargetPemda{{
+					Id: 0, KodeIndikator: tp.IndikatorPemda[i].KodeIndikator,
+					Target: "-", Satuan: "-", Tahun: tahun, Jenis: targetJenis,
+				}}
+			}
+		}
+		result = append(result, *tp)
+	}
+	return result, nil
+}
+
+// ─────────────────────────────────────────────────────────────────
 // HIDE / UNHIDE — tb_tujuan_pemda_view
 // ─────────────────────────────────────────────────────────────────
 

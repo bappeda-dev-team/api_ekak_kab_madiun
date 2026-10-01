@@ -4,6 +4,7 @@ import (
 	"context"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -67,8 +68,9 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-	claims := helper.ValidateJWT(tokenString)
-	if claims.UserId == 0 {
+	claims, err := helper.ValidateJWT(tokenString)
+	if err != nil {
+		log.Printf("ERROR %v", err)
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusUnauthorized)
 
