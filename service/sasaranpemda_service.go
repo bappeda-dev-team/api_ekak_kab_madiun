@@ -23,4 +23,9 @@ type SasaranPemdaService interface {
 	UnlockSasaranPemda(ctx context.Context, tahun string) (sasaranpemda.LockDataPemdaResponse, error)
 	IsSasaranPemdaLocked(ctx context.Context, tahun string) (sasaranpemda.LockDataPemdaResponse, error)
 	FindAllLockSasaranPemda(ctx context.Context) ([]sasaranpemda.LockDataPemdaResponse, error)
+
+	// v2 — filter berdasarkan tahun di tematik
+	FindSasaranPemdaRanwalV2(ctx context.Context, tahun, jenisPeriode string) ([]sasaranpemda.SasaranPemdaResponse, error)
+	FindSasaranPemdaRankhirDualV2(ctx context.Context, tahun, jenisPeriode string) ([]sasaranpemda.SasaranPemdaRankhirDualResponse, error)
+	FindSasaranPemdaPenetapanDualV2(ctx context.Context, tahun, jenisPeriode string) ([]sasaranpemda.SasaranPemdaPenetapanDualResponse, error)
 }

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 type IkuServiceImpl struct {
@@ -66,6 +67,159 @@ func (service *IkuServiceImpl) FindAll(ctx context.Context, tahunAwal string, ta
 		})
 	}
 
+	return responses, nil
+}
+
+// ═════════════════════════════════════════════════════════════════
+// V2 — IKU Pemda filter berdasarkan tematik.tahun
+// ═════════════════════════════════════════════════════════════════
+
+func hasRealIkuTarget(t domain.Target) bool {
+	raw := strings.TrimSpace(t.Target)
+	return raw != "" && raw != "-"
+}
+
+func emptyIkuTargetSlot(tahun string) iku.TargetResponse {
+	return iku.TargetResponse{Target: "", Satuan: "", Tahun: tahun}
+}
+
+// singleIkuTargetForYear — 1 slot untuk tahun tematik; ranwal = potongan renstra (bukan jenis ranwal di DB).
+func singleIkuTargetForYear(targets []domain.Target, tahun string) []iku.TargetResponse {
+	for _, t := range targets {
+		if t.Tahun == tahun && hasRealIkuTarget(t) {
+			return []iku.TargetResponse{{Target: t.Target, Satuan: t.Satuan, Tahun: t.Tahun}}
+		}
+	}
+	return []iku.TargetResponse{emptyIkuTargetSlot(tahun)}
+}
+
+func buildDomainTargetMap(items []domain.Indikator) map[string][]domain.Target {
+	m := make(map[string][]domain.Target, len(items))
+	for _, item := range items {
+		m[item.Id] = item.Target
+	}
+	return m
+}
+
+func toIkuResponseSliceSingleYear(items []domain.Indikator, tahun string) []iku.IkuResponse {
+	responses := make([]iku.IkuResponse, 0, len(items))
+	for _, item := range items {
+		responses = append(responses, iku.IkuResponse{
+			IndikatorId:         item.Id,
+			Sumber:              item.Sumber,
+			IkuActive:           item.IkuActive,
+			Indikator:           item.Indikator,
+			RumusPerhitungan:    item.RumusPerhitungan.String,
+			DefinisiOperasional: item.DefinisiOperasional.String,
+			SumberData:          item.SumberData.String,
+			CreatedAt:           item.CreatedAt,
+			TahunAwal:           item.TahunAwal,
+			TahunAkhir:          item.TahunAkhir,
+			JenisPeriode:        item.JenisPeriode,
+			Target:              singleIkuTargetForYear(item.Target, tahun),
+		})
+	}
+	return responses
+}
+
+// FindIkuPemdaRanwalV2 — potongan target renstra untuk tahun tematik (tanpa override jenis ranwal).
+func (service *IkuServiceImpl) FindIkuPemdaRanwalV2(
+	ctx context.Context, tahun, jenisPeriode string,
+) ([]iku.IkuResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	items, err := service.IkuRepository.FindAllPemdaByTematikTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	return toIkuResponseSliceSingleYear(items, tahun), nil
+}
+
+// FindIkuPemdaRankhirDualV2 — target_ranwal = potongan renstra; target_rankhir = rankhir saja (kosong jika belum ada).
+func (service *IkuServiceImpl) FindIkuPemdaRankhirDualV2(
+	ctx context.Context, tahun, jenisPeriode string,
+) ([]iku.IkuPemdaRankhirDualResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	baseItems, err := service.IkuRepository.FindAllPemdaByTematikTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	rankhirItems, err := service.IkuRepository.FindAllPemdaByTematikTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
+	if err != nil {
+		return nil, err
+	}
+	rankhirMap := buildDomainTargetMap(rankhirItems)
+
+	responses := make([]iku.IkuPemdaRankhirDualResponse, 0, len(baseItems))
+	for _, item := range baseItems {
+		responses = append(responses, iku.IkuPemdaRankhirDualResponse{
+			IndikatorId:         item.Id,
+			Sumber:              item.Sumber,
+			IkuActive:           item.IkuActive,
+			Indikator:           item.Indikator,
+			RumusPerhitungan:    item.RumusPerhitungan.String,
+			DefinisiOperasional: item.DefinisiOperasional.String,
+			SumberData:          item.SumberData.String,
+			CreatedAt:           item.CreatedAt,
+			TahunAwal:           item.TahunAwal,
+			TahunAkhir:          item.TahunAkhir,
+			JenisPeriode:        item.JenisPeriode,
+			TargetRanwal:        singleIkuTargetForYear(item.Target, tahun),
+			TargetRankhir:       singleIkuTargetForYear(rankhirMap[item.Id], tahun),
+		})
+	}
+	return responses, nil
+}
+
+// FindIkuPemdaPenetapanDualV2 — target_rankhir dan target_penetapan masing-masing dari layer-nya (tanpa saling isi).
+func (service *IkuServiceImpl) FindIkuPemdaPenetapanDualV2(
+	ctx context.Context, tahun, jenisPeriode string,
+) ([]iku.IkuPemdaPenetapanDualResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+	baseItems, err := service.IkuRepository.FindAllPemdaByTematikTahun(ctx, tx, tahun, jenisPeriode, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	rankhirItems, err := service.IkuRepository.FindAllPemdaByTematikTahun(ctx, tx, tahun, jenisPeriode, "rankhir")
+	if err != nil {
+		return nil, err
+	}
+	penetapanItems, err := service.IkuRepository.FindAllPemdaByTematikTahun(ctx, tx, tahun, jenisPeriode, "penetapan")
+	if err != nil {
+		return nil, err
+	}
+	rankhirMap := buildDomainTargetMap(rankhirItems)
+	penetapanMap := buildDomainTargetMap(penetapanItems)
+
+	responses := make([]iku.IkuPemdaPenetapanDualResponse, 0, len(baseItems))
+	for _, item := range baseItems {
+		responses = append(responses, iku.IkuPemdaPenetapanDualResponse{
+			IndikatorId:         item.Id,
+			Sumber:              item.Sumber,
+			IkuActive:           item.IkuActive,
+			Indikator:           item.Indikator,
+			RumusPerhitungan:    item.RumusPerhitungan.String,
+			DefinisiOperasional: item.DefinisiOperasional.String,
+			SumberData:          item.SumberData.String,
+			CreatedAt:           item.CreatedAt,
+			TahunAwal:           item.TahunAwal,
+			TahunAkhir:          item.TahunAkhir,
+			JenisPeriode:        item.JenisPeriode,
+			TargetRankhir:       singleIkuTargetForYear(rankhirMap[item.Id], tahun),
+			TargetPenetapan:     singleIkuTargetForYear(penetapanMap[item.Id], tahun),
+		})
+	}
 	return responses, nil
 }
 

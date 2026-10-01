@@ -35,4 +35,7 @@ type TujuanPemdaRepository interface {
 	GetIsHideByTujuanPemdaIds(ctx context.Context, tx *sql.Tx, ids []int) (map[int]bool, error)
 	HideTujuanPemdaView(ctx context.Context, tx *sql.Tx, tujuanPemdaId int) error
 	UnhideTujuanPemdaView(ctx context.Context, tx *sql.Tx, tujuanPemdaId int) error
+
+	// v2 — filter berdasarkan tahun di tematik (level_pohon=0)
+	FindAllByTematikTahun(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode, targetJenis string) ([]domain.TujuanPemda, error)
 }

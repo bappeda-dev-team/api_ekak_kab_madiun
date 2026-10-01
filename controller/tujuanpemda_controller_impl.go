@@ -836,3 +836,41 @@ func (controller *TujuanPemdaControllerImpl) UnhideTujuanPemda(
 		Data:   "tujuan pemda berhasil ditampilkan kembali",
 	})
 }
+
+// ── V2: filter tematik.tahun ─────────────────────────────────────
+
+func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRanwalV2(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	tahun := params.ByName("tahun")
+	resp, err := controller.TujuanPemdaService.FindTujuanPemdaRanwalV2(request.Context(), tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{Code: http.StatusOK, Status: "OK", Data: resp})
+}
+
+func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhirDualV2(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	tahun := params.ByName("tahun")
+	resp, err := controller.TujuanPemdaService.FindTujuanPemdaRankhirDualV2(request.Context(), tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{Code: http.StatusOK, Status: "OK", Data: resp})
+}
+
+func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaPenetapanDualV2(
+	writer http.ResponseWriter, request *http.Request, params httprouter.Params,
+) {
+	tahun := params.ByName("tahun")
+	resp, err := controller.TujuanPemdaService.FindTujuanPemdaPenetapanDualV2(request.Context(), tahun, "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{Code: http.StatusOK, Status: "OK", Data: resp})
+}

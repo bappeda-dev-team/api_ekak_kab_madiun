@@ -76,15 +76,11 @@ indikator_sasaran AS (
         sp.tahun_awal,
         sp.tahun_akhir,
         sp.jenis_periode,
+        COALESCE(pk_subtematik.is_active, false) as is_active,
         CASE
-            WHEN pk_tematik.id IS NULL THEN false
             WHEN pk_subtematik.id IS NULL THEN false
-            ELSE COALESCE(pk_subtematik.is_active, false)
-        END as is_active,
-        CASE
-            WHEN pk_tematik.id IS NULL THEN false
-            WHEN pk_subtematik.id IS NULL THEN false
-            ELSE true
+            WHEN (pk_anc1.level_pohon = 0 OR pk_anc2.level_pohon = 0 OR pk_anc3.level_pohon = 0) THEN true
+            ELSE false
         END as is_exists,
         COALESCE(tpv.is_hide, 0) as is_hide
     FROM tb_indikator_matrix_pemda i
@@ -92,8 +88,10 @@ indikator_sasaran AS (
     LEFT JOIN tb_target_pemda t
         ON t.kode_indikator = i.kode_indikator AND t.jenis = 'renstra'
     LEFT JOIN tb_tujuan_pemda tp ON sp.tujuan_pemda_id = tp.id
-    LEFT JOIN tb_pohon_kinerja pk_tematik ON tp.tematik_id = pk_tematik.id
-    LEFT JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
+    INNER JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
+    LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id = pk_subtematik.parent
+    LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id = pk_anc1.parent
+    LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id = pk_anc2.parent
     LEFT JOIN tb_tujuan_pemda_view tpv ON tp.id = tpv.id_tujuan_pemda
     WHERE sp.tahun_awal = ?
     AND sp.tahun_akhir = ?
@@ -661,6 +659,194 @@ func (repository *IkuRepositoryImpl) FindAllIkuOpdOld(ctx context.Context, tx *s
 		return result[i].Indikator < result[j].Indikator
 	})
 
+	return result, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V2 — FindAllPemdaByTematikTahun
+// IKU pemda: indikator dari tujuan + sasaran pemda,
+// difilter berdasarkan tematik.tahun = tahun (bukan range periode).
+// ═══════════════════════════════════════════════════════════════════
+func (repository *IkuRepositoryImpl) FindAllPemdaByTematikTahun(
+	ctx context.Context, tx *sql.Tx, tahun, jenisPeriode, jenisTarget string,
+) ([]domain.Indikator, error) {
+	query := `
+WITH tematik_v2 AS (
+    SELECT id, nama_pohon, tahun
+    FROM tb_pohon_kinerja
+    WHERE level_pohon = 0
+      AND tahun = ?
+),
+indikator_tujuan AS (
+    SELECT
+        i.kode_indikator AS indikator_id,
+        i.indikator,
+        i.rumus_perhitungan,
+        i.sumber_data,
+        i.created_at AS indikator_created_at,
+        i.iku_active,
+        t.id AS target_id,
+        t.target,
+        t.satuan,
+        t.tahun AS target_tahun,
+        'Tujuan Pemda' AS sumber,
+        tp.id AS parent_id,
+        tp.tujuan_pemda AS parent_name,
+        tp.tahun_awal_periode,
+        tp.tahun_akhir_periode,
+        tp.jenis_periode,
+        COALESCE(pk_tematik.is_active, false) AS is_active,
+        true AS is_exists,
+        COALESCE(tpv.is_hide, 0) AS is_hide
+    FROM tb_indikator_matrix_pemda i
+    INNER JOIN tb_tujuan_pemda tp ON i.tujuan_pemda_id = tp.id
+    INNER JOIN tematik_v2 pk_tematik ON tp.tematik_id = pk_tematik.id
+    LEFT JOIN tb_target_pemda t ON t.kode_indikator = i.kode_indikator AND t.jenis = ?
+    LEFT JOIN tb_tujuan_pemda_view tpv ON tp.id = tpv.id_tujuan_pemda
+    WHERE tp.jenis_periode = ?
+      AND i.jenis = 'renstra'
+),
+indikator_sasaran AS (
+    SELECT
+        i.kode_indikator AS indikator_id,
+        i.indikator,
+        i.rumus_perhitungan,
+        i.sumber_data,
+        i.created_at AS indikator_created_at,
+        i.iku_active,
+        t.id AS target_id,
+        t.target,
+        t.satuan,
+        t.tahun AS target_tahun,
+        'Sasaran Pemda' AS sumber,
+        sp.id AS parent_id,
+        sp.sasaran_pemda AS parent_name,
+        sp.tahun_awal,
+        sp.tahun_akhir,
+        sp.jenis_periode,
+        CASE
+            WHEN pk_subtematik.id IS NULL THEN false
+            ELSE COALESCE(pk_subtematik.is_active, false)
+        END AS is_active,
+        true AS is_exists,
+        COALESCE(tpv.is_hide, 0) AS is_hide
+    FROM tb_indikator_matrix_pemda i
+    INNER JOIN tb_sasaran_pemda sp ON i.sasaran_pemda_id = sp.id
+    INNER JOIN tb_pohon_kinerja pk_subtematik ON sp.subtema_id = pk_subtematik.id
+    LEFT JOIN tb_pohon_kinerja pk_anc1 ON pk_anc1.id = pk_subtematik.parent
+    LEFT JOIN tb_pohon_kinerja pk_anc2 ON pk_anc2.id = pk_anc1.parent
+    LEFT JOIN tb_pohon_kinerja pk_anc3 ON pk_anc3.id = pk_anc2.parent
+    INNER JOIN tematik_v2 tm ON (
+        (pk_anc1.level_pohon = 0 AND pk_anc1.id = tm.id)
+        OR (pk_anc2.level_pohon = 0 AND pk_anc2.id = tm.id)
+        OR (pk_anc3.level_pohon = 0 AND pk_anc3.id = tm.id)
+    )
+    LEFT JOIN tb_tujuan_pemda tp2 ON sp.tujuan_pemda_id = tp2.id
+    LEFT JOIN tb_tujuan_pemda_view tpv ON tp2.id = tpv.id_tujuan_pemda
+    LEFT JOIN tb_target_pemda t ON t.kode_indikator = i.kode_indikator AND t.jenis = ?
+    WHERE sp.jenis_periode = ?
+      AND i.jenis = 'renstra'
+)
+SELECT * FROM (
+    SELECT * FROM indikator_tujuan
+    UNION ALL
+    SELECT * FROM indikator_sasaran
+) combined
+WHERE indikator IS NOT NULL
+ORDER BY indikator_created_at ASC`
+
+	// jenisTarget dipakai 2x: sekali untuk tujuan, sekali untuk sasaran
+	rows, err := tx.QueryContext(ctx, query, tahun, jenisTarget, jenisPeriode, jenisTarget, jenisPeriode)
+	if err != nil {
+		return nil, fmt.Errorf("FindAllPemdaByTematikTahun: %w", err)
+	}
+	defer rows.Close()
+
+	indikatorMap := make(map[string]*domain.Indikator)
+	for rows.Next() {
+		var (
+			indikatorId        sql.NullString
+			indikator          sql.NullString
+			rumusPerhitungan   sql.NullString
+			sumberData         sql.NullString
+			indikatorCreatedAt sql.NullTime
+			ikuActive          bool
+			targetId           sql.NullInt64
+			target             sql.NullString
+			satuan             sql.NullString
+			targetTahun        sql.NullString
+			sumber             string
+			parentId           sql.NullInt64
+			parentName         sql.NullString
+			tahunAwal          string
+			tahunAkhir         string
+			jenisPeriodeData   string
+			isActive           bool
+			isExists           bool
+			isHide             sql.NullBool
+		)
+		err := rows.Scan(
+			&indikatorId, &indikator, &rumusPerhitungan, &sumberData,
+			&indikatorCreatedAt, &ikuActive,
+			&targetId, &target, &satuan, &targetTahun,
+			&sumber, &parentId, &parentName,
+			&tahunAwal, &tahunAkhir, &jenisPeriodeData,
+			&isActive, &isExists, &isHide,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if !indikator.Valid || !indikatorId.Valid || !isExists {
+			continue
+		}
+		item, exists := indikatorMap[indikatorId.String]
+		if !exists {
+			tahunAwalInt, _ := strconv.Atoi(tahunAwal)
+			tahunAkhirInt, _ := strconv.Atoi(tahunAkhir)
+			var targets []domain.Target
+			for y := tahunAwalInt; y <= tahunAkhirInt; y++ {
+				targets = append(targets, domain.Target{
+					Id: "-", IndikatorId: indikatorId.String,
+					Target: "", Satuan: "", Tahun: strconv.Itoa(y),
+				})
+			}
+			item = &domain.Indikator{
+				Id: indikatorId.String, Indikator: indikator.String,
+				RumusPerhitungan: rumusPerhitungan, SumberData: sumberData,
+				CreatedAt: indikatorCreatedAt.Time, Sumber: sumber,
+				ParentId: int(parentId.Int64), ParentName: parentName.String,
+				Target: targets, IsActive: isActive, IkuActive: ikuActive,
+				IsHide: isHide.Valid && isHide.Bool,
+			}
+			indikatorMap[indikatorId.String] = item
+		}
+		if targetId.Valid && targetTahun.Valid {
+			tahunInt, _ := strconv.Atoi(targetTahun.String)
+			tahunAwalInt, _ := strconv.Atoi(tahunAwal)
+			idx := tahunInt - tahunAwalInt
+			if idx >= 0 && idx < len(item.Target) {
+				item.Target[idx] = domain.Target{
+					Id: strconv.FormatInt(targetId.Int64, 10),
+					IndikatorId: indikatorId.String,
+					Target: target.String, Satuan: satuan.String,
+					Tahun: targetTahun.String,
+				}
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]domain.Indikator, 0, len(indikatorMap))
+	for _, item := range indikatorMap {
+		result = append(result, *item)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+			return result[i].Indikator < result[j].Indikator
+		}
+		return result[i].CreatedAt.Before(result[j].CreatedAt)
+	})
 	return result, nil
 }
 
