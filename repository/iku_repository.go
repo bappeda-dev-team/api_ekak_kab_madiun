@@ -13,4 +13,8 @@ type IkuRepository interface {
 	UpdateIkuActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) (int64, error)
 	UpdateIkuOpdActive(ctx context.Context, tx *sql.Tx, indikatorId string, ikuActive bool) (int64, error)
 	FindAllIkuRenja(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string, jenisIndikator string) ([]domain.Indikator, error)
+
+	// v2 — filter berdasarkan tematik.tahun (bukan range periode)
+	// jenisTarget: "renstra" | "ranwal" | "rankhir" | "penetapan"
+	FindAllPemdaByTematikTahun(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode, jenisTarget string) ([]domain.Indikator, error)
 }

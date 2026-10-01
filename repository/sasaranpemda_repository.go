@@ -28,5 +28,9 @@ type SasaranPemdaRepository interface {
 	// ── UTILS ────────────────────────────────────────────────────
 	IsIdExists(ctx context.Context, tx *sql.Tx, id int) bool
 	IsSubtemaIdExists(ctx context.Context, tx *sql.Tx, subtemaId int) bool
+
+	// v2 — filter berdasarkan tahun di tematik (level_pohon=0)
+	FindRanwalByTematikTahun(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode string) ([]domain.SasaranPemda, error)
+	FindAllByTematikTahun(ctx context.Context, tx *sql.Tx, tahun, jenisPeriode, jenis string) ([]domain.SasaranPemda, error)
 	UpdatePeriode(ctx context.Context, tx *sql.Tx, sasaranPemda domain.SasaranPemda) (domain.SasaranPemda, error)
 }

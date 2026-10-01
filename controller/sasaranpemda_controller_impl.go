@@ -311,3 +311,32 @@ func (c *SasaranPemdaControllerImpl) FindAllLockSasaranPemda(w http.ResponseWrit
 	}
 	helper.WriteJSON(w, http.StatusOK, "OK", result)
 }
+
+// ── V2: filter tematik.tahun ─────────────────────────────────────
+
+func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRanwalV2(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindSasaranPemdaRanwalV2(r.Context(), params.ByName("tahun"), "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}
+
+func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDualV2(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindSasaranPemdaRankhirDualV2(r.Context(), params.ByName("tahun"), "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}
+
+func (c *SasaranPemdaControllerImpl) FindSasaranPemdaPenetapanDualV2(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	result, err := c.sasaranPemdaService.FindSasaranPemdaPenetapanDualV2(r.Context(), params.ByName("tahun"), "RPJMD")
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, "OK", result)
+}

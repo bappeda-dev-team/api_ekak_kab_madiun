@@ -14,4 +14,9 @@ type IkuController interface {
 	FindAllIkuRenjaOpdRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllIkuRenjaOpdRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllIkuRenjaOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	// v2 — IKU pemda filter tematik.tahun
+	FindIkuPemdaRanwalV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindIkuPemdaRankhirDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindIkuPemdaPenetapanDualV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
