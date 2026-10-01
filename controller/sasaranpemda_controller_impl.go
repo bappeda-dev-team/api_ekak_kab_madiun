@@ -5,6 +5,7 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/sasaranpemda"
 	"ekak_kabupaten_madiun/service"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -169,10 +170,24 @@ func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDual(w http.Response
 // @Security     BearerAuth
 // @Router       /sasaran_pemda/penetapan/{tahun} [get]
 func (c *SasaranPemdaControllerImpl) FindSasaranPemdaPenetapanDual(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	result, err := c.sasaranPemdaService.FindSasaranPemdaPenetapanDual(
-		r.Context(), params.ByName("tahun"), "RPJMD",
+	tahun := params.ByName("tahun")
+	if tahun == "" {
+		helper.WriteToResponseBody(w, "Tahun harus diisi")
+		return
+	}
+	result, err := c.sasaranPemdaService.FindSasaranPemdaPenetapanDualV2(
+		r.Context(), tahun, "RPJMD",
 	)
 	if err != nil {
+		if errors.Is(err, helper.ErrInvalidYear) {
+			webResponse := web.WebResponse{
+				Code:   http.StatusBadRequest,
+				Status: "BAD REQUEST",
+				Data:   err.Error(),
+			}
+			helper.WriteToResponseBody(w, webResponse)
+			return
+		}
 		helper.WriteToResponseBodyWstatus(w, sasaranPemdaErr(err))
 		return
 	}

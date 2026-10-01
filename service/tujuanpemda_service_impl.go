@@ -1446,7 +1446,10 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaRankhirDualV2(
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	type dKey struct{ tujuanId int; kodeInd string }
+	type dKey struct {
+		tujuanId int
+		kodeInd  string
+	}
 	rankhirMap := make(map[dKey][]domain.TargetPemda)
 	for _, tp := range rankhirList {
 		for _, ind := range tp.IndikatorPemda {
@@ -1455,7 +1458,9 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaRankhirDualV2(
 		}
 	}
 	ids := make([]int, 0, len(renstraList))
-	for _, tp := range renstraList { ids = append(ids, tp.Id) }
+	for _, tp := range renstraList {
+		ids = append(ids, tp.Id)
+	}
 	isHideMap, _ := s.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, ids)
 	responses := make([]tujuanpemda.TujuanPemdaRankhirDualResponse, 0, len(renstraList))
 	for _, tp := range renstraList {
@@ -1477,8 +1482,14 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaRankhirDualV2(
 func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDualV2(
 	ctx context.Context, tahun, jenisPeriode string,
 ) ([]tujuanpemda.TujuanPemdaPenetapanDualResponse, error) {
-	if len(strings.TrimSpace(tahun)) != 4 {
-		return nil, fmt.Errorf("format tahun tidak valid, contoh: 2025")
+	tahun = strings.TrimSpace(tahun)
+
+	if len(tahun) != 4 {
+		return nil, helper.ErrInvalidYear
+	}
+
+	if _, err := strconv.Atoi(tahun); err != nil {
+		return nil, helper.ErrInvalidYear
 	}
 	tx, err := s.DB.Begin()
 	if err != nil {
@@ -1501,7 +1512,10 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDualV2(
 	if err != nil {
 		return nil, err
 	}
-	type dKey struct{ tujuanId int; kodeInd string }
+	type dKey struct {
+		tujuanId int
+		kodeInd  string
+	}
 	penetapanMap := make(map[dKey][]domain.TargetPemda)
 	for _, tp := range penetapanList {
 		for _, ind := range tp.IndikatorPemda {
@@ -1510,9 +1524,13 @@ func (s *TujuanPemdaServiceImpl) FindTujuanPemdaPenetapanDualV2(
 		}
 	}
 	baseList := rankhirList
-	if len(baseList) == 0 { baseList = renstraList }
+	if len(baseList) == 0 {
+		baseList = renstraList
+	}
 	ids := make([]int, 0, len(baseList))
-	for _, tp := range baseList { ids = append(ids, tp.Id) }
+	for _, tp := range baseList {
+		ids = append(ids, tp.Id)
+	}
 	isHideMap, _ := s.TujuanPemdaRepository.GetIsHideByTujuanPemdaIds(ctx, tx, ids)
 	responses := make([]tujuanpemda.TujuanPemdaPenetapanDualResponse, 0, len(baseList))
 	for _, tp := range baseList {

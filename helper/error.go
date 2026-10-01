@@ -97,3 +97,5 @@ type BusinessError struct {
 func (e *BusinessError) Error() string {
 	return e.Message
 }
+
+var ErrInvalidYear = errors.New("format tahun tidak valid, contoh: 2025")
