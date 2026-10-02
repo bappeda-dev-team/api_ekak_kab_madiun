@@ -80,7 +80,7 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		if strings.Contains(err.Error(), "token is expired") {
 			message = "Session telah berakhir, silakan login kembali"
 		}
-
+		log.Printf("ERROR %v", err)
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(status)
 

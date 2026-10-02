@@ -1336,13 +1336,18 @@ func (r *TujuanPemdaRepositoryImpl) FindAllByTematikTahun(
 	tahun, jenisPeriode, targetJenis string,
 ) ([]domain.TujuanPemda, error) {
 	var targetJenisClause string
-	var args []interface{}
+	var args []any
 	if targetJenis == "renstra" {
 		targetJenisClause = "(tg.jenis = 'renstra' OR tg.jenis = '' OR tg.jenis IS NULL)"
-		args = []interface{}{tahun, tahun, jenisPeriode}
+		args = []any{tahun, tahun, jenisPeriode}
 	} else {
 		targetJenisClause = "tg.jenis = ?"
-		args = []interface{}{tahun, targetJenis, tahun, jenisPeriode}
+		args = []any{
+			tahun,
+			tahun,
+			targetJenis,
+			jenisPeriode,
+		}
 	}
 	query := fmt.Sprintf(`
 		SELECT
