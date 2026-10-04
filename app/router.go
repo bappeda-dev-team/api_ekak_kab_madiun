@@ -74,6 +74,7 @@ func NewRouter(
 	nspkController controller.NspkController,
 	nspkopdController controller.NspkOpdController,
 	arahkebijakanController controller.ArahKebijakanController,
+	outcomeMatrixController controller.OutcomeMatrixController,
 ) *httprouter.Router {
 	router := httprouter.New()
 
@@ -382,6 +383,13 @@ func NewRouter(
 	router.GET("/review_pokin/tematik/:tahun", reviewController.FindAllReviewByTematik)
 	router.GET("/review_pokin/opd/:kode_opd/:tahun", reviewController.FindAllReviewOpd)
 
+	// review tujuan opd
+	router.POST("/review_tujuan_opd/create/:tujuanOpdId", reviewController.CreateTujuanOpd)
+	router.PUT("/review_tujuan_opd/update/:id", reviewController.UpdateTujuanOpd)
+	router.DELETE("/review_tujuan_opd/delete/:id", reviewController.DeleteTujuanOpd)
+	router.GET("/review_tujuan_opd/findall/:tujuan_opd_id", reviewController.FindAllTujuanOpd)
+	router.GET("/review_tujuan_opd/detail/:id", reviewController.FindByIdTujuanOpd)
+
 	//periode
 	router.POST("/periode/create", periodeController.Create)
 	router.PUT("/periode/update/:id", periodeController.Update)
@@ -502,6 +510,14 @@ func NewRouter(
 	router.POST("/matrix_renstra/indikator/create", matrixRenstraController.CreateIndikatorV2)
 	router.PUT("/matrix_renstra/indikator/update", matrixRenstraController.UpdateIndikatorRenstra)
 	router.POST("/matrix_renstra/target/upsert", matrixRenstraController.UpsertTarget)
+
+	// outcome matrix
+	router.GET("/outcome_matrix", outcomeMatrixController.FindAll)
+	router.GET("/outcome_matrix/detail/:id", outcomeMatrixController.FindById)
+	router.POST("/outcome_matrix/create", outcomeMatrixController.Create)
+	router.PUT("/outcome_matrix/update/:id", outcomeMatrixController.Update)
+	router.DELETE("/outcome_matrix/delete/:id", outcomeMatrixController.Delete)
+	router.POST("/outcome_matrix/batch", outcomeMatrixController.UpsertBatch)
 
 	//cascading opd
 	router.GET("/cascading_opd/findall/:kode_opd/:tahun", cascadingOpdController.FindAll)

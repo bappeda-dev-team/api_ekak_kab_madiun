@@ -1152,6 +1152,26 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 	}
 	if len(tujuanOpds) > 0 {
 		log.Println("POKIN TUJUAN OPD RENSTRA - NOT FOUND")
+		tujuanIds := make([]int, 0, len(tujuanOpds))
+		for _, tujuan := range tujuanOpds {
+			tujuanIds = append(tujuanIds, tujuan.Id)
+		}
+		reviewTujuanList, err := service.reviewRepository.FindByTujuanOpdIdsBatch(ctx, tx, tujuanIds)
+		if err != nil {
+			return pohonkinerja.PohonKinerjaOpdAllResponse{}, err
+		}
+		reviewTujuanMap := make(map[int][]pohonkinerja.ReviewTujuanOpdResponse)
+		for _, review := range reviewTujuanList {
+			reviewTujuanMap[review.IdTujuanOpd] = append(reviewTujuanMap[review.IdTujuanOpd], pohonkinerja.ReviewTujuanOpdResponse{
+				Id:             review.Id,
+				IdTujuanOpd:    review.IdTujuanOpd,
+				IdPohonKinerja: review.IdPohonKinerja,
+				Review:         review.Review,
+				Keterangan:     review.Keterangan,
+				CreatedBy:      review.CreatedBy,
+				NamaPegawai:    review.NamaReviewer,
+			})
+		}
 		tujuanResponses := make([]pohonkinerja.TujuanOpdResponse, 0, len(tujuanOpds))
 		for _, tujuan := range tujuanOpds {
 			indikatorResponses := make([]pohonkinerja.IndikatorTujuanResponse, 0, len(tujuan.Indikator))
@@ -1169,11 +1189,16 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 					Target:    targetResponses,
 				})
 			}
+			reviews := reviewTujuanMap[tujuan.Id]
+			if reviews == nil {
+				reviews = []pohonkinerja.ReviewTujuanOpdResponse{}
+			}
 			tujuanResponses = append(tujuanResponses, pohonkinerja.TujuanOpdResponse{
 				Id:        tujuan.Id,
 				KodeOpd:   tujuan.KodeOpd,
 				Tujuan:    tujuan.Tujuan,
 				Indikator: indikatorResponses,
+				Review:    reviews,
 			})
 		}
 		response.TujuanOpd = tujuanResponses
@@ -4629,6 +4654,7 @@ func (service *PohonKinerjaOpdServiceImpl) CetakPokin(
 			KodeOpd:   tujuan.KodeOpd,
 			Tujuan:    tujuan.Tujuan,
 			Indikator: indikatorResponses,
+			Review:    []pohonkinerja.ReviewTujuanOpdResponse{},
 		})
 	}
 

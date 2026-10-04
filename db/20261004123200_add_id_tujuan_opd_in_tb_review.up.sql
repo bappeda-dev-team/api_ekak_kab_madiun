@@ -1,0 +1,2 @@
+ALTER TABLE tb_review
+ADD COLUMN id_tujuan_opd INT NOT NULL DEFAULT 0;

@@ -8,6 +8,17 @@ type ReviewResponse struct {
 	CreatedBy      string `json:"created_by,omitempty"`
 	NamaPegawai    string `json:"nama_pegawai,omitempty"`
 	JenisPokin     string `json:"jenis_pokin"`
+	IdTujuanOpd    int    `json:"id_tujuan_opd,omitempty"`
+}
+
+type ReviewTujuanOpdResponse struct {
+	Id             int    `json:"id"`
+	IdTujuanOpd    int    `json:"id_tujuan_opd"`
+	IdPohonKinerja int    `json:"id_pohon_kinerja"`
+	Review         string `json:"review"`
+	Keterangan     string `json:"keterangan"`
+	CreatedBy      string `json:"created_by,omitempty"`
+	NamaPegawai    string `json:"nama_pegawai,omitempty"`
 }
 
 type ReviewTematikResponse struct {

@@ -371,6 +371,15 @@ var matrixRenstraSet = wire.NewSet(
 	wire.Bind(new(controller.MatrixRenstraController), new(*controller.MatrixRenstraControllerImpl)),
 )
 
+var outcomeMatrixSet = wire.NewSet(
+	repository.NewOutcomeMatrixRepositoryImpl,
+	wire.Bind(new(repository.OutcomeMatrixRepository), new(*repository.OutcomeMatrixRepositoryImpl)),
+	service.NewOutcomeMatrixServiceImpl,
+	wire.Bind(new(service.OutcomeMatrixService), new(*service.OutcomeMatrixServiceImpl)),
+	controller.NewOutcomeMatrixControllerImpl,
+	wire.Bind(new(controller.OutcomeMatrixController), new(*controller.OutcomeMatrixControllerImpl)),
+)
+
 var cascadingOpdSet = wire.NewSet(
 	repository.NewCascadingOpdRepositoryImpl,
 	wire.Bind(new(repository.CascadingOpdRepository), new(*repository.CascadingOpdRepositoryImpl)),
@@ -696,6 +705,7 @@ func InitializeServer() *http.Server {
 		visiPemdaSet,
 		misiPemdaSet,
 		matrixRenstraSet,
+		outcomeMatrixSet,
 		cascadingOpdSet,
 		rincianBelanjaSet,
 		kelompokAnggaranSet,
