@@ -486,25 +486,68 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 				data.UpdatedAt,
 			)
 
-			// Tinggi baris mengikuti isi Review/Keterangan.
+			// =========================
+			// HITUNG JUMLAH BARIS
+			// =========================
+
+			lineNamaPohon := pdf.SplitLines(
+				[]byte(namaPohon),
+				colWidths[1]-2,
+			)
+
+			lineJenisPohon := pdf.SplitLines(
+				[]byte(strings.ToUpper(jenisPohon)),
+				colWidths[1]-2,
+			)
+
 			lineReview := pdf.SplitLines(
 				[]byte(review),
-				colWidths[2],
+				colWidths[2]-2,
 			)
 
 			lineKeterangan := pdf.SplitLines(
 				[]byte(keterangan),
-				colWidths[3],
+				colWidths[3]-2,
 			)
 
-			maxLines := len(lineReview)
+			lineNamaPegawai := pdf.SplitLines(
+				[]byte(namaPegawai),
+				colWidths[4]-2,
+			)
+
+			lineWaktuReview := pdf.SplitLines(
+				[]byte(waktuReview),
+				colWidths[5]-2,
+			)
+
+			// =========================
+			// TENTUKAN JUMLAH BARIS
+			// =========================
+
+			maxLines := len(lineNamaPohon)
+
+			if len(lineJenisPohon) > maxLines {
+				maxLines = len(lineJenisPohon)
+			}
+
+			if len(lineReview) > maxLines {
+				maxLines = len(lineReview)
+			}
 
 			if len(lineKeterangan) > maxLines {
 				maxLines = len(lineKeterangan)
 			}
 
-			// Minimal 2 baris karena Nama Pohon terdiri dari
-			// nama + jenis pohon.
+			if len(lineNamaPegawai) > maxLines {
+				maxLines = len(lineNamaPegawai)
+			}
+
+			if len(lineWaktuReview) > maxLines {
+				maxLines = len(lineWaktuReview)
+			}
+
+			// Minimal 2 baris:
+			// Nama Pohon + Jenis Pohon
 			if maxLines < 2 {
 				maxLines = 2
 			}
@@ -516,6 +559,13 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 			}
 
 			// =========================
+			// POSISI AWAL BARIS
+			// =========================
+
+			x := pdf.GetX()
+			y := pdf.GetY()
+
+			// =========================
 			// NO
 			// =========================
 
@@ -525,55 +575,89 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 			// NAMA POHON
 			// =========================
 
-			x := pdf.GetX()
-			y := pdf.GetY()
+			currentX := x + colWidths[0]
+
+			pdf.SetXY(currentX, y)
+
+			pdf.SetFont("Arial", "", 8)
 
 			pdf.MultiCell(colWidths[1], 4.5, namaPohon, "LR", "L", false)
 
-			pdf.SetXY(x, y+4.5)
+			// Jenis pohon
+			pdf.SetXY(currentX, y+4.5)
 
 			pdf.SetFont("Arial", "", 7)
 
 			pdf.MultiCell(colWidths[1], 4, strings.ToUpper(jenisPohon), "LR", "L", false)
 
-			pdf.SetXY(
-				x+colWidths[1],
-				y,
-			)
+			// Tutup border bawah Nama Pohon
+			pdf.SetXY(currentX, y+rowHeight)
 
-			pdf.SetFont("Arial", "", 8)
+			pdf.CellFormat(colWidths[1], 0, "", "B", 0, "L", false, 0, "")
 
 			// =========================
 			// REVIEW
 			// =========================
 
-			pdf.MultiCell(colWidths[2], 4.5, review, "1", "L", false)
+			currentX += colWidths[1]
 
-			pdf.SetXY(x+colWidths[1]+colWidths[2], y)
+			pdf.SetXY(currentX, y)
+
+			pdf.SetFont("Arial", "", 8)
+
+			pdf.MultiCell(colWidths[2], 4.5, review, "LR", "L", false)
+
+			// Border luar bawah
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[2], 0, "", "B", 0, "L", false, 0, "")
 
 			// =========================
 			// KETERANGAN
 			// =========================
 
-			pdf.MultiCell(colWidths[3], 4.5, keterangan, "1", "L", false)
+			currentX += colWidths[2]
 
-			pdf.SetXY(x+colWidths[1]+colWidths[2]+colWidths[3], y)
+			pdf.SetXY(currentX, y)
+
+			pdf.MultiCell(colWidths[3], 4.5, keterangan, "LR", "L", false)
+
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[3], 0, "", "B", 0, "L", false, 0, "")
 
 			// =========================
 			// USER PEMBUAT
 			// =========================
 
-			pdf.MultiCell(colWidths[4], 4.5, namaPegawai, "1", "L", false)
+			currentX += colWidths[3]
 
-			pdf.SetXY(x+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4], y)
+			pdf.SetXY(currentX, y)
+
+			pdf.MultiCell(colWidths[4], 4.5, namaPegawai, "LR", "L", false)
+
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[4], 0, "", "B", 0, "L", false, 0, "")
 
 			// =========================
 			// WAKTU REVIEW
 			// =========================
 
-			pdf.MultiCell(colWidths[5], 4.5, waktuReview, "1", "L", false)
+			currentX += colWidths[4]
 
-			// Pastikan cursor pindah ke awal baris berikutnya.
+			pdf.SetXY(currentX, y)
+
+			pdf.MultiCell(colWidths[5], 4.5, waktuReview, "LR", "L", false)
+
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[5], 0, "", "B", 0, "L", false, 0, "")
+
+			// =========================
+			// PINDAH KE BARIS BERIKUTNYA
+			// =========================
+
 			pdf.SetXY(x, y+rowHeight)
 
 			pdf.SetFont("Arial", "", 8)
