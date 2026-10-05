@@ -864,10 +864,23 @@ func (repository *TujuanOpdRepositoryImpl) FindAllByTahun(
 	)
 	if jenisIndikator == "renstra" {
 		targetJenisClause = "(tg.jenis = 'renstra' OR tg.jenis = '')"
-		finalArgs = []interface{}{tahun, kodeOpd, jenisPeriode, tahun, tahun}
+		finalArgs = []interface{}{
+			tahun,
+			kodeOpd,
+			jenisPeriode,
+			tahun,
+			tahun,
+		}
 	} else {
 		targetJenisClause = "tg.jenis = ?"
-		finalArgs = []interface{}{tahun, jenisIndikator, kodeOpd, jenisPeriode, tahun, tahun}
+		finalArgs = []interface{}{
+			tahun,
+			jenisIndikator, // <-- harus di posisi kedua
+			kodeOpd,
+			jenisPeriode,
+			tahun,
+			tahun,
+		}
 	}
 
 	query := fmt.Sprintf(`
