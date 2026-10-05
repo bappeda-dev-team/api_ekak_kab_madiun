@@ -13,4 +13,5 @@ type ReviewService interface {
 	FindById(ctx context.Context, id int) (pohonkinerja.ReviewResponse, error)
 	FindAllReviewByTematik(ctx context.Context, tahun string) ([]pohonkinerja.ReviewTematikResponse, error)
 	FindAllReviewOpd(ctx context.Context, kodeOpd, tahun string) ([]pohonkinerja.ReviewOpdResponse, error)
+	CetakPDFReviewOpd(ctx context.Context, kodeOpd string, tahun string) ([]byte, error)
 }

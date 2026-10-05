@@ -198,3 +198,24 @@ func (controller *ReviewControllerImpl) FindAllReviewOpd(writer http.ResponseWri
 		Data:   reviewResponse,
 	})
 }
+
+func (controller *ReviewControllerImpl) CetakPDFReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	pdfBytes, err := controller.ReviewService.CetakPDFReviewOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/pdf")
+	writer.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="review-opd-%s.pdf"`, tahun))
+
+	writer.WriteHeader(http.StatusOK)
+	_, err = writer.Write(pdfBytes)
+}
