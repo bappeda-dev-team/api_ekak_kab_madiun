@@ -428,7 +428,8 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 	//
 	// Total          = 277
 
-	colWidths := []float64{12, 48, 75, 55, 40, 47}
+	// colWidths := []float64{12, 48, 75, 55, 40, 47}
+	colWidths := []float64{12, 55, 85, 65, 45, 48}
 
 	headers := []string{"No", "Nama Pohon", "Review", "Keterangan", "User Pembuat", "Waktu Review"}
 
@@ -448,7 +449,8 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 
 	if len(reviewResponses) == 0 {
 
-		pdf.CellFormat(277, 10, "Data Kosong / Belum Ditambahkan", "1", 1, "C", false, 0, "")
+		// pdf.CellFormat(277, 10, "Data Kosong / Belum Ditambahkan", "1", 1, "C", false, 0, "")
+		pdf.CellFormat(310, 10, "Data Kosong / Belum Ditambahkan", "1", 1, "C", false, 0, "")
 
 	} else {
 
