@@ -14,4 +14,5 @@ type ReviewController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllReviewByTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CetakPDFReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

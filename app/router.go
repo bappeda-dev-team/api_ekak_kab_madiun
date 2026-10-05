@@ -355,6 +355,7 @@ func NewRouter(
 	router.GET("/review_pokin/detail/:id", reviewController.FindById)
 	router.GET("/review_pokin/tematik/:tahun", reviewController.FindAllReviewByTematik)
 	router.GET("/review_pokin/opd/:kode_opd/:tahun", reviewController.FindAllReviewOpd)
+	router.GET("/review_pokin/opd/:kode_opd/:tahun/download-pdf",reviewController.CetakPDFReviewOpd)
 
 	//periode
 	router.POST("/periode/create", periodeController.Create)
