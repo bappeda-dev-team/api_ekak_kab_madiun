@@ -471,8 +471,8 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 				review = "-"
 			}
 
-			keterangan := data.Keterangan
-			if strings.TrimSpace(keterangan) == "" {
+			keterangan := strings.TrimSpace(data.Keterangan)
+			if keterangan == "" {
 				keterangan = "-"
 			}
 
@@ -521,39 +521,46 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 			)
 
 			// =========================
-			// TENTUKAN JUMLAH BARIS
+			// TENTUKAN TINGGI BARIS
 			// =========================
 
-			maxLines := len(lineNamaPohon)
+			// Nama Pohon + Jenis Pohon berada dalam satu kolom.
+			// Jadi tinggi keduanya harus dijumlahkan.
+			namaPohonHeight :=
+				float64(len(lineNamaPohon))*4.5 +
+				float64(len(lineJenisPohon))*4
 
-			if len(lineJenisPohon) > maxLines {
-				maxLines = len(lineJenisPohon)
+			reviewHeight :=
+				float64(len(lineReview)) * 4.5
+
+			keteranganHeight :=
+				float64(len(lineKeterangan)) * 4.5
+
+			pegawaiHeight :=
+				float64(len(lineNamaPegawai)) * 4.5
+
+			waktuHeight :=
+				float64(len(lineWaktuReview)) * 4.5
+
+			rowHeight := namaPohonHeight
+
+			if reviewHeight > rowHeight {
+				rowHeight = reviewHeight
 			}
 
-			if len(lineReview) > maxLines {
-				maxLines = len(lineReview)
+			if keteranganHeight > rowHeight {
+				rowHeight = keteranganHeight
 			}
 
-			if len(lineKeterangan) > maxLines {
-				maxLines = len(lineKeterangan)
+			if pegawaiHeight > rowHeight {
+				rowHeight = pegawaiHeight
 			}
 
-			if len(lineNamaPegawai) > maxLines {
-				maxLines = len(lineNamaPegawai)
+			if waktuHeight > rowHeight {
+				rowHeight = waktuHeight
 			}
 
-			if len(lineWaktuReview) > maxLines {
-				maxLines = len(lineWaktuReview)
-			}
-
-			// Minimal 2 baris:
-			// Nama Pohon + Jenis Pohon
-			if maxLines < 2 {
-				maxLines = 2
-			}
-
-			rowHeight := float64(maxLines) * 4.5
-
+			// Minimal tinggi row
 			if rowHeight < 12 {
 				rowHeight = 12
 			}
@@ -584,11 +591,22 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 			pdf.MultiCell(colWidths[1], 4.5, namaPohon, "LR", "L", false)
 
 			// Jenis pohon
-			pdf.SetXY(currentX, y+4.5)
+			// Mulai setelah seluruh baris Nama Pohon selesai.
+			pdf.SetXY(
+				currentX,
+				y+float64(len(lineNamaPohon))*4.5,
+			)
 
 			pdf.SetFont("Arial", "", 7)
 
-			pdf.MultiCell(colWidths[1], 4, strings.ToUpper(jenisPohon), "LR", "L", false)
+			pdf.MultiCell(
+				colWidths[1],
+				4,
+				strings.ToUpper(jenisPohon),
+				"LR",
+				"L",
+				false,
+			)
 
 			// Tutup border bawah Nama Pohon
 			pdf.SetXY(currentX, y+rowHeight)
@@ -653,6 +671,62 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 			pdf.SetXY(currentX, y+rowHeight)
 
 			pdf.CellFormat(colWidths[5], 0, "", "B", 0, "L", false, 0, "")
+
+			// =========================
+			// SAMBUNG GARIS SAMPING
+			// =========================
+
+			// Karena MultiCell dengan "LR" hanya menggambar
+			// garis sepanjang tinggi teks, maka bagian yang
+			// masih kosong sampai rowHeight harus disambung manual.
+
+			// Nama Pohon
+			pdf.Line(
+				x+colWidths[0],
+				y,
+				x+colWidths[0],
+				y+rowHeight,
+			)
+
+			// Batas Review
+			pdf.Line(
+				x+colWidths[0]+colWidths[1],
+				y,
+				x+colWidths[0]+colWidths[1],
+				y+rowHeight,
+			)
+
+			// Batas Keterangan
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2],
+				y+rowHeight,
+			)
+
+			// Batas User Pembuat
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3],
+				y+rowHeight,
+			)
+
+			// Batas Waktu Review
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4],
+				y+rowHeight,
+			)
+
+			// Garis paling kanan
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4]+colWidths[5],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4]+colWidths[5],
+				y+rowHeight,
+			)
 
 			// =========================
 			// PINDAH KE BARIS BERIKUTNYA
