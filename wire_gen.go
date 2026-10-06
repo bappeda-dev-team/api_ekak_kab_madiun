@@ -176,7 +176,7 @@ func InitializeServer() *http.Server {
 	matrixRenjaRepositoryImpl := repository.NewMatrixRenjaRepositoryImpl()
 	matrixRenjaServiceImpl := service.NewMatrixRenjaServiceImpl(matrixRenjaRepositoryImpl, periodeRepositoryImpl, pegawaiRepositoryImpl, db)
 	matrixRenjaControllerImpl := controller.NewMatrixRenjaControllerImpl(matrixRenjaServiceImpl)
-	dataMasterServiceImpl := service.NewDataMasterServiceImpl(dataMasterRepositoryImpl, rencanaKinerjaRepositoryImpl, crosscuttingOpdRepositoryImpl, db)
+	dataMasterServiceImpl := service.NewDataMasterServiceImpl(dataMasterRepositoryImpl, rencanaKinerjaRepositoryImpl, crosscuttingOpdRepositoryImpl, gambaranUmumRepositoryImpl, permasalahanRekinRepositoryImpl, db)
 	dataMasterControllerImpl := controller.NewDataMasterControllerImpl(dataMasterServiceImpl)
 	pkRepositoryImpl := repository.NewPkRepositoryImpl()
 	strukturOrganisasiRepositoryImpl := repository.NewStrukturOrganisasiRepositoryImpl()

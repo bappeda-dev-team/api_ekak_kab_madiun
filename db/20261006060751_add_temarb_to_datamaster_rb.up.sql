@@ -1,0 +1,2 @@
+ALTER TABLE datamaster_rb
+    ADD COLUMN tema_rb VARCHAR(255) NOT NULL DEFAULT '-';

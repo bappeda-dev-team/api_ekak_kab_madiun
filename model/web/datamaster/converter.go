@@ -6,6 +6,7 @@ import "ekak_kabupaten_madiun/model/domain/datamaster"
 func ConvertRBRequestToMaster(rbReq RBRequest, userId int) datamaster.MasterRB {
 	master := datamaster.MasterRB{
 		JenisRB:       rbReq.JenisRB,
+		TemaRB:        rbReq.TemaRB,
 		KegiatanUtama: rbReq.KegiatanUtama,
 		Keterangan:    rbReq.Keterangan,
 		TahunBaseline: rbReq.TahunBaseline,

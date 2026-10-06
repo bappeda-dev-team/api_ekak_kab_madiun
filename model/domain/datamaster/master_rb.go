@@ -3,6 +3,7 @@ package datamaster
 type MasterRB struct {
 	Id             int
 	JenisRB        string
+	TemaRB         string
 	KegiatanUtama  string
 	Keterangan     string
 	Indikator      []IndikatorRB
@@ -10,7 +11,7 @@ type MasterRB struct {
 	TahunNext      int
 	LastUpdatedBy  int
 	CurrentVersion int
-	RencanaAksis  []RencanaAksiRB
+	RencanaAksis   []RencanaAksiRB
 }
 
 type IndikatorRB struct {
@@ -33,14 +34,14 @@ type TargetRB struct {
 }
 
 type PokinIdRBTagging struct {
-	IdTagging int
-	KodeRB int
+	IdTagging     int
+	KodeRB        int
 	KegiatanUtama string
-	IdPokin int
-	NamaTagging string
-	NamaPohon string
-	KodeOpd string
-	JenisPohon string
+	IdPokin       int
+	NamaTagging   string
+	NamaPohon     string
+	KodeOpd       string
+	JenisPohon    string
 }
 
 type RencanaAksiRB struct {
