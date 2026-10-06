@@ -198,3 +198,114 @@ func (controller *ReviewControllerImpl) FindAllReviewOpd(writer http.ResponseWri
 		Data:   reviewResponse,
 	})
 }
+
+func (controller *ReviewControllerImpl) CreateTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	req := pohonkinerja.ReviewTujuanOpdCreateRequest{}
+	helper.ReadFromRequestBody(request, &req)
+
+	id, err := strconv.Atoi(params.ByName("tujuanOpdId"))
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	req.IdTujuanOpd = id
+
+	claims := request.Context().Value(helper.UserInfoKey).(web.JWTClaim)
+	ctx := context.WithValue(request.Context(), helper.UserInfoKey, claims)
+
+	resp, err := controller.ReviewService.CreateTujuanOpd(ctx, req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusCreated, Status: "success create review tujuan opd", Data: resp,
+	})
+}
+
+func (controller *ReviewControllerImpl) UpdateTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	req := pohonkinerja.ReviewTujuanOpdUpdateRequest{}
+	helper.ReadFromRequestBody(request, &req)
+	req.Id = id
+
+	resp, err := controller.ReviewService.UpdateTujuanOpd(request.Context(), req)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusOK, Status: "success update review tujuan opd", Data: resp,
+	})
+}
+
+func (controller *ReviewControllerImpl) DeleteTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	if err := controller.ReviewService.DeleteTujuanOpd(request.Context(), id); err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusOK, Status: "success delete review tujuan opd",
+	})
+}
+
+func (controller *ReviewControllerImpl) FindAllTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id, err := strconv.Atoi(params.ByName("tujuan_opd_id"))
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	resp, err := controller.ReviewService.FindAllTujuanOpd(request.Context(), id)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusOK, Status: "success get all review tujuan opd", Data: resp,
+	})
+}
+
+func (controller *ReviewControllerImpl) FindByIdTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id, err := strconv.Atoi(params.ByName("id"))
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
+		})
+		return
+	}
+	resp, err := controller.ReviewService.FindByIdTujuanOpd(request.Context(), id)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code: http.StatusInternalServerError, Status: "INTERNAL SERVER ERROR", Data: err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code: http.StatusOK, Status: "success get review tujuan opd", Data: resp,
+	})
+}

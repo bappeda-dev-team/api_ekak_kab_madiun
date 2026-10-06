@@ -43,10 +43,10 @@ func (repository *ReviewRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, 
 }
 
 func (repository *ReviewRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.Review, error) {
-	script := "SELECT id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by, created_at, updated_at FROM tb_review WHERE id = ?"
+	script := "SELECT id, id_pohon_kinerja, COALESCE(id_tujuan_opd, 0), review, keterangan, jenis_pokin, created_by, created_at, updated_at FROM tb_review WHERE id = ?"
 	row := tx.QueryRowContext(ctx, script, id)
 	var review domain.Review
-	err := row.Scan(&review.Id, &review.IdPohonKinerja, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
+	err := row.Scan(&review.Id, &review.IdPohonKinerja, &review.IdTujuanOpd, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
 	if err != nil {
 		return domain.Review{}, err
 	}
@@ -391,4 +391,106 @@ func (r *ReviewRepositoryImpl) CountReviewByPokinIdsBatch(ctx context.Context, t
 		result[id] = count
 	}
 	return result, rows.Err()
+}
+
+func (repository *ReviewRepositoryImpl) CreateTujuanOpd(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
+	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, created_by, id_tujuan_opd) VALUES (?, ?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, review.Id, 0, review.Review, review.Keterangan, review.CreatedBy, review.IdTujuanOpd)
+	if err != nil {
+		return domain.Review{}, err
+	}
+	review.IdPohonKinerja = 0
+	return review, nil
+}
+
+func (repository *ReviewRepositoryImpl) FindByTujuanOpd(ctx context.Context, tx *sql.Tx, idTujuanOpd int) ([]domain.Review, error) {
+	script := `
+		SELECT id, id_pohon_kinerja, COALESCE(id_tujuan_opd, 0), review, keterangan, created_by, created_at, updated_at
+		FROM tb_review
+		WHERE id_tujuan_opd = ?
+		ORDER BY id ASC
+	`
+	rows, err := tx.QueryContext(ctx, script, idTujuanOpd)
+	if err != nil {
+		return []domain.Review{}, err
+	}
+	defer rows.Close()
+
+	reviews := make([]domain.Review, 0)
+	for rows.Next() {
+		var review domain.Review
+		err := rows.Scan(
+			&review.Id,
+			&review.IdPohonKinerja,
+			&review.IdTujuanOpd,
+			&review.Review,
+			&review.Keterangan,
+			&review.CreatedBy,
+			&review.CreatedAt,
+			&review.UpdatedAt,
+		)
+		if err != nil {
+			return []domain.Review{}, err
+		}
+		reviews = append(reviews, review)
+	}
+	return reviews, rows.Err()
+}
+
+func (repository *ReviewRepositoryImpl) FindByTujuanOpdIdsBatch(ctx context.Context, tx *sql.Tx, tujuanOpdIds []int) ([]domain.ReviewWithNama, error) {
+	if len(tujuanOpdIds) == 0 {
+		return make([]domain.ReviewWithNama, 0), nil
+	}
+
+	placeholders := make([]string, len(tujuanOpdIds))
+	args := make([]interface{}, len(tujuanOpdIds))
+	for i, id := range tujuanOpdIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	script := fmt.Sprintf(`
+		SELECT
+			r.id,
+			r.id_pohon_kinerja,
+			COALESCE(r.id_tujuan_opd, 0) as id_tujuan_opd,
+			r.review,
+			r.keterangan,
+			r.created_by,
+			COALESCE(p.nama, '') as nama_reviewer,
+			COALESCE(r.jenis_pokin, '') as jenis_pokin
+		FROM tb_review r
+		LEFT JOIN tb_pegawai p ON p.nip = r.created_by
+		WHERE r.id_tujuan_opd IN (%s)
+		ORDER BY r.id_tujuan_opd, r.id
+	`, strings.Join(placeholders, ","))
+
+	rows, err := tx.QueryContext(ctx, script, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	reviews := make([]domain.ReviewWithNama, 0)
+	for rows.Next() {
+		var review domain.ReviewWithNama
+		err := rows.Scan(
+			&review.Id,
+			&review.IdPohonKinerja,
+			&review.IdTujuanOpd,
+			&review.Review,
+			&review.Keterangan,
+			&review.CreatedBy,
+			&review.NamaReviewer,
+			&review.Jenis_pokin,
+		)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, review)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return reviews, nil
 }

@@ -14,4 +14,10 @@ type ReviewController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllReviewByTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	CreateTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	UpdateTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	DeleteTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindByIdTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }
