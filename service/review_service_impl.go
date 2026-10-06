@@ -431,19 +431,63 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 	// colWidths := []float64{12, 48, 75, 55, 40, 47}
 	colWidths := []float64{12, 55, 85, 65, 45, 48}
 
-	headers := []string{"No", "Nama Pohon", "Review", "Keterangan", "User Pembuat", "Waktu Review"}
+	headers := []string{
+		"No",
+		"Nama Pohon",
+		"Review",
+		"Keterangan",
+		"User Pembuat",
+		"Waktu Review",
+	}
+
+	nomorKolom := []string{
+		"1",
+		"2",
+		"3",
+		"4",
+		"5",
+		"6",
+	}
+
+	// =========================
+	// HEADER TABEL
+	// =========================
 
 	pdf.SetFont("Arial", "B", 9)
 
+	// Header utama
 	for i, header := range headers {
-		pdf.CellFormat(colWidths[i], 10, header, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(
+			colWidths[i],
+			10,
+			header,
+			"1",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
 	}
 
 	pdf.Ln(-1)
 
-	// =========================
-	// DATA
-	// =========================
+	// Nomor referensi kolom
+	for i, nomor := range nomorKolom {
+		pdf.CellFormat(
+			colWidths[i],
+			6,
+			nomor,
+			"1",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+	}
+
+	pdf.Ln(-1)
 
 	pdf.SetFont("Arial", "", 8)
 
