@@ -33,12 +33,23 @@ func NewOutcomeMatrixServiceImpl(
 
 func toOutcomeMatrixResponse(data domain.OutcomeMatrix) outcomematrix.OutcomeMatrixResponse {
 	return outcomematrix.OutcomeMatrixResponse{
-		Id:              data.Id,
-		KodeSubkegiatan: data.KodeSubkegiatan,
-		Kode:            data.Kode,
-		Outcome:         data.Outcome,
-		CreatedAt:       data.CreatedAt,
-		UpdatedAt:       data.UpdatedAt,
+		Id:        data.Id,
+		KodeOpd:   data.KodeOpd,
+		Kode:      data.Kode,
+		Jenis:     data.Jenis,
+		Outcome:   data.Outcome,
+		CreatedAt: data.CreatedAt,
+		UpdatedAt: data.UpdatedAt,
+	}
+}
+
+func toOutcomeDomain(id int, kodeOpd, kode, jenis, outcome string) domain.OutcomeMatrix {
+	return domain.OutcomeMatrix{
+		Id:      id,
+		KodeOpd: strings.TrimSpace(kodeOpd),
+		Kode:    strings.TrimSpace(kode),
+		Jenis:   strings.TrimSpace(jenis),
+		Outcome: outcome,
 	}
 }
 
@@ -51,11 +62,7 @@ func (s *OutcomeMatrixServiceImpl) Create(ctx context.Context, request outcomema
 		return outcomematrix.OutcomeMatrixResponse{}, err
 	}
 	defer helper.CommitOrRollback(tx)
-	result, err := s.OutcomeMatrixRepository.Create(ctx, tx, domain.OutcomeMatrix{
-		KodeSubkegiatan: strings.TrimSpace(request.KodeSubkegiatan),
-		Kode:            strings.TrimSpace(request.Kode),
-		Outcome:         request.Outcome,
-	})
+	result, err := s.OutcomeMatrixRepository.Create(ctx, tx, toOutcomeDomain(0, request.KodeOpd, request.Kode, request.Jenis, request.Outcome))
 	if err != nil {
 		return outcomematrix.OutcomeMatrixResponse{}, err
 	}
@@ -74,12 +81,7 @@ func (s *OutcomeMatrixServiceImpl) Update(ctx context.Context, request outcomema
 	if _, err := s.OutcomeMatrixRepository.FindById(ctx, tx, request.Id); err != nil {
 		return outcomematrix.OutcomeMatrixResponse{}, fmt.Errorf("outcome matrix id %d tidak ditemukan", request.Id)
 	}
-	result, err := s.OutcomeMatrixRepository.Update(ctx, tx, domain.OutcomeMatrix{
-		Id:              request.Id,
-		KodeSubkegiatan: strings.TrimSpace(request.KodeSubkegiatan),
-		Kode:            strings.TrimSpace(request.Kode),
-		Outcome:         request.Outcome,
-	})
+	result, err := s.OutcomeMatrixRepository.Update(ctx, tx, toOutcomeDomain(request.Id, request.KodeOpd, request.Kode, request.Jenis, request.Outcome))
 	if err != nil {
 		return outcomematrix.OutcomeMatrixResponse{}, err
 	}
@@ -111,13 +113,13 @@ func (s *OutcomeMatrixServiceImpl) FindById(ctx context.Context, id int) (outcom
 	return toOutcomeMatrixResponse(result), nil
 }
 
-func (s *OutcomeMatrixServiceImpl) FindAll(ctx context.Context, kode, kodeSubkegiatan string) ([]outcomematrix.OutcomeMatrixResponse, error) {
+func (s *OutcomeMatrixServiceImpl) FindAll(ctx context.Context, kode, kodeOpd, jenis string) ([]outcomematrix.OutcomeMatrixResponse, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer helper.CommitOrRollback(tx)
-	list, err := s.OutcomeMatrixRepository.FindAll(ctx, tx, strings.TrimSpace(kode), strings.TrimSpace(kodeSubkegiatan))
+	list, err := s.OutcomeMatrixRepository.FindAll(ctx, tx, strings.TrimSpace(kode), strings.TrimSpace(kodeOpd), strings.TrimSpace(jenis))
 	if err != nil {
 		return nil, err
 	}
@@ -142,12 +144,7 @@ func (s *OutcomeMatrixServiceImpl) UpsertBatch(ctx context.Context, requests []o
 		if err := s.Validate.Struct(req); err != nil {
 			return nil, fmt.Errorf("item batch ke-%d tidak valid: %w", i+1, err)
 		}
-		data := domain.OutcomeMatrix{
-			Id:              req.Id,
-			KodeSubkegiatan: strings.TrimSpace(req.KodeSubkegiatan),
-			Kode:            strings.TrimSpace(req.Kode),
-			Outcome:         req.Outcome,
-		}
+		data := toOutcomeDomain(req.Id, req.KodeOpd, req.Kode, req.Jenis, req.Outcome)
 		var result domain.OutcomeMatrix
 		if req.Id > 0 {
 			if _, err := s.OutcomeMatrixRepository.FindById(ctx, tx, req.Id); err != nil {
