@@ -23,6 +23,17 @@ func NewReviewControllerImpl(reviewService service.ReviewService) *ReviewControl
 	}
 }
 
+// @Summary      Create Review Pohon Kinerja
+// @Description  Membuat review untuk pohon kinerja; id_pohon_kinerja diisi dari path pokinId. created_by diambil dari JWT.
+// @Tags         Review Pokin
+// @Accept       json
+// @Produce      json
+// @Param        pokinId  path  int  true  "ID pohon kinerja"
+// @Param        request  body  pohonkinerja.ReviewCreateRequest  true  "Payload review (id_pohon_kinerja dari path)"
+// @Success      201  {object}  web.WebResponse{data=pohonkinerja.ReviewResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_pokin/create/{pokinId} [post]
 func (controller *ReviewControllerImpl) Create(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	reviewCreateRequest := pohonkinerja.ReviewCreateRequest{}
 	helper.ReadFromRequestBody(request, &reviewCreateRequest)
@@ -52,6 +63,18 @@ func (controller *ReviewControllerImpl) Create(writer http.ResponseWriter, reque
 	})
 }
 
+// @Summary      Update Review Pohon Kinerja
+// @Description  Memperbarui review berdasarkan ID.
+// @Tags         Review Pokin
+// @Accept       json
+// @Produce      json
+// @Param        id       path  int  true  "ID review"
+// @Param        request  body  pohonkinerja.ReviewUpdateRequest  true  "Payload update review"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.ReviewResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_pokin/update/{id} [put]
 func (controller *ReviewControllerImpl) Update(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	paramId := params.ByName("id")
 	id, err := strconv.Atoi(paramId)
@@ -85,6 +108,15 @@ func (controller *ReviewControllerImpl) Update(writer http.ResponseWriter, reque
 	})
 }
 
+// @Summary      Delete Review Pohon Kinerja
+// @Description  Menghapus review berdasarkan ID.
+// @Tags         Review Pokin
+// @Produce      json
+// @Param        id  path  int  true  "ID review"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_pokin/delete/{id} [delete]
 func (controller *ReviewControllerImpl) Delete(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	paramId := params.ByName("id")
 	id, err := strconv.Atoi(paramId)
@@ -104,6 +136,16 @@ func (controller *ReviewControllerImpl) Delete(writer http.ResponseWriter, reque
 	})
 }
 
+// @Summary      Daftar Review per Pohon Kinerja
+// @Description  Mendapatkan semua review untuk satu pohon kinerja.
+// @Tags         Review Pokin
+// @Produce      json
+// @Param        pokin_id  path  int  true  "ID pohon kinerja"
+// @Success      200  {object}  web.WebResponse{data=[]pohonkinerja.ReviewResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_pokin/findall/{pokin_id} [get]
 func (controller *ReviewControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	pohonkinerjaId := params.ByName("pokin_id")
 	id, err := strconv.Atoi(pohonkinerjaId)
@@ -133,6 +175,16 @@ func (controller *ReviewControllerImpl) FindAll(writer http.ResponseWriter, requ
 	})
 }
 
+// @Summary      Detail Review Pohon Kinerja
+// @Description  Mendapatkan satu review berdasarkan ID.
+// @Tags         Review Pokin
+// @Produce      json
+// @Param        id  path  int  true  "ID review"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.ReviewResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_pokin/detail/{id} [get]
 func (controller *ReviewControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	paramId := params.ByName("id")
 	id, err := strconv.Atoi(paramId)
@@ -160,6 +212,15 @@ func (controller *ReviewControllerImpl) FindById(writer http.ResponseWriter, req
 	})
 }
 
+// @Summary      Daftar Review Tematik
+// @Description  Mendapatkan review yang dikelompokkan per tematik untuk tahun tertentu.
+// @Tags         Review Pokin
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]pohonkinerja.ReviewTematikResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_pokin/tematik/{tahun} [get]
 func (controller *ReviewControllerImpl) FindAllReviewByTematik(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	tahun := params.ByName("tahun")
 
@@ -179,6 +240,16 @@ func (controller *ReviewControllerImpl) FindAllReviewByTematik(writer http.Respo
 	})
 }
 
+// @Summary      Daftar Review OPD
+// @Description  Mendapatkan review pohon kinerja OPD berdasarkan kode OPD dan tahun.
+// @Tags         Review Pokin
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]pohonkinerja.ReviewOpdResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_pokin/opd/{kode_opd}/{tahun} [get]
 func (controller *ReviewControllerImpl) FindAllReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
@@ -199,6 +270,18 @@ func (controller *ReviewControllerImpl) FindAllReviewOpd(writer http.ResponseWri
 	})
 }
 
+// @Summary      Create Review Tujuan OPD
+// @Description  Membuat review untuk tujuan OPD; id_tujuan_opd dari path. id_pohon_kinerja default 0, jenis_pokin tidak perlu dikirim.
+// @Tags         Review Tujuan OPD
+// @Accept       json
+// @Produce      json
+// @Param        tujuanOpdId  path  int  true  "ID tujuan OPD"
+// @Param        request      body  pohonkinerja.ReviewTujuanOpdCreateRequest  true  "Payload review tujuan OPD"
+// @Success      201  {object}  web.WebResponse{data=pohonkinerja.ReviewTujuanOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_tujuan_opd/create/{tujuanOpdId} [post]
 func (controller *ReviewControllerImpl) CreateTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	req := pohonkinerja.ReviewTujuanOpdCreateRequest{}
 	helper.ReadFromRequestBody(request, &req)
@@ -227,6 +310,18 @@ func (controller *ReviewControllerImpl) CreateTujuanOpd(writer http.ResponseWrit
 	})
 }
 
+// @Summary      Update Review Tujuan OPD
+// @Description  Memperbarui review tujuan OPD berdasarkan ID review.
+// @Tags         Review Tujuan OPD
+// @Accept       json
+// @Produce      json
+// @Param        id       path  int  true  "ID review"
+// @Param        request  body  pohonkinerja.ReviewTujuanOpdUpdateRequest  true  "Payload update"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.ReviewTujuanOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_tujuan_opd/update/{id} [put]
 func (controller *ReviewControllerImpl) UpdateTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil {
@@ -251,6 +346,16 @@ func (controller *ReviewControllerImpl) UpdateTujuanOpd(writer http.ResponseWrit
 	})
 }
 
+// @Summary      Delete Review Tujuan OPD
+// @Description  Menghapus review tujuan OPD berdasarkan ID.
+// @Tags         Review Tujuan OPD
+// @Produce      json
+// @Param        id  path  int  true  "ID review"
+// @Success      200  {object}  web.WebResponse
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_tujuan_opd/delete/{id} [delete]
 func (controller *ReviewControllerImpl) DeleteTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil {
@@ -270,6 +375,16 @@ func (controller *ReviewControllerImpl) DeleteTujuanOpd(writer http.ResponseWrit
 	})
 }
 
+// @Summary      Daftar Review Tujuan OPD
+// @Description  Mendapatkan semua review untuk satu tujuan OPD.
+// @Tags         Review Tujuan OPD
+// @Produce      json
+// @Param        tujuan_opd_id  path  int  true  "ID tujuan OPD"
+// @Success      200  {object}  web.WebResponse{data=[]pohonkinerja.ReviewTujuanOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_tujuan_opd/findall/{tujuan_opd_id} [get]
 func (controller *ReviewControllerImpl) FindAllTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id, err := strconv.Atoi(params.ByName("tujuan_opd_id"))
 	if err != nil {
@@ -290,6 +405,16 @@ func (controller *ReviewControllerImpl) FindAllTujuanOpd(writer http.ResponseWri
 	})
 }
 
+// @Summary      Detail Review Tujuan OPD
+// @Description  Mendapatkan satu review tujuan OPD berdasarkan ID review.
+// @Tags         Review Tujuan OPD
+// @Produce      json
+// @Param        id  path  int  true  "ID review"
+// @Success      200  {object}  web.WebResponse{data=pohonkinerja.ReviewTujuanOpdResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /review_tujuan_opd/detail/{id} [get]
 func (controller *ReviewControllerImpl) FindByIdTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil {
