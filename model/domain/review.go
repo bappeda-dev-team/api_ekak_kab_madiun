@@ -8,6 +8,7 @@ type Review struct {
 	IdTujuanOpd    int
 	Review         string
 	Keterangan     string
+	Catatan        string
 	CreatedBy      string
 	Jenis_pokin    string
 	CreatedAt      time.Time

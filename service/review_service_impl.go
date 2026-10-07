@@ -352,6 +352,7 @@ func (service *ReviewServiceImpl) CreateTujuanOpd(ctx context.Context, request p
 		IdTujuanOpd:    request.IdTujuanOpd,
 		Review:         request.Review,
 		Keterangan:     request.Keterangan,
+		Catatan:        request.Catatan,
 		CreatedBy:      claims.Nip,
 	}
 
@@ -381,6 +382,7 @@ func (service *ReviewServiceImpl) UpdateTujuanOpd(ctx context.Context, request p
 		Id:         request.Id,
 		Review:     request.Review,
 		Keterangan: request.Keterangan,
+		Catatan:    request.Catatan,
 	})
 	if err != nil {
 		return pohonkinerja.ReviewTujuanOpdResponse{}, err

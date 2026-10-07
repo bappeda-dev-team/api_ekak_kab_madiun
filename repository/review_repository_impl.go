@@ -25,8 +25,8 @@ func (repository *ReviewRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, 
 }
 
 func (repository *ReviewRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
-	script := "UPDATE tb_review SET review = ?, keterangan = ? WHERE id = ?"
-	_, err := tx.ExecContext(ctx, script, review.Review, review.Keterangan, review.Id)
+	script := "UPDATE tb_review SET review = ?, keterangan = ?, catatan = ? WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, review.Review, review.Keterangan, review.Catatan, review.Id)
 	if err != nil {
 		return domain.Review{}, err
 	}
@@ -394,8 +394,8 @@ func (r *ReviewRepositoryImpl) CountReviewByPokinIdsBatch(ctx context.Context, t
 }
 
 func (repository *ReviewRepositoryImpl) CreateTujuanOpd(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
-	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, created_by, id_tujuan_opd) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, script, review.Id, 0, review.Review, review.Keterangan, review.CreatedBy, review.IdTujuanOpd)
+	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, catatan, created_by, id_tujuan_opd) VALUES (?, ?, ?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, review.Id, 0, review.Review, review.Keterangan, review.Catatan, review.CreatedBy, review.IdTujuanOpd)
 	if err != nil {
 		return domain.Review{}, err
 	}
