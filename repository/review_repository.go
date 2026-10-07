@@ -17,4 +17,8 @@ type ReviewRepository interface {
 	FindAllReviewOpd(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.ReviewOpd, error)
 	FindByPokinIdBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) ([]domain.ReviewWithNama, error)
 	CountReviewByPokinIdsBatch(ctx context.Context, tx *sql.Tx, pokinIds []int) (map[int]int, error)
+
+	CreateTujuanOpd(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error)
+	FindByTujuanOpd(ctx context.Context, tx *sql.Tx, idTujuanOpd int) ([]domain.Review, error)
+	FindByTujuanOpdIdsBatch(ctx context.Context, tx *sql.Tx, tujuanOpdIds []int) ([]domain.ReviewWithNama, error)
 }

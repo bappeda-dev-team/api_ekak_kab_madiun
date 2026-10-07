@@ -5,6 +5,7 @@ import "time"
 type Review struct {
 	Id             int
 	IdPohonKinerja int
+	IdTujuanOpd    int
 	Review         string
 	Keterangan     string
 	CreatedBy      string
@@ -55,4 +56,5 @@ type ReviewWithNama struct {
 	CreatedBy      string
 	NamaReviewer   string
 	Jenis_pokin    string
+	IdTujuanOpd    int
 }

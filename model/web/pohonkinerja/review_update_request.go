@@ -6,3 +6,9 @@ type ReviewUpdateRequest struct {
 	Review         string `json:"review"`
 	Keterangan     string `json:"keterangan"`
 }
+
+type ReviewTujuanOpdUpdateRequest struct {
+	Id         int    `json:"id"`
+	Review     string `json:"review"`
+	Keterangan string `json:"keterangan"`
+}

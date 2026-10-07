@@ -13,4 +13,10 @@ type ReviewService interface {
 	FindById(ctx context.Context, id int) (pohonkinerja.ReviewResponse, error)
 	FindAllReviewByTematik(ctx context.Context, tahun string) ([]pohonkinerja.ReviewTematikResponse, error)
 	FindAllReviewOpd(ctx context.Context, kodeOpd, tahun string) ([]pohonkinerja.ReviewOpdResponse, error)
+
+	CreateTujuanOpd(ctx context.Context, request pohonkinerja.ReviewTujuanOpdCreateRequest) (pohonkinerja.ReviewTujuanOpdResponse, error)
+	UpdateTujuanOpd(ctx context.Context, request pohonkinerja.ReviewTujuanOpdUpdateRequest) (pohonkinerja.ReviewTujuanOpdResponse, error)
+	DeleteTujuanOpd(ctx context.Context, id int) error
+	FindAllTujuanOpd(ctx context.Context, idTujuanOpd int) ([]pohonkinerja.ReviewTujuanOpdResponse, error)
+	FindByIdTujuanOpd(ctx context.Context, id int) (pohonkinerja.ReviewTujuanOpdResponse, error)
 }
