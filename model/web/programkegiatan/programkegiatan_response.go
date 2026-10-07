@@ -176,6 +176,7 @@ type UrusanV2Response struct {
 	Jenis        string                      `json:"jenis"`
 	Anggaran     []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
 	Indikator    []IndikatorPeriodResponse   `json:"indikator"`
+	Outcome      []OutcomeMatrixItemResponse `json:"outcome"`
 	BidangUrusan []BidangUrusanV2Response    `json:"bidang_urusan"`
 }
 
@@ -185,6 +186,7 @@ type BidangUrusanV2Response struct {
 	Jenis     string                      `json:"jenis"`
 	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
 	Indikator []IndikatorPeriodResponse   `json:"indikator"`
+	Outcome   []OutcomeMatrixItemResponse `json:"outcome"`
 	Program   []ProgramV2Response         `json:"program"`
 }
 
@@ -194,6 +196,7 @@ type ProgramV2Response struct {
 	Jenis     string                      `json:"jenis"`
 	Anggaran  []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
 	Indikator []IndikatorPeriodResponse   `json:"indikator"`
+	Outcome   []OutcomeMatrixItemResponse `json:"outcome"`
 	Kegiatan  []KegiatanV2Response        `json:"kegiatan"`
 }
 
@@ -203,6 +206,7 @@ type KegiatanV2Response struct {
 	Jenis       string                      `json:"jenis"`
 	Anggaran    []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
 	Indikator   []IndikatorPeriodResponse   `json:"indikator"`
+	Outcome     []OutcomeMatrixItemResponse `json:"outcome"`
 	SubKegiatan []SubKegiatanV2Response     `json:"subkegiatan"`
 }
 
@@ -214,6 +218,14 @@ type SubKegiatanV2Response struct {
 	NamaPegawai string                      `json:"nama_pegawai"`
 	Anggaran    []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
 	Indikator   []IndikatorPeriodResponse   `json:"indikator"`
+	Outcome     []OutcomeMatrixItemResponse `json:"outcome"`
+}
+
+type OutcomeMatrixItemResponse struct {
+	Id              int    `json:"id"`
+	KodeSubkegiatan string `json:"kode_subkegiatan"`
+	Kode            string `json:"kode"`
+	Outcome         string `json:"outcome"`
 }
 
 type IndikatorRenstraUpdateResponse struct {
