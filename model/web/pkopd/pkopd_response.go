@@ -138,6 +138,7 @@ type IndikatorPk struct {
 	IdIndikator string        `json:"id_indikator"`
 	Indikator   string        `json:"indikator"`
 	Targets     []TargetIndPk `json:"targets"`
+	Keterangan  string        `json:"keterangan,omitempty"`
 }
 
 type TargetIndPk struct {

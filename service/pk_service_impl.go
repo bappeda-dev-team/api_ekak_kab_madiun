@@ -1268,8 +1268,10 @@ func (service *PkServiceImpl) FindPkPenetapan(
 	}
 	// end validate
 	idRekins := make([]string, 0, len(pks))
+	idSasaranOpds := make([]int, 0)
 	for _, pk := range pks {
 		idRekins = append(idRekins, pk.IdRekinPemilikPk)
+		idSasaranOpds = append(idSasaranOpds, int(pk.SasaranOpdId))
 	}
 	indikatorRekins, err := service.pkRepository.IndikatorTargetPkByIdRekins(ctx, tx, idRekins)
 	if err != nil {
@@ -1279,6 +1281,12 @@ func (service *PkServiceImpl) FindPkPenetapan(
 	renaksiRekins, err := service.pkRepository.RenaksiPkByIdRekins(ctx, tx, idRekins)
 	if err != nil {
 		log.Printf("Error find renaksi pk penetapan: %v", err)
+		return nil, err
+	}
+	// KHUSUS LEVEL 1
+	indikatorSasaranOpd, err := service.pkRepository.IndikatorTargetSasaranOpd(ctx, tx, tahun, idSasaranOpds)
+	if err != nil {
+		log.Printf("Error find indikator sasaran opd: %v", err)
 		return nil, err
 	}
 
@@ -1304,6 +1312,26 @@ func (service *PkServiceImpl) FindPkPenetapan(
 					IdIndikator: ind.Id,
 					Indikator:   ind.Indikator,
 					Targets:     targets,
+				})
+		}
+		for _, indss := range indikatorSasaranOpd[int(pk.SasaranOpdId)] {
+			targets := make([]pkopd.TargetIndPk, 0)
+			for _, tar := range indss.Target {
+				targets = append(targets,
+					pkopd.TargetIndPk{
+						IdIndikator: tar.IndikatorId,
+						IdTarget:    tar.Id,
+						Target:      tar.Target,
+						Satuan:      tar.Satuan,
+					})
+			}
+			indikatorPks = append(indikatorPks,
+				pkopd.IndikatorPk{
+					IdRekin:     pk.IdRekinPemilikPk,
+					IdIndikator: indss.Id,
+					Indikator:   indss.Indikator,
+					Targets:     targets,
+					Keterangan:  "INDIKATOR SASARAN OPD",
 				})
 		}
 		// renaksi pk

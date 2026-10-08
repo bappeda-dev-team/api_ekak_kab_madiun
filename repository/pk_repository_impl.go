@@ -1165,3 +1165,103 @@ func (repository *PkRepositoryImpl) UpdatePkPegawais(
 
 	return nil
 }
+
+func (repository *PkRepositoryImpl) IndikatorTargetSasaranOpd(
+	ctx context.Context,
+	tx *sql.Tx,
+	tahun int,
+	sasaranOpdIds []int,
+) (map[int][]domain.Indikator, error) {
+	const op = "PkRepository.IndikatorTargetSasaranOpd"
+
+	if len(sasaranOpdIds) == 0 {
+		return map[int][]domain.Indikator{}, nil
+	}
+
+	baseQuery := `
+          SELECT ind.kode_indikator,
+                 ind.sasaran_opd_id,
+                 ind.indikator,
+                 ind.tahun,
+                 tgt.id as target_id,
+                 tgt.target,
+                 tgt.satuan,
+                 tgt.tahun as target_tahun
+          FROM tb_indikator_matrix ind
+	  LEFT JOIN tb_target tgt ON tgt.indikator_id = ind.kode_indikator
+          WHERE sasaran_opd_id IN (?) AND tgt.tahun = ?
+		  ORDER BY ind.id
+    `
+
+	query, args := helper.BuildInQueryWithArgs(baseQuery, sasaranOpdIds, tahun)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// sasaranOpdId -> indikatorId -> indikator
+	rekinMap := make(map[int]map[string]*domain.Indikator)
+
+	for rows.Next() {
+		var (
+			indId, indikator, tahun                        string
+			sasaranOpdId                                   int
+			targetId, target, satuan, tahunTarget, tahunNs sql.NullString
+		)
+
+		if err := rows.Scan(
+			&indId,
+			&sasaranOpdId,
+			&indikator,
+			&tahunNs,
+			&targetId,
+			&target,
+			&satuan,
+			&tahunTarget,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		// init rekinMap
+		if rekinMap[sasaranOpdId] == nil {
+			rekinMap[sasaranOpdId] = make(map[string]*domain.Indikator)
+		}
+		if rekinMap[sasaranOpdId][indId] == nil {
+			if tahunNs.Valid {
+				tahun = tahunNs.String
+			}
+			rekinMap[sasaranOpdId][indId] = &domain.Indikator{
+				Id:           indId,
+				SasaranOpdId: sasaranOpdId,
+				Indikator:    indikator,
+				Tahun:        tahun,
+				Target:       make([]domain.Target, 0),
+			}
+		}
+		if targetId.Valid {
+			rekinMap[sasaranOpdId][indId].Target = append(
+				rekinMap[sasaranOpdId][indId].Target,
+				domain.Target{
+					Id:          targetId.String,
+					IndikatorId: indId,
+					Target:      target.String,
+					Satuan:      satuan.String,
+					Tahun:       tahunTarget.String,
+				},
+			)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+	result := make(map[int][]domain.Indikator)
+	for rekinId, indikatorMap := range rekinMap {
+		for _, ind := range indikatorMap {
+			result[rekinId] = append(result[rekinId], *ind)
+		}
+	}
+
+	return result, nil
+}

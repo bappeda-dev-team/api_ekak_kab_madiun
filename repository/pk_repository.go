@@ -28,4 +28,6 @@ type PkRepository interface {
 	// INDIKATOR TARGET PENETAPAN
 	IndikatorRenjaByKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int) (map[string][]domain.IndikatorRenja, error)
 	UpdatePkPegawais(ctx context.Context, tx *sql.Tx, pks []domain.PkOpd) error
+	// INDIKATOR TARGET REKIN LEVEL 1 (KHUSUS)
+	IndikatorTargetSasaranOpd(ctx context.Context, tx *sql.Tx, tahun int, sasaranOpdIds []int) (map[int][]domain.Indikator, error)
 }

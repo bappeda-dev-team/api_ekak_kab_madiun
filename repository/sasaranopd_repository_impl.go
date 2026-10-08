@@ -1454,7 +1454,7 @@ func (r *SasaranOpdRepositoryImpl) FindSasaranByTahun(
 	kodeOpd, tahun, jenisPeriode, jenisIndikator string,
 ) ([]domain.SasaranOpd, error) {
 	jenisClause := ""
-	var args []interface{}
+	var args []any
 	// 1. Subquery indikator+target: INNER JOIN agar indikator hanya muncul jika punya target di tahun tsb
 	args = append(args, tahun) // tg.tahun = ?
 	if jenisIndikator != "" {
