@@ -11,6 +11,6 @@ type OutcomeMatrixRepository interface {
 	Update(ctx context.Context, tx *sql.Tx, data domain.OutcomeMatrix) (domain.OutcomeMatrix, error)
 	Delete(ctx context.Context, tx *sql.Tx, id int) error
 	FindById(ctx context.Context, tx *sql.Tx, id int) (domain.OutcomeMatrix, error)
-	FindAll(ctx context.Context, tx *sql.Tx, kode, kodeSubkegiatan string) ([]domain.OutcomeMatrix, error)
-	FindByKodes(ctx context.Context, tx *sql.Tx, kodes []string, kodeSubkegiatans []string) ([]domain.OutcomeMatrix, error)
+	FindAll(ctx context.Context, tx *sql.Tx, kode, kodeOpd, jenis string) ([]domain.OutcomeMatrix, error)
+	FindByKodeAndKodeOpd(ctx context.Context, tx *sql.Tx, kodes []string, kodeOpd string) ([]domain.OutcomeMatrix, error)
 }

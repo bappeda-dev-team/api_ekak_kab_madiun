@@ -170,6 +170,71 @@ definitions:
       nama_opd:
         type: string
     type: object
+  outcomematrix.OutcomeMatrixBatchItemRequest:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      outcome:
+        type: string
+    required:
+    - kode
+    - kode_opd
+    type: object
+  outcomematrix.OutcomeMatrixCreateRequest:
+    properties:
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      outcome:
+        type: string
+    required:
+    - kode
+    - kode_opd
+    - outcome
+    type: object
+  outcomematrix.OutcomeMatrixResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      outcome:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  outcomematrix.OutcomeMatrixUpdateRequest:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      outcome:
+        type: string
+    required:
+    - kode
+    - kode_opd
+    - outcome
+    type: object
   pohonkinerja.ControlPokinOpdData:
     properties:
       jumlah_pelaksana:
@@ -621,7 +686,7 @@ definitions:
       parent:
         type: integer
     type: object
-  pohonkinerja.ReviewResponse:
+  pohonkinerja.ReviewCreateRequest:
     properties:
       created_by:
         type: string
@@ -633,7 +698,133 @@ definitions:
         type: string
       keterangan:
         type: string
+      review:
+        type: string
+    type: object
+  pohonkinerja.ReviewDetailResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id_pohon:
+        type: integer
+      jenis_pohon:
+        type: string
+      keterangan:
+        type: string
+      level_pohon:
+        type: integer
+      nama_pohon:
+        type: string
+      parent:
+        type: integer
+      review:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  pohonkinerja.ReviewOpdResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id_pohon:
+        type: integer
+      jenis_pohon:
+        type: string
+      keterangan:
+        type: string
+      level_pohon:
+        type: integer
+      nama_pohon:
+        type: string
+      parent:
+        type: integer
+      review:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  pohonkinerja.ReviewResponse:
+    properties:
+      created_by:
+        type: string
+      id:
+        type: integer
+      id_pohon_kinerja:
+        type: integer
+      id_tujuan_opd:
+        type: integer
+      jenis_pokin:
+        type: string
+      keterangan:
+        type: string
       nama_pegawai:
+        type: string
+      review:
+        type: string
+    type: object
+  pohonkinerja.ReviewTematikResponse:
+    properties:
+      id_tematik:
+        type: integer
+      level_pohon:
+        type: integer
+      nama_pohon:
+        type: string
+      review:
+        items:
+          $ref: '#/definitions/pohonkinerja.ReviewDetailResponse'
+        type: array
+    type: object
+  pohonkinerja.ReviewTujuanOpdCreateRequest:
+    properties:
+      created_by:
+        type: string
+      id:
+        type: integer
+      id_tujuan_opd:
+        type: integer
+      keterangan:
+        type: string
+      review:
+        type: string
+    type: object
+  pohonkinerja.ReviewTujuanOpdResponse:
+    properties:
+      created_by:
+        type: string
+      id:
+        type: integer
+      id_pohon_kinerja:
+        type: integer
+      id_tujuan_opd:
+        type: integer
+      keterangan:
+        type: string
+      nama_pegawai:
+        type: string
+      review:
+        type: string
+    type: object
+  pohonkinerja.ReviewTujuanOpdUpdateRequest:
+    properties:
+      id:
+        type: integer
+      keterangan:
+        type: string
+      review:
+        type: string
+    type: object
+  pohonkinerja.ReviewUpdateRequest:
+    properties:
+      id:
+        type: integer
+      id_pohon_kinerja:
+        type: integer
+      keterangan:
         type: string
       review:
         type: string
@@ -840,12 +1031,15 @@ definitions:
       id:
         type: integer
       indikator:
-        description: Periode   PeriodeResponse           `json:"periode,omitempty"`
         items:
           $ref: '#/definitions/pohonkinerja.IndikatorTujuanResponse'
         type: array
       kode_opd:
         type: string
+      review:
+        items:
+          $ref: '#/definitions/pohonkinerja.ReviewTujuanOpdResponse'
+        type: array
       tujuan:
         type: string
     type: object
@@ -954,6 +1148,10 @@ definitions:
         type: string
       nama:
         type: string
+      outcome:
+        items:
+          $ref: '#/definitions/programkegiatan.OutcomeMatrixItemResponse'
+        type: array
       program:
         items:
           $ref: '#/definitions/programkegiatan.ProgramV2Response'
@@ -1082,23 +1280,6 @@ definitions:
       tahun:
         type: string
     type: object
-  programkegiatan.IndikatorRenstraV2CreateRequest:
-    properties:
-      indikator:
-        type: string
-      kode:
-        type: string
-      kode_indikator:
-        type: string
-      kode_opd:
-        type: string
-      tahun:
-        type: string
-      target:
-        items:
-          $ref: '#/definitions/programkegiatan.TargetCreateRequest'
-        type: array
-    type: object
   programkegiatan.IndikatorResponse:
     properties:
       id:
@@ -1148,25 +1329,6 @@ definitions:
       target:
         type: string
     type: object
-  programkegiatan.IndikatorV2UpsertResponse:
-    properties:
-      indikator:
-        type: string
-      jenis:
-        type: string
-      kode:
-        type: string
-      kode_indikator:
-        type: string
-      kode_opd:
-        type: string
-      tahun:
-        type: string
-      target:
-        items:
-          $ref: '#/definitions/programkegiatan.TargetResponse'
-        type: array
-    type: object
   programkegiatan.KegiatanResponse:
     properties:
       anggaran:
@@ -1208,10 +1370,27 @@ definitions:
         type: string
       nama:
         type: string
+      outcome:
+        items:
+          $ref: '#/definitions/programkegiatan.OutcomeMatrixItemResponse'
+        type: array
       subkegiatan:
         items:
           $ref: '#/definitions/programkegiatan.SubKegiatanV2Response'
         type: array
+    type: object
+  programkegiatan.OutcomeMatrixItemResponse:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      kode:
+        type: string
+      kode_opd:
+        type: string
+      outcome:
+        type: string
     type: object
   programkegiatan.PaguAnggaranTotalResponse:
     properties:
@@ -1267,6 +1446,10 @@ definitions:
         type: string
       nama:
         type: string
+      outcome:
+        items:
+          $ref: '#/definitions/programkegiatan.OutcomeMatrixItemResponse'
+        type: array
     type: object
   programkegiatan.SubKegiatanResponse:
     properties:
@@ -1315,20 +1498,11 @@ definitions:
         type: string
       nama_pegawai:
         type: string
+      outcome:
+        items:
+          $ref: '#/definitions/programkegiatan.OutcomeMatrixItemResponse'
+        type: array
       pegawai_id:
-        type: string
-    type: object
-  programkegiatan.TargetCreateRequest:
-    properties:
-      id:
-        type: string
-      indikator_id:
-        type: string
-      satuan:
-        type: string
-      tahun:
-        type: string
-      target:
         type: string
     type: object
   programkegiatan.TargetRenstraUpsertRequest:
@@ -1349,6 +1523,8 @@ definitions:
       id:
         type: string
       indikator_id:
+        type: string
+      jenis:
         type: string
       satuan:
         type: string
@@ -1438,6 +1614,10 @@ definitions:
         type: string
       nama:
         type: string
+      outcome:
+        items:
+          $ref: '#/definitions/programkegiatan.OutcomeMatrixItemResponse'
+        type: array
     type: object
   rencanakinerja.DataOutput:
     properties:
@@ -3517,44 +3697,6 @@ paths:
       summary: Upsert Anggaran Renstra
       tags:
       - Matrix Renstra
-  /matrix_renstra/indikator/create:
-    post:
-      consumes:
-      - application/json
-      description: Membuat satu atau lebih indikator. Setiap indikator boleh punya
-        banyak target dengan tahun yang berbeda.
-      parameters:
-      - description: Array indikator beserta target per tahun
-        in: body
-        name: request
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/programkegiatan.IndikatorRenstraV2CreateRequest'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/web.WebResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/programkegiatan.IndikatorV2UpsertResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/web.WebResponse'
-      security:
-      - BearerAuth: []
-      summary: Create Indikator Renstra (multi target)
-      tags:
-      - Matrix Renstra
   /matrix_renstra/indikator/delete/{kode_indikator}:
     delete:
       consumes:
@@ -3786,6 +3928,211 @@ paths:
       summary: Matrix Renstra Versi Kedua
       tags:
       - Matrix Renstra
+  /outcome_matrix:
+    get:
+      description: Mendapatkan daftar outcome matrix; filter opsional kode, kode_opd,
+        dan jenis (query kosong = tanpa filter field tersebut).
+      parameters:
+      - description: Filter kode hierarki (urusan/program/kegiatan/subkegiatan)
+        in: query
+        name: kode
+        type: string
+      - description: Filter kode OPD
+        in: query
+        name: kode_opd
+        type: string
+      - description: Filter jenis
+        in: query
+        name: jenis
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/outcomematrix.OutcomeMatrixResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Outcome Matrix
+      tags:
+      - Outcome Matrix
+  /outcome_matrix/batch:
+    post:
+      consumes:
+      - application/json
+      description: id = 0 atau kosong untuk create; id > 0 untuk update baris yang
+        sudah ada.
+      parameters:
+      - description: Array item outcome matrix
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/outcomematrix.OutcomeMatrixBatchItemRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/outcomematrix.OutcomeMatrixResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Batch Outcome Matrix
+      tags:
+      - Outcome Matrix
+  /outcome_matrix/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat data outcome matrix baru (kode OPD, kode hierarki, jenis,
+        outcome).
+      parameters:
+      - description: Payload create outcome matrix
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/outcomematrix.OutcomeMatrixCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/outcomematrix.OutcomeMatrixResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Outcome Matrix
+      tags:
+      - Outcome Matrix
+  /outcome_matrix/delete/{id}:
+    delete:
+      description: Menghapus outcome matrix berdasarkan ID.
+      parameters:
+      - description: ID outcome matrix
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Outcome Matrix
+      tags:
+      - Outcome Matrix
+  /outcome_matrix/detail/{id}:
+    get:
+      description: Mendapatkan satu outcome matrix berdasarkan ID.
+      parameters:
+      - description: ID outcome matrix
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/outcomematrix.OutcomeMatrixResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Detail Outcome Matrix
+      tags:
+      - Outcome Matrix
+  /outcome_matrix/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui outcome matrix berdasarkan ID path.
+      parameters:
+      - description: ID outcome matrix
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Payload update outcome matrix
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/outcomematrix.OutcomeMatrixUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/outcomematrix.OutcomeMatrixResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Outcome Matrix
+      tags:
+      - Outcome Matrix
   /pohon_kinerja/pilih_parent/{kode_opd}/{tahun}/{level_pohon}:
     get:
       consumes:
@@ -4141,6 +4488,437 @@ paths:
       summary: Find All Rekin Level 1
       tags:
       - Rencana Kinerja
+  /review_pokin/create/{pokinId}:
+    post:
+      consumes:
+      - application/json
+      description: Membuat review untuk pohon kinerja; id_pohon_kinerja diisi dari
+        path pokinId. created_by diambil dari JWT.
+      parameters:
+      - description: ID pohon kinerja
+        in: path
+        name: pokinId
+        required: true
+        type: integer
+      - description: Payload review (id_pohon_kinerja dari path)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.ReviewCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ReviewResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Review Pohon Kinerja
+      tags:
+      - Review Pokin
+  /review_pokin/delete/{id}:
+    delete:
+      description: Menghapus review berdasarkan ID.
+      parameters:
+      - description: ID review
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Review Pohon Kinerja
+      tags:
+      - Review Pokin
+  /review_pokin/detail/{id}:
+    get:
+      description: Mendapatkan satu review berdasarkan ID.
+      parameters:
+      - description: ID review
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ReviewResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Detail Review Pohon Kinerja
+      tags:
+      - Review Pokin
+  /review_pokin/findall/{pokin_id}:
+    get:
+      description: Mendapatkan semua review untuk satu pohon kinerja.
+      parameters:
+      - description: ID pohon kinerja
+        in: path
+        name: pokin_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/pohonkinerja.ReviewResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Review per Pohon Kinerja
+      tags:
+      - Review Pokin
+  /review_pokin/opd/{kode_opd}/{tahun}:
+    get:
+      description: Mendapatkan review pohon kinerja OPD berdasarkan kode OPD dan tahun.
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/pohonkinerja.ReviewOpdResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Review OPD
+      tags:
+      - Review Pokin
+  /review_pokin/tematik/{tahun}:
+    get:
+      description: Mendapatkan review yang dikelompokkan per tematik untuk tahun tertentu.
+      parameters:
+      - description: Tahun
+        example: '"2025"'
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/pohonkinerja.ReviewTematikResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Review Tematik
+      tags:
+      - Review Pokin
+  /review_pokin/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui review berdasarkan ID.
+      parameters:
+      - description: ID review
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Payload update review
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.ReviewUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ReviewResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Review Pohon Kinerja
+      tags:
+      - Review Pokin
+  /review_tujuan_opd/create/{tujuanOpdId}:
+    post:
+      consumes:
+      - application/json
+      description: Membuat review untuk tujuan OPD; id_tujuan_opd dari path. id_pohon_kinerja
+        default 0, jenis_pokin tidak perlu dikirim.
+      parameters:
+      - description: ID tujuan OPD
+        in: path
+        name: tujuanOpdId
+        required: true
+        type: integer
+      - description: Payload review tujuan OPD
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.ReviewTujuanOpdCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ReviewTujuanOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Create Review Tujuan OPD
+      tags:
+      - Review Tujuan OPD
+  /review_tujuan_opd/delete/{id}:
+    delete:
+      description: Menghapus review tujuan OPD berdasarkan ID.
+      parameters:
+      - description: ID review
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Review Tujuan OPD
+      tags:
+      - Review Tujuan OPD
+  /review_tujuan_opd/detail/{id}:
+    get:
+      description: Mendapatkan satu review tujuan OPD berdasarkan ID review.
+      parameters:
+      - description: ID review
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ReviewTujuanOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Detail Review Tujuan OPD
+      tags:
+      - Review Tujuan OPD
+  /review_tujuan_opd/findall/{tujuan_opd_id}:
+    get:
+      description: Mendapatkan semua review untuk satu tujuan OPD.
+      parameters:
+      - description: ID tujuan OPD
+        in: path
+        name: tujuan_opd_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/pohonkinerja.ReviewTujuanOpdResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Review Tujuan OPD
+      tags:
+      - Review Tujuan OPD
+  /review_tujuan_opd/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui review tujuan OPD berdasarkan ID review.
+      parameters:
+      - description: ID review
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Payload update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pohonkinerja.ReviewTujuanOpdUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/pohonkinerja.ReviewTujuanOpdResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Review Tujuan OPD
+      tags:
+      - Review Tujuan OPD
   /sasaran_opd/create:
     post:
       consumes:
