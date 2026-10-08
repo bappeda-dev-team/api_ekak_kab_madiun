@@ -3,6 +3,7 @@ package datamaster
 type RbLaporanTahunanResponse struct {
 	IdRB          int             `json:"id"`
 	JenisRB       string          `json:"jenis_rb"`
+	TemaRB        string          `json:"tema_rb"`
 	KegiatanUtama string          `json:"kegiatan_utama"`
 	Keterangan    string          `json:"keterangan"`
 	TahunBaseline int             `json:"tahun_baseline"`
@@ -23,6 +24,8 @@ type RencanaAksiRB struct {
 	NamaPelaksana   string                   `json:"nama_pelaksana"`
 	Subkegiatan     SubkegiatanRB            `json:"subkegiatan"`
 	OpdCrosscutting []OpdCrosscutting        `json:"opd_crosscuttings"`
+	GambaranUmum    []GambaranUmumRB         `json:"gambaran_umums"`
+	Permasalahans   []PermasalahanRB         `json:"permasalahans"`
 }
 
 type SubkegiatanRB struct {
@@ -53,4 +56,18 @@ type OpdCrosscutting struct {
 type PelaksanaCrosscutting struct {
 	NipPelaksana  string `json:"nip_pelaksana"`
 	NamaPelaksana string `json:"nama_pelaksana"`
+}
+
+type GambaranUmumRB struct {
+	Id string `json:"id"`
+	// REKIN ID
+	IdRencanaAksi string `json:"id_rencana_aksi"`
+	GambaranUmum  string `json:"gambaran_umum"`
+}
+
+type PermasalahanRB struct {
+	Id string `json:"id"`
+	// REKIN ID
+	IdRencanaAksi string `json:"id_rencana_aksi"`
+	Permasalahan  string `json:"permasalahan"`
 }

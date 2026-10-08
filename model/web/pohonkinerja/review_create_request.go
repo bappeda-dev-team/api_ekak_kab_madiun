@@ -8,3 +8,12 @@ type ReviewCreateRequest struct {
 	CreatedBy      string `json:"created_by"`
 	JenisPokin     string `json:"jenis_pokin"`
 }
+
+type ReviewTujuanOpdCreateRequest struct {
+	Id          int    `json:"id"`
+	IdTujuanOpd int    `json:"id_tujuan_opd"`
+	Review      string `json:"review"`
+	Keterangan  string `json:"keterangan"`
+	Catatan     string `json:"catatan"`
+	CreatedBy   string `json:"created_by"`
+}

@@ -308,3 +308,139 @@ func (service *ReviewServiceImpl) FindAllReviewOpd(ctx context.Context, kodeOpd,
 
 	return reviewResponses, nil
 }
+
+func toReviewTujuanOpdResponse(review domain.Review, namaPegawai string) pohonkinerja.ReviewTujuanOpdResponse {
+	return pohonkinerja.ReviewTujuanOpdResponse{
+		Id:             review.Id,
+		IdTujuanOpd:    review.IdTujuanOpd,
+		IdPohonKinerja: review.IdPohonKinerja,
+		Review:         review.Review,
+		Keterangan:     review.Keterangan,
+		CreatedBy:      review.CreatedBy,
+		NamaPegawai:    namaPegawai,
+	}
+}
+
+func (service *ReviewServiceImpl) CreateTujuanOpd(ctx context.Context, request pohonkinerja.ReviewTujuanOpdCreateRequest) (pohonkinerja.ReviewTujuanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, err
+	}
+	defer tx.Rollback()
+
+	claims, ok := ctx.Value(helper.UserInfoKey).(web.JWTClaim)
+	if !ok {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, errors.New("unauthorized: invalid user info in context")
+	}
+	if claims.Nip == "" {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, errors.New("unauthorized: NIP tidak ditemukan")
+	}
+	if request.IdTujuanOpd <= 0 {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, errors.New("id_tujuan_opd harus diisi")
+	}
+
+	randomId := rand.Intn(1000000)
+	_, err = service.ReviewRepository.FindById(ctx, tx, randomId)
+	for err == nil {
+		randomId = rand.Intn(1000000)
+		_, err = service.ReviewRepository.FindById(ctx, tx, randomId)
+	}
+
+	review := domain.Review{
+		Id:             randomId,
+		IdPohonKinerja: 0,
+		IdTujuanOpd:    request.IdTujuanOpd,
+		Review:         request.Review,
+		Keterangan:     request.Keterangan,
+		Catatan:        request.Catatan,
+		CreatedBy:      claims.Nip,
+	}
+
+	result, err := service.ReviewRepository.CreateTujuanOpd(ctx, tx, review)
+	if err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, err
+	}
+	return toReviewTujuanOpdResponse(result, ""), nil
+}
+
+func (service *ReviewServiceImpl) UpdateTujuanOpd(ctx context.Context, request pohonkinerja.ReviewTujuanOpdUpdateRequest) (pohonkinerja.ReviewTujuanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, err
+	}
+	defer tx.Rollback()
+
+	existing, err := service.ReviewRepository.FindById(ctx, tx, request.Id)
+	if err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, errors.New("review tidak ditemukan")
+	}
+
+	result, err := service.ReviewRepository.Update(ctx, tx, domain.Review{
+		Id:         request.Id,
+		Review:     request.Review,
+		Keterangan: request.Keterangan,
+		Catatan:    request.Catatan,
+	})
+	if err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, err
+	}
+	result.IdPohonKinerja = existing.IdPohonKinerja
+	result.IdTujuanOpd = existing.IdTujuanOpd
+	result.CreatedBy = existing.CreatedBy
+	return toReviewTujuanOpdResponse(result, ""), nil
+}
+
+func (service *ReviewServiceImpl) DeleteTujuanOpd(ctx context.Context, id int) error {
+	return service.Delete(ctx, id)
+}
+
+func (service *ReviewServiceImpl) FindAllTujuanOpd(ctx context.Context, idTujuanOpd int) ([]pohonkinerja.ReviewTujuanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	reviews, err := service.ReviewRepository.FindByTujuanOpd(ctx, tx, idTujuanOpd)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]pohonkinerja.ReviewTujuanOpdResponse, 0, len(reviews))
+	for _, review := range reviews {
+		namaPegawai := ""
+		if review.CreatedBy != "" {
+			if pegawai, errPegawai := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy); errPegawai == nil {
+				namaPegawai = pegawai.NamaPegawai
+			}
+		}
+		responses = append(responses, toReviewTujuanOpdResponse(review, namaPegawai))
+	}
+	return responses, nil
+}
+
+func (service *ReviewServiceImpl) FindByIdTujuanOpd(ctx context.Context, id int) (pohonkinerja.ReviewTujuanOpdResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	review, err := service.ReviewRepository.FindById(ctx, tx, id)
+	if err != nil {
+		return pohonkinerja.ReviewTujuanOpdResponse{}, errors.New("review tidak ditemukan")
+	}
+	namaPegawai := ""
+	if review.CreatedBy != "" {
+		if pegawai, errPegawai := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy); errPegawai == nil {
+			namaPegawai = pegawai.NamaPegawai
+		}
+	}
+	return toReviewTujuanOpdResponse(review, namaPegawai), nil
+}

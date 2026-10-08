@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
@@ -13,18 +14,22 @@ import (
 )
 
 type DataMasterServiceImpl struct {
-	DataMasterRepository      repository.DataMasterRepository
-	RencanaKinerjaRepository  repository.RencanaKinerjaRepository
-	CrosscuttingOpdRepository repository.CrosscuttingOpdRepository
-	DB                        *sql.DB
+	DataMasterRepository        repository.DataMasterRepository
+	RencanaKinerjaRepository    repository.RencanaKinerjaRepository
+	CrosscuttingOpdRepository   repository.CrosscuttingOpdRepository
+	GambaranUmumRepository      repository.GambaranUmumRepository
+	PermasalahanRekinRepository repository.PermasalahanRekinRepository
+	DB                          *sql.DB
 }
 
-func NewDataMasterServiceImpl(dataMasterRepository repository.DataMasterRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, DB *sql.DB) *DataMasterServiceImpl {
+func NewDataMasterServiceImpl(dataMasterRepository repository.DataMasterRepository, rencanaKinerjaRepository repository.RencanaKinerjaRepository, crosscuttingOpdRepository repository.CrosscuttingOpdRepository, gambaranUmumRepository repository.GambaranUmumRepository, permasalahanRekinRepository repository.PermasalahanRekinRepository, DB *sql.DB) *DataMasterServiceImpl {
 	return &DataMasterServiceImpl{
-		DataMasterRepository:      dataMasterRepository,
-		RencanaKinerjaRepository:  rencanaKinerjaRepository,
-		CrosscuttingOpdRepository: crosscuttingOpdRepository,
-		DB:                        DB,
+		DataMasterRepository:        dataMasterRepository,
+		RencanaKinerjaRepository:    rencanaKinerjaRepository,
+		CrosscuttingOpdRepository:   crosscuttingOpdRepository,
+		GambaranUmumRepository:      gambaranUmumRepository,
+		PermasalahanRekinRepository: permasalahanRekinRepository,
+		DB:                          DB,
 	}
 }
 
@@ -52,6 +57,7 @@ func (service *DataMasterServiceImpl) DataRBByTahun(ctx context.Context, tahunBa
 		resp := datamaster.RBResponse{
 			IdRB:          rb.Id,
 			JenisRB:       rb.JenisRB,
+			TemaRB:        rb.TemaRB,
 			KegiatanUtama: rb.KegiatanUtama,
 			Keterangan:    rb.Keterangan,
 			TahunBaseline: rb.TahunBaseline,
@@ -125,6 +131,7 @@ func (service *DataMasterServiceImpl) SaveRB(ctx context.Context, rb datamaster.
 	response := datamaster.RBResponse{
 		IdRB:          int(rbID),
 		JenisRB:       entity.JenisRB,
+		TemaRB:        entity.TemaRB,
 		KegiatanUtama: entity.KegiatanUtama,
 		Keterangan:    entity.Keterangan,
 		TahunBaseline: entity.TahunBaseline,
@@ -208,6 +215,7 @@ func (service *DataMasterServiceImpl) UpdateRB(ctx context.Context, rb datamaste
 	response := datamaster.RBResponse{
 		IdRB:          rbId,
 		JenisRB:       entity.JenisRB,
+		TemaRB:        entity.TemaRB,
 		KegiatanUtama: entity.KegiatanUtama,
 		Keterangan:    entity.Keterangan,
 		TahunBaseline: entity.TahunBaseline,
@@ -288,6 +296,7 @@ func (service *DataMasterServiceImpl) FindByTahun(ctx context.Context, tahunBase
 		resp := datamaster.RbResponseTahunan{
 			IdRB:          rb.Id,
 			JenisRB:       rb.JenisRB,
+			TemaRB:        rb.TemaRB,
 			KegiatanUtama: rb.KegiatanUtama,
 			Keterangan:    rb.Keterangan,
 			TahunBaseline: rb.TahunBaseline,
@@ -324,6 +333,7 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 		resp := datamaster.RbLaporanTahunanResponse{
 			IdRB:          rb.Id,
 			JenisRB:       rb.JenisRB,
+			TemaRB:        rb.TemaRB,
 			KegiatanUtama: rb.KegiatanUtama,
 			Keterangan:    rb.Keterangan,
 			TahunBaseline: rb.TahunBaseline,
@@ -407,6 +417,34 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 	subkegiatanRekin, err := service.RencanaKinerjaRepository.FindSubkegiatanRekinByIds(ctx, tx, rekinIds)
 	if err != nil {
 		return nil, err
+	}
+
+	gambaranUmumRekins, err := service.GambaranUmumRepository.FindByRekinIds(ctx, tx, rekinIds)
+	if err != nil {
+		return nil, err
+	}
+	gambaranUmumByRekin := make(map[string][]datamaster.GambaranUmumRB)
+	for _, gbu := range gambaranUmumRekins {
+		gambaranUmumByRekin[gbu.RekinId] = append(gambaranUmumByRekin[gbu.RekinId],
+			datamaster.GambaranUmumRB{
+				Id:            gbu.Id,
+				IdRencanaAksi: gbu.RekinId,
+				GambaranUmum:  gbu.GambaranUmum,
+			})
+	}
+
+	permasalahanRekins, err := service.PermasalahanRekinRepository.FindByRekinIds(ctx, tx, rekinIds)
+	if err != nil {
+		return nil, err
+	}
+	permasalahanByRekin := make(map[string][]datamaster.PermasalahanRB)
+	for _, pr := range permasalahanRekins {
+		permasalahanByRekin[pr.RekinId] = append(permasalahanByRekin[pr.RekinId],
+			datamaster.PermasalahanRB{
+				Id:            strconv.Itoa(pr.Id),
+				IdRencanaAksi: pr.RekinId,
+				Permasalahan:  pr.Permasalahan,
+			})
 	}
 
 	crossRows, err := service.CrosscuttingOpdRepository.FindCrosscuttingByPohonIdsFrom(ctx, tx, uniquePohonIdsInRekin)
@@ -493,6 +531,8 @@ func (service *DataMasterServiceImpl) LaporanByTahun(ctx context.Context, tahunN
 			NipPelaksana:    rekin.PegawaiId,
 			NamaPelaksana:   rekin.NamaPegawai,
 			OpdCrosscutting: crossMap[rekin.IdPohon],
+			GambaranUmum:    gambaranUmumByRekin[rekin.Id],
+			Permasalahans:   permasalahanByRekin[rekin.Id],
 			Subkegiatan:     subkegiatan,
 		}
 

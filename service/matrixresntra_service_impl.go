@@ -17,6 +17,7 @@ import (
 
 type MatrixRenstraServiceImpl struct {
 	MatrixRenstraRepository repository.MatrixRenstraRepository
+	OutcomeMatrixRepository repository.OutcomeMatrixRepository
 	PeriodeRepository       repository.PeriodeRepository
 	PegawaiRepository       repository.PegawaiRepository
 	DB                      *sql.DB
@@ -24,12 +25,14 @@ type MatrixRenstraServiceImpl struct {
 
 func NewMatrixRenstraServiceImpl(
 	matrixRenstraRepository repository.MatrixRenstraRepository,
+	outcomeMatrixRepository repository.OutcomeMatrixRepository,
 	periodeRepository repository.PeriodeRepository,
 	pegawaiRepository repository.PegawaiRepository,
 	db *sql.DB,
 ) *MatrixRenstraServiceImpl {
 	return &MatrixRenstraServiceImpl{
 		MatrixRenstraRepository: matrixRenstraRepository,
+		OutcomeMatrixRepository: outcomeMatrixRepository,
 		PeriodeRepository:       periodeRepository,
 		PegawaiRepository:       pegawaiRepository,
 		DB:                      db,
@@ -203,6 +206,31 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 	if err != nil {
 		return nil, err
 	}
+	kodes := make([]string, 0)
+	kodeSubkegiatans := make([]string, 0)
+	seenKode := make(map[string]struct{})
+	seenKodeSubkeg := make(map[string]struct{})
+	for _, item := range data {
+		for _, kode := range []string{item.KodeUrusan, item.KodeBidangUrusan, item.KodeProgram, item.KodeKegiatan, item.KodeSubKegiatan} {
+			if kode == "" {
+				continue
+			}
+			if _, ok := seenKode[kode]; !ok {
+				seenKode[kode] = struct{}{}
+				kodes = append(kodes, kode)
+			}
+		}
+		if item.KodeSubKegiatan != "" {
+			if _, ok := seenKodeSubkeg[item.KodeSubKegiatan]; !ok {
+				seenKodeSubkeg[item.KodeSubKegiatan] = struct{}{}
+				kodeSubkegiatans = append(kodeSubkegiatans, item.KodeSubKegiatan)
+			}
+		}
+	}
+	outcomeList, err := service.OutcomeMatrixRepository.FindByKodes(ctx, tx, kodes, kodeSubkegiatans)
+	if err != nil {
+		return nil, err
+	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -299,6 +327,38 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 		}
 
 		return result
+	}
+
+	// Outcome tidak terikat tahun: tampil di seluruh periode selama kode + kode_subkegiatan cocok.
+	type outcomeKey struct {
+		kode            string
+		kodeSubkegiatan string
+	}
+	outcomeByPair := make(map[outcomeKey][]programkegiatan.OutcomeMatrixItemResponse)
+	outcomeByKode := make(map[string][]programkegiatan.OutcomeMatrixItemResponse)
+	for _, oc := range outcomeList {
+		item := programkegiatan.OutcomeMatrixItemResponse{
+			Id:              oc.Id,
+			KodeSubkegiatan: oc.KodeSubkegiatan,
+			Kode:            oc.Kode,
+			Outcome:         oc.Outcome,
+		}
+		outcomeByPair[outcomeKey{kode: oc.Kode, kodeSubkegiatan: oc.KodeSubkegiatan}] = append(
+			outcomeByPair[outcomeKey{kode: oc.Kode, kodeSubkegiatan: oc.KodeSubkegiatan}], item,
+		)
+		outcomeByKode[oc.Kode] = append(outcomeByKode[oc.Kode], item)
+	}
+	getOutcome := func(kode, kodeSubkegiatan string) []programkegiatan.OutcomeMatrixItemResponse {
+		if kodeSubkegiatan != "" {
+			if list := outcomeByPair[outcomeKey{kode: kode, kodeSubkegiatan: kodeSubkegiatan}]; list != nil {
+				return list
+			}
+			return []programkegiatan.OutcomeMatrixItemResponse{}
+		}
+		if list := outcomeByKode[kode]; list != nil {
+			return list
+		}
+		return []programkegiatan.OutcomeMatrixItemResponse{}
 	}
 
 	buildAnggaran := func(paguByTahun map[string]int64) []programkegiatan.PaguAnggaranTotalResponse {
@@ -437,6 +497,7 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			Jenis:        "urusans",
 			Anggaran:     buildAnggaran(sumPaguSubkeg(allSubkegByUrusan(kodeUrusan))),
 			Indikator:    getIndikator(kodeUrusan),
+			Outcome:      getOutcome(kodeUrusan, ""),
 			BidangUrusan: make([]programkegiatan.BidangUrusanV2Response, 0),
 		}
 		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
@@ -447,6 +508,7 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 				Jenis:     "bidang_urusans",
 				Anggaran:  buildAnggaran(sumPaguSubkeg(allSubkegByBidang(kodeBidang))),
 				Indikator: getIndikator(kodeBidang),
+				Outcome:   getOutcome(kodeBidang, ""),
 				Program:   make([]programkegiatan.ProgramV2Response, 0),
 			}
 			for _, kodePrg := range prgByBidang[kodeBidang] {
@@ -457,6 +519,7 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 					Jenis:     "programs",
 					Anggaran:  buildAnggaran(sumPaguSubkeg(allSubkegByPrg(kodePrg))),
 					Indikator: getIndikator(kodePrg),
+					Outcome:   getOutcome(kodePrg, ""),
 					Kegiatan:  make([]programkegiatan.KegiatanV2Response, 0),
 				}
 				for _, kodeKeg := range kegByPrg[kodePrg] {
@@ -467,6 +530,7 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 						Jenis:       "kegiatans",
 						Anggaran:    buildAnggaran(sumPaguSubkeg(allSubkegByKeg(kodeKeg))),
 						Indikator:   getIndikator(kodeKeg),
+						Outcome:     getOutcome(kodeKeg, ""),
 						SubKegiatan: make([]programkegiatan.SubKegiatanV2Response, 0),
 					}
 					for _, kodeSubkeg := range subkegByKeg[kodeKeg] {
@@ -479,6 +543,7 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 							NamaPegawai: sd.namaPegawai,
 							Anggaran:    buildAnggaran(paguSubkegByTahun[kodeSubkeg]),
 							Indikator:   getIndikator(kodeSubkeg),
+							Outcome:     getOutcome(kodeSubkeg, kodeSubkeg),
 						})
 					}
 					prgResp.Kegiatan = append(prgResp.Kegiatan, kegResp)
