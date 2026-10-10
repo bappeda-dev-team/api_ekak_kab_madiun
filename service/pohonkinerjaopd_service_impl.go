@@ -1168,6 +1168,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 				IdPohonKinerja: review.IdPohonKinerja,
 				Review:         review.Review,
 				Keterangan:     review.Keterangan,
+				Catatan:        review.Catatan,
 				CreatedBy:      review.CreatedBy,
 				NamaPegawai:    review.NamaReviewer,
 			})

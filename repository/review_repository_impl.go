@@ -456,6 +456,7 @@ func (repository *ReviewRepositoryImpl) FindByTujuanOpdIdsBatch(ctx context.Cont
 			COALESCE(r.id_tujuan_opd, 0) as id_tujuan_opd,
 			r.review,
 			r.keterangan,
+			r.catatan,
 			r.created_by,
 			COALESCE(p.nama, '') as nama_reviewer,
 			COALESCE(r.jenis_pokin, '') as jenis_pokin
@@ -480,6 +481,7 @@ func (repository *ReviewRepositoryImpl) FindByTujuanOpdIdsBatch(ctx context.Cont
 			&review.IdTujuanOpd,
 			&review.Review,
 			&review.Keterangan,
+			&review.Catatan,
 			&review.CreatedBy,
 			&review.NamaReviewer,
 			&review.Jenis_pokin,

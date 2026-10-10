@@ -54,6 +54,7 @@ type ReviewWithNama struct {
 	IdPohonKinerja int
 	Review         string
 	Keterangan     string
+	Catatan        string
 	CreatedBy      string
 	NamaReviewer   string
 	Jenis_pokin    string
