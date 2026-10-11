@@ -1189,7 +1189,7 @@ func (repository *PkRepositoryImpl) IndikatorTargetSasaranOpd(
                  tgt.tahun as target_tahun
           FROM tb_indikator_matrix ind
 	  LEFT JOIN tb_target tgt ON tgt.indikator_id = ind.kode_indikator
-          WHERE sasaran_opd_id IN (?) AND tgt.tahun = ?
+          WHERE sasaran_opd_id IN (?) AND tgt.tahun = ? AND ind.jenis = 'penetapan'
 		  ORDER BY ind.id
     `
 
