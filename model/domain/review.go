@@ -11,6 +11,7 @@ type Review struct {
 	Catatan        string
 	CreatedBy      string
 	Jenis_pokin    string
+	Tahun          int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

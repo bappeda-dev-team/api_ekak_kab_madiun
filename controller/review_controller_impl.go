@@ -434,3 +434,25 @@ func (controller *ReviewControllerImpl) FindByIdTujuanOpd(writer http.ResponseWr
 		Code: http.StatusOK, Status: "success get review tujuan opd", Data: resp,
 	})
 }
+
+func (controller *ReviewControllerImpl) FindAllLaporanTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+
+	kodeOpd := params.ByName("kode_opd")
+
+	ReviewTujuanOpdResponses, err := controller.ReviewService.FindAllLaporanTujuanOpd(request.Context(), kodeOpd)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   ReviewTujuanOpdResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

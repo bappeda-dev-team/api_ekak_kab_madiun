@@ -400,6 +400,7 @@ func NewRouter(
 	router.DELETE("/review_tujuan_opd/delete/:id", reviewController.DeleteTujuanOpd)
 	router.GET("/review_tujuan_opd/findall/:tujuan_opd_id", reviewController.FindAllTujuanOpd)
 	router.GET("/review_tujuan_opd/detail/:id", reviewController.FindByIdTujuanOpd)
+	router.GET("/laporan/review_tujuan_opd/findall/:kode_opd", reviewController.FindAllLaporanTujuanOpd)
 
 	//periode
 	router.POST("/periode/create", periodeController.Create)

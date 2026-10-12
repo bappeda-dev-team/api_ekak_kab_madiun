@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web"
+	"ekak_kabupaten_madiun/model/web/laporanreviewtujuanopd"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
@@ -354,6 +355,7 @@ func (service *ReviewServiceImpl) CreateTujuanOpd(ctx context.Context, request p
 		Keterangan:     request.Keterangan,
 		Catatan:        request.Catatan,
 		CreatedBy:      claims.Nip,
+		Tahun:          request.Tahun,
 	}
 
 	result, err := service.ReviewRepository.CreateTujuanOpd(ctx, tx, review)
@@ -443,4 +445,63 @@ func (service *ReviewServiceImpl) FindByIdTujuanOpd(ctx context.Context, id int)
 		}
 	}
 	return toReviewTujuanOpdResponse(review, namaPegawai), nil
+}
+
+func (service *ReviewServiceImpl) FindAllLaporanTujuanOpd(ctx context.Context, kodeOpd string) ([]laporanreviewtujuanopd.LaporanReviewTujuanOpd, error) {
+
+	tx, err := service.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return []laporanreviewtujuanopd.LaporanReviewTujuanOpd{}, err
+	}
+
+	// Rollback otomatis jika fungsi keluar sebelum commit.
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// Ambil data tujuan OPD beserta review.
+	results, err := service.ReviewRepository.FindLaporanReviewTujuanOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return []laporanreviewtujuanopd.LaporanReviewTujuanOpd{}, err
+	}
+
+	responses := make([]laporanreviewtujuanopd.LaporanReviewTujuanOpd, 0)
+
+	for _, result := range results {
+		reviews := make([]laporanreviewtujuanopd.LaporanReviewTujuanDetail, 0)
+
+		for _, review := range result.Review {
+			reviews = append(reviews, laporanreviewtujuanopd.LaporanReviewTujuanDetail{
+				Id:             review.Id,
+				IdTujuanOpd:    review.IdTujuanOpd,
+				IdPohonKinerja: review.IdPohonKinerja,
+				Review:         review.Review,
+				Keterangan:     review.Keterangan,
+				Catatan:        review.Catatan,
+				CreatedBy:      review.CreatedBy,
+				NamaPegawai:    review.NamaPegawai,
+				Tahun:          review.Tahun,
+			})
+		}
+
+		responses = append(responses, laporanreviewtujuanopd.LaporanReviewTujuanOpd{
+			Id:               result.Id,
+			KodeOpd:          result.KodeOpd,
+			NamaOpd:          result.NamaOpd,
+			KodeBidangUrusan: result.KodeBidangUrusan,
+			NamaBidangUrusan: result.NamaBidangUrusan,
+			Tujuan:           result.Tujuan,
+			Review:           reviews,
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return []laporanreviewtujuanopd.LaporanReviewTujuanOpd{}, err
+	}
+	committed = true
+
+	return responses, nil
 }
