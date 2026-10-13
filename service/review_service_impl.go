@@ -11,6 +11,7 @@ import (
 	"ekak_kabupaten_madiun/repository"
 	"errors"
 	"math/rand"
+	"strings"
 )
 
 type ReviewServiceImpl struct {
@@ -447,14 +448,14 @@ func (service *ReviewServiceImpl) FindByIdTujuanOpd(ctx context.Context, id int)
 	return toReviewTujuanOpdResponse(review, namaPegawai), nil
 }
 
+
 func (service *ReviewServiceImpl) FindAllLaporanTujuanOpd(ctx context.Context, kodeOpd string) ([]laporanreviewtujuanopd.LaporanReviewTujuanOpd, error) {
 
 	tx, err := service.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return []laporanreviewtujuanopd.LaporanReviewTujuanOpd{}, err
+		return nil, err
 	}
 
-	// Rollback otomatis jika fungsi keluar sebelum commit.
 	committed := false
 	defer func() {
 		if !committed {
@@ -462,29 +463,93 @@ func (service *ReviewServiceImpl) FindAllLaporanTujuanOpd(ctx context.Context, k
 		}
 	}()
 
-	// Ambil data tujuan OPD beserta review.
-	results, err := service.ReviewRepository.FindLaporanReviewTujuanOpd(ctx, tx, kodeOpd)
+	results, err := service.ReviewRepository.FindLaporanReviewTujuanOpd(
+		ctx, tx, kodeOpd,
+	)
 	if err != nil {
-		return []laporanreviewtujuanopd.LaporanReviewTujuanOpd{}, err
+		return nil, err
 	}
 
-	responses := make([]laporanreviewtujuanopd.LaporanReviewTujuanOpd, 0)
+	responses := make(
+		[]laporanreviewtujuanopd.LaporanReviewTujuanOpd,
+		0,
+	)
 
 	for _, result := range results {
-		reviews := make([]laporanreviewtujuanopd.LaporanReviewTujuanDetail, 0)
+		reviewTujuan := laporanreviewtujuanopd.LaporanReviewTujuan{}
 
 		for _, review := range result.Review {
-			reviews = append(reviews, laporanreviewtujuanopd.LaporanReviewTujuanDetail{
-				Id:             review.Id,
-				IdTujuanOpd:    review.IdTujuanOpd,
-				IdPohonKinerja: review.IdPohonKinerja,
+			detail := &laporanreviewtujuanopd.LaporanReviewTujuanDetail{
+				Id:             &review.Id,
+				IdTujuanOpd:    &review.IdTujuanOpd,
+				IdPohonKinerja: &review.IdPohonKinerja,
 				Review:         review.Review,
 				Keterangan:     review.Keterangan,
 				Catatan:        review.Catatan,
-				CreatedBy:      review.CreatedBy,
-				NamaPegawai:    review.NamaPegawai,
-				Tahun:          review.Tahun,
-			})
+				CreatedBy:      &review.CreatedBy,
+				NamaPegawai:    &review.NamaPegawai,
+				Tahun:          &review.Tahun,
+			}
+
+			switch strings.ToLower(strings.TrimSpace(review.Review)) {
+			case "validasi":
+				reviewTujuan.Validasi = detail
+			case "kesesuaian":
+				reviewTujuan.Kesesuaian = detail
+			case "kelengkapan":
+				reviewTujuan.Kelengkapan = detail
+			case "catatan":
+				reviewTujuan.Catatan = detail
+			}
+		}
+
+		
+		// Jika validasi Ideal, hasil kesesuaian dan kelengkapan otomatis.
+		if reviewTujuan.Validasi != nil &&
+			strings.EqualFold(
+				strings.TrimSpace(reviewTujuan.Validasi.Keterangan),
+				"Ideal",
+			) {
+
+			reviewTujuan.Kesesuaian = &laporanreviewtujuanopd.LaporanReviewTujuanDetail{
+				Review:     "KESESUAIAN",
+				Keterangan: "Sesuai",
+			}
+
+			reviewTujuan.Kelengkapan = &laporanreviewtujuanopd.LaporanReviewTujuanDetail{
+				Review:     "KELENGKAPAN",
+				Keterangan: "Lengkap",
+			}
+
+			reviewTujuan.Catatan = nil
+		} else {
+			// Gabungkan catatan kesesuaian dan kelengkapan.
+			var catatanList []string
+
+			if reviewTujuan.Kesesuaian != nil &&
+				strings.TrimSpace(reviewTujuan.Kesesuaian.Catatan) != "" {
+				catatanList = append(
+					catatanList,
+					reviewTujuan.Kesesuaian.Catatan,
+				)
+			}
+
+			if reviewTujuan.Kelengkapan != nil &&
+				strings.TrimSpace(reviewTujuan.Kelengkapan.Catatan) != "" {
+				catatanList = append(
+					catatanList,
+					reviewTujuan.Kelengkapan.Catatan,
+				)
+			}
+
+			if len(catatanList) > 0 {
+				reviewTujuan.Catatan = &laporanreviewtujuanopd.LaporanReviewTujuanDetail{
+					Review:  "CATATAN",
+					Catatan: strings.Join(catatanList, "; "),
+				}
+			} else {
+				reviewTujuan.Catatan = nil
+			}
 		}
 
 		responses = append(responses, laporanreviewtujuanopd.LaporanReviewTujuanOpd{
@@ -494,12 +559,12 @@ func (service *ReviewServiceImpl) FindAllLaporanTujuanOpd(ctx context.Context, k
 			KodeBidangUrusan: result.KodeBidangUrusan,
 			NamaBidangUrusan: result.NamaBidangUrusan,
 			Tujuan:           result.Tujuan,
-			Review:           reviews,
+			Review:           reviewTujuan,
 		})
 	}
 
 	if err := tx.Commit(); err != nil {
-		return []laporanreviewtujuanopd.LaporanReviewTujuanOpd{}, err
+		return nil, err
 	}
 	committed = true
 
