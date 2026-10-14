@@ -21,4 +21,5 @@ type ReviewService interface {
 	FindAllTujuanOpd(ctx context.Context, idTujuanOpd int) ([]pohonkinerja.ReviewTujuanOpdResponse, error)
 	FindByIdTujuanOpd(ctx context.Context, id int) (pohonkinerja.ReviewTujuanOpdResponse, error)
 	FindAllLaporanTujuanOpd(ctx context.Context, kodeOpd string) ([]laporanreviewtujuanopd.LaporanReviewTujuanOpd, error)
+	CetakPDFReviewTujuanOpd(ctx context.Context, kodeOpd string) ([]byte, error)
 }

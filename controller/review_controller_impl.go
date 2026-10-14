@@ -456,3 +456,27 @@ func (controller *ReviewControllerImpl) FindAllLaporanTujuanOpd(writer http.Resp
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+func (controller *ReviewControllerImpl) CetakLaporanTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+
+	kodeOpd := params.ByName("kode_opd")
+
+	pdfBytes, err := controller.ReviewService.CetakPDFReviewTujuanOpd(request.Context(), kodeOpd)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/pdf")
+	writer.Header().Set("Content-Disposition", `inline; filename="laporan-review-tujuan-opd.pdf"`)
+	writer.WriteHeader(http.StatusOK)
+
+	_, err = writer.Write(pdfBytes)
+	if err != nil {
+		return
+	}
+}

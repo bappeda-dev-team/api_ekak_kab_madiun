@@ -21,4 +21,5 @@ type ReviewController interface {
 	FindAllTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindByIdTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllLaporanTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	CetakLaporanTujuanOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

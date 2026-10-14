@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
@@ -10,8 +11,11 @@ import (
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
+
+	"github.com/go-pdf/fpdf"
 )
 
 type ReviewServiceImpl struct {
@@ -570,3 +574,558 @@ func (service *ReviewServiceImpl) FindAllLaporanTujuanOpd(ctx context.Context, k
 
 	return responses, nil
 }
+
+
+func (service *ReviewServiceImpl) CetakPDFReviewTujuanOpd(ctx context.Context, kodeOpd string) ([]byte, error) {
+	if strings.TrimSpace(kodeOpd) == "" {
+		return nil, fmt.Errorf("kode OPD tidak boleh kosong")
+	}
+
+	data, err := service.FindAllLaporanTujuanOpd(ctx, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+
+	// =========================
+	// MEMBUAT PDF F4 LANDSCAPE
+	// =========================
+	pdf := fpdf.NewCustom(&fpdf.InitType{
+		OrientationStr: "L",
+		UnitStr:        "mm",
+		SizeStr:        "",
+		Size: fpdf.SizeType{
+			Wd: 330,
+			Ht: 210,
+		},
+		FontDirStr: "",
+	})
+
+	pdf.SetTitle("Laporan Hasil Analisa Tujuan OPD", false)
+	pdf.SetAuthor("Review Tujuan OPD", false)
+	pdf.SetMargins(10, 10, 10)
+	pdf.SetAutoPageBreak(true, 10)
+
+	pdf.AddPage()
+
+	// =========================
+	// JUDUL LAPORAN
+	// =========================
+	pdf.SetFont("Arial", "B", 14)
+	pdf.CellFormat(
+		185,
+		8,
+		"Laporan Hasil Analisa Tujuan OPD",
+		"",
+		1,
+		"C",
+		false,
+		0,
+		"",
+	)
+
+	pdf.Ln(7)
+
+	// =========================
+	// LEBAR KOLOM
+	// =========================
+	colWidths := []float64{
+		10, // No
+		45, // Nama OPD
+		45, // Bidang Urusan
+		30, // Lengkap
+		30, // Tidak Lengkap
+		35, // Sesuai
+		35, // Belum Sesuai
+		80, // Catatan
+	}
+
+	tableWidth := 0.0
+	for _, width := range colWidths {
+		tableWidth += width
+	}
+
+	// Lebar halaman F4 landscape 330 mm.
+	// Margin kiri dan kanan masing-masing 10 mm.
+	// Lebar tabel disesuaikan agar tidak melewati area cetak.
+	if tableWidth > 310 {
+		return nil, fmt.Errorf("total lebar tabel melebihi area cetak")
+	}
+
+	startX := (330 - tableWidth) / 2
+
+	// =========================
+	// FUNGSI HEADER TABEL
+	// =========================
+	renderHeader := func() {
+		pdf.SetFont("Arial", "B", 9)
+
+		startY := pdf.GetY()
+		x := startX
+		groupHeight := 7.0
+		subHeight := 7.0
+		numberHeight := 6.0
+		totalHeaderHeight := groupHeight + subHeight + numberHeight
+
+		// Kolom No.
+		pdf.Rect(x, startY, colWidths[0], totalHeaderHeight, "D")
+		pdf.SetXY(x, startY)
+		pdf.CellFormat(
+			colWidths[0],
+			totalHeaderHeight,
+			"No.",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+		x += colWidths[0]
+
+		// Kolom Nama OPD
+		pdf.Rect(x, startY, colWidths[1], totalHeaderHeight, "D")
+		pdf.SetXY(x, startY)
+		pdf.CellFormat(
+			colWidths[1],
+			totalHeaderHeight,
+			"Nama OPD",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+		x += colWidths[1]
+
+		// Kolom Bidang Urusan
+		pdf.Rect(x, startY, colWidths[2], totalHeaderHeight, "D")
+		pdf.SetXY(x, startY)
+		pdf.CellFormat(
+			colWidths[2],
+			totalHeaderHeight,
+			"Bidang Urusan",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+		x += colWidths[2]
+
+		// Kelompok Kelengkapan Tujuan OPD
+		kelengkapanWidth := colWidths[3] + colWidths[4]
+		pdf.Rect(x, startY, kelengkapanWidth, groupHeight, "D")
+		pdf.SetXY(x, startY)
+		pdf.CellFormat(
+			kelengkapanWidth,
+			groupHeight,
+			"KELENGKAPAN TUJUAN OPD",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Subkolom Lengkap
+		pdf.Rect(x, startY+groupHeight, colWidths[3], subHeight, "D")
+		pdf.SetXY(x, startY+groupHeight)
+		pdf.CellFormat(
+			colWidths[3],
+			subHeight,
+			"Lengkap",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Subkolom Tidak Lengkap
+		pdf.Rect(
+			x+colWidths[3],
+			startY+groupHeight,
+			colWidths[4],
+			subHeight,
+			"D",
+		)
+		pdf.SetXY(x+colWidths[3], startY+groupHeight)
+		pdf.CellFormat(
+			colWidths[4],
+			subHeight,
+			"Tidak Lengkap",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Nomor referensi 4 dan 5
+		pdf.SetFont("Arial", "I", 9)
+		pdf.Rect(
+			x,
+			startY+groupHeight+subHeight,
+			colWidths[3],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(x, startY+groupHeight+subHeight)
+		pdf.CellFormat(
+			colWidths[3],
+			numberHeight,
+			"4",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		pdf.Rect(
+			x+colWidths[3],
+			startY+groupHeight+subHeight,
+			colWidths[4],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(x+colWidths[3], startY+groupHeight+subHeight)
+		pdf.CellFormat(
+			colWidths[4],
+			numberHeight,
+			"5",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		x += kelengkapanWidth
+
+		// Kelompok Kesesuaian
+		kesesuaianWidth := colWidths[5] + colWidths[6]
+		pdf.SetFont("Arial", "B", 9)
+		pdf.Rect(x, startY, kesesuaianWidth, groupHeight, "D")
+		pdf.SetXY(x, startY)
+		pdf.CellFormat(
+			kesesuaianWidth,
+			groupHeight,
+			"KESESUAIAN DENGAN INMENDAGRI NO 2 TAHUN 2025",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Subkolom Sesuai
+		pdf.Rect(x, startY+groupHeight, colWidths[5], subHeight, "D")
+		pdf.SetXY(x, startY+groupHeight)
+		pdf.CellFormat(
+			colWidths[5],
+			subHeight,
+			"Sesuai",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Subkolom Belum Sesuai
+		pdf.Rect(
+			x+colWidths[5],
+			startY+groupHeight,
+			colWidths[6],
+			subHeight,
+			"D",
+		)
+		pdf.SetXY(x+colWidths[5], startY+groupHeight)
+		pdf.CellFormat(
+			colWidths[6],
+			subHeight,
+			"Belum Sesuai",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Nomor referensi 6 dan 7
+		pdf.SetFont("Arial", "I", 9)
+		pdf.Rect(
+			x,
+			startY+groupHeight+subHeight,
+			colWidths[5],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(x, startY+groupHeight+subHeight)
+		pdf.CellFormat(
+			colWidths[5],
+			numberHeight,
+			"6",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		pdf.Rect(
+			x+colWidths[5],
+			startY+groupHeight+subHeight,
+			colWidths[6],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(x+colWidths[5], startY+groupHeight+subHeight)
+		pdf.CellFormat(
+			colWidths[6],
+			numberHeight,
+			"7",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		x += kesesuaianWidth
+
+		// Kolom Catatan
+		pdf.SetFont("Arial", "B", 9)
+		pdf.Rect(x, startY, colWidths[7], totalHeaderHeight, "D")
+		pdf.SetXY(x, startY)
+		pdf.CellFormat(
+			colWidths[7],
+			totalHeaderHeight,
+			"CATATAN",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Nomor referensi 1, 2, dan 3
+		pdf.SetFont("Arial", "I", 9)
+
+		numberY := startY + groupHeight + subHeight
+
+		// Nomor kolom 1 - No.
+		pdf.Rect(
+			startX,
+			numberY,
+			colWidths[0],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(startX, numberY)
+		pdf.CellFormat(
+			colWidths[0],
+			numberHeight,
+			"1",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Nomor kolom 2 - Nama OPD
+		xNomor2 := startX + colWidths[0]
+		pdf.Rect(
+			xNomor2,
+			numberY,
+			colWidths[1],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(xNomor2, numberY)
+		pdf.CellFormat(
+			colWidths[1],
+			numberHeight,
+			"2",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Nomor kolom 3 - Bidang Urusan
+		xNomor3 := startX + colWidths[0] + colWidths[1]
+		pdf.Rect(
+			xNomor3,
+			numberY,
+			colWidths[2],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(xNomor3, numberY)
+		pdf.CellFormat(
+			colWidths[2],
+			numberHeight,
+			"3",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Posisi awal data
+		pdf.SetXY(startX, startY+totalHeaderHeight)
+	}
+
+	renderHeader()
+
+	// =========================
+	// FUNGSI MENGAMBIL STATUS
+	// =========================
+	getKeterangan := func(
+		detail *laporanreviewtujuanopd.LaporanReviewTujuanDetail,
+	) string {
+		if detail == nil {
+			return ""
+		}
+		return strings.TrimSpace(detail.Keterangan)
+	}
+
+	getCatatan := func(
+		detail *laporanreviewtujuanopd.LaporanReviewTujuanDetail,
+	) string {
+		if detail == nil {
+			return ""
+		}
+		return strings.TrimSpace(detail.Catatan)
+	}
+
+	// =========================
+	// ISI TABEL
+	// =========================
+	pdf.SetFont("Arial", "", 8)
+
+	for i, item := range data {
+		// Status kelengkapan
+		kelengkapan := getKeterangan(item.Review.Kelengkapan)
+		lengkap := ""
+		tidakLengkap := ""
+
+		if strings.EqualFold(kelengkapan, "Lengkap") {
+			lengkap = "Lengkap"
+		} else if strings.EqualFold(kelengkapan, "Tidak Lengkap") {
+			tidakLengkap = "Tidak Lengkap"
+		}
+
+		// Status kesesuaian
+		kesesuaian := getKeterangan(item.Review.Kesesuaian)
+		sesuai := ""
+		belumSesuai := ""
+
+		if strings.EqualFold(kesesuaian, "Sesuai") {
+			sesuai = "Sesuai"
+		} else if strings.EqualFold(kesesuaian, "Tidak Sesuai") {
+			belumSesuai = "TIdak Sesuai"
+		}
+
+		catatan := getCatatan(item.Review.Catatan)
+
+		row := []string{
+			fmt.Sprintf("%d", i+1),
+			item.NamaOpd,
+			item.NamaBidangUrusan,
+			lengkap,
+			tidakLengkap,
+			sesuai,
+			belumSesuai,
+			catatan,
+		}
+
+		// Hitung tinggi baris sesuai teks terpanjang
+		lineHeight := 5.0
+		maxLines := 1
+
+		for col, value := range row {
+			lines := pdf.SplitLines(
+				[]byte(value),
+				colWidths[col]-2,
+			)
+			if len(lines) > maxLines {
+				maxLines = len(lines)
+			}
+		}
+
+		rowHeight := float64(maxLines)*lineHeight + 2
+
+		// Jika tidak cukup ruang, pindah halaman
+		if pdf.GetY()+rowHeight > 200 {
+			pdf.AddPage()
+			renderHeader()
+			pdf.SetFont("Arial", "", 8)
+		}
+
+		y := pdf.GetY()
+		x := startX
+
+		for col, value := range row {
+			width := colWidths[col]
+
+			// Gambar border sel
+			pdf.Rect(x, y, width, rowHeight, "D")
+
+			// Isi teks sel
+			pdf.SetXY(x+1, y+1)
+
+			align := "L"
+			if col == 0 || (col >= 3 && col <= 6) {
+				align = "C"
+			}
+
+			pdf.MultiCell(
+				width-2,
+				lineHeight,
+				value,
+				"",
+				align,
+				false,
+			)
+
+			x += width
+		}
+
+		pdf.SetXY(startX, y+rowHeight)
+	}
+
+	// =========================
+	// OUTPUT PDF
+	// =========================
+	var buffer bytes.Buffer
+
+	err = pdf.Output(&buffer)
+	if err != nil {
+		return nil, fmt.Errorf("gagal membuat PDF: %w", err)
+	}
+
+	return buffer.Bytes(), nil
+}
+
