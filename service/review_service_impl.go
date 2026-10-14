@@ -594,8 +594,8 @@ func (service *ReviewServiceImpl) CetakPDFReviewTujuanOpd(ctx context.Context, k
 		UnitStr:        "mm",
 		SizeStr:        "",
 		Size: fpdf.SizeType{
-			Wd: 330,
-			Ht: 210,
+			Wd: 210,
+			Ht: 330,
 		},
 		FontDirStr: "",
 	})
@@ -612,7 +612,7 @@ func (service *ReviewServiceImpl) CetakPDFReviewTujuanOpd(ctx context.Context, k
 	// =========================
 	pdf.SetFont("Arial", "B", 14)
 	pdf.CellFormat(
-		185,
+		330,
 		8,
 		"Laporan Hasil Analisa Tujuan OPD",
 		"",
@@ -634,9 +634,9 @@ func (service *ReviewServiceImpl) CetakPDFReviewTujuanOpd(ctx context.Context, k
 		45, // Bidang Urusan
 		30, // Lengkap
 		30, // Tidak Lengkap
-		35, // Sesuai
-		35, // Belum Sesuai
-		80, // Catatan
+		45, // Sesuai
+		45, // Belum Sesuai
+		60, // Catatan
 	}
 
 	tableWidth := 0.0
@@ -907,14 +907,46 @@ func (service *ReviewServiceImpl) CetakPDFReviewTujuanOpd(ctx context.Context, k
 
 		x += kesesuaianWidth
 
-		// Kolom Catatan
+				// Kolom Catatan
 		pdf.SetFont("Arial", "B", 9)
-		pdf.Rect(x, startY, colWidths[7], totalHeaderHeight, "D")
+
+		// Judul CATATAN
+		pdf.Rect(
+			x,
+			startY,
+			colWidths[7],
+			groupHeight+subHeight,
+			"D",
+		)
 		pdf.SetXY(x, startY)
 		pdf.CellFormat(
 			colWidths[7],
-			totalHeaderHeight,
+			groupHeight+subHeight,
 			"CATATAN",
+			"",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+
+		// Nomor kolom 8
+		pdf.SetFont("Arial", "I", 9)
+		numberY := startY + groupHeight + subHeight
+
+		pdf.Rect(
+			x,
+			numberY,
+			colWidths[7],
+			numberHeight,
+			"D",
+		)
+		pdf.SetXY(x, numberY)
+		pdf.CellFormat(
+			colWidths[7],
+			numberHeight,
+			"8",
 			"",
 			0,
 			"C",
@@ -926,7 +958,7 @@ func (service *ReviewServiceImpl) CetakPDFReviewTujuanOpd(ctx context.Context, k
 		// Nomor referensi 1, 2, dan 3
 		pdf.SetFont("Arial", "I", 9)
 
-		numberY := startY + groupHeight + subHeight
+		numberY = startY + groupHeight + subHeight
 
 		// Nomor kolom 1 - No.
 		pdf.Rect(
