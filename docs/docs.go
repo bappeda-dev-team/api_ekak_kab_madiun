@@ -1511,69 +1511,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/matrix_renstra/indikator/create": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Membuat satu atau lebih indikator. Setiap indikator boleh punya banyak target dengan tahun yang berbeda.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Matrix Renstra"
-                ],
-                "summary": "Create Indikator Renstra (multi target)",
-                "parameters": [
-                    {
-                        "description": "Array indikator beserta target per tahun",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/programkegiatan.IndikatorRenstraV2CreateRequest"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/web.WebResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/programkegiatan.IndikatorV2UpsertResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/web.WebResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/matrix_renstra/indikator/delete/{kode_indikator}": {
             "delete": {
                 "security": [
@@ -1936,6 +1873,348 @@ const docTemplate = `{
                                             "items": {
                                                 "$ref": "#/definitions/programkegiatan.UrusanDetailV2Response"
                                             }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outcome_matrix": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan daftar outcome matrix; filter opsional kode, kode_opd, dan jenis (query kosong = tanpa filter field tersebut).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Outcome Matrix"
+                ],
+                "summary": "Daftar Outcome Matrix",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter kode hierarki (urusan/program/kegiatan/subkegiatan)",
+                        "name": "kode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter kode OPD",
+                        "name": "kode_opd",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter jenis",
+                        "name": "jenis",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/outcomematrix.OutcomeMatrixResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outcome_matrix/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "id = 0 atau kosong untuk create; id \u003e 0 untuk update baris yang sudah ada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Outcome Matrix"
+                ],
+                "summary": "Upsert Batch Outcome Matrix",
+                "parameters": [
+                    {
+                        "description": "Array item outcome matrix",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/outcomematrix.OutcomeMatrixBatchItemRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/outcomematrix.OutcomeMatrixResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outcome_matrix/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat data outcome matrix baru (kode OPD, kode hierarki, jenis, outcome).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Outcome Matrix"
+                ],
+                "summary": "Create Outcome Matrix",
+                "parameters": [
+                    {
+                        "description": "Payload create outcome matrix",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/outcomematrix.OutcomeMatrixCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/outcomematrix.OutcomeMatrixResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outcome_matrix/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus outcome matrix berdasarkan ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Outcome Matrix"
+                ],
+                "summary": "Delete Outcome Matrix",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID outcome matrix",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outcome_matrix/detail/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan satu outcome matrix berdasarkan ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Outcome Matrix"
+                ],
+                "summary": "Detail Outcome Matrix",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID outcome matrix",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/outcomematrix.OutcomeMatrixResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outcome_matrix/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui outcome matrix berdasarkan ID path.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Outcome Matrix"
+                ],
+                "summary": "Update Outcome Matrix",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID outcome matrix",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload update outcome matrix",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/outcomematrix.OutcomeMatrixUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/outcomematrix.OutcomeMatrixResponse"
                                         }
                                     }
                                 }
@@ -2895,6 +3174,723 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_pokin/create/{pokinId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat review untuk pohon kinerja; id_pohon_kinerja diisi dari path pokinId. created_by diambil dari JWT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Pokin"
+                ],
+                "summary": "Create Review Pohon Kinerja",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID pohon kinerja",
+                        "name": "pokinId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload review (id_pohon_kinerja dari path)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.ReviewCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_pokin/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus review berdasarkan ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Pokin"
+                ],
+                "summary": "Delete Review Pohon Kinerja",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID review",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_pokin/detail/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan satu review berdasarkan ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Pokin"
+                ],
+                "summary": "Detail Review Pohon Kinerja",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID review",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_pokin/findall/{pokin_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua review untuk satu pohon kinerja.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Pokin"
+                ],
+                "summary": "Daftar Review per Pohon Kinerja",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID pohon kinerja",
+                        "name": "pokin_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_pokin/opd/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan review pohon kinerja OPD berdasarkan kode OPD dan tahun.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Pokin"
+                ],
+                "summary": "Daftar Review OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/pohonkinerja.ReviewOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_pokin/tematik/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan review yang dikelompokkan per tematik untuk tahun tertentu.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Pokin"
+                ],
+                "summary": "Daftar Review Tematik",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/pohonkinerja.ReviewTematikResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_pokin/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui review berdasarkan ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Pokin"
+                ],
+                "summary": "Update Review Pohon Kinerja",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID review",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload update review",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.ReviewUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ReviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_tujuan_opd/create/{tujuanOpdId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat review untuk tujuan OPD; id_tujuan_opd dari path. id_pohon_kinerja default 0, jenis_pokin tidak perlu dikirim.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Tujuan OPD"
+                ],
+                "summary": "Create Review Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID tujuan OPD",
+                        "name": "tujuanOpdId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload review tujuan OPD",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.ReviewTujuanOpdCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ReviewTujuanOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_tujuan_opd/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus review tujuan OPD berdasarkan ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Tujuan OPD"
+                ],
+                "summary": "Delete Review Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID review",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_tujuan_opd/detail/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan satu review tujuan OPD berdasarkan ID review.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Tujuan OPD"
+                ],
+                "summary": "Detail Review Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID review",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ReviewTujuanOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_tujuan_opd/findall/{tujuan_opd_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua review untuk satu tujuan OPD.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Tujuan OPD"
+                ],
+                "summary": "Daftar Review Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID tujuan OPD",
+                        "name": "tujuan_opd_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/pohonkinerja.ReviewTujuanOpdResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/review_tujuan_opd/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Memperbarui review tujuan OPD berdasarkan ID review.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review Tujuan OPD"
+                ],
+                "summary": "Update Review Tujuan OPD",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID review",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pohonkinerja.ReviewTujuanOpdUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/pohonkinerja.ReviewTujuanOpdResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     }
                 }
@@ -7612,7 +8608,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "aksi_kegiatan": {
-                    "description": "AksiKegiatan, KodeSubKegiatan, dan NamaSubKegiatan diabaikan server.\nKodeSubKegiatan dan NamaSubKegiatan selalu diturunkan dari subkegiatan\nterpilih pada rencana kinerja terkait.",
                     "type": "string"
                 },
                 "anggaran": {
@@ -7704,6 +8699,103 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nama_opd": {
+                    "type": "string"
+                }
+            }
+        },
+        "outcomematrix.OutcomeMatrixBatchItemRequest": {
+            "type": "object",
+            "required": [
+                "kode",
+                "kode_opd"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "outcome": {
+                    "type": "string"
+                }
+            }
+        },
+        "outcomematrix.OutcomeMatrixCreateRequest": {
+            "type": "object",
+            "required": [
+                "kode",
+                "kode_opd",
+                "outcome"
+            ],
+            "properties": {
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "outcome": {
+                    "type": "string"
+                }
+            }
+        },
+        "outcomematrix.OutcomeMatrixResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "outcome": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "outcomematrix.OutcomeMatrixUpdateRequest": {
+            "type": "object",
+            "required": [
+                "kode",
+                "kode_opd",
+                "outcome"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "outcome": {
                     "type": "string"
                 }
             }
@@ -8385,7 +9477,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pohonkinerja.ReviewResponse": {
+        "pohonkinerja.ReviewCreateRequest": {
             "type": "object",
             "properties": {
                 "created_by": {
@@ -8403,7 +9495,209 @@ const docTemplate = `{
                 "keterangan": {
                     "type": "string"
                 },
+                "review": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewDetailResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id_pohon": {
+                    "type": "integer"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "review": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewOpdResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id_pohon": {
+                    "type": "integer"
+                },
+                "jenis_pohon": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "review": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewResponse": {
+            "type": "object",
+            "properties": {
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_pohon_kinerja": {
+                    "type": "integer"
+                },
+                "id_tujuan_opd": {
+                    "type": "integer"
+                },
+                "jenis_pokin": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
                 "nama_pegawai": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewTematikResponse": {
+            "type": "object",
+            "properties": {
+                "id_tematik": {
+                    "type": "integer"
+                },
+                "level_pohon": {
+                    "type": "integer"
+                },
+                "nama_pohon": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewDetailResponse"
+                    }
+                }
+            }
+        },
+        "pohonkinerja.ReviewTujuanOpdCreateRequest": {
+            "type": "object",
+            "properties": {
+                "catatan": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_tujuan_opd": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewTujuanOpdResponse": {
+            "type": "object",
+            "properties": {
+                "catatan": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_pohon_kinerja": {
+                    "type": "integer"
+                },
+                "id_tujuan_opd": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewTujuanOpdUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "catatan": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_pohon_kinerja": {
+                    "type": "integer"
+                },
+                "keterangan": {
                     "type": "string"
                 },
                 "review": {
@@ -8712,7 +10006,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "indikator": {
-                    "description": "Periode   PeriodeResponse           ` + "`" + `json:\"periode,omitempty\"` + "`" + `",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/pohonkinerja.IndikatorTujuanResponse"
@@ -8720,6 +10013,12 @@ const docTemplate = `{
                 },
                 "kode_opd": {
                     "type": "string"
+                },
+                "review": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewTujuanOpdResponse"
+                    }
                 },
                 "tujuan": {
                     "type": "string"
@@ -8879,6 +10178,12 @@ const docTemplate = `{
                 },
                 "nama": {
                     "type": "string"
+                },
+                "outcome": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.OutcomeMatrixItemResponse"
+                    }
                 },
                 "program": {
                     "type": "array",
@@ -9076,32 +10381,6 @@ const docTemplate = `{
                 }
             }
         },
-        "programkegiatan.IndikatorRenstraV2CreateRequest": {
-            "type": "object",
-            "properties": {
-                "indikator": {
-                    "type": "string"
-                },
-                "kode": {
-                    "type": "string"
-                },
-                "kode_indikator": {
-                    "type": "string"
-                },
-                "kode_opd": {
-                    "type": "string"
-                },
-                "tahun": {
-                    "type": "string"
-                },
-                "target": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/programkegiatan.TargetCreateRequest"
-                    }
-                }
-            }
-        },
         "programkegiatan.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -9176,35 +10455,6 @@ const docTemplate = `{
                 }
             }
         },
-        "programkegiatan.IndikatorV2UpsertResponse": {
-            "type": "object",
-            "properties": {
-                "indikator": {
-                    "type": "string"
-                },
-                "jenis": {
-                    "type": "string"
-                },
-                "kode": {
-                    "type": "string"
-                },
-                "kode_indikator": {
-                    "type": "string"
-                },
-                "kode_opd": {
-                    "type": "string"
-                },
-                "tahun": {
-                    "type": "string"
-                },
-                "target": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/programkegiatan.TargetResponse"
-                    }
-                }
-            }
-        },
         "programkegiatan.KegiatanResponse": {
             "type": "object",
             "properties": {
@@ -9267,11 +10517,37 @@ const docTemplate = `{
                 "nama": {
                     "type": "string"
                 },
+                "outcome": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.OutcomeMatrixItemResponse"
+                    }
+                },
                 "subkegiatan": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/programkegiatan.SubKegiatanV2Response"
                     }
+                }
+            }
+        },
+        "programkegiatan.OutcomeMatrixItemResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "outcome": {
+                    "type": "string"
                 }
             }
         },
@@ -9356,6 +10632,12 @@ const docTemplate = `{
                 },
                 "nama": {
                     "type": "string"
+                },
+                "outcome": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.OutcomeMatrixItemResponse"
+                    }
                 }
             }
         },
@@ -9430,27 +10712,13 @@ const docTemplate = `{
                 "nama_pegawai": {
                     "type": "string"
                 },
+                "outcome": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.OutcomeMatrixItemResponse"
+                    }
+                },
                 "pegawai_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "programkegiatan.TargetCreateRequest": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "indikator_id": {
-                    "type": "string"
-                },
-                "satuan": {
-                    "type": "string"
-                },
-                "tahun": {
-                    "type": "string"
-                },
-                "target": {
                     "type": "string"
                 }
             }
@@ -9482,6 +10750,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "indikator_id": {
+                    "type": "string"
+                },
+                "jenis": {
                     "type": "string"
                 },
                 "satuan": {
@@ -9617,6 +10888,12 @@ const docTemplate = `{
                 },
                 "nama": {
                     "type": "string"
+                },
+                "outcome": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.OutcomeMatrixItemResponse"
+                    }
                 }
             }
         },

@@ -168,6 +168,9 @@ func (repository *OpdRepositoryImpl) FindAllWithLembaga(ctx context.Context, tx 
 			}
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
 
 	return opds, lembagaMap, nil
 }

@@ -16,4 +16,5 @@ type ReviewTujuanOpdCreateRequest struct {
 	Keterangan  string `json:"keterangan"`
 	Catatan     string `json:"catatan"`
 	CreatedBy   string `json:"created_by"`
+	Tahun       int    `json:"tahun"`
 }

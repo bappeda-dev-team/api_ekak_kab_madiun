@@ -17,6 +17,7 @@ type ReviewTujuanOpdResponse struct {
 	IdPohonKinerja int    `json:"id_pohon_kinerja"`
 	Review         string `json:"review"`
 	Keterangan     string `json:"keterangan"`
+	Catatan        string `json:"catatan"`
 	CreatedBy      string `json:"created_by,omitempty"`
 	NamaPegawai    string `json:"nama_pegawai,omitempty"`
 }
