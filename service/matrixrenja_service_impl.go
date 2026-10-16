@@ -961,6 +961,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponsePenetapan(data []domai
 					Indikator:    item.Indikator,
 					Tahun:        item.IndikatorTahun,
 					StatusTarget: false,
+					TargetId:     item.TargetId,
 					Target:       item.Target,
 					Satuan:       item.Satuan,
 				},
