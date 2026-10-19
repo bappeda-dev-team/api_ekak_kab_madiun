@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/go-pdf/fpdf"
 )
@@ -314,6 +315,547 @@ func (service *ReviewServiceImpl) FindAllReviewOpd(ctx context.Context, kodeOpd,
 	}
 
 	return reviewResponses, nil
+}
+
+func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd string, tahun string) ([]byte, error) {
+
+	if kodeOpd == "" {
+		return nil, fmt.Errorf("kode opd tidak boleh kosong")
+	}
+
+	if tahun == "" {
+		return nil, fmt.Errorf("tahun tidak boleh kosong")
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	reviews, err := service.ReviewRepository.FindAllReviewOpd(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mengikuti response yang digunakan FE.
+	reviewResponses := make([]pohonkinerja.ReviewOpdResponse, 0, len(reviews))
+
+	for _, review := range reviews {
+
+		pegawai, _ := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy)
+
+		reviewResponses = append(
+			reviewResponses,
+			pohonkinerja.ReviewOpdResponse{
+				IdPohon:     review.IdPohon,
+				Parent:      review.Parent,
+				NamaPohon:   review.NamaPohon,
+				LevelPohon:  review.LevelPohon,
+				JenisPohon:  review.JenisPohon,
+				Review:      review.Review,
+				Keterangan:  review.Keterangan,
+				NamaPegawai: pegawai.NamaPegawai,
+				CreatedAt:   review.CreatedAt,
+				UpdatedAt:   review.UpdatedAt,
+			},
+		)
+	}
+
+	// Membuat PDF.
+	// pdf := fpdf.New("L", "mm", "A4", "")
+
+	pdf := fpdf.NewCustom(&fpdf.InitType{
+		OrientationStr: "L",
+		UnitStr:        "mm",
+		SizeStr:        "",
+		Size: fpdf.SizeType{
+			Wd: 210,
+			Ht: 330,
+		},
+		FontDirStr: "",
+	})
+
+	pdf.SetTitle("Laporan Review Pohon Kinerja", false)
+	pdf.SetAuthor("Pohon Kinerja", false)
+
+	pdf.SetMargins(10, 10, 10)
+	pdf.SetAutoPageBreak(true, 10)
+
+	pdf.AddPage()
+
+	// =========================
+	// JUDUL
+	// =========================
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.CellFormat(0, 8, "LAPORAN REVIEW POHON KINERJA", "", 1, "C", false, 0, "")
+
+	pdf.Ln(3)
+
+	// =========================
+	// INFORMASI
+	// =========================
+
+	pdf.SetFont("Arial", "", 10)
+
+	pdf.CellFormat(20, 6, "Kode OPD", "", 0, "L", false, 0, "")
+
+	pdf.CellFormat(5, 6, ":", "", 0, "L", false, 0, "")
+
+	pdf.CellFormat(0, 6, kodeOpd, "", 1, "L", false, 0, "")
+
+	pdf.CellFormat(20, 6, "Tahun", "", 0, "L", false, 0, "")
+
+	pdf.CellFormat(5, 6, ":", "", 0, "L", false, 0, "")
+
+	pdf.CellFormat(0, 6, tahun, "", 1, "L", false, 0, "")
+
+	pdf.Ln(5)
+
+	// =========================
+	// HEADER TABLE
+	// =========================
+
+	// Total lebar sekitar 277 mm.
+	// A4 landscape = 297 mm
+	// margin kiri + kanan = 20 mm
+	//
+	// No             = 12
+	// Nama Pohon     = 48
+	// Review         = 75
+	// Keterangan     = 55
+	// User Pembuat   = 40
+	// Waktu Review   = 47
+	//
+	// Total          = 277
+
+	// colWidths := []float64{12, 48, 75, 55, 40, 47}
+	colWidths := []float64{12, 55, 85, 65, 45, 48}
+
+	headers := []string{
+		"No",
+		"Nama Pohon",
+		"Review",
+		"Keterangan",
+		"User Pembuat",
+		"Waktu Review",
+	}
+
+	nomorKolom := []string{
+		"1",
+		"2",
+		"3",
+		"4",
+		"5",
+		"6",
+	}
+
+	// =========================
+	// HEADER TABEL
+	// =========================
+
+	pdf.SetFont("Arial", "B", 9)
+
+	// Header utama
+	for i, header := range headers {
+		pdf.CellFormat(
+			colWidths[i],
+			10,
+			header,
+			"1",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+	}
+
+	pdf.Ln(-1)
+
+	// Nomor referensi kolom
+	for i, nomor := range nomorKolom {
+		pdf.CellFormat(
+			colWidths[i],
+			6,
+			nomor,
+			"1",
+			0,
+			"C",
+			false,
+			0,
+			"",
+		)
+	}
+
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 8)
+
+	if len(reviewResponses) == 0 {
+
+		// pdf.CellFormat(277, 10, "Data Kosong / Belum Ditambahkan", "1", 1, "C", false, 0, "")
+		pdf.CellFormat(310, 10, "Data Kosong / Belum Ditambahkan", "1", 1, "C", false, 0, "")
+
+	} else {
+
+		for index, data := range reviewResponses {
+
+			namaPohon := data.NamaPohon
+			if strings.TrimSpace(namaPohon) == "" {
+				namaPohon = "-"
+			}
+
+			jenisPohon := data.JenisPohon
+			if strings.TrimSpace(jenisPohon) == "" {
+				jenisPohon = "-"
+			}
+
+			review := data.Review
+			if strings.TrimSpace(review) == "" {
+				review = "-"
+			}
+
+			keterangan := strings.TrimSpace(data.Keterangan)
+			if keterangan == "" {
+				keterangan = "-"
+			}
+
+			namaPegawai := data.NamaPegawai
+			if strings.TrimSpace(namaPegawai) == "" {
+				namaPegawai = "-"
+			}
+
+			waktuReview := formatWaktuReviewPDF(
+				data.CreatedAt,
+				data.UpdatedAt,
+			)
+
+			// =========================
+			// HITUNG JUMLAH BARIS
+			// =========================
+
+			lineNamaPohon := pdf.SplitLines(
+				[]byte(namaPohon),
+				colWidths[1]-2,
+			)
+
+			lineJenisPohon := pdf.SplitLines(
+				[]byte(strings.ToUpper(jenisPohon)),
+				colWidths[1]-2,
+			)
+
+			lineReview := pdf.SplitLines(
+				[]byte(review),
+				colWidths[2]-2,
+			)
+
+			lineKeterangan := pdf.SplitLines(
+				[]byte(keterangan),
+				colWidths[3]-2,
+			)
+
+			lineNamaPegawai := pdf.SplitLines(
+				[]byte(namaPegawai),
+				colWidths[4]-2,
+			)
+
+			lineWaktuReview := pdf.SplitLines(
+				[]byte(waktuReview),
+				colWidths[5]-2,
+			)
+
+			// =========================
+			// TENTUKAN TINGGI BARIS
+			// =========================
+
+			// Nama Pohon + Jenis Pohon berada dalam satu kolom.
+			// Jadi tinggi keduanya harus dijumlahkan.
+			namaPohonHeight :=
+				float64(len(lineNamaPohon))*4.5 +
+				float64(len(lineJenisPohon))*4
+
+			reviewHeight :=
+				float64(len(lineReview)) * 4.5
+
+			keteranganHeight :=
+				float64(len(lineKeterangan)) * 4.5
+
+			pegawaiHeight :=
+				float64(len(lineNamaPegawai)) * 4.5
+
+			waktuHeight :=
+				float64(len(lineWaktuReview)) * 4.5
+
+			rowHeight := namaPohonHeight
+
+			if reviewHeight > rowHeight {
+				rowHeight = reviewHeight
+			}
+
+			if keteranganHeight > rowHeight {
+				rowHeight = keteranganHeight
+			}
+
+			if pegawaiHeight > rowHeight {
+				rowHeight = pegawaiHeight
+			}
+
+			if waktuHeight > rowHeight {
+				rowHeight = waktuHeight
+			}
+
+			// Minimal tinggi row
+			if rowHeight < 12 {
+				rowHeight = 12
+			}
+
+			// =========================
+			// POSISI AWAL BARIS
+			// =========================
+
+			x := pdf.GetX()
+			y := pdf.GetY()
+
+			// =========================
+			// NO
+			// =========================
+
+			pdf.CellFormat(colWidths[0], rowHeight, fmt.Sprintf("%d", index+1), "1", 0, "C", false, 0, "")
+
+			// =========================
+			// NAMA POHON
+			// =========================
+
+			currentX := x + colWidths[0]
+
+			pdf.SetXY(currentX, y)
+
+			pdf.SetFont("Arial", "", 8)
+
+			pdf.MultiCell(colWidths[1], 4.5, namaPohon, "LR", "L", false)
+
+			// Jenis pohon
+			// Mulai setelah seluruh baris Nama Pohon selesai.
+			pdf.SetXY(
+				currentX,
+				y+float64(len(lineNamaPohon))*4.5,
+			)
+
+			pdf.SetFont("Arial", "", 7)
+
+			pdf.MultiCell(
+				colWidths[1],
+				4,
+				strings.ToUpper(jenisPohon),
+				"LR",
+				"L",
+				false,
+			)
+
+			// Tutup border bawah Nama Pohon
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[1], 0, "", "B", 0, "L", false, 0, "")
+
+			// =========================
+			// REVIEW
+			// =========================
+
+			currentX += colWidths[1]
+
+			pdf.SetXY(currentX, y)
+
+			pdf.SetFont("Arial", "", 8)
+
+			pdf.MultiCell(colWidths[2], 4.5, review, "LR", "L", false)
+
+			// Border luar bawah
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[2], 0, "", "B", 0, "L", false, 0, "")
+
+			// =========================
+			// KETERANGAN
+			// =========================
+
+			currentX += colWidths[2]
+
+			pdf.SetXY(currentX, y)
+
+			pdf.MultiCell(colWidths[3], 4.5, keterangan, "LR", "L", false)
+
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[3], 0, "", "B", 0, "L", false, 0, "")
+
+			// =========================
+			// USER PEMBUAT
+			// =========================
+
+			currentX += colWidths[3]
+
+			pdf.SetXY(currentX, y)
+
+			pdf.MultiCell(colWidths[4], 4.5, namaPegawai, "LR", "L", false)
+
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[4], 0, "", "B", 0, "L", false, 0, "")
+
+			// =========================
+			// WAKTU REVIEW
+			// =========================
+
+			currentX += colWidths[4]
+
+			pdf.SetXY(currentX, y)
+
+			pdf.MultiCell(colWidths[5], 4.5, waktuReview, "LR", "L", false)
+
+			pdf.SetXY(currentX, y+rowHeight)
+
+			pdf.CellFormat(colWidths[5], 0, "", "B", 0, "L", false, 0, "")
+
+			// =========================
+			// SAMBUNG GARIS SAMPING
+			// =========================
+
+			// Karena MultiCell dengan "LR" hanya menggambar
+			// garis sepanjang tinggi teks, maka bagian yang
+			// masih kosong sampai rowHeight harus disambung manual.
+
+			// Nama Pohon
+			pdf.Line(
+				x+colWidths[0],
+				y,
+				x+colWidths[0],
+				y+rowHeight,
+			)
+
+			// Batas Review
+			pdf.Line(
+				x+colWidths[0]+colWidths[1],
+				y,
+				x+colWidths[0]+colWidths[1],
+				y+rowHeight,
+			)
+
+			// Batas Keterangan
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2],
+				y+rowHeight,
+			)
+
+			// Batas User Pembuat
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3],
+				y+rowHeight,
+			)
+
+			// Batas Waktu Review
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4],
+				y+rowHeight,
+			)
+
+			// Garis paling kanan
+			pdf.Line(
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4]+colWidths[5],
+				y,
+				x+colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4]+colWidths[5],
+				y+rowHeight,
+			)
+
+			// =========================
+			// PINDAH KE BARIS BERIKUTNYA
+			// =========================
+
+			pdf.SetXY(x, y+rowHeight)
+
+			pdf.SetFont("Arial", "", 8)
+		}
+	}
+
+	// =========================
+	// OUTPUT PDF
+	// =========================
+
+	var buffer bytes.Buffer
+
+	err = pdf.Output(&buffer)
+	if err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), nil
+}
+
+func formatWaktuReviewPDF(createdAt, updatedAt string) string {
+
+	layouts := []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+	}
+
+	parseTime := func(value string) time.Time {
+		for _, layout := range layouts {
+			if result, err := time.Parse(layout, value); err == nil {
+				return result
+			}
+		}
+
+		return time.Time{}
+	}
+
+	created := parseTime(createdAt)
+	updated := parseTime(updatedAt)
+
+	label := "diedit pada :"
+	target := updated
+
+	if createdAt == updatedAt {
+		label = "dibuat pada :"
+		target = created
+	}
+
+	if target.IsZero() {
+		return label + "\n" + "-"
+	}
+
+	months := []string{
+		"Januari",
+		"Februari",
+		"Maret",
+		"April",
+		"Mei",
+		"Juni",
+		"Juli",
+		"Agustus",
+		"September",
+		"Oktober",
+		"November",
+		"Desember",
+	}
+
+	waktu := fmt.Sprintf(
+		"%d %s %d %02d:%02d",
+		target.Day(),
+		months[int(target.Month())-1],
+		target.Year(),
+		target.Hour(),
+		target.Minute(),
+	)
+
+	return label + "\n" + waktu
 }
 
 func toReviewTujuanOpdResponse(review domain.Review, namaPegawai string) pohonkinerja.ReviewTujuanOpdResponse {
