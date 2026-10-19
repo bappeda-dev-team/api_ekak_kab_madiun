@@ -289,7 +289,7 @@ func (repository *PkRepositoryImpl) FindPaguPkByKodeSubkegiatans(ctx context.Con
 	}
 
 	placeholders := make([]string, len(kodeSubkegiatans))
-	args := make([]any, len(kodeSubkegiatans)+2)
+	args := make([]any, 0, len(kodeSubkegiatans)+2)
 
 	for i, kode := range kodeSubkegiatans {
 		placeholders[i] = "?"
