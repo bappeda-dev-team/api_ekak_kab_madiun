@@ -1566,7 +1566,7 @@ func (service *PkServiceImpl) FindPkPenetapanRenja(
 		log.Printf("Error find indikator renja pk penetapan: %v", err)
 		return nil, err
 	}
-	paguPerSubkegiatan, err := service.pkRepository.FindPaguPkByKodeSubkegiatans(ctx, tx, kodeSubkegiatans)
+	paguPerSubkegiatan, err := service.pkRepository.FindPaguPkByKodeSubkegiatans(ctx, tx, kodeOpd, tahun, kodeSubkegiatans)
 	if err != nil {
 		log.Printf("Error find pagu renja pk penetapan: %v", err)
 		return nil, err

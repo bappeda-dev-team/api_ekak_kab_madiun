@@ -282,26 +282,34 @@ func (repository *PkRepositoryImpl) FindTotalPaguAnggaranByRekinIds(ctx context.
 	return totalPaguMap, nil
 }
 
-func (repository *PkRepositoryImpl) FindPaguPkByKodeSubkegiatans(ctx context.Context, tx *sql.Tx, kodeSubkegiatans []string) (map[string]int64, error) {
+func (repository *PkRepositoryImpl) FindPaguPkByKodeSubkegiatans(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun int, kodeSubkegiatans []string) (map[string]int64, error) {
 	paguSubkegiatanMap := make(map[string]int64)
 	if len(kodeSubkegiatans) == 0 {
 		return paguSubkegiatanMap, nil
 	}
 
 	placeholders := make([]string, len(kodeSubkegiatans))
-	args := make([]any, len(kodeSubkegiatans))
+	args := make([]any, len(kodeSubkegiatans)+2)
+
 	for i, kode := range kodeSubkegiatans {
 		placeholders[i] = "?"
-		args[i] = kode
+		args = append(args, kode)
 	}
 
 	script := fmt.Sprintf(`
          SELECT pg.kode_subkegiatan, pg.pagu
          FROM tb_pagu pg
          WHERE pg.jenis = 'penetapan'
+	 AND pg.kode_opd = ?
+	 AND pg.tahun = ?
          AND pg.kode_subkegiatan IN (%s)
-    `, strings.Join(placeholders, ","))
-	rows, err := tx.QueryContext(ctx, script, args...)
+	`, strings.Join(placeholders, ","))
+
+	finalArgs := make([]any, 0, len(args)+2)
+	finalArgs = append(finalArgs, kodeOpd, tahun)
+	finalArgs = append(finalArgs, args...)
+
+	rows, err := tx.QueryContext(ctx, script, finalArgs...)
 	if err != nil {
 		return nil, err
 	}
