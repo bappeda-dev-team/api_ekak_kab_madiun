@@ -110,7 +110,7 @@ func (controller *OpdControllerImpl) FindAll(writer http.ResponseWriter, request
 		helper.WriteToResponseBody(writer, web.WebResponse{
 			Code:   500,
 			Status: "error",
-			Data:   "Gagal mengambil data OPD. Silakan coba lagi.",
+			Data:   err.Error(),
 		})
 		return
 	}

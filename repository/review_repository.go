@@ -21,4 +21,5 @@ type ReviewRepository interface {
 	CreateTujuanOpd(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error)
 	FindByTujuanOpd(ctx context.Context, tx *sql.Tx, idTujuanOpd int) ([]domain.Review, error)
 	FindByTujuanOpdIdsBatch(ctx context.Context, tx *sql.Tx, tujuanOpdIds []int) ([]domain.ReviewWithNama, error)
+	FindLaporanReviewTujuanOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.LaporanReviewTujuanOpd, error)
 }

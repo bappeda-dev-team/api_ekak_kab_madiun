@@ -11,6 +11,7 @@ type Review struct {
 	Catatan        string
 	CreatedBy      string
 	Jenis_pokin    string
+	Tahun          int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -54,6 +55,7 @@ type ReviewWithNama struct {
 	IdPohonKinerja int
 	Review         string
 	Keterangan     string
+	Catatan        string
 	CreatedBy      string
 	NamaReviewer   string
 	Jenis_pokin    string

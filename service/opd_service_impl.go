@@ -238,7 +238,8 @@ func (service *OpdServiceImpl) FindAll(ctx context.Context) ([]opdmaster.OpdResp
 	if err != nil {
 		return []opdmaster.OpdResponse{}, err
 	}
-	defer helper.CommitOrRollback(tx)
+	// Read-only: rollback saja; CommitOrRollback + Commit bisa panic (invalid connection) setelah query gagal/koneksi drop.
+	defer func() { _ = tx.Rollback() }()
 
 	// Menggunakan JOIN untuk mengambil semua data sekaligus
 	opds, lembagaMap, err := service.OpdRepository.FindAllWithLembaga(ctx, tx)

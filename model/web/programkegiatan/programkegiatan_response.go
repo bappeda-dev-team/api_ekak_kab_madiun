@@ -222,10 +222,11 @@ type SubKegiatanV2Response struct {
 }
 
 type OutcomeMatrixItemResponse struct {
-	Id              int    `json:"id"`
-	KodeSubkegiatan string `json:"kode_subkegiatan"`
-	Kode            string `json:"kode"`
-	Outcome         string `json:"outcome"`
+	Id      int    `json:"id"`
+	KodeOpd string `json:"kode_opd"`
+	Kode    string `json:"kode"`
+	Jenis   string `json:"jenis"`
+	Outcome string `json:"outcome"`
 }
 
 type IndikatorRenstraUpdateResponse struct {
