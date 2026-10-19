@@ -17,7 +17,7 @@ func NewReviewRepositoryImpl() *ReviewRepositoryImpl {
 
 func (repository *ReviewRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
 	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by, tahun) VALUES (?, ?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, script, review.Id, review.IdPohonKinerja, review.Review, review.Keterangan, review.Jenis_pokin, review.CreatedBy)
+	_, err := tx.ExecContext(ctx, script, review.Id, review.IdPohonKinerja, review.Review, review.Keterangan, review.Jenis_pokin, review.CreatedBy, review.Tahun)
 	if err != nil {
 		return domain.Review{}, err
 	}

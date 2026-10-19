@@ -71,6 +71,7 @@ func (service *ReviewServiceImpl) Create(ctx context.Context, request pohonkiner
 		Keterangan:     request.Keterangan,
 		CreatedBy:      claims.Nip,
 		Jenis_pokin:    request.JenisPokin,
+		Tahun:          request.Tahun,
 	}
 
 	// Simpan ke database
