@@ -226,6 +226,7 @@ func (service *ReviewServiceImpl) FindById(ctx context.Context, id int) (pohonki
 		IdPohonKinerja: review.IdPohonKinerja,
 		Review:         review.Review,
 		Keterangan:     review.Keterangan,
+		Catatan:        review.Catatan,
 		CreatedBy:      review.CreatedBy,
 		JenisPokin:     review.Jenis_pokin,
 	}
