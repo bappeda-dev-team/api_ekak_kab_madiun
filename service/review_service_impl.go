@@ -195,6 +195,7 @@ func (service *ReviewServiceImpl) FindAll(ctx context.Context, idPohonKinerja in
 			IdPohonKinerja: review.IdPohonKinerja,
 			Review:         review.Review,
 			Keterangan:     review.Keterangan,
+			Catatan:        review.Catatan,
 			CreatedBy:      review.CreatedBy,
 			JenisPokin:  review.Jenis_pokin,
 			NamaPegawai: pegawai.NamaPegawai,

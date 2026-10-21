@@ -54,7 +54,7 @@ func (repository *ReviewRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx
 }
 
 func (repository *ReviewRepositoryImpl) FindByPohonKinerja(ctx context.Context, tx *sql.Tx, idPohonKinerja int) ([]domain.Review, error) {
-	script := "SELECT id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by, created_at, updated_at FROM tb_review WHERE id_pohon_kinerja = ?"
+	script := "SELECT id, id_pohon_kinerja, review, keterangan, catatan, jenis_pokin, created_by, created_at, updated_at FROM tb_review WHERE id_pohon_kinerja = ?"
 	rows, err := tx.QueryContext(ctx, script, idPohonKinerja)
 	if err != nil {
 		return []domain.Review{}, err
@@ -64,7 +64,7 @@ func (repository *ReviewRepositoryImpl) FindByPohonKinerja(ctx context.Context, 
 	var reviews []domain.Review
 	for rows.Next() {
 		var review domain.Review
-		err := rows.Scan(&review.Id, &review.IdPohonKinerja, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
+		err := rows.Scan(&review.Id, &review.IdPohonKinerja, &review.Review, &review.Keterangan, &review.Catatan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
 		if err != nil {
 			return []domain.Review{}, err
 		}
