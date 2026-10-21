@@ -5,6 +5,7 @@ type ReviewUpdateRequest struct {
 	IdPohonKinerja int    `json:"id_pohon_kinerja"`
 	Review         string `json:"review"`
 	Keterangan     string `json:"keterangan"`
+	Catatan        string `json:"catatan"`
 }
 
 type ReviewTujuanOpdUpdateRequest struct {

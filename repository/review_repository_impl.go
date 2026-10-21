@@ -16,8 +16,8 @@ func NewReviewRepositoryImpl() *ReviewRepositoryImpl {
 }
 
 func (repository *ReviewRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
-	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by, tahun) VALUES (?, ?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, script, review.Id, review.IdPohonKinerja, review.Review, review.Keterangan, review.Jenis_pokin, review.CreatedBy, review.Tahun)
+	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, catatan, jenis_pokin, created_by, tahun) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, review.Id, review.IdPohonKinerja, review.Review, review.Keterangan, review.Catatan, review.Jenis_pokin, review.CreatedBy, review.Tahun)
 	if err != nil {
 		return domain.Review{}, err
 	}
@@ -43,10 +43,10 @@ func (repository *ReviewRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, 
 }
 
 func (repository *ReviewRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.Review, error) {
-	script := "SELECT id, id_pohon_kinerja, COALESCE(id_tujuan_opd, 0), review, keterangan, jenis_pokin, created_by, tahun, created_at, updated_at FROM tb_review WHERE id = ?"
+	script := "SELECT id, id_pohon_kinerja, COALESCE(id_tujuan_opd, 0), review, keterangan, catatan, jenis_pokin, created_by, tahun, created_at, updated_at FROM tb_review WHERE id = ?"
 	row := tx.QueryRowContext(ctx, script, id)
 	var review domain.Review
-	err := row.Scan(&review.Id, &review.IdPohonKinerja, &review.IdTujuanOpd, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.Tahun, &review.CreatedAt, &review.UpdatedAt)
+	err := row.Scan(&review.Id, &review.IdPohonKinerja, &review.IdTujuanOpd, &review.Review, &review.Keterangan, &review.Catatan, &review.Jenis_pokin, &review.CreatedBy, &review.Tahun, &review.CreatedAt, &review.UpdatedAt)
 	if err != nil {
 		return domain.Review{}, err
 	}

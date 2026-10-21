@@ -5,6 +5,7 @@ type ReviewCreateRequest struct {
 	IdPohonKinerja int    `json:"id_pohon_kinerja"`
 	Review         string `json:"review"`
 	Keterangan     string `json:"keterangan"`
+	Catatan        string `json:"catatan"`
 	CreatedBy      string `json:"created_by"`
 	JenisPokin     string `json:"jenis_pokin"`
 	Tahun          int    `json:"tahun"`

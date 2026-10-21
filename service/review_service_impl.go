@@ -72,6 +72,7 @@ func (service *ReviewServiceImpl) Create(ctx context.Context, request pohonkiner
 		IdPohonKinerja: request.IdPohonKinerja,
 		Review:         request.Review,
 		Keterangan:     request.Keterangan,
+		Catatan:        request.Catatan,
 		CreatedBy:      claims.Nip,
 		Jenis_pokin:    request.JenisPokin,
 		Tahun:          request.Tahun,
@@ -94,6 +95,7 @@ func (service *ReviewServiceImpl) Create(ctx context.Context, request pohonkiner
 		IdPohonKinerja: result.IdPohonKinerja,
 		Review:         result.Review,
 		Keterangan:     result.Keterangan,
+		Catatan:        result.Catatan,
 		CreatedBy:      result.CreatedBy,
 		JenisPokin:     result.Jenis_pokin,
 	}
@@ -118,6 +120,7 @@ func (service *ReviewServiceImpl) Update(ctx context.Context, request pohonkiner
 		Id:         request.Id,
 		Review:     request.Review,
 		Keterangan: request.Keterangan,
+		Catatan:    request.Catatan,
 	}
 
 	result, err := service.ReviewRepository.Update(ctx, tx, review)
@@ -135,6 +138,7 @@ func (service *ReviewServiceImpl) Update(ctx context.Context, request pohonkiner
 		IdPohonKinerja: result.IdPohonKinerja,
 		Review:         result.Review,
 		Keterangan:     result.Keterangan,
+		Catatan:        result.Catatan,
 		CreatedBy:      result.CreatedBy,
 	}
 
