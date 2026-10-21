@@ -6,6 +6,7 @@ type ReviewResponse struct {
 	Review         string `json:"review"`
 	Keterangan     string `json:"keterangan"`
 	Catatan        string `json:"catatan"`
+	Substansi      string `json:"substansi"`
 	CreatedBy      string `json:"created_by,omitempty"`
 	NamaPegawai    string `json:"nama_pegawai,omitempty"`
 	JenisPokin     string `json:"jenis_pokin"`
@@ -38,6 +39,8 @@ type ReviewDetailResponse struct {
 	JenisPohon  string `json:"jenis_pohon"`
 	Review      string `json:"review"`
 	Keterangan  string `json:"keterangan"`
+	Catatan     string `json:"catatan"`
+	Substansi   string `json:"substansi"`
 	NamaPegawai string `json:"created_by"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
@@ -52,6 +55,8 @@ type ReviewOpdResponse struct {
 	Indikator   []IndikatorResponse `json:"indikator"`
 	Review      string              `json:"review"`
 	Keterangan  string              `json:"keterangan"`
+	Catatan     string              `json:"catatan"`
+	Substansi   string              `json:"substansi"`
 	NamaPegawai string              `json:"created_by"`
 	CreatedAt   string              `json:"created_at"`
 	UpdatedAt   string              `json:"updated_at"`

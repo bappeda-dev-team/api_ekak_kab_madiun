@@ -73,6 +73,7 @@ func (service *ReviewServiceImpl) Create(ctx context.Context, request pohonkiner
 		Review:         request.Review,
 		Keterangan:     request.Keterangan,
 		Catatan:        request.Catatan,
+		Substansi:      request.Substansi,
 		CreatedBy:      claims.Nip,
 		Jenis_pokin:    request.JenisPokin,
 		Tahun:          request.Tahun,
@@ -96,6 +97,7 @@ func (service *ReviewServiceImpl) Create(ctx context.Context, request pohonkiner
 		Review:         result.Review,
 		Keterangan:     result.Keterangan,
 		Catatan:        result.Catatan,
+		Substansi:      result.Substansi,
 		CreatedBy:      result.CreatedBy,
 		JenisPokin:     result.Jenis_pokin,
 	}
@@ -121,6 +123,7 @@ func (service *ReviewServiceImpl) Update(ctx context.Context, request pohonkiner
 		Review:     request.Review,
 		Keterangan: request.Keterangan,
 		Catatan:    request.Catatan,
+		Substansi:  request.Substansi,
 	}
 
 	result, err := service.ReviewRepository.Update(ctx, tx, review)
@@ -139,6 +142,7 @@ func (service *ReviewServiceImpl) Update(ctx context.Context, request pohonkiner
 		Review:         result.Review,
 		Keterangan:     result.Keterangan,
 		Catatan:        result.Catatan,
+		Substansi:      result.Substansi,
 		CreatedBy:      result.CreatedBy,
 	}
 
@@ -196,6 +200,7 @@ func (service *ReviewServiceImpl) FindAll(ctx context.Context, idPohonKinerja in
 			Review:         review.Review,
 			Keterangan:     review.Keterangan,
 			Catatan:        review.Catatan,
+			Substansi:      review.Substansi,
 			CreatedBy:      review.CreatedBy,
 			JenisPokin:  review.Jenis_pokin,
 			NamaPegawai: pegawai.NamaPegawai,
@@ -228,6 +233,7 @@ func (service *ReviewServiceImpl) FindById(ctx context.Context, id int) (pohonki
 		Review:         review.Review,
 		Keterangan:     review.Keterangan,
 		Catatan:        review.Catatan,
+		Substansi:      review.Substansi,
 		CreatedBy:      review.CreatedBy,
 		JenisPokin:     review.Jenis_pokin,
 	}
@@ -266,6 +272,8 @@ func (service *ReviewServiceImpl) FindAllReviewByTematik(ctx context.Context, ta
 				JenisPohon:  review.JenisPohon,
 				Review:      review.Review,
 				Keterangan:  review.Keterangan,
+				Catatan:     review.Catatan,
+				Substansi:   review.Substansi,
 				NamaPegawai: pegawai.NamaPegawai,
 				CreatedAt:   review.CreatedAt,
 				UpdatedAt:   review.UpdatedAt,
@@ -381,6 +389,8 @@ func (service *ReviewServiceImpl) FindAllReviewOpd(ctx context.Context, kodeOpd,
 			Indikator:   indikatorMap[review.IdPohon],
 			Review:      review.Review,
 			Keterangan:  review.Keterangan,
+			Catatan:     review.Catatan,
+			Substansi:   review.Substansi,
 			NamaPegawai: pegawai.NamaPegawai, // Akan kosong jika pegawai tidak ditemukan
 			CreatedAt:   review.CreatedAt,
 			UpdatedAt:   review.UpdatedAt,
