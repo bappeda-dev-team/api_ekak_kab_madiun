@@ -133,7 +133,7 @@ func InitializeServer() *http.Server {
 	crosscuttingOpdControllerImpl := controller.NewCrosscuttingOpdControllerImpl(crosscuttingOpdServiceImpl)
 	manualIKServiceImpl := service.NewManualIKServiceImpl(manualIKRepositoryImpl, db, validate)
 	manualIKControllerImpl := controller.NewManualIKControllerImpl(manualIKServiceImpl)
-	reviewServiceImpl := service.NewReviewServiceImpl(reviewRepositoryImpl, db, pohonKinerjaRepositoryImpl, pegawaiRepositoryImpl)
+	reviewServiceImpl := service.NewReviewServiceImpl(reviewRepositoryImpl, db, pohonKinerjaRepositoryImpl, pegawaiRepositoryImpl, opdRepositoryImpl)
 	reviewControllerImpl := controller.NewReviewControllerImpl(reviewServiceImpl)
 	periodeServiceImpl := service.NewPeriodeServiceImpl(periodeRepositoryImpl, db)
 	periodeControllerImpl := controller.NewPeriodeControllerImpl(periodeServiceImpl)

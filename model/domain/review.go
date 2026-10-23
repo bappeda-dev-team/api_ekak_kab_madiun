@@ -9,6 +9,7 @@ type Review struct {
 	Review         string
 	Keterangan     string
 	Catatan        string
+	Substansi      string
 	CreatedBy      string
 	Jenis_pokin    string
 	Tahun          int
@@ -31,6 +32,8 @@ type ReviewDetail struct {
 	JenisPohon string
 	Review     string
 	Keterangan string
+	Catatan    string
+	Substansi  string
 	CreatedBy  string
 	JenisPokin string
 	CreatedAt  string
@@ -45,6 +48,8 @@ type ReviewOpd struct {
 	JenisPohon string
 	Review     string
 	Keterangan string
+	Catatan    string
+	Substansi  string
 	CreatedBy  string
 	CreatedAt  string
 	UpdatedAt  string
@@ -56,6 +61,7 @@ type ReviewWithNama struct {
 	Review         string
 	Keterangan     string
 	Catatan        string
+	Substansi      string
 	CreatedBy      string
 	NamaReviewer   string
 	Jenis_pokin    string

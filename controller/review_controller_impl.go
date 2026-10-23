@@ -270,6 +270,27 @@ func (controller *ReviewControllerImpl) FindAllReviewOpd(writer http.ResponseWri
 	})
 }
 
+func (controller *ReviewControllerImpl) CetakPDFReviewOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	pdfBytes, err := controller.ReviewService.CetakPDFReviewOpd(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/pdf")
+	writer.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="review-opd-%s.pdf"`, tahun))
+
+	writer.WriteHeader(http.StatusOK)
+	_, err = writer.Write(pdfBytes)
+}
+
 // @Summary      Create Review Tujuan OPD
 // @Description  Membuat review untuk tujuan OPD; id_tujuan_opd dari path. id_pohon_kinerja default 0, jenis_pokin tidak perlu dikirim.
 // @Tags         Review Tujuan OPD
