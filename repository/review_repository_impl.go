@@ -331,7 +331,7 @@ func (repository *ReviewRepositoryImpl) FindByPokinIdBatch(ctx context.Context, 
 			r.id_pohon_kinerja, 
 			r.review, 
 			r.keterangan, 
-			COALESCE(r.catatan, '') as catatan
+			COALESCE(r.catatan, '') as catatan,
 			COALESCE(r.substansi, '') as substansi, 
 			r.created_by, 
 			COALESCE(p.nama, '') as nama_reviewer,

@@ -376,29 +376,62 @@ func (service *ReviewServiceImpl) FindAllReviewOpd(ctx context.Context, kodeOpd,
 		indikatorMap[pokinId] = indikatorResponses
 	}
 
-	var reviewResponses []pohonkinerja.ReviewOpdResponse
-	for _, review := range reviews {
-		pegawai, _ := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy)
+	// Kelompokkan review berdasarkan ID pohon kinerja.
+	reviewMap := make(map[int]*pohonkinerja.ReviewOpdResponse)
+	urutanIdPohon := make([]int, 0)
 
-		reviewResponses = append(reviewResponses, pohonkinerja.ReviewOpdResponse{
-			IdPohon:     review.IdPohon,
-			Parent:      review.Parent,
-			NamaPohon:   review.NamaPohon,
-			LevelPohon:  review.LevelPohon,
-			JenisPohon:  review.JenisPohon,
-			Indikator:   indikatorMap[review.IdPohon],
-			Review:      review.Review,
-			Keterangan:  review.Keterangan,
-			Catatan:     review.Catatan,
-			Substansi:   review.Substansi,
-			NamaPegawai: pegawai.NamaPegawai, // Akan kosong jika pegawai tidak ditemukan
-			CreatedAt:   review.CreatedAt,
-			UpdatedAt:   review.UpdatedAt,
-		})
+	for _, review := range reviews {
+		response, exists := reviewMap[review.IdPohon]
+
+		// Buat data pohon hanya sekali.
+		if !exists {
+			response = &pohonkinerja.ReviewOpdResponse{
+				IdPohon:    review.IdPohon,
+				Parent:     review.Parent,
+				NamaPohon:  review.NamaPohon,
+				LevelPohon: review.LevelPohon,
+				JenisPohon: review.JenisPohon,
+				Indikator:  indikatorMap[review.IdPohon],
+				Review:     make([]pohonkinerja.ReviewOpdItemResponse, 0),
+			}
+
+			reviewMap[review.IdPohon] = response
+			urutanIdPohon = append(urutanIdPohon, review.IdPohon)
+		}
+
+		// Ambil nama pegawai pembuat review.
+		pegawai, _ := service.pegawaiRepository.FindByNip(
+			ctx,
+			tx,
+			review.CreatedBy,
+		)
+
+		namaPegawai := pegawai.NamaPegawai
+
+		// Tambahkan setiap review ke pohon yang sesuai.
+		reviewMap[review.IdPohon].Review = append(
+			reviewMap[review.IdPohon].Review,
+			pohonkinerja.ReviewOpdItemResponse{
+				Review:      review.Review,
+				Keterangan:  review.Keterangan,
+				Catatan:     review.Catatan,
+				Substansi:   review.Substansi,
+				NamaPegawai: namaPegawai,
+				CreatedAt:   review.CreatedAt,
+				UpdatedAt:   review.UpdatedAt,
+			},
+		)
 	}
 
-	if len(reviewResponses) == 0 {
-		return []pohonkinerja.ReviewOpdResponse{}, nil
+	// Susun response sesuai urutan pohon dari repository.
+	reviewResponses := make(
+		[]pohonkinerja.ReviewOpdResponse,
+		0,
+		len(urutanIdPohon),
+	)
+
+	for _, idPohon := range urutanIdPohon {
+		reviewResponses = append(reviewResponses, *reviewMap[idPohon])
 	}
 
 	return reviewResponses, nil
@@ -484,28 +517,57 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 		indikatorMap[pokinId] = indikatorResponses
 	}
 
-	// Mengikuti response yang digunakan FE.
-	reviewResponses := make([]pohonkinerja.ReviewOpdResponse, 0, len(reviews))
+	// Kelompokkan review berdasarkan ID pohon kinerja.
+	reviewMap := make(map[int]*pohonkinerja.ReviewOpdResponse)
+	urutanIdPohon := make([]int, 0)
 
 	for _, review := range reviews {
+		response, exists := reviewMap[review.IdPohon]
+
+		if !exists {
+			response = &pohonkinerja.ReviewOpdResponse{
+				IdPohon:    review.IdPohon,
+				Parent:     review.Parent,
+				NamaPohon:  review.NamaPohon,
+				LevelPohon: review.LevelPohon,
+				JenisPohon: review.JenisPohon,
+				Indikator:  indikatorMap[review.IdPohon],
+				Review:     make([]pohonkinerja.ReviewOpdItemResponse, 0),
+			}
+
+			reviewMap[review.IdPohon] = response
+			urutanIdPohon = append(urutanIdPohon, review.IdPohon)
+		}
 
 		pegawai, _ := service.pegawaiRepository.FindByNip(ctx, tx, review.CreatedBy)
 
-		reviewResponses = append(
-			reviewResponses,
-			pohonkinerja.ReviewOpdResponse{
-				IdPohon:     review.IdPohon,
-				Parent:      review.Parent,
-				NamaPohon:   review.NamaPohon,
-				LevelPohon:  review.LevelPohon,
-				JenisPohon:  review.JenisPohon,
-				Indikator:   indikatorMap[review.IdPohon],
+		namaPegawai := pegawai.NamaPegawai
+
+		reviewMap[review.IdPohon].Review = append(
+			reviewMap[review.IdPohon].Review,
+			pohonkinerja.ReviewOpdItemResponse{
 				Review:      review.Review,
 				Keterangan:  review.Keterangan,
-				NamaPegawai: pegawai.NamaPegawai,
+				Catatan:     review.Catatan,
+				Substansi:   review.Substansi,
+				NamaPegawai: namaPegawai,
 				CreatedAt:   review.CreatedAt,
 				UpdatedAt:   review.UpdatedAt,
 			},
+		)
+	}
+
+	// Susun hasil sesuai urutan pohon dari repository.
+	reviewResponses := make(
+		[]pohonkinerja.ReviewOpdResponse,
+		0,
+		len(urutanIdPohon),
+	)
+
+	for _, idPohon := range urutanIdPohon {
+		reviewResponses = append(
+			reviewResponses,
+			*reviewMap[idPohon],
 		)
 	}
 
@@ -589,63 +651,238 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 	// colWidths := []float64{12, 48, 75, 55, 40, 47}
 	// colWidths := []float64{12, 55, 85, 65, 45, 48}
 
-	colWidths := []float64{8, 40, 45, 17, 17, 57, 48, 38, 40}
+	colWidths := []float64{
+		8,  // No
+		40, // Nama Pohon / Level
+		45, // Indikator
+		17, // Target
+		17, // Satuan
+		22, // Kelengkapan
+		22, // Kesesuaian Level
+		22, // Substansi
+		39, // Keterangan lainnya
+		38, // User Pembuat
+		40, // Waktu Review
+	}
 
 	headers := []string{
-		"No", "Nama Pohon / Level", "Indikator", "Target", "Satuan", "Review", "Keterangan lainnya", "User Pembuat", "Waktu Review",
+		"No",
+		"Nama Pohon / Level",
+		"Indikator",
+		"Target",
+		"Satuan",
+		"Kelengkapan",
+		"Kesesuaian Level",
+		"Substansi",
+		"Keterangan lainnya",
+		"User Pembuat",
+		"Waktu Review",
 	}
 
 	nomorKolom := []string{
-		"1", "2", "3", "4", "5", "6", "7", "8", "9",
+		"1", "2", "3", "4", "5", "6",
+		"7", "8", "9", "10", "11",
 	}
 
 	// =========================
 	// HEADER TABEL
 	// =========================
 
-	pdf.SetFont("Arial", "B", 9)
+	gambarHeader := func() {
+		pdf.SetFont("Arial", "B", 8)
 
-	// Header utama
-	for i, header := range headers {
+		headerY := pdf.GetY()
+		headerHeight := 8.0
+		subHeaderMinHeight := 8.0
+		nomorHeight := 6.0
+		lineHeight := 4.0
+
+		// =========================
+		// HITUNG TINGGI SUBHEADER REVIEW OTOMATIS
+		// =========================
+		subHeaders := []string{
+			"Kelengkapan",
+			"Kesesuaian Level",
+			"Substansi",
+		}
+
+		subHeaderHeight := subHeaderMinHeight
+
+		for i, header := range subHeaders {
+			lines := pdf.SplitLines(
+				[]byte(header),
+				colWidths[5+i]-2,
+			)
+
+			tinggiTeks := float64(len(lines))*lineHeight + 2
+
+			if tinggiTeks > subHeaderHeight {
+				subHeaderHeight = tinggiTeks
+			}
+		}
+
+		// =========================
+		// KOLOM 1-5: HEADER VERTIKAL
+		// =========================
+		tinggiHeaderUtama := headerHeight + subHeaderHeight
+		x := 10.0
+
+		for i := 0; i < 5; i++ {
+			pdf.Rect(
+				x,
+				headerY,
+				colWidths[i],
+				tinggiHeaderUtama,
+				"D",
+			)
+
+			pdf.SetXY(x+1, headerY+1)
+
+			pdf.MultiCell(
+				colWidths[i]-2,
+				lineHeight,
+				headers[i],
+				"",
+				"C",
+				false,
+			)
+
+			x += colWidths[i]
+		}
+
+		// =========================
+		// HEADER REVIEW
+		// =========================
+		reviewWidth := colWidths[5] +
+			colWidths[6] +
+			colWidths[7]
+
+		pdf.Rect(
+			x,
+			headerY,
+			reviewWidth,
+			headerHeight,
+			"D",
+		)
+
+		pdf.SetXY(x, headerY+1.5)
 		pdf.CellFormat(
-			colWidths[i],
-			10,
-			header,
-			"1",
+			reviewWidth,
+			5,
+			"Review",
+			"",
 			0,
 			"C",
 			false,
 			0,
 			"",
 		)
+
+		// =========================
+		// SUBHEADER REVIEW
+		// =========================
+		subX := x
+
+		for i, header := range subHeaders {
+			lebar := colWidths[5+i]
+
+			pdf.Rect(
+				subX,
+				headerY+headerHeight,
+				lebar,
+				subHeaderHeight,
+				"D",
+			)
+
+			pdf.SetXY(subX+1, headerY+headerHeight+1)
+
+			pdf.MultiCell(
+				lebar-2,
+				lineHeight,
+				header,
+				"",
+				"C",
+				false,
+			)
+
+			subX += lebar
+		}
+
+		// =========================
+		// KOLOM KETERANGAN SAMPAI WAKTU REVIEW
+		// =========================
+		x = x + reviewWidth
+
+		for i := 8; i < len(headers); i++ {
+			pdf.Rect(
+				x,
+				headerY,
+				colWidths[i],
+				tinggiHeaderUtama,
+				"D",
+			)
+
+			pdf.SetXY(x+1, headerY+1)
+
+			pdf.MultiCell(
+				colWidths[i]-2,
+				lineHeight,
+				headers[i],
+				"",
+				"C",
+				false,
+			)
+
+			x += colWidths[i]
+		}
+
+		// =========================
+		// NOMOR REFERENSI KOLOM
+		// =========================
+		nomorY := headerY + tinggiHeaderUtama
+		x = 10.0
+
+		pdf.SetFont("Arial", "", 8)
+
+		for i, nomor := range nomorKolom {
+			pdf.Rect(
+				x,
+				nomorY,
+				colWidths[i],
+				nomorHeight,
+				"D",
+			)
+
+			pdf.SetXY(x, nomorY)
+
+			pdf.CellFormat(
+				colWidths[i],
+				nomorHeight,
+				nomor,
+				"",
+				0,
+				"C",
+				false,
+				0,
+				"",
+			)
+
+			x += colWidths[i]
+		}
+
+		// Posisikan awal data tepat di bawah nomor kolom.
+		pdf.SetXY(10, nomorY+nomorHeight)
 	}
 
-	pdf.Ln(-1)
-
-	// Nomor referensi kolom
-	for i, nomor := range nomorKolom {
-		pdf.CellFormat(
-			colWidths[i],
-			6,
-			nomor,
-			"1",
-			0,
-			"C",
-			false,
-			0,
-			"",
-		)
-	}
-
-	pdf.Ln(-1)
+	gambarHeader()
 
 	pdf.SetFont("Arial", "", 8)
 
+	// pdf.SetFont("Arial", "", 8)
+
+	
 	if len(reviewResponses) == 0 {
-
-		// pdf.CellFormat(277, 10, "Data Kosong / Belum Ditambahkan", "1", 1, "C", false, 0, "")
 		pdf.CellFormat(310, 10, "Data Kosong / Belum Ditambahkan", "1", 1, "C", false, 0, "")
-
 	} else {
 		type detailIndikator struct {
 			nama   string
@@ -668,27 +905,9 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 				jenisPohon = "-"
 			}
 
-			review := strings.TrimSpace(data.Review)
-			if review == "" {
-				review = "-"
-			}
-
-			keterangan := strings.TrimSpace(data.Keterangan)
-			if keterangan == "" {
-				keterangan = "-"
-			}
-
-			namaPegawai := strings.TrimSpace(data.NamaPegawai)
-			if namaPegawai == "" {
-				namaPegawai = "-"
-			}
-
-			waktuReview := formatWaktuReviewPDF(
-				data.CreatedAt,
-				data.UpdatedAt,
-			)
-
-			// Siapkan baris indikator dan target.
+			// =========================
+			// SIAPKAN DATA INDIKATOR
+			// =========================
 			var details []detailIndikator
 
 			for _, indikator := range data.Indikator {
@@ -699,9 +918,7 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 
 				if len(indikator.Target) == 0 {
 					details = append(details, detailIndikator{
-						nama:   namaIndikator,
-						target: "-",
-						satuan: "-",
+						nama: namaIndikator, target: "-", satuan: "-",
 					})
 					continue
 				}
@@ -718,163 +935,172 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 					}
 
 					details = append(details, detailIndikator{
-						nama:   namaIndikator,
-						target: nilaiTarget,
-						satuan: satuan,
+						nama: namaIndikator, target: nilaiTarget, satuan: satuan,
 					})
 				}
 			}
 
 			if len(details) == 0 {
 				details = append(details, detailIndikator{
-					nama:   "-",
-					target: "-",
-					satuan: "-",
+					nama: "-", target: "-", satuan: "-",
 				})
 			}
 
-			// Hitung tinggi teks Nama Pohon dan Jenis Pohon.
+			// =========================
+			// SIAPKAN DATA REVIEW PER BARIS
+			// =========================
+			reviews := data.Review
+
+			// Jumlah baris indikator dan review dihitung terpisah.
+			jumlahBarisIndikator := len(details)
+			jumlahBarisReview := len(reviews)
+
+			// Jika salah satu kelompok kosong, gunakan satu baris
+			// hanya untuk menjaga kerangka tabel tetap tergambar.
+			if jumlahBarisIndikator == 0 {
+				jumlahBarisIndikator = 1
+			}
+
+			if jumlahBarisReview == 0 {
+				jumlahBarisReview = 1
+			}
+
+			lebarReview := []float64{
+				colWidths[5], colWidths[6], colWidths[7],
+				colWidths[8], colWidths[9], colWidths[10],
+			}
+
+			
+			// =========================
+			// HITUNG TINGGI BARIS TERPISAH
+			// =========================
 			lebarNamaPohon := colWidths[1] - 2
 
-			lineNamaPohon := pdf.SplitLines(
-				[]byte(namaPohon),
-				lebarNamaPohon,
-			)
+			lineNamaPohon := pdf.SplitLines([]byte(namaPohon), lebarNamaPohon)
 			lineJenisPohon := pdf.SplitLines(
-				[]byte(strings.ToUpper(jenisPohon)),
-				lebarNamaPohon,
+				[]byte(strings.ToUpper(jenisPohon)), lebarNamaPohon,
 			)
 
-			if len(lineNamaPohon) < 1 {
+			if len(lineNamaPohon) == 0 {
 				lineNamaPohon = [][]byte{[]byte("-")}
 			}
-			if len(lineJenisPohon) < 1 {
+			if len(lineJenisPohon) == 0 {
 				lineJenisPohon = [][]byte{[]byte("-")}
 			}
 
 			namaPohonHeight := float64(len(lineNamaPohon))*lineHeight +
 				float64(len(lineJenisPohon))*4.0 + 2
 
-			// Hitung tinggi setiap baris berdasarkan SEMUA kolom detail.
-			rowHeights := make([]float64, len(details))
-			totalHeight := 0.0
+			// Hitung tinggi setiap baris indikator.
+			rowHeightsIndikator := make([]float64, jumlahBarisIndikator)
+			totalHeightIndikator := 0.0
 
-			for i, detail := range details {
-				lineIndikator := pdf.SplitLines(
-					[]byte(detail.nama),
-					colWidths[2]-2,
-				)
-				lineTarget := pdf.SplitLines(
-					[]byte(detail.target),
-					colWidths[3]-2,
-				)
-				lineSatuan := pdf.SplitLines(
-					[]byte(detail.satuan),
-					colWidths[4]-2,
-				)
+			for i := 0; i < jumlahBarisIndikator; i++ {
+				jumlahBarisTeks := 1
 
-				jumlahBaris := len(lineIndikator)
-				if len(lineTarget) > jumlahBaris {
-					jumlahBaris = len(lineTarget)
-				}
-				if len(lineSatuan) > jumlahBaris {
-					jumlahBaris = len(lineSatuan)
-				}
-				if jumlahBaris < 1 {
-					jumlahBaris = 1
+				if i < len(details) {
+					detail := details[i]
+					teksDetail := []string{
+						detail.nama, detail.target, detail.satuan,
+					}
+
+					for j, teks := range teksDetail {
+						lines := pdf.SplitLines(
+							[]byte(teks), colWidths[j+2]-2,
+						)
+						if len(lines) > jumlahBarisTeks {
+							jumlahBarisTeks = len(lines)
+						}
+					}
 				}
 
-				h := float64(jumlahBaris)*lineHeight + 2
+				h := float64(jumlahBarisTeks)*lineHeight + 2
 				if h < minRowHeight {
 					h = minRowHeight
 				}
 
-				rowHeights[i] = h
-				totalHeight += h
+				rowHeightsIndikator[i] = h
+				totalHeightIndikator += h
 			}
 
-			// Hitung tinggi kebutuhan teks di kolom yang di-merge.
-			lineReview := pdf.SplitLines(
-				[]byte(review),
-				colWidths[5]-2,
-			)
-			lineKeterangan := pdf.SplitLines(
-				[]byte(keterangan),
-				colWidths[6]-2,
-			)
-			linePegawai := pdf.SplitLines(
-				[]byte(namaPegawai),
-				colWidths[7]-2,
-			)
-			lineWaktu := pdf.SplitLines(
-				[]byte(waktuReview),
-				colWidths[8]-2,
-			)
+			// Hitung tinggi setiap baris review.
+			rowHeightsReview := make([]float64, jumlahBarisReview)
+			totalHeightReview := 0.0
 
-			maxReviewLines := len(lineReview)
-			if len(lineKeterangan) > maxReviewLines {
-				maxReviewLines = len(lineKeterangan)
-			}
-			if len(linePegawai) > maxReviewLines {
-				maxReviewLines = len(linePegawai)
-			}
-			if len(lineWaktu) > maxReviewLines {
-				maxReviewLines = len(lineWaktu)
-			}
-			if maxReviewLines < 1 {
-				maxReviewLines = 1
-			}
+			for i := 0; i < jumlahBarisReview; i++ {
+				jumlahBarisTeks := 1
 
-			reviewHeight := float64(maxReviewLines)*lineHeight + 2
-			if reviewHeight < minRowHeight {
-				reviewHeight = minRowHeight
-			}
+				if i < len(reviews) {
+					item := reviews[i]
+					teksReview := []string{
+						strings.TrimSpace(item.Review),
+						strings.TrimSpace(item.Catatan),
+						strings.TrimSpace(item.Substansi),
+						strings.TrimSpace(item.Keterangan),
+						strings.TrimSpace(item.NamaPegawai),
+						formatWaktuReviewPDF(item.CreatedAt, item.UpdatedAt),
+					}
 
-			// Cari tinggi minimum seluruh kelompok.
-			requiredHeight := totalHeight
+					for j, teks := range teksReview {
+						if teks == "" {
+							teks = "-"
+						}
 
-			if namaPohonHeight > requiredHeight {
-				requiredHeight = namaPohonHeight
-			}
-			if reviewHeight > requiredHeight {
-				requiredHeight = reviewHeight
+						lines := pdf.SplitLines(
+							[]byte(teks), lebarReview[j]-2,
+						)
+						if len(lines) > jumlahBarisTeks {
+							jumlahBarisTeks = len(lines)
+						}
+					}
+				}
+
+				h := float64(jumlahBarisTeks)*lineHeight + 2
+				if h < minRowHeight {
+					h = minRowHeight
+				}
+
+				rowHeightsReview[i] = h
+				totalHeightReview += h
 			}
 
-			// Tambahkan selisih pada baris terakhir supaya
-			// semua kolom merge memiliki tinggi yang sama.
-			if requiredHeight > totalHeight {
-				rowHeights[len(rowHeights)-1] += requiredHeight - totalHeight
-				totalHeight = requiredHeight
+			// Tinggi tabel mengikuti kelompok yang paling tinggi.
+			totalHeight := totalHeightIndikator
+			if totalHeightReview > totalHeight {
+				totalHeight = totalHeightReview
+			}
+			if namaPohonHeight > totalHeight {
+				totalHeight = namaPohonHeight
 			}
 
-			// Pastikan kelompok data muat di halaman.
-			// Header tabel tetap dicetak ulang setelah pindah halaman.
+			// Pastikan setiap kelompok mengisi tinggi tabel.
+			// Selisih ditambahkan ke baris terakhir kelompok tersebut.
+			if totalHeightIndikator < totalHeight {
+				rowHeightsIndikator[len(rowHeightsIndikator)-1] +=
+					totalHeight - totalHeightIndikator
+			}
+
+			if totalHeightReview < totalHeight {
+				rowHeightsReview[len(rowHeightsReview)-1] +=
+					totalHeight - totalHeightReview
+			}
+
+
+			// =========================
+			// CEK HALAMAN
+			// =========================
 			if pdf.GetY()+totalHeight > bottomLimit {
 				pdf.AddPage()
-
-				pdf.SetFont("Arial", "B", 9)
-				for i, header := range headers {
-					pdf.CellFormat(
-						colWidths[i], 10, header,
-						"1", 0, "C", false, 0, "",
-					)
-				}
-				pdf.Ln(-1)
-
-				for i, nomor := range nomorKolom {
-					pdf.CellFormat(
-						colWidths[i], 6, nomor,
-						"1", 0, "C", false, 0, "",
-					)
-				}
-				pdf.Ln(-1)
+				gambarHeader()
 				pdf.SetFont("Arial", "", 8)
 			}
 
-			x := pdf.GetX()
+			x := 10.0
 			y := pdf.GetY()
 
-			// NO: merge vertikal seluruh baris indikator.
+			// =========================
+			// NO (MERGE VERTIKAL)
+			// =========================
 			pdf.Rect(x, y, colWidths[0], totalHeight, "D")
 			pdf.SetXY(x, y)
 			pdf.CellFormat(
@@ -883,135 +1109,117 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 				"", 0, "C", false, 0, "",
 			)
 
-			// NAMA POHON + JENIS POHON: merge vertikal.
+			// =========================
+			// NAMA POHON + JENIS POHON
+			// =========================
 			xNama := x + colWidths[0]
 			pdf.Rect(xNama, y, colWidths[1], totalHeight, "D")
 
 			pdf.SetFont("Arial", "", 8)
 			pdf.SetXY(xNama+1, y+1)
 			pdf.MultiCell(
-				colWidths[1]-2,
-				lineHeight,
-				namaPohon,
-				"",
-				"L",
-				false,
+				colWidths[1]-2, lineHeight, namaPohon, "", "L", false,
 			)
 
 			pdf.SetFont("Arial", "", 7)
 			posJenis := y + 1 + float64(len(lineNamaPohon))*lineHeight
 			pdf.SetXY(xNama+1, posJenis)
 			pdf.MultiCell(
-				colWidths[1]-2,
-				4.0,
-				strings.ToUpper(jenisPohon),
-				"",
-				"L",
-				false,
+				colWidths[1]-2, 4.0, strings.ToUpper(jenisPohon), "", "L", false,
 			)
 
-			// INDIKATOR, TARGET, SATUAN.
-			// Setiap sel memakai tinggi baris hasil perhitungan.
-			yDetail := y
+			
+			// =========================
+			// GAMBAR INDIKATOR, TARGET, SATUAN
+			// =========================
 			xDetail := x + colWidths[0] + colWidths[1]
+			yBaris := y
 
-			for i, detail := range details {
-				h := rowHeights[i]
+			for i := 0; i < jumlahBarisIndikator; i++ {
+				h := rowHeightsIndikator[i]
 
-				// Indikator.
-				pdf.Rect(
-					xDetail, yDetail,
-					colWidths[2], h, "D",
-				)
-				pdf.SetXY(xDetail+1, yDetail+1)
-				pdf.SetFont("Arial", "", 8)
-				pdf.MultiCell(
-					colWidths[2]-2,
-					lineHeight,
-					detail.nama,
-					"",
-					"L",
-					false,
-				)
+				detail := detailIndikator{
+					nama: "-", target: "-", satuan: "-",
+				}
+				if i < len(details) {
+					detail = details[i]
+				}
 
-				// Target.
-				xTarget := xDetail + colWidths[2]
-				pdf.Rect(
-					xTarget, yDetail,
-					colWidths[3], h, "D",
-				)
-				pdf.SetXY(xTarget+1, yDetail+1)
-				pdf.MultiCell(
-					colWidths[3]-2,
-					lineHeight,
-					detail.target,
-					"",
-					"C",
-					false,
-				)
+				teksDetail := []string{
+					detail.nama, detail.target, detail.satuan,
+				}
+				currentX := xDetail
 
-				// Satuan.
-				xSatuan := xTarget + colWidths[3]
-				pdf.Rect(
-					xSatuan, yDetail,
-					colWidths[4], h, "D",
-				)
-				pdf.SetXY(xSatuan+1, yDetail+1)
-				pdf.MultiCell(
-					colWidths[4]-2,
-					lineHeight,
-					detail.satuan,
-					"",
-					"C",
-					false,
-				)
+				for j, teks := range teksDetail {
+					pdf.Rect(currentX, yBaris, colWidths[j+2], h, "D")
+					pdf.SetXY(currentX+1, yBaris+1)
+					pdf.SetFont("Arial", "", 8)
 
-				yDetail += h
+					align := "L"
+					if j > 0 {
+						align = "C"
+					}
+					pdf.MultiCell(
+						colWidths[j+2]-2, lineHeight, teks, "", align, false,
+					)
+
+					currentX += colWidths[j+2]
+				}
+
+				yBaris += h
 			}
 
-			// Kolom review dan informasi pembuat di-merge.
-			xReview := x + colWidths[0] + colWidths[1] +
+
+			
+			// =========================
+			// GAMBAR KOLOM REVIEW PER BARIS
+			// =========================
+			xReview := xDetail +
 				colWidths[2] + colWidths[3] + colWidths[4]
+			yReview := y
 
-			mergedColumns := []struct {
-				width float64
-				text  string
-			}{
-				{colWidths[5], review},
-				{colWidths[6], keterangan},
-				{colWidths[7], namaPegawai},
-				{colWidths[8], waktuReview},
+			for i := 0; i < jumlahBarisReview; i++ {
+				h := rowHeightsReview[i]
+
+				nilai := []string{"-", "-", "-", "-", "-", "-"}
+				if i < len(reviews) {
+					item := reviews[i]
+					nilai = []string{
+						strings.TrimSpace(item.Review),
+						strings.TrimSpace(item.Catatan),
+						strings.TrimSpace(item.Substansi),
+						strings.TrimSpace(item.Keterangan),
+						strings.TrimSpace(item.NamaPegawai),
+						formatWaktuReviewPDF(item.CreatedAt, item.UpdatedAt),
+					}
+				}
+
+				currentX := xReview
+
+				for j, teks := range nilai {
+					if teks == "" {
+						teks = "-"
+					}
+
+					pdf.Rect(currentX, yReview, lebarReview[j], h, "D")
+					pdf.SetXY(currentX+1, yReview+1)
+					pdf.SetFont("Arial", "", 8)
+					pdf.MultiCell(
+						lebarReview[j]-2, lineHeight, teks, "", "L", false,
+					)
+
+					currentX += lebarReview[j]
+				}
+
+				yReview += h
 			}
 
-			currentX := xReview
-
-			for _, col := range mergedColumns {
-				pdf.Rect(
-					currentX, y,
-					col.width, totalHeight, "D",
-				)
-
-				pdf.SetXY(currentX+1, y+1)
-				pdf.SetFont("Arial", "", 8)
-				pdf.MultiCell(
-					col.width-2,
-					lineHeight,
-					col.text,
-					"",
-					"L",
-					false,
-				)
-
-				currentX += col.width
-			}
 
 			// Pindah ke bawah seluruh kelompok.
 			pdf.SetXY(x, y+totalHeight)
 			pdf.SetFont("Arial", "", 8)
 		}
 	}
-
-
 
 	// =========================
 	// OUTPUT PDF

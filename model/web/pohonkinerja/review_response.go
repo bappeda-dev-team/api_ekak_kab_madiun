@@ -47,17 +47,21 @@ type ReviewDetailResponse struct {
 }
 
 type ReviewOpdResponse struct {
-	IdPohon     int                 `json:"id_pohon"`
-	Parent      int                 `json:"parent"`
-	NamaPohon   string              `json:"nama_pohon"`
-	LevelPohon  int                 `json:"level_pohon"`
-	JenisPohon  string              `json:"jenis_pohon"`
-	Indikator   []IndikatorResponse `json:"indikator"`
-	Review      string              `json:"review"`
-	Keterangan  string              `json:"keterangan"`
-	Catatan     string              `json:"catatan"`
-	Substansi   string              `json:"substansi"`
-	NamaPegawai string              `json:"created_by"`
-	CreatedAt   string              `json:"created_at"`
-	UpdatedAt   string              `json:"updated_at"`
+	IdPohon    int                     `json:"id_pohon"`
+	Parent     int                     `json:"parent"`
+	NamaPohon  string                  `json:"nama_pohon"`
+	LevelPohon int                     `json:"level_pohon"`
+	JenisPohon string                  `json:"jenis_pohon"`
+	Indikator  []IndikatorResponse     `json:"indikator"`
+	Review     []ReviewOpdItemResponse `json:"review"`
+}
+
+type ReviewOpdItemResponse struct {
+	Review      string `json:"review"`
+	Keterangan  string `json:"keterangan"`
+	Catatan     string `json:"catatan"`
+	Substansi   string `json:"substansi"`
+	NamaPegawai string `json:"created_by"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
