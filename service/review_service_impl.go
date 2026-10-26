@@ -584,8 +584,8 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 		UnitStr:        "mm",
 		SizeStr:        "",
 		Size: fpdf.SizeType{
-			Wd: 210,
-			Ht: 330,
+			Wd: 297,
+			Ht: 420,
 		},
 		FontDirStr: "",
 	})
@@ -652,16 +652,16 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 	// colWidths := []float64{12, 55, 85, 65, 45, 48}
 
 	colWidths := []float64{
-		8,  // No
-		40, // Nama Pohon / Level
-		45, // Indikator
-		17, // Target
-		17, // Satuan
-		22, // Kelengkapan
-		22, // Kesesuaian Level
-		22, // Substansi
-		39, // Keterangan lainnya
-		38, // User Pembuat
+		9,  // No
+		45, // Nama Pohon / Level
+		50, // Indikator
+		18, // Target
+		18, // Satuan
+		30, // Kelengkapan
+		30, // Kesesuaian Level
+		60, // Substansi
+		60, // Keterangan lainnya
+		40, // User Pembuat
 		40, // Waktu Review
 	}
 
@@ -724,6 +724,35 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 		// =========================
 		// KOLOM 1-5: HEADER VERTIKAL
 		// =========================
+		// tinggiHeaderUtama := headerHeight + subHeaderHeight
+		// x := 10.0
+
+		// for i := 0; i < 5; i++ {
+		// 	pdf.Rect(
+		// 		x,
+		// 		headerY,
+		// 		colWidths[i],
+		// 		tinggiHeaderUtama,
+		// 		"D",
+		// 	)
+
+		// 	pdf.SetXY(x+1, headerY+1)
+
+		// 	pdf.MultiCell(
+		// 		colWidths[i]-2,
+		// 		lineHeight,
+		// 		headers[i],
+		// 		"",
+		// 		"C",
+		// 		false,
+		// 	)
+
+		// 	x += colWidths[i]
+		// }
+
+		// =========================
+		// KOLOM 1-5: HEADER VERTIKAL
+		// =========================
 		tinggiHeaderUtama := headerHeight + subHeaderHeight
 		x := 10.0
 
@@ -736,7 +765,18 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 				"D",
 			)
 
-			pdf.SetXY(x+1, headerY+1)
+			// Hitung tinggi teks berdasarkan jumlah baris
+			jumlahBaris := pdf.SplitText(
+				headers[i],
+				colWidths[i]-2,
+			)
+
+			tinggiTeks := float64(len(jumlahBaris)) * lineHeight
+
+			// Posisi Y agar teks berada di tengah vertikal
+			posisiY := headerY + (tinggiHeaderUtama-tinggiTeks)/2
+
+			pdf.SetXY(x+1, posisiY)
 
 			pdf.MultiCell(
 				colWidths[i]-2,
@@ -780,22 +820,37 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 
 		// =========================
 		// SUBHEADER REVIEW
+		// TULISAN CENTER HORIZONTAL & VERTIKAL
 		// =========================
 		subX := x
 
 		for i, header := range subHeaders {
 			lebar := colWidths[5+i]
+			subY := headerY + headerHeight
 
+			// Gambar batas kolom subheader
 			pdf.Rect(
 				subX,
-				headerY+headerHeight,
+				subY,
 				lebar,
 				subHeaderHeight,
 				"D",
 			)
 
-			pdf.SetXY(subX+1, headerY+headerHeight+1)
+			// Hitung jumlah baris teks
+			jumlahBaris := pdf.SplitText(
+				header,
+				lebar-2,
+			)
 
+			tinggiTeks := float64(len(jumlahBaris)) * lineHeight
+
+			// Hitung posisi Y agar tulisan tepat di tengah vertikal
+			posisiY := subY + (subHeaderHeight-tinggiTeks)/2
+
+			pdf.SetXY(subX+1, posisiY)
+
+			// Tampilkan tulisan rata tengah
 			pdf.MultiCell(
 				lebar-2,
 				lineHeight,
@@ -822,7 +877,18 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 				"D",
 			)
 
-			pdf.SetXY(x+1, headerY+1)
+			// Hitung tinggi teks berdasarkan jumlah baris
+			jumlahBaris := pdf.SplitText(
+				headers[i],
+				colWidths[i]-2,
+			)
+
+			tinggiTeks := float64(len(jumlahBaris)) * lineHeight
+
+			// Posisi Y agar teks berada di tengah vertikal
+			posisiY := headerY + (tinggiHeaderUtama-tinggiTeks)/2
+
+			pdf.SetXY(x+1, posisiY)
 
 			pdf.MultiCell(
 				colWidths[i]-2,
@@ -842,7 +908,7 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 		nomorY := headerY + tinggiHeaderUtama
 		x = 10.0
 
-		pdf.SetFont("Arial", "", 8)
+		pdf.SetFont("Arial", "I", 8)
 
 		for i, nomor := range nomorKolom {
 			pdf.Rect(
@@ -904,6 +970,7 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 			if jenisPohon == "" {
 				jenisPohon = "-"
 			}
+
 
 			// =========================
 			// SIAPKAN DATA INDIKATOR
@@ -1121,12 +1188,14 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 				colWidths[1]-2, lineHeight, namaPohon, "", "L", false,
 			)
 
-			pdf.SetFont("Arial", "", 7)
+			pdf.SetFont("Arial", "BI", 8)
 			posJenis := y + 1 + float64(len(lineNamaPohon))*lineHeight
 			pdf.SetXY(xNama+1, posJenis)
 			pdf.MultiCell(
 				colWidths[1]-2, 4.0, strings.ToUpper(jenisPohon), "", "L", false,
 			)
+
+			// pdf.SetFont("Arial", "B", 8)
 
 			
 			// =========================
