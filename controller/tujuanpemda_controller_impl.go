@@ -467,8 +467,10 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhirDual(
 // @Summary      Tujuan Pemda Penetapan (Dual Target)
 // @Description  Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa fallback antar jenis.
 // @Tags         Tujuan Pemda
-// @Param        tahun         path  string  true  "Tahun"          example("2025")
-// @Param        jenis_periode path  string  true  "Jenis Periode"  example("RPJMD")
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun"  example("2025")
 // @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaPenetapanDualResponse}
 // @Failure      400  {object}  web.WebResponse
 // @Failure      500  {object}  web.WebResponse

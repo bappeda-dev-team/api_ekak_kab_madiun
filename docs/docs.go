@@ -18,6 +18,122 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/bidang_urusan/findall/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan daftar bidang urusan berdasarkan kode OPD.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bidang Urusan",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Bidang Urusan by Kode OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/bidangurusanresponse.BidangUrusanResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/get_rencana_kinerja/pegawai/{pegawai_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan daftar rencana kinerja pegawai berdasarkan ID pegawai. Filter opsional: kode_opd dan tahun (query).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rencana Kinerja",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Sasaran Kinerja Pegawai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Pegawai",
+                        "name": "pegawai_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/ikm": {
             "get": {
                 "description": "Get all indikator IKM berdasarkan tahun awal dan akhir",
@@ -3767,7 +3883,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Renja Penetapan"
+                    "Sasaran Opd Renja Penetapan",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Sasaran Opd Penetapan",
                 "parameters": [
@@ -4382,7 +4499,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Renstra"
+                    "Sasaran Opd Renstra",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Sasaran Opd Renstra",
                 "parameters": [
@@ -4924,6 +5042,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/sasaran_pemda/v2/penetapan/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda penetapan (dual target) dengan filter tematik berdasarkan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Penetapan",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Sasaran Pemda Penetapan V2",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaPenetapanDualResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sub_kegiatan/findall": {
             "get": {
                 "security": [
@@ -4993,73 +5171,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/web.WebResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/trialtujuan_opd/penetapan/{kode_opd}/{tahun}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tujuan Opd Penetapan"
-                ],
-                "summary": "Tujuan Opd Penetapan",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "\"1.01.1.01.0.00.01.0000\"",
-                        "description": "Kode OPD",
-                        "name": "kode_opd",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"2025\"",
-                        "description": "Tahun",
-                        "name": "tahun",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/web.WebResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/tujuanopd.TujuanOpdPenetapanResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -5543,7 +5654,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Tujuan Opd Renja Penetapan"
+                    "Tujuan Opd Renja Penetapan",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Tujuan Opd Renja Penetapan",
                 "parameters": [
@@ -5578,7 +5690,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/tujuanopd.TujuanOpdwithBidangUrusanResponse"
+                                                "$ref": "#/definitions/tujuanopd.TujuanOpdPenetapanResponse"
                                             }
                                         }
                                     }
@@ -6511,7 +6623,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Tujuan Opd Renstra"
+                    "Tujuan Opd Renstra",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Tujuan Opd Renstra",
                 "parameters": [
@@ -6898,8 +7011,15 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa fallback antar jenis.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
-                    "Tujuan Pemda"
+                    "Tujuan Pemda",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Tujuan Pemda Penetapan (Dual Target)",
                 "parameters": [
@@ -6908,14 +7028,6 @@ const docTemplate = `{
                         "example": "\"2025\"",
                         "description": "Tahun",
                         "name": "tahun",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"RPJMD\"",
-                        "description": "Jenis Periode",
-                        "name": "jenis_periode",
                         "in": "path",
                         "required": true
                     }
@@ -7641,6 +7753,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "bidangurusanresponse.BidangUrusanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
         "ikk.IkkFullResponse": {
             "type": "object",
             "properties": {
@@ -10843,6 +10972,41 @@ const docTemplate = `{
                 }
             }
         },
+        "sasaranpemda.IndikatorPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.TargetResponse"
+                    }
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.TargetResponse"
+                    }
+                }
+            }
+        },
         "sasaranpemda.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -10904,6 +11068,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranpemda.SasaranPemdaPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.IndikatorPenetapanDualResponse"
+                    }
+                },
+                "periode": {
+                    "$ref": "#/definitions/sasaranpemda.PeriodeResponse"
+                },
+                "sasaran_pemda": {
                     "type": "string"
                 }
             }

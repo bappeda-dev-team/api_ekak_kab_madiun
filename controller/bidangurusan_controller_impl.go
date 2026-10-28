@@ -127,6 +127,18 @@ func (controller *BidangUrusanControllerImpl) Delete(writer http.ResponseWriter,
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// FindByKodeOpd godoc
+// @Summary      Bidang Urusan by Kode OPD
+// @Description  Mendapatkan daftar bidang urusan berdasarkan kode OPD.
+// @Tags         Bidang Urusan
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"  example("1.01.1.01.0.00.01.0000")
+// @Success      200  {object}  web.WebResponse{data=[]bidangurusanresponse.BidangUrusanResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /bidang_urusan/findall/{kode_opd} [get]
 func (controller *BidangUrusanControllerImpl) FindByKodeOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 
