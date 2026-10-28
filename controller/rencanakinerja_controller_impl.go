@@ -146,6 +146,20 @@ func (controller *RencanaKinerjaControllerImpl) Delete(writer http.ResponseWrite
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// FindAllRencanaKinerja godoc
+// @Summary      Sasaran Kinerja Pegawai
+// @Description  Mendapatkan daftar rencana kinerja pegawai berdasarkan ID pegawai. Filter opsional: kode_opd dan tahun (query).
+// @Tags         Rencana Kinerja
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        pegawai_id  path   string  true   "ID Pegawai"
+// @Param        kode_opd    query  string  false  "Kode OPD"
+// @Param        tahun       query  string  false  "Tahun"
+// @Success      200  {object}  web.WebRencanaKinerjaResponse
+// @Failure      400  {object}  web.WebRencanaKinerjaResponse
+// @Security     BearerAuth
+// @Router       /get_rencana_kinerja/pegawai/{pegawai_id} [get]
 func (controller *RencanaKinerjaControllerImpl) FindAllRencanaKinerja(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	pegawaiId := params.ByName("pegawai_id")
 

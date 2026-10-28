@@ -272,6 +272,7 @@ func (controller *TujuanOpdControllerImpl) FindTujuanOpdByTahun(writer http.Resp
 // @Summary      Tujuan Opd Renstra
 // @Description  Mendapatkan data tujuan opd renstra berdasarkan kode OPD dan tahun.
 // @Tags         Tujuan Opd Renstra
+// @Tags         IntegrasiKabMadiun
 // @Accept       json
 // @Produce      json
 // @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
@@ -563,18 +564,6 @@ func (controller *TujuanOpdControllerImpl) DeleteTujuanRenjaIndikator(writer htt
 
 }
 
-// GetRenjaRanwal godoc
-// @Summary      Tujuan Opd Renja Penetapan
-// @Description  Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.
-// @Tags         Tujuan Opd Renja Penetapan
-// @Accept       json
-// @Produce      json
-// @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
-// @Param        tahun     path     string  true  "Tahun"      example("2025")
-// @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TujuanOpdwithBidangUrusanResponse}
-// @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
-// @Router       /tujuan_opd/penetapan/{kode_opd}/{tahun} [get]
 func (controller *TujuanOpdControllerImpl) FindTujuanOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")
@@ -672,10 +661,11 @@ func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaPenetapanIndikator(w
 	})
 }
 
-// Tujuan Opd Penetapan godoc
-// @Summary      Tujuan Opd Penetapan
+// TujuanOpdPenetapan godoc
+// @Summary      Tujuan Opd Renja Penetapan
 // @Description  Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.
-// @Tags         Tujuan Opd Penetapan
+// @Tags         Tujuan Opd Renja Penetapan
+// @Tags         IntegrasiKabMadiun
 // @Accept       json
 // @Produce      json
 // @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
@@ -683,7 +673,7 @@ func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaPenetapanIndikator(w
 // @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TujuanOpdPenetapanResponse}
 // @Failure      400  {object}  web.WebResponse
 // @Security     BearerAuth
-// @Router       /trialtujuan_opd/penetapan/{kode_opd}/{tahun} [get]
+// @Router       /tujuan_opd/penetapan/{kode_opd}/{tahun} [get]
 func (controller *TujuanOpdControllerImpl) TujuanOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahun := params.ByName("tahun")

@@ -332,6 +332,18 @@ func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDualV2(w http.Respon
 	helper.WriteJSON(w, http.StatusOK, "OK", result)
 }
 
+// FindSasaranPemdaPenetapanDualV2 godoc
+// @Summary      Sasaran Pemda Penetapan V2
+// @Description  Mengambil daftar sasaran pemda penetapan (dual target) dengan filter tematik berdasarkan tahun.
+// @Tags         Sasaran Pemda Penetapan
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        tahun  path  string  true  "Tahun yang akan diambil"  example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]sasaranpemda.SasaranPemdaPenetapanDualResponse}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sasaran_pemda/v2/penetapan/{tahun} [get]
 func (c *SasaranPemdaControllerImpl) FindSasaranPemdaPenetapanDualV2(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	result, err := c.sasaranPemdaService.FindSasaranPemdaPenetapanDualV2(r.Context(), params.ByName("tahun"), "RPJMD")
 	if err != nil {
