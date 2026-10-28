@@ -16,4 +16,5 @@ type CrosscuttingOpdController interface {
 	FindPokinByCrosscuttingStatus(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindOPDCrosscuttingFrom(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	DeleteCrosscuttingDiterima(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindAllLaporanCrosscutting(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

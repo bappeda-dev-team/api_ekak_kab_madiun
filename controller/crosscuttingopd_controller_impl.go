@@ -442,3 +442,36 @@ func (controller *CrosscuttingOpdControllerImpl) DeleteCrosscuttingDiterima(writ
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+func (controller *CrosscuttingOpdControllerImpl) FindAllLaporanCrosscutting(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	if kodeOpd == "" || tahun == "" {
+		webResponse := web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   "kode_opd dan tahun harus diisi",
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	crosscuttingResponses, err := controller.CrosscuttingOpdService.FindAllLaporanCrosscutting(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   crosscuttingResponses,
+	}
+	helper.WriteToResponseBody(writer, webResponse)
+}

@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/laporancrosscutting"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
 	"fmt"
+	"log"
+	"sort"
 	"strconv"
 	"time"
 
@@ -416,4 +419,300 @@ func (service *CrosscuttingOpdServiceImpl) UnlinkCrosscuttingDiterima(
 	}
 	defer helper.CommitOrRollback(tx)
 	return service.CrosscuttingOpdRepository.UnlinkCrosscuttingDiterima(ctx, tx, crosscuttingId)
+}
+
+func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx context.Context, kodeOpd, tahun string) (laporancrosscutting.PohonKinerjaCrosscuttingAllResponse, error) {
+	startTime := time.Now()
+	serviceName := "PohonKinerjaOpdService.FindAll"
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return laporancrosscutting.PohonKinerjaCrosscuttingAllResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// Validasi OPD
+	opd, err := service.OpdRepository.FindByKodeOpd(ctx, tx, kodeOpd)
+	if err != nil {
+		return laporancrosscutting.PohonKinerjaCrosscuttingAllResponse{}, errors.New("kode opd tidak ditemukan")
+	}
+
+	// Inisialisasi response dasar
+	response := laporancrosscutting.PohonKinerjaCrosscuttingAllResponse{
+		KodeOpd:    kodeOpd,
+		NamaOpd:    opd.NamaOpd,
+		Tahun:      tahun,
+		PohonKinerja: make([]laporancrosscutting.PohonKinerjaCrosscuttingItemResponse, 0),
+	}
+	
+
+	// Ambil data pohon kinerja
+	pokins, err := service.PohonKinerjaRepository.FindAll(ctx, tx, kodeOpd, tahun)
+	if err != nil || len(pokins) == 0 {
+		log.Printf("[%s] [END] [%s] totalResponseTime=%v (empty/error)",
+			time.Now().Format("2006-01-02 15:04:05.000"), serviceName, time.Since(startTime))
+		return response, nil
+	}
+
+	// Kumpulkan semua pokin IDs
+	pokinIds := make([]int, 0, len(pokins))
+	for _, p := range pokins {
+		if p.LevelPohon >= 4 {
+			pokinIds = append(pokinIds, p.Id)
+		}
+	}
+
+	// Batch fetch pelaksana
+	pelaksanas, _ := service.PohonKinerjaRepository.FindPelaksanaPokinBatch(ctx, tx, pokinIds)
+	pelaksanaMap := make(map[int][]laporancrosscutting.PelaksanaOpdResponse)
+	for pokinId, pelaksanaList := range pelaksanas {
+		pelaksanaResponses := make([]laporancrosscutting.PelaksanaOpdResponse, 0, len(pelaksanaList))
+		for _, p := range pelaksanaList {
+			pelaksanaResponses = append(pelaksanaResponses, laporancrosscutting.PelaksanaOpdResponse{
+				Id:          p.Id,
+				PegawaiId:   p.PegawaiId,
+				NamaPegawai: p.NamaPegawai,
+			})
+		}
+		pelaksanaMap[pokinId] = pelaksanaResponses
+	}
+
+	// Batch fetch indikator
+	indikatorBatch, _ := service.PohonKinerjaRepository.FindIndikatorByPokinIdsBatch(ctx, tx, pokinIds)
+
+	// Kumpulkan indikator IDs untuk batch fetch target
+	var allIndikatorIds []string
+	for _, indikatorList := range indikatorBatch {
+		for _, indikator := range indikatorList {
+			allIndikatorIds = append(allIndikatorIds, indikator.Id)
+		}
+	}
+
+	// Batch fetch target
+	targetBatch := make(map[string][]domain.Target)
+	if len(allIndikatorIds) > 0 {
+		targetBatch, _ = service.PohonKinerjaRepository.FindTargetByIndikatorIdsBatch(ctx, tx, allIndikatorIds)
+	}
+
+	// Build indikator map
+	indikatorMap := make(map[int][]laporancrosscutting.IndikatorResponse)
+	for pokinId, indikatorList := range indikatorBatch {
+		indikatorResponses := make([]laporancrosscutting.IndikatorResponse, 0, len(indikatorList))
+		for _, indikator := range indikatorList {
+			targetList := targetBatch[indikator.Id]
+			targetResponses := make([]laporancrosscutting.TargetResponse, 0, len(targetList))
+			for _, target := range targetList {
+				targetResponses = append(targetResponses, laporancrosscutting.TargetResponse{
+					Id:              target.Id,
+					IndikatorId:     target.IndikatorId,
+					TargetIndikator: target.Target,
+					SatuanIndikator: target.Satuan,
+				})
+			}
+			indikatorResponses = append(indikatorResponses, laporancrosscutting.IndikatorResponse{
+				Id:            indikator.Id,
+				IdPokin:       fmt.Sprint(pokinId),
+				NamaIndikator: indikator.Indikator,
+				Target:        targetResponses,
+			})
+		}
+		indikatorMap[pokinId] = indikatorResponses
+	}
+
+	
+
+	// Batch fetch tematik - HAPUS SEMUA LOGGING DEBUG
+	//
+	tematikCloneFromSet := make(map[int]struct{})
+	for _, p := range pokins {
+		if p.LevelPohon >= 4 && p.CloneFrom > 0 {
+			tematikCloneFromSet[p.CloneFrom] = struct{}{}
+		}
+	}
+	tematikCloneFromIds := make([]int, 0, len(tematikCloneFromSet))
+	for id := range tematikCloneFromSet {
+		tematikCloneFromIds = append(tematikCloneFromIds, id)
+	}
+	sort.Ints(tematikCloneFromIds)
+	
+
+	// Proses pohon ke map
+	pohonMap := make(map[int]map[int][]domain.PohonKinerja)
+	for _, p := range pokins {
+		if p.LevelPohon >= 4 {
+			if pohonMap[p.LevelPohon] == nil {
+				pohonMap[p.LevelPohon] = make(map[int][]domain.PohonKinerja)
+			}
+			p.NamaOpd = opd.NamaOpd
+			pohonMap[p.LevelPohon][p.Parent] = append(pohonMap[p.LevelPohon][p.Parent], p)
+		}
+	}
+
+	// Batch fetch tagging (sudah include program unggulan dari JOIN)
+	taggings, _ := service.PohonKinerjaRepository.FindTaggingByPokinIdsBatch(ctx, tx, pokinIds)
+
+	// Build tagging map (tidak perlu batch fetch program unggulan lagi)
+	taggingMap := make(map[int][]pohonkinerja.TaggingResponse)
+	for pokinId, tagList := range taggings {
+		taggingResponses := make([]pohonkinerja.TaggingResponse, 0, len(tagList))
+		for _, tag := range tagList {
+			keteranganResponses := make([]pohonkinerja.KeteranganTaggingResponse, 0, len(tag.KeteranganTaggingProgram))
+			for _, keterangan := range tag.KeteranganTaggingProgram {
+				keteranganResponses = append(keteranganResponses, pohonkinerja.KeteranganTaggingResponse{
+					Id:                   keterangan.Id,
+					IdTagging:            keterangan.IdTagging,
+					KodeProgramUnggulan:  keterangan.KodeProgramUnggulan,
+					NamaProgramPrioritas: keterangan.NamaProgramPrioritas, // Sudah diisi dari JOIN
+					RencanaImplementasi:  keterangan.RencanaImplementasi,  // Sudah diisi dari JOIN
+				})
+			}
+			taggingResponses = append(taggingResponses, pohonkinerja.TaggingResponse{
+				Id:                       tag.Id,
+				IdPokin:                  tag.IdPokin,
+				NamaTagging:              tag.NamaTagging,
+				KeteranganTaggingProgram: keteranganResponses,
+			})
+		}
+		taggingMap[pokinId] = taggingResponses
+	}
+
+	// Batch fetch crosscutting dari tb_crosscutting (by crosscutting_to = id pokin)
+	crosscuttingBatch, _ := service.CrosscuttingOpdRepository.FindCrosscuttingByPokinIdsBatch(ctx, tx, pokinIds)
+	crosscuttingDikirimBatch, _ := service.CrosscuttingOpdRepository.FindCrosscuttingFromByPokinIdsBatch(ctx, tx, pokinIds)
+	opdTujuanNamaMap := make(map[string]string)
+	for _, list := range crosscuttingDikirimBatch {
+		for _, c := range list {
+			if c.KodeOpd != "" {
+				opdTujuanNamaMap[c.KodeOpd] = ""
+			}
+		}
+	}
+	for kode := range opdTujuanNamaMap {
+		o, err := service.OpdRepository.FindByKodeOpd(ctx, tx, kode)
+		if err == nil {
+			opdTujuanNamaMap[kode] = o.NamaOpd
+		}
+	}
+	crosscuttingDikirimMap := make(map[int][]laporancrosscutting.CrosscuttingDikirimResponse)
+	for pokinId, list := range crosscuttingDikirimBatch {
+		items := make([]laporancrosscutting.CrosscuttingDikirimResponse, 0, len(list))
+		for _, c := range list {
+			items = append(items, laporancrosscutting.CrosscuttingDikirimResponse{
+				IdCrosscutting:         c.Id,
+				KeteranganCrosscutting: c.Keterangan,
+				NamaPohonTujuan:        c.NamaPohonAsal,
+				KodeOpdTujuan:          c.KodeOpd,
+				NamaOpdTujuan:          opdTujuanNamaMap[c.KodeOpd],
+				Status:                 c.Status,
+			})
+		}
+		crosscuttingDikirimMap[pokinId] = items
+	}
+	// Ambil kode OPD asal yang unik untuk fetch nama OPD sekali
+	opdAsalSet := make(map[string]struct{})
+	for _, list := range crosscuttingBatch {
+		for _, c := range list {
+			if c.OpdPengirim != "" {
+				opdAsalSet[c.OpdPengirim] = struct{}{}
+			}
+		}
+	}
+	opdAsalNamaMap := make(map[string]string)
+	for kode := range opdAsalSet {
+		o, err := service.OpdRepository.FindByKodeOpd(ctx, tx, kode)
+		if err == nil {
+			opdAsalNamaMap[kode] = o.NamaOpd
+		}
+	}
+	// Build crosscutting map siap pakai
+	crosscuttingStatusMap := make(map[int]string)
+	crosscuttingMap := make(map[int][]laporancrosscutting.CrosscuttingPokinResponse)
+	for pokinId, list := range crosscuttingBatch {
+		if len(list) > 0 {
+			// Satu status per pohon; contoh: ambil dari baris pertama (sesuaikan jika banyak baris berbeda status)
+			crosscuttingStatusMap[pokinId] = list[0].Status
+		}
+		items := make([]laporancrosscutting.CrosscuttingPokinResponse, 0, len(list))
+		for _, c := range list {
+			items = append(items, laporancrosscutting.CrosscuttingPokinResponse{
+				IdCrosscutting:         c.Id,
+				KeteranganCrosscutting: c.Keterangan,
+				KodeOpdAsal:            c.OpdPengirim,
+				NamaPohonAsal:          c.NamaPohonAsal,
+				NamaOpdAsal:            opdAsalNamaMap[c.OpdPengirim],
+				Status:                 c.Status,
+			})
+		}
+		crosscuttingMap[pokinId] = items
+	}
+	// crosscuttingMap := make(map[int][]pohonkinerja.CrosscuttingPokinResponse)
+	// for pokinId, list := range crosscuttingBatch {
+	// 	items := make([]pohonkinerja.CrosscuttingPokinResponse, 0, len(list))
+	// 	for _, c := range list {
+	// 		items = append(items, pohonkinerja.CrosscuttingPokinResponse{
+	// 			IdCrosscutting:         c.Id,
+	// 			KeteranganCrosscutting: c.Keterangan,
+	// 			KodeOpdAsal:            c.OpdPengirim,
+	// 			NamaOpdAsal:            opdAsalNamaMap[c.OpdPengirim],
+	// 			// Status:                 c.Status,
+	// 		})
+	// 	}
+	// 	crosscuttingMap[pokinId] = items
+	// }
+
+	// Build response flat: hanya pohon yang memiliki crosscutting.
+	for _, p := range pokins {
+		if p.LevelPohon < 4 {
+			continue
+		}
+
+		crosscutting := crosscuttingMap[p.Id]
+		crosscuttingDikirim := crosscuttingDikirimMap[p.Id]
+
+		// Hanya tampilkan pohon yang memiliki crosscutting.
+		if len(crosscutting) == 0 && len(crosscuttingDikirim) == 0 {
+			continue
+		}
+
+		p.NamaOpd = opd.NamaOpd
+
+		indikator := indikatorMap[p.Id]
+		if indikator == nil {
+			indikator = []laporancrosscutting.IndikatorResponse{}
+		}
+
+		pelaksana := pelaksanaMap[p.Id]
+		if pelaksana == nil {
+			pelaksana = []laporancrosscutting.PelaksanaOpdResponse{}
+		}
+
+		if crosscutting == nil {
+			crosscutting = []laporancrosscutting.CrosscuttingPokinResponse{}
+		}
+
+		if crosscuttingDikirim == nil {
+			crosscuttingDikirim = []laporancrosscutting.CrosscuttingDikirimResponse{}
+		}
+
+		response.PohonKinerja = append(
+			response.PohonKinerja,
+			laporancrosscutting.PohonKinerjaCrosscuttingItemResponse{
+				PohonKinerja:        p,
+				Crosscutting:        crosscutting,
+				CrosscuttingDikirim: crosscuttingDikirim,
+				Indikator:           indikator,
+				Pelaksana:           pelaksana,
+			},
+		)
+	}
+
+	log.Printf(
+		"[%s] [END] [%s] totalResponseTime=%v, crosscuttingCount=%d",
+		time.Now().Format("2006-01-02 15:04:05.000"),
+		serviceName,
+		time.Since(startTime),
+		len(response.PohonKinerja),
+	)
+
+	return response, nil
 }
