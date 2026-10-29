@@ -158,7 +158,7 @@ func (controller *RencanaKinerjaControllerImpl) Delete(writer http.ResponseWrite
 // @Param        tahun       query  string  false  "Tahun"
 // @Success      200  {object}  web.WebRencanaKinerjaResponse
 // @Failure      400  {object}  web.WebRencanaKinerjaResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /get_rencana_kinerja/pegawai/{pegawai_id} [get]
 func (controller *RencanaKinerjaControllerImpl) FindAllRencanaKinerja(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	pegawaiId := params.ByName("pegawai_id")

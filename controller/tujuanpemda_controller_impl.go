@@ -475,7 +475,7 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhirDual(
 // @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaPenetapanDualResponse}
 // @Failure      400  {object}  web.WebResponse
 // @Failure      500  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /tujuan_pemda/penetapan/{tahun} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaPenetapanDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	tahun := params.ByName("tahun")

@@ -41,6 +41,12 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		{"/isu-nasional/find-by-ids", "^/isu-nasional/find-by-ids$"},
 		{"/isu-regional/find-by-ids", "^/isu-regional/find-by-ids$"},
 		{"/lock-renaksi-opd/lock", "^/lock-renaksi-opd/lock$"},
+		{"/bidang_urusan/findall", "^/bidang_urusan/findall$"},
+		{"/get_rencana_kinerja/pegawai", "^/get_rencana_kinerja/pegawai$"},
+		{"/sasaran_opd/renstra", "^/sasaran_opd/renstra$"},
+		{"/sasaran_pemda/v2/penetapan", "^/sasaran_pemda/v2/penetapan$"},
+		{"/tujuan_opd/renstra", "^/tujuan_opd/renstra$"},
+		{"/tujuan_pemda/penetapan", "^/tujuan_pemda/penetapan$"},
 	}
 
 	currentPath := request.URL.Path

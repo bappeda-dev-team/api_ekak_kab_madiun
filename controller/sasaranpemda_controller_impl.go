@@ -357,7 +357,7 @@ func (c *SasaranPemdaControllerImpl) FindSasaranPemdaRankhirDualV2(w http.Respon
 // @Param        tahun  path  string  true  "Tahun yang akan diambil"  example("2025")
 // @Success      200  {object}  web.WebResponse{data=[]sasaranpemda.SasaranPemdaPenetapanDualResponse}
 // @Failure      500  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /sasaran_pemda/v2/penetapan/{tahun} [get]
 func (c *SasaranPemdaControllerImpl) FindSasaranPemdaPenetapanDualV2(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	result, err := c.sasaranPemdaService.FindSasaranPemdaPenetapanDualV2(r.Context(), params.ByName("tahun"), "RPJMD")

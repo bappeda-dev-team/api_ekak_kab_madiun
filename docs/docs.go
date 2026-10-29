@@ -22,7 +22,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Mendapatkan daftar bidang urusan berdasarkan kode OPD.",
@@ -82,7 +82,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Mendapatkan daftar rencana kinerja pegawai berdasarkan ID pegawai. Filter opsional: kode_opd dan tahun (query).",
@@ -138,7 +138,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Mendapatkan data sasaran opd penetapan berdasarkan kode OPD dan tahun.",
@@ -206,7 +206,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Mendapatkan data sasaran opd renstra berdasarkan kode OPD dan tahun.",
@@ -290,7 +290,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Mengambil daftar sasaran pemda penetapan (dual target) dengan filter tematik berdasarkan tahun.",
@@ -350,7 +350,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.",
@@ -418,7 +418,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Mendapatkan data tujuan opd renstra berdasarkan kode OPD dan tahun.",
@@ -494,7 +494,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "None": []
                     }
                 ],
                 "description": "Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa fallback antar jenis.",

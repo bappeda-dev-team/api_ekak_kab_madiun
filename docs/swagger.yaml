@@ -446,7 +446,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Bidang Urusan by Kode OPD
       tags:
       - Bidang Urusan
@@ -483,7 +483,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebRencanaKinerjaResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Sasaran Kinerja Pegawai
       tags:
       - Rencana Kinerja
@@ -526,7 +526,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Sasaran Opd Penetapan
       tags:
       - Sasaran Opd Renja Penetapan
@@ -580,7 +580,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Sasaran Opd Renstra
       tags:
       - Sasaran Opd Renstra
@@ -617,7 +617,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Sasaran Pemda Penetapan V2
       tags:
       - Sasaran Pemda Penetapan
@@ -660,7 +660,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Tujuan Opd Renja Penetapan
       tags:
       - Tujuan Opd Renja Penetapan
@@ -708,7 +708,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Tujuan Opd Renstra
       tags:
       - Tujuan Opd Renstra
@@ -749,7 +749,7 @@ paths:
           schema:
             $ref: '#/definitions/web.WebResponse'
       security:
-      - BearerAuth: []
+      - None: []
       summary: Tujuan Pemda Penetapan (Dual Target)
       tags:
       - Tujuan Pemda

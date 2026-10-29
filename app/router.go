@@ -329,7 +329,7 @@ func NewRouter(
 	router.PUT("/bidang_urusan/update/:id", bidangUrusanController.Update)
 	router.GET("/bidang_urusan/detail/:id", bidangUrusanController.FindById)
 	router.DELETE("/bidang_urusan/delete/:id", bidangUrusanController.Delete)
-	router.GET("/bidang_urusan/findall", bidangUrusanController.FindAll)
+	router.GET("/bidang_urusans", bidangUrusanController.FindAll)
 	router.GET("/bidang_urusan/findall/:kode_opd", bidangUrusanController.FindByKodeOpd)
 
 	//kegiatan
