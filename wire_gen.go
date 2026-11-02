@@ -129,7 +129,7 @@ func InitializeServer() *http.Server {
 	lockDataRepositoryImpl := repository.NewLockDataRepositoryImpl()
 	tujuanOpdServiceImpl := service.NewTujuanOpdServiceImpl(tujuanOpdRepositoryImpl, opdRepositoryImpl, periodeRepositoryImpl, bidangUrusanRepositoryImpl, lockDataRepositoryImpl, db)
 	tujuanOpdControllerImpl := controller.NewTujuanOpdControllerImpl(tujuanOpdServiceImpl)
-	crosscuttingOpdServiceImpl := service.NewCrosscuttingOpdServiceImpl(crosscuttingOpdRepositoryImpl, pohonKinerjaRepositoryImpl, pegawaiRepositoryImpl, opdRepositoryImpl, db)
+	crosscuttingOpdServiceImpl := service.NewCrosscuttingOpdServiceImpl(crosscuttingOpdRepositoryImpl, pohonKinerjaRepositoryImpl, pegawaiRepositoryImpl, opdRepositoryImpl, rencanaKinerjaRepositoryImpl, db)
 	crosscuttingOpdControllerImpl := controller.NewCrosscuttingOpdControllerImpl(crosscuttingOpdServiceImpl)
 	manualIKServiceImpl := service.NewManualIKServiceImpl(manualIKRepositoryImpl, db, validate)
 	manualIKControllerImpl := controller.NewManualIKControllerImpl(manualIKServiceImpl)

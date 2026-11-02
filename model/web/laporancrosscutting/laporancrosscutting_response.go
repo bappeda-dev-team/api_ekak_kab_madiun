@@ -40,6 +40,7 @@ type PohonKinerjaCrosscuttingItemResponse struct {
 	CrosscuttingDikirim []CrosscuttingDikirimResponse `json:"crosscutting_dikirim"`
 	Indikator           []IndikatorResponse           `json:"indikator"`
 	Pelaksana           []PelaksanaOpdResponse        `json:"pelaksana"`
+	RencanaKinerja      []RencanaKinerjaResponse      `json:"rencana_kinerja"`
 }
 
 type CrosscuttingPokinResponse struct {
@@ -52,12 +53,16 @@ type CrosscuttingPokinResponse struct {
 }
 
 type CrosscuttingDikirimResponse struct {
-	IdCrosscutting         int    `json:"id_crosscutting"`
-	KeteranganCrosscutting string `json:"keterangan_crosscutting"`
-	NamaPohonTujuan        string `json:"nama_pohon_tujuan"`
-	KodeOpdTujuan          string `json:"kode_opd_tujuan"`
-	NamaOpdTujuan          string `json:"nama_opd_tujuan,omitempty"`
-	Status                 string `json:"status"`
+	IdCrosscutting         int    			   	  `json:"id_crosscutting"`
+	IdPokin                int    			   	  `json:"id_pokin"`
+	KeteranganCrosscutting string 			   	  `json:"keterangan_crosscutting"`
+	NamaPohonTujuan        string			   	  `json:"nama_pohon_tujuan"`
+	KodeOpdTujuan          string 			   	  `json:"kode_opd_tujuan"`
+	NamaOpdTujuan          string 			   	  `json:"nama_opd_tujuan,omitempty"`
+	Status                 string 			   	  `json:"status"`
+	IdRekin                string 			   	  `json:"id_rekin"`
+	IndikatorDikirim       []IndikatorResponse 	  `json:"indikator_dikirim"`
+	PelaksanaDikirim       []PelaksanaOpdResponse `json:"pelaksana_dikirim"`
 }
 
 type IndikatorResponse struct {
@@ -84,6 +89,17 @@ type PelaksanaOpdResponse struct {
 	PegawaiId      string `json:"pegawai_id"`
 	Nip            string `json:"nip"`
 	NamaPegawai    string `json:"nama_pegawai"`
+}
+
+type RencanaKinerjaResponse struct {
+	Id                 string              `json:"id_rencana_kinerja,omitempty"`
+	IdPohon            int                 `json:"id_pohon,omitempty"`
+	NamaPohon          string              `json:"nama_pohon,omitempty"`
+	NamaRencanaKinerja string              `json:"nama_rencana_kinerja,omitempty"`
+	Tahun              string              `json:"tahun,omitempty"`
+	PegawaiId          string              `json:"pegawai_id,omitempty"`
+	NamaPegawai        string              `json:"nama_pegawai,omitempty"`
+	NamaSubKegiatan    string              `json:"nama_sub_kegiatan,omitempty"`
 }
 
 type PohonKinerjaCrosscuttingAllResponse struct {
