@@ -130,7 +130,7 @@ func validateTargetTahun(indikators []tujuanpemda.IndikatorCreateRequest, tahunA
 		tahunMap := make(map[string]bool)
 		for _, t := range ind.Target {
 			tt, _ := strconv.Atoi(t.Tahun)
-			if tt < tahunAwal || tt > tahunAkhir {
+			if tt <= tahunAwal || tt >= tahunAkhir {
 				return fmt.Errorf("tahun target %d harus dalam rentang %d-%d", tt, tahunAwal, tahunAkhir)
 			}
 			if tahunMap[t.Tahun] {
