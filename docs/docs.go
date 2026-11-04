@@ -838,6 +838,140 @@ const docTemplate = `{
                 }
             }
         },
+        "/manual_ik/pegawai/{nip}/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar Manual IK berdasarkan NIP pegawai, kode OPD, dan tahun. Manual IK diambil dari indikator yang melekat pada rencana kinerja pegawai.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Manual IK",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Manual IK by Pegawai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NIP Pegawai",
+                        "name": "nip",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanakinerja.ManualIKResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manual_ik/rekin/{rencana_kinerja_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh Manual IK yang terikat pada sebuah Rencana Kinerja berdasarkan ID rencana kinerja.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Manual IK",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Manual IK by Rencana Kinerja",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Rencana Kinerja",
+                        "name": "rencana_kinerja_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanakinerja.ManualIKResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -2513,6 +2647,140 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh rencana aksi beserta bobot pelaksanaan berdasarkan NIP, kode OPD, dan tahun. Data difilter dari rencana kinerja pegawai (pegawai_id = NIP).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rencana Aksi",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Rencana Aksi by Pegawai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NIP Pegawai",
+                        "name": "nip",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebRencanaAksiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "renaksi": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanaaksi.RencanaAksiPegawaiResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaAksiResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana_aksi/rekin/{rencana_kinerja_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh rencana aksi beserta bobot pelaksanaan berdasarkan ID rencana kinerja.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rencana Aksi",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Rencana Aksi by Rencana Kinerja",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Rencana Kinerja",
+                        "name": "rencana_kinerja_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebRencanaAksiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "renaksi": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanaaksi.RencanaAksiResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaAksiResponse"
                         }
                     }
                 }
@@ -9456,6 +9724,19 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "description": "Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -9791,6 +10072,19 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "description": "Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -9901,6 +10195,19 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "description": "Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -9975,6 +10282,19 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
+                    }
+                },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "description": "Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
                     }
                 },
                 "jenis": {
@@ -10163,6 +10483,19 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "description": "Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -10209,6 +10542,99 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/programkegiatan.OutcomeMatrixItemResponse"
                     }
+                }
+            }
+        },
+        "rencanaaksi.PelaksanaanRencanaAksiResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "bobot": {
+                    "type": "integer"
+                },
+                "bobot_tersedia": {
+                    "type": "integer"
+                },
+                "bulan": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "rencana_aksi_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "rencanaaksi.RencanaAksiPegawaiResponse": {
+            "type": "object",
+            "properties": {
+                "jumlah_bobot": {
+                    "type": "integer"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_rencana_kinerja": {
+                    "type": "string"
+                },
+                "nip": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "rencana_aksi": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanaaksi.RencanaAksiResponse"
+                    }
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "rencanaaksi.RencanaAksiResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "jumlah_bobot": {
+                    "type": "integer"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_rencana_aksi": {
+                    "type": "string"
+                },
+                "pelaksanaan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanaaksi.PelaksanaanRencanaAksiResponse"
+                    }
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "total_bobot_rencana_aksi": {
+                    "type": "integer"
+                },
+                "urutan": {
+                    "type": "integer"
                 }
             }
         },
@@ -10297,6 +10723,93 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/rencanakinerja.TargetResponse"
+                    }
+                }
+            }
+        },
+        "rencanakinerja.ManualIKResponse": {
+            "type": "object",
+            "properties": {
+                "definisi": {
+                    "type": "string"
+                },
+                "formula": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "jangka_waktu_akhir": {
+                    "type": "string"
+                },
+                "jangka_waktu_awal": {
+                    "type": "string"
+                },
+                "jenis_indikator": {
+                    "type": "string"
+                },
+                "key_activities": {
+                    "type": "string"
+                },
+                "nama_parent": {
+                    "type": "string"
+                },
+                "output_data": {
+                    "$ref": "#/definitions/rencanakinerja.OutputData"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "periode_pelaporan": {
+                    "type": "string"
+                },
+                "perspektif": {
+                    "type": "string"
+                },
+                "rencana_kinerja": {
+                    "$ref": "#/definitions/rencanakinerja.RekinResponse"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "tujuan_rekin": {
+                    "type": "string"
+                },
+                "unit_penanggung_jawab": {
+                    "type": "string"
+                },
+                "unit_penyedia_data": {
+                    "type": "string"
+                }
+            }
+        },
+        "rencanakinerja.OutputData": {
+            "type": "object",
+            "properties": {
+                "kinerja": {
+                    "type": "boolean"
+                },
+                "penduduk": {
+                    "type": "boolean"
+                },
+                "spatial": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "rencanakinerja.RekinResponse": {
+            "type": "object",
+            "properties": {
+                "Nama_rencana_kinerja": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanakinerja.IndikatorResponse"
                     }
                 }
             }
@@ -12253,6 +12766,24 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "web.WebRencanaAksiResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "renaksi": {},
+                "rencana_aksi_action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "status": {
                     "type": "string"
                 }
             }

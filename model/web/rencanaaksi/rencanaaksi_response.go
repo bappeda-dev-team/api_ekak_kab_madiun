@@ -25,3 +25,13 @@ type RencanaAksiTableResponse struct {
 	TotalKeseluruhan int                   `json:"total_keseluruhan"`
 	WaktuDibutuhkan  int                   `json:"waktu_dibutuhkan"`
 }
+
+type RencanaAksiPegawaiResponse struct {
+	RencanaKinerjaId   string                `json:"rekin_id"`
+	NamaRencanaKinerja string                `json:"nama_rencana_kinerja"`
+	Nip                string                `json:"nip"`
+	KodeOpd            string                `json:"kode_opd"`
+	Tahun              string                `json:"tahun"`
+	JumlahBobot        int                   `json:"jumlah_bobot"`
+	RencanaAksi        []RencanaAksiResponse `json:"rencana_aksi"`
+}

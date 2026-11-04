@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid" // Tambahkan impor ini
@@ -293,4 +294,83 @@ func (service *RencanaAksiServiceImpl) Delete(ctx context.Context, id string) er
 	}
 
 	return nil
+}
+
+func (service *RencanaAksiServiceImpl) FindByRekin(ctx context.Context, rekinId string) ([]rencanaaksi.RencanaAksiResponse, error) {
+	if strings.TrimSpace(rekinId) == "" {
+		return nil, fmt.Errorf("rencana_kinerja_id wajib diisi")
+	}
+	return service.FindAll(ctx, rekinId)
+}
+
+func (service *RencanaAksiServiceImpl) FindByPegawai(ctx context.Context, nip string, kodeOpd string, tahun string) ([]rencanaaksi.RencanaAksiPegawaiResponse, error) {
+	if strings.TrimSpace(nip) == "" {
+		return nil, fmt.Errorf("nip wajib diisi")
+	}
+	if strings.TrimSpace(kodeOpd) == "" {
+		return nil, fmt.Errorf("kode_opd wajib diisi")
+	}
+	if strings.TrimSpace(tahun) == "" {
+		return nil, fmt.Errorf("tahun wajib diisi")
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	rencanaAksiList, err := service.rencanaAksiRepository.FindByPegawai(ctx, tx, nip, kodeOpd, tahun)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil rencana aksi pegawai: %v", err)
+	}
+
+	order := make([]string, 0)
+	groupMap := make(map[string]*rencanaaksi.RencanaAksiPegawaiResponse)
+
+	for _, rencanaAksi := range rencanaAksiList {
+		group, exists := groupMap[rencanaAksi.RencanaKinerjaId]
+		if !exists {
+			group = &rencanaaksi.RencanaAksiPegawaiResponse{
+				RencanaKinerjaId:   rencanaAksi.RencanaKinerjaId,
+				NamaRencanaKinerja: rencanaAksi.NamaRencanaKinerja,
+				Nip:                rencanaAksi.PegawaiId,
+				KodeOpd:            rencanaAksi.KodeOpd,
+				Tahun:              rencanaAksi.Tahun,
+				RencanaAksi:        []rencanaaksi.RencanaAksiResponse{},
+			}
+			groupMap[rencanaAksi.RencanaKinerjaId] = group
+			order = append(order, rencanaAksi.RencanaKinerjaId)
+		}
+
+		pelaksanaanResponses := make([]rencanaaksi.PelaksanaanRencanaAksiResponse, 0, len(rencanaAksi.Pelaksanaan))
+		jumlahBobot := 0
+		for _, pelaksanaan := range rencanaAksi.Pelaksanaan {
+			pelaksanaanResponses = append(pelaksanaanResponses, rencanaaksi.PelaksanaanRencanaAksiResponse{
+				Id:            pelaksanaan.Id,
+				RencanaAksiId: pelaksanaan.RencanaAksiId,
+				Bulan:         pelaksanaan.Bulan,
+				Bobot:         pelaksanaan.Bobot,
+			})
+			jumlahBobot += pelaksanaan.Bobot
+		}
+
+		group.RencanaAksi = append(group.RencanaAksi, rencanaaksi.RencanaAksiResponse{
+			Id:                     rencanaAksi.Id,
+			RencanaKinerjaId:       rencanaAksi.RencanaKinerjaId,
+			KodeOpd:                rencanaAksi.KodeOpd,
+			Urutan:                 rencanaAksi.Urutan,
+			NamaRencanaAksi:        rencanaAksi.NamaRencanaAksi,
+			PelaksanaanRencanaAksi: pelaksanaanResponses,
+			JumlahBobot:            jumlahBobot,
+		})
+		group.JumlahBobot += jumlahBobot
+	}
+
+	results := make([]rencanaaksi.RencanaAksiPegawaiResponse, 0, len(order))
+	for _, rekinId := range order {
+		results = append(results, *groupMap[rekinId])
+	}
+
+	return results, nil
 }
