@@ -9,6 +9,7 @@ import (
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -217,4 +218,56 @@ func (service *ManualIKServiceImpl) FindManualIKSasaranOpdByIndikatorId(ctx cont
 	}
 
 	return response, nil
+}
+
+func (service *ManualIKServiceImpl) FindManualIKByPegawai(ctx context.Context, nip string, kodeOpd string, tahun string) ([]rencanakinerja.ManualIKResponse, error) {
+	if strings.TrimSpace(nip) == "" {
+		return nil, fmt.Errorf("nip wajib diisi")
+	}
+	if strings.TrimSpace(kodeOpd) == "" {
+		return nil, fmt.Errorf("kode_opd wajib diisi")
+	}
+	if strings.TrimSpace(tahun) == "" {
+		return nil, fmt.Errorf("tahun wajib diisi")
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	manualIKs, err := service.ManualIKRepository.FindByPegawai(ctx, tx, nip, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := helper.ToManualIKResponses(manualIKs)
+	if responses == nil {
+		responses = []rencanakinerja.ManualIKResponse{}
+	}
+	return responses, nil
+}
+
+func (service *ManualIKServiceImpl) FindManualIKByRekin(ctx context.Context, rekinId string) ([]rencanakinerja.ManualIKResponse, error) {
+	if strings.TrimSpace(rekinId) == "" {
+		return nil, fmt.Errorf("rencana_kinerja_id wajib diisi")
+	}
+
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	manualIKs, err := service.ManualIKRepository.FindByRekinId(ctx, tx, rekinId)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := helper.ToManualIKResponses(manualIKs)
+	if responses == nil {
+		responses = []rencanakinerja.ManualIKResponse{}
+	}
+	return responses, nil
 }

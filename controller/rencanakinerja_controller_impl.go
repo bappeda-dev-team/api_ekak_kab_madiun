@@ -182,7 +182,7 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRencanaKinerja(writer htt
 
 	rencanaKinerjaResponses, err := controller.rencanaKinerjaService.FindAll(request.Context(), pegawaiId, kodeOpd, tahun)
 	if err != nil {
-		webResponse := web.WebRencanaKinerjaResponse{
+		webResponse := web.WebResponse{
 			Code:   http.StatusBadRequest,
 			Status: "failed get rencana kinerja",
 			Data:   nil,

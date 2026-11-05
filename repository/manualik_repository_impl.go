@@ -664,3 +664,330 @@ func (repository *ManualIKRepositoryImpl) CreateBatch(ctx context.Context, tx *s
 
 	return nil
 }
+
+func (repository *ManualIKRepositoryImpl) FindByPegawai(
+	ctx context.Context,
+	tx *sql.Tx,
+	nip string,
+	kodeOpd string,
+	tahun string,
+) ([]domain.ManualIK, error) {
+	script := `
+		SELECT
+			m.id,
+			m.indikator_id,
+			m.perspektif,
+			m.tujuan_rekin,
+			m.definisi,
+			m.key_activities,
+			m.formula,
+			m.jenis_indikator,
+			m.kinerja,
+			m.penduduk,
+			m.spasial,
+			m.unit_penanggung_jawab,
+			m.unit_penyedia_data,
+			m.sumber_data,
+			m.jangka_waktu_awal,
+			m.jangka_waktu_akhir,
+			m.periode_pelaporan,
+			i.id,
+			i.rencana_kinerja_id,
+			i.indikator,
+			COALESCE(i.tahun, '') AS indikator_tahun,
+			rk.nama_rencana_kinerja,
+			COALESCE(rk.tahun, '') AS rk_tahun,
+			COALESCE(rk.kode_opd, '') AS kode_opd,
+			COALESCE(rk.pegawai_id, '') AS pegawai_id,
+			COALESCE(pk.parent, 0) AS parent_id,
+			COALESCE(pkp.nama_pohon, '') AS parent_nama_pohon,
+			COALESCE(t.id, '') AS target_id,
+			COALESCE(t.target, '') AS target_value,
+			COALESCE(t.satuan, '') AS target_satuan,
+			COALESCE(t.tahun, '') AS target_tahun
+		FROM tb_rencana_kinerja rk
+		INNER JOIN tb_indikator i ON i.rencana_kinerja_id = rk.id
+		INNER JOIN tb_manual_ik m ON m.indikator_id = i.id
+		LEFT JOIN tb_pohon_kinerja pk ON rk.id_pohon = pk.id
+		LEFT JOIN tb_pohon_kinerja pkp ON pk.parent = pkp.id
+		LEFT JOIN tb_target t ON t.indikator_id = i.id AND t.tahun = ?
+		WHERE rk.pegawai_id = ?
+		  AND rk.kode_opd = ?
+		  AND rk.tahun = ?
+		ORDER BY rk.id, i.id, m.id, t.id
+	`
+
+	rows, err := tx.QueryContext(ctx, script, tahun, nip, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type manualKey struct {
+		manualId    int
+		indikatorId string
+	}
+
+	order := make([]manualKey, 0)
+	resultMap := make(map[manualKey]domain.ManualIK)
+	targetSeen := make(map[manualKey]map[string]bool)
+
+	for rows.Next() {
+		var (
+			manualIK                                               domain.ManualIK
+			indikatorId, rencanaKinerjaId, namaIndikator, indTahun string
+			namaRekin, rkTahun, kodeOpdRow, pegawaiId              string
+			parentId                                               int
+			parentNamaPohon                                        string
+			targetId, targetValue, targetSatuan, targetTahun       string
+		)
+
+		if scanErr := rows.Scan(
+			&manualIK.Id,
+			&manualIK.IndikatorId,
+			&manualIK.Perspektif,
+			&manualIK.TujuanRekin,
+			&manualIK.Definisi,
+			&manualIK.KeyActivities,
+			&manualIK.Formula,
+			&manualIK.JenisIndikator,
+			&manualIK.Kinerja,
+			&manualIK.Penduduk,
+			&manualIK.Spatial,
+			&manualIK.UnitPenanggungJawab,
+			&manualIK.UnitPenyediaData,
+			&manualIK.SumberData,
+			&manualIK.JangkaWaktuAwal,
+			&manualIK.JangkaWaktuAkhir,
+			&manualIK.PeriodePelaporan,
+			&indikatorId,
+			&rencanaKinerjaId,
+			&namaIndikator,
+			&indTahun,
+			&namaRekin,
+			&rkTahun,
+			&kodeOpdRow,
+			&pegawaiId,
+			&parentId,
+			&parentNamaPohon,
+			&targetId,
+			&targetValue,
+			&targetSatuan,
+			&targetTahun,
+		); scanErr != nil {
+			return nil, scanErr
+		}
+
+		key := manualKey{manualId: manualIK.Id, indikatorId: manualIK.IndikatorId}
+		existing, exists := resultMap[key]
+		if !exists {
+			manualIK.DataIndikator = domain.Indikator{
+				Id:               indikatorId,
+				RencanaKinerjaId: rencanaKinerjaId,
+				Indikator:        namaIndikator,
+				Tahun:            indTahun,
+				RencanaKinerja: domain.RencanaKinerja{
+					Id:                 rencanaKinerjaId,
+					NamaRencanaKinerja: namaRekin,
+					Tahun:              rkTahun,
+					KodeOpd:            kodeOpdRow,
+					PegawaiId:          pegawaiId,
+					PohonKinerjaParent: domain.PohonKinerja{
+						Parent:          parentId,
+						NamaPohonParent: parentNamaPohon,
+					},
+				},
+			}
+			resultMap[key] = manualIK
+			order = append(order, key)
+			existing = manualIK
+			targetSeen[key] = make(map[string]bool)
+		}
+
+		if targetId != "" && !targetSeen[key][targetId] {
+			targetSeen[key][targetId] = true
+			ind := existing.DataIndikator
+			ind.Target = append(ind.Target, domain.Target{
+				Id:          targetId,
+				IndikatorId: indikatorId,
+				Target:      targetValue,
+				Satuan:      targetSatuan,
+				Tahun:       targetTahun,
+			})
+			existing.DataIndikator = ind
+			resultMap[key] = existing
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	results := make([]domain.ManualIK, 0, len(order))
+	for _, key := range order {
+		results = append(results, resultMap[key])
+	}
+
+	return results, nil
+}
+
+func (repository *ManualIKRepositoryImpl) FindByRekinId(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinId string,
+) ([]domain.ManualIK, error) {
+	script := `
+		SELECT
+			m.id,
+			m.indikator_id,
+			m.perspektif,
+			m.tujuan_rekin,
+			m.definisi,
+			m.key_activities,
+			m.formula,
+			m.jenis_indikator,
+			m.kinerja,
+			m.penduduk,
+			m.spasial,
+			m.unit_penanggung_jawab,
+			m.unit_penyedia_data,
+			m.sumber_data,
+			m.jangka_waktu_awal,
+			m.jangka_waktu_akhir,
+			m.periode_pelaporan,
+			i.id                                AS indikator_id,
+			i.rencana_kinerja_id,
+			i.indikator,
+			COALESCE(i.tahun, '')               AS indikator_tahun,
+			rk.nama_rencana_kinerja,
+			COALESCE(rk.tahun, '')              AS rk_tahun,
+			COALESCE(rk.kode_opd, '')           AS kode_opd,
+			COALESCE(rk.pegawai_id, '')         AS pegawai_id,
+			COALESCE(pk.parent, 0)              AS parent_id,
+			COALESCE(pkp.nama_pohon, '')        AS parent_nama_pohon,
+			COALESCE(t.id, '')                  AS target_id,
+			COALESCE(t.target, '')              AS target_value,
+			COALESCE(t.satuan, '')              AS target_satuan,
+			COALESCE(t.tahun, '')               AS target_tahun
+		FROM tb_indikator i
+		INNER JOIN tb_manual_ik m ON m.indikator_id = i.id
+		INNER JOIN tb_rencana_kinerja rk ON i.rencana_kinerja_id = rk.id
+		LEFT JOIN tb_pohon_kinerja pk  ON rk.id_pohon  = pk.id
+		LEFT JOIN tb_pohon_kinerja pkp ON pk.parent     = pkp.id
+		LEFT JOIN tb_target t          ON t.indikator_id = i.id
+		WHERE i.rencana_kinerja_id = ?
+		ORDER BY i.id, t.id
+	`
+
+	rows, err := tx.QueryContext(ctx, script, rekinId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type manualKey struct {
+		manualId    int
+		indikatorId string
+	}
+
+	order := make([]manualKey, 0)
+	resultMap := make(map[manualKey]domain.ManualIK)
+	targetSeen := make(map[manualKey]map[string]bool)
+
+	for rows.Next() {
+		var (
+			manualIK                                                      domain.ManualIK
+			indikatorId, rencanaKinerjaId, namaIndikator, indTahun       string
+			namaRekin, rkTahun, kodeOpdRow, pegawaiId                    string
+			parentId                                                      int
+			parentNamaPohon                                               string
+			targetId, targetValue, targetSatuan, targetTahun             string
+		)
+
+		if scanErr := rows.Scan(
+			&manualIK.Id,
+			&manualIK.IndikatorId,
+			&manualIK.Perspektif,
+			&manualIK.TujuanRekin,
+			&manualIK.Definisi,
+			&manualIK.KeyActivities,
+			&manualIK.Formula,
+			&manualIK.JenisIndikator,
+			&manualIK.Kinerja,
+			&manualIK.Penduduk,
+			&manualIK.Spatial,
+			&manualIK.UnitPenanggungJawab,
+			&manualIK.UnitPenyediaData,
+			&manualIK.SumberData,
+			&manualIK.JangkaWaktuAwal,
+			&manualIK.JangkaWaktuAkhir,
+			&manualIK.PeriodePelaporan,
+			&indikatorId,
+			&rencanaKinerjaId,
+			&namaIndikator,
+			&indTahun,
+			&namaRekin,
+			&rkTahun,
+			&kodeOpdRow,
+			&pegawaiId,
+			&parentId,
+			&parentNamaPohon,
+			&targetId,
+			&targetValue,
+			&targetSatuan,
+			&targetTahun,
+		); scanErr != nil {
+			return nil, scanErr
+		}
+
+		key := manualKey{manualId: manualIK.Id, indikatorId: manualIK.IndikatorId}
+		existing, exists := resultMap[key]
+		if !exists {
+			manualIK.DataIndikator = domain.Indikator{
+				Id:               indikatorId,
+				RencanaKinerjaId: rencanaKinerjaId,
+				Indikator:        namaIndikator,
+				Tahun:            indTahun,
+				RencanaKinerja: domain.RencanaKinerja{
+					Id:                 rencanaKinerjaId,
+					NamaRencanaKinerja: namaRekin,
+					Tahun:              rkTahun,
+					KodeOpd:            kodeOpdRow,
+					PegawaiId:          pegawaiId,
+					PohonKinerjaParent: domain.PohonKinerja{
+						Parent:          parentId,
+						NamaPohonParent: parentNamaPohon,
+					},
+				},
+			}
+			resultMap[key] = manualIK
+			order = append(order, key)
+			existing = manualIK
+			targetSeen[key] = make(map[string]bool)
+		}
+
+		if targetId != "" && !targetSeen[key][targetId] {
+			targetSeen[key][targetId] = true
+			ind := existing.DataIndikator
+			ind.Target = append(ind.Target, domain.Target{
+				Id:          targetId,
+				IndikatorId: indikatorId,
+				Target:      targetValue,
+				Satuan:      targetSatuan,
+				Tahun:       targetTahun,
+			})
+			existing.DataIndikator = ind
+			resultMap[key] = existing
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	out := make([]domain.ManualIK, 0, len(order))
+	for _, k := range order {
+		out = append(out, resultMap[k])
+	}
+	return out, nil
+}

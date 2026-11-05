@@ -110,6 +110,8 @@ func NewRouter(
 
 	//rencana_aksi
 	router.GET("/rencana_aksi/findall/:rencana_kinerja_id", rencanaAksiController.FindAll)
+	router.GET("/rencana_aksi/rekin/:rencana_kinerja_id", rencanaAksiController.FindByRekin)
+	router.GET("/rencana_aksi/pegawai/:nip/:kode_opd/:tahun", rencanaAksiController.FindByPegawai)
 	// router.GET("/rencana_kinerja/:rekin_id/rincian_kak", rencanaAksiController.FindAll)
 	router.GET("/detail-rencana_aksi/:rencanaaksiId", rencanaAksiController.FindById)
 	router.POST("/rencana_aksi/create/rencanaaksi/:rekin_id", rencanaAksiController.Create)
@@ -385,6 +387,8 @@ func NewRouter(
 	router.PUT("/manual_ik/update/:indikatorId", manualIKController.Update)
 	router.GET("/manual_ik/detail/:indikatorId", manualIKController.FindManualIKByIndikatorId)
 	router.GET("/manual_ik/sasaran_opd/:indikatorId/:tahun", manualIKController.FindManualIKSasaranOpdByIndikatorId)
+	router.GET("/manual_ik/pegawai/:nip/:kode_opd/:tahun", manualIKController.FindManualIKByPegawai)
+	router.GET("/manual_ik/rekin/:rencana_kinerja_id", manualIKController.FindManualIKByRekin)
 
 	//review
 	router.POST("/review_pokin/create/:pokinId", reviewController.Create)

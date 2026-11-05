@@ -1139,6 +1139,24 @@
                 }
             }
         },
+        "web.WebRencanaAksiResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "renaksi": {},
+                "rencana_aksi_action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "web.WebRencanaKinerjaResponse": {
             "type": "object",
             "properties": {
