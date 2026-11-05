@@ -11,18 +11,21 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 )
 
 type RincianBelanjaServiceImpl struct {
 	rincianBelanjaRepository repository.RincianBelanjaRepository
 	pegawaiRepository        repository.PegawaiRepository
+	pptkRepository           repository.PptkRepository
 	DB                       *sql.DB
 }
 
-func NewRincianBelanjaServiceImpl(rincianBelanjaRepository repository.RincianBelanjaRepository, pegawaiRepository repository.PegawaiRepository, DB *sql.DB) *RincianBelanjaServiceImpl {
+func NewRincianBelanjaServiceImpl(rincianBelanjaRepository repository.RincianBelanjaRepository, pegawaiRepository repository.PegawaiRepository, pptkRepository repository.PptkRepository, DB *sql.DB) *RincianBelanjaServiceImpl {
 	return &RincianBelanjaServiceImpl{
 		rincianBelanjaRepository: rincianBelanjaRepository,
 		pegawaiRepository:        pegawaiRepository,
+		pptkRepository:           pptkRepository,
 		DB:                       DB,
 	}
 }
@@ -265,6 +268,26 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 	if err != nil {
 		return nil, err
 	}
+	// find kandidat pptk
+	// kandidatPptkList, err := service.pptkRepository.KandidatPptkOpd(
+	// 	ctx,
+	// 	tx,
+	// 	kodeOpd,
+	// 	tahun,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
+
+	for _, kandidat := range rincianBelanjaList {
+		kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
+			Nip:   kandidat.PegawaiId,
+			Nama:  kandidat.NamaPegawai,
+			Level: kandidat.Level,
+		}
+	}
 
 	// Map untuk mengelompokkan berdasarkan kode subkegiatan
 	subkegiatanMap := make(map[string]*rincianbelanja.RincianBelanjaAsnResponse)
@@ -316,12 +339,132 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaOpd(ctx context.C
 				})
 			}
 
+			// -----------------------------------------------------
+			// Ambil PPTK berdasarkan subkegiatan
+			// -----------------------------------------------------
+			// -----------------------------------------------------
+			// Ambil PPTK berdasarkan subkegiatan
+			// -----------------------------------------------------
+			pptkResults := make([]domain.Pptk, 0)
+
+			tahunInt, err := strconv.Atoi(tahun)
+			if err != nil {
+				log.Printf("Tahun cari PPTK tidak valid: %s: %v", tahun, err)
+			} else {
+				pptkResult, err := service.pptkRepository.FindPptkAktif(
+					ctx,
+					tx,
+					rb.KodeSubkegiatan,
+					kodeOpd,
+					tahunInt,
+				)
+				if err != nil {
+					log.Printf(
+						"Error mengambil PPTK untuk subkegiatan %s: %v",
+						rb.KodeSubkegiatan,
+						err,
+					)
+				} else if pptkResult.Id != 0 {
+					// Tetap pertahankan struktur response lama:
+					// PPTK tetap berupa array, meskipun repository mengembalikan single data.
+					pptkResults = append(pptkResults, pptkResult)
+				}
+			}
+
+			// -----------------------------------------------------
+			// Mapping Kandidat PPTK ke response
+			// -----------------------------------------------------
+			kandidatPptkResponses := make([]rincianbelanja.KandidatPptkResponse, 0)
+			kandidatTracker := make(map[string]bool)
+
+			for _, rk := range rb.RencanaKinerja {
+				kandidat, exists := kandidatPptkMap[rk.PegawaiId]
+				if !exists {
+					continue
+				}
+
+				// Jangan query kandidat yang sama berkali-kali
+				if kandidatTracker[kandidat.Nip] {
+					continue
+				}
+
+				kandidatTracker[kandidat.Nip] = true
+
+				// Tambahkan kandidat level 3
+				kandidatPptkResponses = append(
+					kandidatPptkResponses,
+					kandidat,
+				)
+
+				// Cari atasan level 2
+				atasan, err := service.pptkRepository.KandidatAtasanPptk(
+					ctx,
+					tx,
+					kodeOpd,
+					kandidat.Nip,
+				)
+				if err != nil {
+					log.Printf(
+						"Error mencari atasan kandidat %s: %v",
+						kandidat.Nip,
+						err,
+					)
+					continue
+				}
+
+				if atasan == nil {
+					// log.Printf(
+					// 	"Atasan level_2 tidak ditemukan untuk kandidat %s",
+					// 	kandidat.Nip,
+					// )
+					continue
+				}
+
+				// Hindari atasan yang sama masuk berkali-kali
+				if !kandidatTracker[atasan.Nip] {
+					kandidatPptkResponses = append(
+						kandidatPptkResponses,
+						rincianbelanja.KandidatPptkResponse{
+							Nip:   atasan.Nip,
+							Nama:  atasan.Nama,
+							Level: atasan.Level,
+						},
+					)
+
+					kandidatTracker[atasan.Nip] = true
+				}
+			}
+			// -----------------------------------------------------
+			// Mapping PPTK ke response
+			// -----------------------------------------------------
+			pptkResponses := make([]rincianbelanja.PptkResponse, 0)
+
+			for _, result := range pptkResults {
+				pptkResponses = append(
+					pptkResponses,
+					rincianbelanja.PptkResponse{
+						Id:              result.Id,
+						Nip:             result.Nip,
+						NamaPegawai:     result.NamaPegawai,
+						KodeOpd:         result.KodeOpd,
+						Tahun:           result.Tahun,
+						KodeSubKegiatan: result.KodeSubKegiatan,
+						NipAtasan:       result.NipAtasan,
+						NamaAtasan:      result.NamaAtasan,
+						AktifAt:         result.AktifAt,
+						NonAktifAt:      result.NonAktifAt,
+					},
+				)
+			}
+
 			subResponse = &rincianbelanja.RincianBelanjaAsnResponse{
 				KodeSubkegiatan:      rb.KodeSubkegiatan,
 				NamaSubkegiatan:      rb.NamaSubkegiatan,
 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
 				TotalAnggaran:        0,
 				RincianBelanja:       []rincianbelanja.RincianBelanjaResponse{},
+				KandidatPptk:         kandidatPptkResponses,
+				Pptk:                 pptkResponses,
 			}
 			subkegiatanMap[rb.KodeSubkegiatan] = subResponse
 		}
@@ -422,6 +565,26 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 		return nil, err
 	}
 
+	// kandidatPptkList, err := service.pptkRepository.KandidatPptkPegawai(
+	// 	ctx,
+	// 	tx,
+	// 	pegawaiId,
+	// 	tahun,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// kandidatPptkMap := make(map[string]rincianbelanja.KandidatPptkResponse)
+
+	// for _, kandidat := range rincianBelanjaList {
+	// 	kandidatPptkMap[kandidat.PegawaiId] = rincianbelanja.KandidatPptkResponse{
+	// 		Nip:   pegawaiId,
+	// 		Nama:  kandidat.NamaPegawai,
+	// 		Level: kandidat.Level,
+	// 	}
+	// }
+
 	// Map untuk mengelompokkan berdasarkan kode OPD dan subkegiatan
 	subkegiatanMap := make(map[string]*rincianbelanja.RincianBelanjaAsnResponse)
 
@@ -475,6 +638,119 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 				})
 			}
 
+			// -----------------------------------------------------
+			// Ambil PPTK berdasarkan subkegiatan
+			// -----------------------------------------------------
+			pptkResults, err := service.pptkRepository.FindAllByNip(
+				ctx,
+				tx,
+				rb.KodeSubkegiatan,
+				pegawaiId,
+				tahun,
+			)
+			if err != nil {
+				log.Printf(
+					"Error mengambil PPTK untuk subkegiatan %s: %v",
+					pegawaiId,
+					rb.KodeSubkegiatan,
+					err,
+				)
+
+				// Jangan menggagalkan seluruh laporan
+				pptkResults = nil
+			}
+
+			// -----------------------------------------------------
+			// Mapping Kandidat PPTK ke response
+			// -----------------------------------------------------
+
+			kandidatPptkResponses := make([]rincianbelanja.KandidatPptkResponse, 0)
+			kandidatTracker := make(map[string]bool)
+
+			for _, rk := range rb.RencanaKinerja {
+
+				// Hindari kandidat yang sama diproses berkali-kali
+				if kandidatTracker[rk.PegawaiId] {
+					continue
+				}
+
+				kandidatTracker[rk.PegawaiId] = true
+
+				// ==========================================
+				// 1. Tambahkan kandidat level 3
+				// ==========================================
+				kandidatPptkResponses = append(
+					kandidatPptkResponses,
+					rincianbelanja.KandidatPptkResponse{
+						Nip:   rk.PegawaiId,
+						Nama:  rk.NamaPegawai,
+						Level: rk.Level,
+					},
+				)
+
+				// ==========================================
+				// 2. Cari atasan level 2
+				// ==========================================
+				atasan, err := service.pptkRepository.KandidatAtasanPptk(
+					ctx,
+					tx,
+					rb.KodeOpd,
+					rk.PegawaiId,
+				)
+				if err != nil {
+					log.Printf(
+						"Error mencari atasan kandidat %s: %v",
+						rk.PegawaiId,
+						err,
+					)
+					continue
+				}
+
+				// Tidak punya atasan → lanjut kandidat berikutnya
+				if atasan == nil {
+					continue
+				}
+
+				// ==========================================
+				// 3. Tambahkan atasan level 2
+				// ==========================================
+				if !kandidatTracker[atasan.Nip] {
+					kandidatPptkResponses = append(
+						kandidatPptkResponses,
+						rincianbelanja.KandidatPptkResponse{
+							Nip:   atasan.Nip,
+							Nama:  atasan.Nama,
+							Level: atasan.Level,
+						},
+					)
+
+					kandidatTracker[atasan.Nip] = true
+				}
+			}
+
+			// -----------------------------------------------------
+			// Mapping PPTK ke response
+			// -----------------------------------------------------
+			pptkResponses := make([]rincianbelanja.PptkResponse, 0)
+
+			for _, result := range pptkResults {
+				pptkResponses = append(
+					pptkResponses,
+					rincianbelanja.PptkResponse{
+						Id:              result.Id,
+						Nip:             result.Nip,
+						NamaPegawai:     result.NamaPegawai,
+						KodeOpd:         result.KodeOpd,
+						Tahun:           result.Tahun,
+						KodeSubKegiatan: result.KodeSubKegiatan,
+						NipAtasan:       result.NipAtasan,
+						NamaAtasan:      result.NamaAtasan,
+						AktifAt:         result.AktifAt,
+						NonAktifAt:      result.NonAktifAt,
+					},
+				)
+			}
+
 			subResponse = &rincianbelanja.RincianBelanjaAsnResponse{
 				KodeOpd:              rb.KodeOpd,
 				KodeSubkegiatan:      rb.KodeSubkegiatan,
@@ -482,6 +758,8 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 				IndikatorSubkegiatan: indikatorSubkegiatanResponses,
 				TotalAnggaran:        0,
 				RincianBelanja:       []rincianbelanja.RincianBelanjaResponse{},
+				KandidatPptk:         kandidatPptkResponses,
+				Pptk:                 pptkResponses,
 			}
 			subkegiatanMap[key] = subResponse
 		}

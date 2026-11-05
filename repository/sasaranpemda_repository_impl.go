@@ -1296,10 +1296,23 @@ func (r *SasaranPemdaRepositoryImpl) FindAllByTematikTahun(
 	var args []interface{}
 	if jenis == "renstra" {
 		jenisClause = "(t.jenis='renstra' OR t.jenis='' OR t.jenis IS NULL)"
-		args = []interface{}{tahun, tahun, jenisPeriode, tahun, tahun, tahun}
+		args = []interface{}{
+			tahun,        // t.tahun
+			jenisPeriode, // p.jenis_periode
+			tahun,        // pk_anc1.tahun
+			tahun,        // pk_anc2.tahun
+			tahun,        // pk_anc3.tahun
+		}
 	} else {
 		jenisClause = "t.jenis=?"
-		args = []interface{}{tahun, jenis, tahun, jenisPeriode, tahun, tahun, tahun}
+		args = []interface{}{
+			tahun,        // t.tahun
+			jenis,        // t.jenis
+			jenisPeriode, // p.jenis_periode
+			tahun,        // pk_anc1.tahun
+			tahun,        // pk_anc2.tahun
+			tahun,        // pk_anc3.tahun
+		}
 	}
 	query := fmt.Sprintf(`
 		SELECT

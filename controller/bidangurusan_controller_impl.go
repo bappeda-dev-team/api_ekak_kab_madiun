@@ -137,7 +137,7 @@ func (controller *BidangUrusanControllerImpl) Delete(writer http.ResponseWriter,
 // @Param        kode_opd  path  string  true  "Kode OPD"  example("1.01.1.01.0.00.01.0000")
 // @Success      200  {object}  web.WebResponse{data=[]bidangurusanresponse.BidangUrusanResponse}
 // @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /bidang_urusan/findall/{kode_opd} [get]
 func (controller *BidangUrusanControllerImpl) FindByKodeOpd(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")

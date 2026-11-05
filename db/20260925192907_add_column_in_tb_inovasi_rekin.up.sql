@@ -1,0 +1,1 @@
+ALTER TABLE tb_inovasi_rekin ADD COLUMN pegawai_id VARCHAR(255) DEFAULT "";

@@ -55,7 +55,7 @@ func (controller *RencanaKinerjaControllerImpl) Update(writer http.ResponseWrite
 		webResponse := web.WebRencanaKinerjaResponse{
 			Code:   400,
 			Status: "failed update rencana kinerja",
-			Data:   nil,
+			Data:   err.Error(),
 		}
 		helper.WriteToResponseBody(writer, webResponse)
 		return
@@ -158,7 +158,7 @@ func (controller *RencanaKinerjaControllerImpl) Delete(writer http.ResponseWrite
 // @Param        tahun       query  string  false  "Tahun"
 // @Success      200  {object}  web.WebRencanaKinerjaResponse
 // @Failure      400  {object}  web.WebRencanaKinerjaResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /get_rencana_kinerja/pegawai/{pegawai_id} [get]
 func (controller *RencanaKinerjaControllerImpl) FindAllRencanaKinerja(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	pegawaiId := params.ByName("pegawai_id")
@@ -394,7 +394,7 @@ func (controller *RencanaKinerjaControllerImpl) FindAllRekinLevel1(writer http.R
 		responses = make([]rencanakinerja.RencanaKinerjaLevel1Response, 0)
 	}
 
-	webResponse := web.WebRencanaKinerjaResponse{
+	webResponse := web.WebResponse{
 		Code:   200,
 		Status: "OK",
 		Data:   responses,

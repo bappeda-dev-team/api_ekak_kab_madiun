@@ -1,0 +1,68 @@
+package inovasirekin
+
+import (
+	"ekak_kabupaten_madiun/model/web"
+)
+
+type InovasiRekinResponse struct {
+	Id           	   string             `json:"id"`
+	RekinId      	   string             `json:"rencana_kinerja_id"`
+	KodeOpd      	   string             `json:"kode_opd"`
+	NamaOpd      	   string             `json:"nama_opd"`
+	NamaInovasi        string			  `json:"nama_inovasi"`
+	JenisInovasiId     int				  `json:"jenis_inovasi_id"`
+	JenisInovasi       string			  `json:"jenis_inovasi"`
+	WaktuImplementasi  string	          `json:"waktu_implementasi"`
+	Instansi           string			  `json:"instansi"`
+	Inovator           string		      `json:"inovator"`
+	Kebaruan           string             `json:"kebaruan"`
+	AsalInovasi        string             `json:"asal_inovasi"`
+	Tahun              int                `json:"tahun"`
+	NipInovator        string             `json:"nip_inovator"`
+	NamaNipInovator    string             `json:"nama_nip_inovator"`
+	Level              string             `json:"level"`
+	PegawaiId          string			  `json:"pegawai_id"`
+	Action       	   []web.ActionButton `json:"action,omitempty"`
+}
+type InovasiLaporanResponse struct {
+	Id           	   string             `json:"id"`
+	RekinId      	   string             `json:"rencana_kinerja_id"`
+	NamaRencanaKinerja string             `json:"nama_rencana_kinerja"`
+	Indikator          []IndikatorResponse             `json:"indikator,omitempty"`
+	KodeOpd      	   string             `json:"kode_opd"`
+	NamaOpd      	   string             `json:"nama_opd"`
+	NamaInovasi        string			  `json:"nama_inovasi"`
+	JenisInovasiId     int				  `json:"jenis_inovasi_id"`
+	JenisInovasi       string			  `json:"jenis_inovasi"`
+	WaktuImplementasi  string	          `json:"waktu_implementasi"`
+	Instansi           string			  `json:"instansi"`
+	Inovator           string		      `json:"inovator"`
+	Kebaruan           string             `json:"kebaruan"`
+	AsalInovasi        string             `json:"asal_inovasi"`
+	Tahun              int                `json:"tahun"`
+	NipInovator        string             `json:"nip_inovator"`
+	NamaNipInovator    string             `json:"nama_nip_inovator"`
+	Level              string             `json:"level"`
+	PegawaiId          string			  `json:"pegawai_id"`
+	NamaPegawai        string			  `json:"nama_pegawai"`
+	NamaSubKegiatan    string			  `json:"nama_subkegiatan"`
+	PaguAnggaran       int64			      `json:"pagu_anggaran"`
+}
+
+type IndikatorResponse struct {
+	Id               string           `json:"id_indikator,omitempty"`
+	RencanaKinerjaId string           `json:"rencana_kinerja_id,omitempty"`
+	NamaIndikator    string           `json:"nama_indikator,omitempty"`
+	Target           []TargetResponse `json:"targets,omitempty"`
+	// ManualIK         *DataOutput      `json:"data_output,omitempty"`
+	ManualIKExist    bool             `json:"manual_ik_exist"`
+}
+
+type TargetResponse struct {
+	Id              string `json:"id_target,omitempty"`
+	IndikatorId     string `json:"indikator_id"`
+	TargetIndikator string `json:"target"`
+	SatuanIndikator string `json:"satuan"`
+	Tahun           string `json:"tahun,omitempty"`
+}
+

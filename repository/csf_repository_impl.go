@@ -12,9 +12,11 @@ import (
 	"sort"
 )
 
-type CSFRepositoryImpl struct{}
+type CSFRepositoryImpl struct{
 
-func NewCSFRepositoryImpl() CSFRepository {
+}
+
+func NewCSFRepositoryImpl() *CSFRepositoryImpl {
 	return &CSFRepositoryImpl{}
 }
 

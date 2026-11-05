@@ -1,0 +1,173 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"ekak_kabupaten_madiun/model/domain"
+)
+
+type InovasiRekinRepositoryImpl struct {
+}
+
+func NewInovasiRekinRepositoryImpl() *InovasiRekinRepositoryImpl {
+	return &InovasiRekinRepositoryImpl{}
+}
+
+func (repository *InovasiRekinRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, inovasiRekin domain.InovasiRekin) (domain.InovasiRekin, error) {
+	query := `INSERT INTO tb_inovasi_rekin 
+	(id, rekin_id, kode_opd, nama_inovasi, jenis_inovasi_id, waktu_implementasi, instansi, inovator, kebaruan, asal_inovasi, tahun, nip_inovator, pegawai_id) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := tx.ExecContext(ctx, query, inovasiRekin.Id, inovasiRekin.RekinId, inovasiRekin.KodeOpd, inovasiRekin.NamaInovasi, inovasiRekin.JenisInovasiId, 
+	inovasiRekin.WaktuImplementasi, inovasiRekin.Instansi, inovasiRekin.Inovator, inovasiRekin.Kebaruan, inovasiRekin.AsalInovasi, inovasiRekin.Tahun, inovasiRekin.NipInovator, inovasiRekin.PegawaiId)
+	if err != nil {
+		return domain.InovasiRekin{}, err
+	}
+	return inovasiRekin, nil
+}
+
+func (repository *InovasiRekinRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, inovasiRekin domain.InovasiRekin) (domain.InovasiRekin, error) {
+	query := `UPDATE tb_inovasi_rekin SET 
+								nama_inovasi = ?, 
+								jenis_inovasi_id = ?, 
+								waktu_implementasi = ?, 
+								instansi = ?, 
+								inovator = ?,
+								kebaruan = ?,
+								asal_inovasi = ?,
+								nip_inovator = ?
+								WHERE id = ?`
+	_, err := tx.ExecContext(ctx, query, inovasiRekin.NamaInovasi, inovasiRekin.JenisInovasiId, inovasiRekin.WaktuImplementasi, inovasiRekin.Instansi, inovasiRekin.Inovator, inovasiRekin.Kebaruan, inovasiRekin.AsalInovasi, inovasiRekin.NipInovator, inovasiRekin.Id)
+	if err != nil {
+		return domain.InovasiRekin{}, err
+	}
+	return inovasiRekin, nil
+}
+
+func (repository *InovasiRekinRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, id string) error {
+	query := "DELETE FROM tb_inovasi_rekin WHERE id = ?"
+	_, err := tx.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repository *InovasiRekinRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id string) (domain.InovasiRekin, error) {
+	query := `SELECT 
+	tir.id, tir.rekin_id, tir.kode_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator,
+	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator, COALESCE(tro.role, '') AS level, tir.pegawai_id
+	FROM tb_inovasi_rekin tir
+	LEFT JOIN tb_jenis_inovasi ji
+		ON ji.id = tir.jenis_inovasi_id 
+	LEFT JOIN tb_pegawai tp
+		ON tp.nip = tir.nip_inovator 
+	LEFT JOIN tb_users tu
+		ON tu.nip = tir.nip_inovator
+	LEFT JOIN tb_user_role tur
+		ON tur.user_id = tu.id
+	LEFT JOIN tb_role tro
+		ON tro.id = tur.role_id
+	WHERE tir.id = ?`
+	row := tx.QueryRowContext(ctx, query, id)
+	var inovasiRekin domain.InovasiRekin
+	err := row.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.KodeOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi,  &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator, &inovasiRekin.Kebaruan, &inovasiRekin.AsalInovasi, &inovasiRekin.Tahun, &inovasiRekin.NipInovator, &inovasiRekin.NamaNipInovator, &inovasiRekin.Level, &inovasiRekin.PegawaiId)
+	if err != nil {
+		return domain.InovasiRekin{}, err
+	}
+	return inovasiRekin, nil
+}
+
+func (repository *InovasiRekinRepositoryImpl) FindAll(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.InovasiRekin, error) {
+	query := `SELECT 
+	tir.id, tir.rekin_id, tir.kode_opd, od.nama_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator,
+	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator, COALESCE(tro.role, '') AS level, tir.pegawai_id
+	FROM tb_inovasi_rekin tir
+	LEFT JOIN tb_jenis_inovasi ji
+		ON ji.id = tir.jenis_inovasi_id 
+	LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = tir.kode_opd
+	LEFT JOIN tb_pegawai tp
+		ON tp.nip = tir.nip_inovator
+	LEFT JOIN tb_users tu
+		ON tu.nip = tir.nip_inovator
+	LEFT JOIN tb_user_role tur
+		ON tur.user_id = tu.id
+	LEFT JOIN tb_role tro 
+		ON tro.id = tur.role_id
+	WHERE tir.rekin_id = ?`
+	rows, err := tx.QueryContext(ctx, query, rekinId)
+	if err != nil {
+		return []domain.InovasiRekin{}, err
+	}
+	defer rows.Close()
+
+	var inovasiRekinList []domain.InovasiRekin
+	for rows.Next() {
+		var inovasiRekin domain.InovasiRekin
+		err := rows.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.KodeOpd, &inovasiRekin.NamaOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator, &inovasiRekin.Kebaruan, &inovasiRekin.AsalInovasi, &inovasiRekin.Tahun, &inovasiRekin.NipInovator, &inovasiRekin.NamaNipInovator, &inovasiRekin.Level, &inovasiRekin.PegawaiId)
+		if err != nil {
+			return []domain.InovasiRekin{}, err
+		}
+
+		inovasiRekinList = append(inovasiRekinList, inovasiRekin)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return []domain.InovasiRekin{}, err
+	}
+
+	return inovasiRekinList, nil
+}
+func (repository *InovasiRekinRepositoryImpl) FindAllKodeOpdTahun(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string) ([]domain.InovasiLaporan, error) {
+	query := `SELECT 
+	tir.id, tir.rekin_id, COALESCE(trk.nama_rencana_kinerja, ''), tir.kode_opd, od.nama_opd, tir.nama_inovasi, tir.jenis_inovasi_id, ji.jenis, tir.waktu_implementasi, tir.instansi, tir.inovator,
+	tir.kebaruan, tir.asal_inovasi, tir.tahun, tir.nip_inovator, COALESCE(tp.nama, '') AS nama_nip_inovator, COALESCE(tro.role, '') AS level, tir.pegawai_id, COALESCE(tpu.nama, '') AS nama_pegawai,
+	COALESCE(ts.nama_subkegiatan, '')
+	FROM tb_inovasi_rekin tir
+	LEFT JOIN tb_jenis_inovasi ji
+		ON ji.id = tir.jenis_inovasi_id 
+	LEFT JOIN tb_operasional_daerah od
+		ON od.kode_opd = tir.kode_opd
+	LEFT JOIN tb_pegawai tp
+		ON tp.nip = tir.nip_inovator
+	LEFT JOIN tb_users tu
+		ON tu.nip = tir.nip_inovator
+	LEFT JOIN tb_user_role tur
+		ON tur.user_id = tu.id
+	LEFT JOIN tb_role tro 
+		ON tro.id = tur.role_id
+	LEFT JOIN tb_rencana_kinerja trk
+		ON trk.id = tir.rekin_id
+	LEFT JOIN tb_pegawai tpu
+		ON tpu.id = tir.pegawai_id
+	LEFT JOIN tb_subkegiatan_terpilih tst
+		ON tst.rekin_id = tir.rekin_id
+	LEFT JOIN tb_subkegiatan ts
+		ON ts.id = tst.subkegiatan_id
+	WHERE tir.kode_opd = ? AND tir.tahun = ?`
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahun)
+	if err != nil {
+		return []domain.InovasiLaporan{}, err
+	}
+	defer rows.Close()
+
+	var inovasiRekinList []domain.InovasiLaporan
+	for rows.Next() {
+		var inovasiRekin domain.InovasiLaporan
+		err := rows.Scan(&inovasiRekin.Id, &inovasiRekin.RekinId, &inovasiRekin.NamaRencanaKinerja, &inovasiRekin.KodeOpd, &inovasiRekin.NamaOpd, &inovasiRekin.NamaInovasi, &inovasiRekin.JenisInovasiId, &inovasiRekin.JenisInovasi, &inovasiRekin.WaktuImplementasi, &inovasiRekin.Instansi, &inovasiRekin.Inovator, &inovasiRekin.Kebaruan, &inovasiRekin.AsalInovasi, &inovasiRekin.Tahun, &inovasiRekin.NipInovator, &inovasiRekin.NamaNipInovator, &inovasiRekin.Level, &inovasiRekin.PegawaiId, &inovasiRekin.NamaPegawai, &inovasiRekin.NamaSubKegiatan)
+		if err != nil {
+			return []domain.InovasiLaporan{}, err
+		}
+
+		inovasiRekinList = append(inovasiRekinList, inovasiRekin)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return []domain.InovasiLaporan{}, err
+	}
+
+	return inovasiRekinList, nil
+}
+

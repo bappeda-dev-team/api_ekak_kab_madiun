@@ -90,3 +90,62 @@ func (c *PenetapanClientImpl) SyncPenetapanPkPegawai(
 
 	return nil
 }
+
+func (c *PenetapanClientImpl) UpdateStatusPenetapanPkPegawai(
+	ctx context.Context,
+	pegawaiId string,
+	kodeOpd string,
+	tahun int,
+) error {
+	url := fmt.Sprintf("%s/individu/rekin/archive", c.host)
+
+	payload := SyncPenetapanPkPegawaiRequest{
+		PegawaiID: pegawaiId,
+		KodeOpd:   kodeOpd,
+		Tahun:     tahun,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("gagal marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPut,
+		url,
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return fmt.Errorf("gagal membuat request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	sessionID := getSessionID(ctx)
+	if sessionID != "" {
+		req.Header.Set("X-Session-Id", sessionID)
+	} else {
+		log.Printf("Session Id tidak ditemukan, mungkin akan 401")
+	}
+
+	log.Printf("PUT %s", url)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("gagal request sync penetapan: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		responseBody, _ := io.ReadAll(resp.Body)
+
+		return fmt.Errorf(
+			"unexpected status: %d, response: %s",
+			resp.StatusCode,
+			string(responseBody),
+		)
+	}
+
+	return nil
+}

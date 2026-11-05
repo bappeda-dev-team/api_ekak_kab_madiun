@@ -4,6 +4,7 @@ import (
 	"context"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -39,6 +40,13 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 		{"/isu-global/find-by-ids", "^/isu-global/find-by-ids$"},
 		{"/isu-nasional/find-by-ids", "^/isu-nasional/find-by-ids$"},
 		{"/isu-regional/find-by-ids", "^/isu-regional/find-by-ids$"},
+		{"/lock-renaksi-opd/lock", "^/lock-renaksi-opd/lock$"},
+		{"/bidang_urusan/findall", "^/bidang_urusan/findall$"},
+		{"/get_rencana_kinerja/pegawai", "^/get_rencana_kinerja/pegawai$"},
+		{"/sasaran_opd/renstra", "^/sasaran_opd/renstra$"},
+		{"/sasaran_pemda/v2/penetapan", "^/sasaran_pemda/v2/penetapan$"},
+		{"/tujuan_opd/renstra", "^/tujuan_opd/renstra$"},
+		{"/tujuan_pemda/penetapan", "^/tujuan_pemda/penetapan$"},
 	}
 
 	currentPath := request.URL.Path
@@ -66,8 +74,9 @@ func (middleware *AuthMiddleware) ServeHTTP(writer http.ResponseWriter, request 
 
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-	claims := helper.ValidateJWT(tokenString)
-	if claims.UserId == 0 {
+	claims, err := helper.ValidateJWT(tokenString)
+	if err != nil {
+		log.Printf("ERROR %v", err)
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusUnauthorized)
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"ekak_kabupaten_madiun/model/web/laporanreviewtujuanopd"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 )
 
@@ -13,10 +14,13 @@ type ReviewService interface {
 	FindById(ctx context.Context, id int) (pohonkinerja.ReviewResponse, error)
 	FindAllReviewByTematik(ctx context.Context, tahun string) ([]pohonkinerja.ReviewTematikResponse, error)
 	FindAllReviewOpd(ctx context.Context, kodeOpd, tahun string) ([]pohonkinerja.ReviewOpdResponse, error)
+	CetakPDFReviewOpd(ctx context.Context, kodeOpd string, tahun string) ([]byte, error)
 
 	CreateTujuanOpd(ctx context.Context, request pohonkinerja.ReviewTujuanOpdCreateRequest) (pohonkinerja.ReviewTujuanOpdResponse, error)
 	UpdateTujuanOpd(ctx context.Context, request pohonkinerja.ReviewTujuanOpdUpdateRequest) (pohonkinerja.ReviewTujuanOpdResponse, error)
 	DeleteTujuanOpd(ctx context.Context, id int) error
 	FindAllTujuanOpd(ctx context.Context, idTujuanOpd int) ([]pohonkinerja.ReviewTujuanOpdResponse, error)
 	FindByIdTujuanOpd(ctx context.Context, id int) (pohonkinerja.ReviewTujuanOpdResponse, error)
+	FindAllLaporanTujuanOpd(ctx context.Context, kodeOpd string) ([]laporanreviewtujuanopd.LaporanReviewTujuanOpd, error)
+	CetakPDFReviewTujuanOpd(ctx context.Context, kodeOpd string) ([]byte, error)
 }

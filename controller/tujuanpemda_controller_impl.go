@@ -5,6 +5,7 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/tujuanpemda"
 	"ekak_kabupaten_madiun/service"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -474,13 +475,27 @@ func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaRankhirDual(
 // @Success      200  {object}  web.WebResponse{data=[]tujuanpemda.TujuanPemdaPenetapanDualResponse}
 // @Failure      400  {object}  web.WebResponse
 // @Failure      500  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /tujuan_pemda/penetapan/{tahun} [get]
 func (controller *TujuanPemdaControllerImpl) FindTujuanPemdaPenetapanDual(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	result, err := controller.TujuanPemdaService.FindTujuanPemdaPenetapanDual(
-		request.Context(), params.ByName("tahun"), "RPJMD",
+	tahun := params.ByName("tahun")
+	if tahun == "" {
+		helper.WriteToResponseBody(writer, "Tahun harus diisi")
+		return
+	}
+	result, err := controller.TujuanPemdaService.FindTujuanPemdaPenetapanDualV2(
+		request.Context(), tahun, "RPJMD",
 	)
 	if err != nil {
+		if errors.Is(err, helper.ErrInvalidYear) {
+			webResponse := web.WebResponse{
+				Code:   http.StatusBadRequest,
+				Status: "BAD REQUEST",
+				Data:   err.Error(),
+			}
+			helper.WriteToResponseBody(writer, webResponse)
+			return
+		}
 		webResponse := web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: "INTERNAL SERVER ERROR",

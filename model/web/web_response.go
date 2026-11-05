@@ -72,6 +72,13 @@ type WebGambaranUmumResponse struct {
 	Data   interface{}    `json:"gambaran_umum"`
 }
 
+type WebInovasiRekinResponse struct {
+	Code   int            `json:"code"`
+	Status string         `json:"status"`
+	Action []ActionButton `json:"action,omitempty"`
+	Data   interface{}    `json:"inovasi_rekin"`
+}
+
 type WebDasarHukumResponse struct {
 	Code   int            `json:"code"`
 	Status string         `json:"status"`

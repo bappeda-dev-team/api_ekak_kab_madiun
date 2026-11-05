@@ -280,7 +280,7 @@ func (controller *TujuanOpdControllerImpl) FindTujuanOpdByTahun(writer http.Resp
 // @Param        tahun_akhir     path     string  true  "Tahun Akhir"      example("2030")
 // @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TujuanOpdwithBidangUrusanResponse}
 // @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /tujuan_opd/renstra/{kode_opd}/{tahun_awal}/{tahun_akhir} [get]
 func (controller *TujuanOpdControllerImpl) FindTujuanOpdRenstra(
 	writer http.ResponseWriter,
@@ -672,7 +672,7 @@ func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaPenetapanIndikator(w
 // @Param        tahun     path     string  true  "Tahun"      example("2025")
 // @Success      200  {object}  web.WebResponse{data=[]tujuanopd.TujuanOpdPenetapanResponse}
 // @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /tujuan_opd/penetapan/{kode_opd}/{tahun} [get]
 func (controller *TujuanOpdControllerImpl) TujuanOpdPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")

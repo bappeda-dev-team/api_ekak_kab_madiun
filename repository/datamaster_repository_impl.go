@@ -22,6 +22,7 @@ func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, t
 		SELECT
 			rb.id,
 			rb.jenis_rb,
+			rb.tema_rb,
 			rb.kegiatan_utama,
 			rb.keterangan,
 			rb.tahun_baseline,
@@ -87,6 +88,7 @@ func (repository *DataMasterRepositoryImpl) DataRBByTahun(ctx context.Context, t
 		err := rows.Scan(
 			&rb.Id,
 			&rb.JenisRB,
+			&rb.TemaRB,
 			&rb.KegiatanUtama,
 			&keterangan,
 			&rb.TahunBaseline,
@@ -218,14 +220,15 @@ func (r *DataMasterRepositoryImpl) InsertRB(ctx context.Context, tx *sql.Tx, req
 
 	query := `
         INSERT INTO datamaster_rb (
-            jenis_rb, kegiatan_utama, keterangan,
+            jenis_rb, tema_rb, kegiatan_utama, keterangan,
             tahun_baseline, tahun_next,
             last_updated_by, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, 1)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
     `
 
 	res, err := tx.ExecContext(ctx, query,
 		req.JenisRB,
+		req.TemaRB,
 		req.KegiatanUtama,
 		req.Keterangan,
 		req.TahunBaseline,
@@ -306,7 +309,7 @@ func (r *DataMasterRepositoryImpl) InsertTarget(ctx context.Context, tx *sql.Tx,
 func (r *DataMasterRepositoryImpl) UpdateRB(ctx context.Context, tx *sql.Tx, req datamaster.MasterRB, rbId int) error {
 	query := `
 		UPDATE datamaster_rb
-		SET jenis_rb = ?, kegiatan_utama = ?, keterangan = ?,
+		SET jenis_rb = ?, tema_rb = ?, kegiatan_utama = ?, keterangan = ?,
 		    tahun_baseline = ?, tahun_next = ?, last_updated_by = ?,
 		    current_version = current_version + 1
 		WHERE id = ?
@@ -314,6 +317,7 @@ func (r *DataMasterRepositoryImpl) UpdateRB(ctx context.Context, tx *sql.Tx, req
 
 	_, err := tx.ExecContext(ctx, query,
 		req.JenisRB,
+		req.TemaRB,
 		req.KegiatanUtama,
 		req.Keterangan,
 		req.TahunBaseline,
@@ -347,7 +351,7 @@ func (r *DataMasterRepositoryImpl) DeleteAllIndikatorAndTargetByRB(ctx context.C
 
 func (r *DataMasterRepositoryImpl) FindRBById(ctx context.Context, tx *sql.Tx, rbId int) (datamaster.MasterRB, error) {
 	query := `
-		SELECT id, jenis_rb, kegiatan_utama, keterangan, tahun_baseline, tahun_next
+		SELECT id, jenis_rb, tema_rb, kegiatan_utama, keterangan, tahun_baseline, tahun_next
 		FROM datamaster_rb
 		WHERE id = ? AND is_active = 1
 	`
@@ -359,6 +363,7 @@ func (r *DataMasterRepositoryImpl) FindRBById(ctx context.Context, tx *sql.Tx, r
 	err := row.Scan(
 		&rb.Id,
 		&rb.JenisRB,
+		&rb.TemaRB,
 		&rb.KegiatanUtama,
 		&rb.Keterangan,
 		&rb.TahunBaseline,

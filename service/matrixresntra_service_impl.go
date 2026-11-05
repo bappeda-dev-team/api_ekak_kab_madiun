@@ -238,11 +238,87 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			Target:        fillTargetByTahunRange(tahunRange, ind.Target),
 		})
 	}
+
 	getIndikator := func(kode string) []programkegiatan.IndikatorPeriodResponse {
-		if list := indByKode[kode]; list != nil {
-			return list
+		indikators := indByKode[kode]
+		if len(indikators) == 0 {
+			return []programkegiatan.IndikatorPeriodResponse{}
 		}
-		return []programkegiatan.IndikatorPeriodResponse{}
+
+		// kode_indikator -> nama indikator normalized
+		namaByKode := make(map[string]string)
+
+		// nama indikator -> response indikator baseline
+		indikatorByNama := make(map[string]programkegiatan.IndikatorPeriodResponse)
+
+		// Pertahankan urutan indikator baseline.
+		urutanNama := make([]string, 0)
+
+		for _, indikator := range indikators {
+			nama := strings.TrimSpace(indikator.Indikator)
+			if nama == "" {
+				continue
+			}
+
+			namaByKode[indikator.KodeIndikator] = nama
+
+			if _, exists := indikatorByNama[nama]; exists {
+				continue
+			}
+
+			indikator.Indikator = nama
+			indikator.Target = nil
+
+			indikatorByNama[nama] = indikator
+			urutanNama = append(urutanNama, nama)
+		}
+
+		// Kumpulkan target berdasarkan nama indikator.
+		targetsByNama := make(map[string][]programkegiatan.TargetResponse)
+
+		for _, indikator := range indikators {
+			nama := strings.TrimSpace(indikator.Indikator)
+			if nama == "" {
+				continue
+			}
+
+			for _, target := range indikator.Target {
+				if strings.TrimSpace(target.IndikatorId) == "" {
+					continue
+				}
+
+				if strings.TrimSpace(target.Target) == "-" {
+					continue
+				}
+
+				// Pastikan target memang berasal dari indikator
+				// yang memiliki nama tersebut.
+				targetNama, exists := namaByKode[target.IndikatorId]
+				if !exists || targetNama != nama {
+					continue
+				}
+
+				targetsByNama[nama] = append(
+					targetsByNama[nama],
+					target,
+				)
+			}
+		}
+
+		result := make(
+			[]programkegiatan.IndikatorPeriodResponse,
+			0,
+			len(urutanNama),
+		)
+
+		for _, nama := range urutanNama {
+			indikator := indikatorByNama[nama]
+			indikator.Target = targetsByNama[nama]
+
+			result = append(result, indikator)
+		}
+
+		return result
 	}
 
 	// Outcome tampil di seluruh periode jika kode node + kode_opd cocok.

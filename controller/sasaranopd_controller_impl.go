@@ -341,7 +341,7 @@ func (controller *SasaranOpdControllerImpl) FindByNipAndOpd(writer http.Response
 // @Param        jenis_periode  path     string  true  "Jenis Periode"   example("RPJMD")
 // @Success      200  {object}  web.WebResponse{data=[]sasaranopd.SasaranOpdResponse}
 // @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /sasaran_opd/renstra/{kode_opd}/{tahun_awal}/{tahun_akhir}/{jenis_periode} [get]
 func (controller *SasaranOpdControllerImpl) FindSasaranRenstra(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
@@ -639,7 +639,7 @@ func (controller *SasaranOpdControllerImpl) DeleteIndikatorTargetRenja(writer ht
 // @Param        tahun     path     string  true  "Tahun"      example("2025")
 // @Success      200  {object}  web.WebResponse{data=[]sasaranopd.SasaranOpdResponse}
 // @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /sasaran_opd/penetapan/{kode_opd}/{tahun} [get]
 func (controller *SasaranOpdControllerImpl) FindSasaranPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")

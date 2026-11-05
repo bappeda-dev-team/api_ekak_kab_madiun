@@ -1,0 +1,2 @@
+ALTER TABLE tb_review
+ADD COLUMN tahun INT DEFAULT 0;

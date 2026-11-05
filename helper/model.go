@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/dasarhukum"
 	"ekak_kabupaten_madiun/model/web/gambaranumum"
 	"ekak_kabupaten_madiun/model/web/inovasi"
+	"ekak_kabupaten_madiun/model/web/inovasirekin"
 	"ekak_kabupaten_madiun/model/web/jabatan"
 	"ekak_kabupaten_madiun/model/web/opdmaster"
 	"ekak_kabupaten_madiun/model/web/pegawai"
@@ -291,6 +292,87 @@ func ToGambaranUmumResponses(gambaranUmums []domain.GambaranUmum) []gambaranumum
 		gambaranUmumResponses = append(gambaranUmumResponses, ToGambaranUmumResponse(gambaranUmum))
 	}
 	return gambaranUmumResponses
+}
+func ToInovasiRekinResponse(inovasiRekin domain.InovasiRekin) inovasirekin.InovasiRekinResponse {
+	host := os.Getenv("host")
+	port := os.Getenv("port")
+	buttonActions := []web.ActionButton{
+		{
+			NameAction: "Find By Id Inovasi Rekin",
+			Method:     "GET",
+			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/detail/:id", host, port),
+		},
+		{
+			NameAction: "Update Inovasi Rekin",
+			Method:     "PUT",
+			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/update/:id", host, port),
+		},
+		{
+			NameAction: "Delete Inovasi Rekin",
+			Method:     "DELETE",
+			Url:        fmt.Sprintf("%s:%s/inovasi_rekin/delete/:id", host, port),
+		},
+	}
+	return inovasirekin.InovasiRekinResponse{
+		Id:           	 	inovasiRekin.Id,
+		RekinId:      	 	inovasiRekin.RekinId,
+		KodeOpd:      	 	inovasiRekin.KodeOpd,
+		NamaOpd:      	 	inovasiRekin.NamaOpd,
+		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
+		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
+		JenisInovasi:  		inovasiRekin.JenisInovasi,
+		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
+		Instansi:           inovasiRekin.Instansi,
+		Inovator:           inovasiRekin.Inovator,
+		Kebaruan:           inovasiRekin.Kebaruan,
+		AsalInovasi:        inovasiRekin.AsalInovasi,
+		Tahun:              inovasiRekin.Tahun,
+		NipInovator:        inovasiRekin.NipInovator,
+		NamaNipInovator:    inovasiRekin.NamaNipInovator,
+		Level:              inovasiRekin.Level,
+		PegawaiId:          inovasiRekin.PegawaiId,
+		Action:             buttonActions,
+	}
+}
+
+func ToInovasiRekinResponses(inovasiRekins []domain.InovasiRekin) []inovasirekin.InovasiRekinResponse {
+	var inovasiRekinResponses []inovasirekin.InovasiRekinResponse
+	for _, inovasiRekin := range inovasiRekins {
+		inovasiRekinResponses = append(inovasiRekinResponses, ToInovasiRekinResponse(inovasiRekin))
+	}
+	return inovasiRekinResponses
+}
+func ToInovasiLaporanResponse(inovasiRekin domain.InovasiLaporan) inovasirekin.InovasiLaporanResponse {
+	return inovasirekin.InovasiLaporanResponse{
+		Id:           	 	inovasiRekin.Id,
+		RekinId:      	 	inovasiRekin.RekinId,
+		NamaRencanaKinerja: inovasiRekin.NamaRencanaKinerja,
+		KodeOpd:      	 	inovasiRekin.KodeOpd,
+		NamaOpd:      	 	inovasiRekin.NamaOpd,
+		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
+		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
+		JenisInovasi:  		inovasiRekin.JenisInovasi,
+		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
+		Instansi:           inovasiRekin.Instansi,
+		Inovator:           inovasiRekin.Inovator,
+		Kebaruan:           inovasiRekin.Kebaruan,
+		AsalInovasi:        inovasiRekin.AsalInovasi,
+		Tahun:              inovasiRekin.Tahun,
+		NipInovator:        inovasiRekin.NipInovator,
+		NamaNipInovator:    inovasiRekin.NamaNipInovator,
+		Level:              inovasiRekin.Level,
+		PegawaiId:          inovasiRekin.PegawaiId,
+		NamaPegawai:        inovasiRekin.NamaPegawai,
+		NamaSubKegiatan:    inovasiRekin.NamaSubKegiatan,
+	}
+}
+
+func ToInovasiLaporanResponses(inovasiRekins []domain.InovasiLaporan) []inovasirekin.InovasiLaporanResponse {
+	var inovasiRekinResponses []inovasirekin.InovasiLaporanResponse
+	for _, inovasiRekin := range inovasiRekins {
+		inovasiRekinResponses = append(inovasiRekinResponses, ToInovasiLaporanResponse(inovasiRekin))
+	}
+	return inovasiRekinResponses
 }
 
 func ToDasarHukumResponse(dasarHukum domain.DasarHukum) dasarhukum.DasarHukumResponse {

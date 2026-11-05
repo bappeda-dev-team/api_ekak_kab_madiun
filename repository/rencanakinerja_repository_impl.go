@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1059,7 +1060,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIds(
 ) ([]domain.RencanaKinerja, error) {
 
 	if len(pokinIds) == 0 {
-		return nil, errors.New("ids tidak boleh kosong")
+		return []domain.RencanaKinerja{}, nil
 	}
 
 	// Build IN clause
@@ -2046,4 +2047,92 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByIdRekins(ctx context.Conte
 	}
 
 	return rencanaKinerjas, nil
+}
+
+func (repo *RencanaKinerjaRepositoryImpl) FindSubkegiatanRekinByIds(
+	ctx context.Context,
+	tx *sql.Tx,
+	rekinIds []string,
+) (map[string]domain.SubKegiatan, error) {
+	const op = "rencanakinerja_repository.FindSubkegiatanRekinByIds"
+
+	if len(rekinIds) == 0 {
+		return map[string]domain.SubKegiatan{}, nil
+	}
+
+	baseQuery := `
+		SELECT
+			rek.id,
+			sub.kode_subkegiatan,
+			sub.nama_subkegiatan,
+			pagu.id,
+			pagu.pagu
+		FROM tb_rencana_kinerja rek
+		JOIN tb_subkegiatan_terpilih st
+			ON st.rekin_id = rek.id
+		JOIN tb_subkegiatan sub
+			ON st.kode_subkegiatan = sub.kode_subkegiatan
+		LEFT JOIN tb_pagu pagu
+			ON pagu.kode_subkegiatan = sub.kode_subkegiatan
+			AND pagu.kode_opd = rek.kode_opd
+			AND pagu.tahun = rek.tahun
+			AND pagu.jenis = 'penetapan'
+		WHERE rek.id IN (?)
+	`
+
+	query, args := helper.BuildInQueryString(baseQuery, rekinIds)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	rekinMap := make(map[string]domain.SubKegiatan, len(rekinIds))
+
+	for rows.Next() {
+		var (
+			rekinID           string
+			kodeSubKegiatan   string
+			namaSubKegiatan   string
+			paguIdNi          sql.NullInt64
+			paguSubKegiatanNi sql.NullInt64
+			paguId            string
+			paguSubKegiatan   int
+		)
+
+		if err := rows.Scan(
+			&rekinID,
+			&kodeSubKegiatan,
+			&namaSubKegiatan,
+			&paguIdNi,
+			&paguSubKegiatanNi,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+		if paguIdNi.Valid {
+			paguId = strconv.Itoa(int(paguIdNi.Int64))
+			paguSubKegiatan = int(paguSubKegiatanNi.Int64)
+		}
+
+		paguSub := make([]domain.PaguSubKegiatan, 0)
+		paguSub = append(paguSub, domain.PaguSubKegiatan{
+			Id:           paguId,
+			JenisPagu:    "penetapan",
+			PaguAnggaran: paguSubKegiatan,
+		})
+
+		rekinMap[rekinID] = domain.SubKegiatan{
+			KodeSubKegiatan: kodeSubKegiatan,
+			NamaSubKegiatan: namaSubKegiatan,
+			RekinId:         rekinID,
+			PaguSubKegiatan: paguSub,
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows iteration failed: %w", op, err)
+	}
+
+	return rekinMap, nil
 }

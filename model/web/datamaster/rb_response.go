@@ -3,6 +3,7 @@ package datamaster
 type RBResponse struct {
 	IdRB          int           `json:"id"`
 	JenisRB       string        `json:"jenis_rb"`
+	TemaRB        string        `json:"tema_rb"`
 	KegiatanUtama string        `json:"kegiatan_utama"`
 	Keterangan    string        `json:"keterangan"`
 	Indikator     []IndikatorRB `json:"indikator"`

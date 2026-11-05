@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"ekak_kabupaten_madiun/model/web/laporancrosscutting"
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 )
 
@@ -15,4 +16,5 @@ type CrosscuttingOpdService interface {
 	FindPokinByCrosscuttingStatus(ctx context.Context, kodeOpd string, tahun string) ([]pohonkinerja.CrosscuttingOpdResponse, error)
 	FindOPDCrosscuttingFrom(ctx context.Context, crosscuttingTo int) (pohonkinerja.CrosscuttingFromResponse, error)
 	DeleteCrosscuttingDiterima(ctx context.Context, crosscuttingId int) error
+	FindAllLaporanCrosscutting(ctx context.Context, kodeOpd, tahun string) (laporancrosscutting.PohonKinerjaCrosscuttingAllResponse, error)
 }

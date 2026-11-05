@@ -183,6 +183,7 @@ func (repository *TujuanOpdRepositoryImpl) Update(ctx context.Context, tx *sql.T
 	}
 	return nil
 }
+
 func (repository *TujuanOpdRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, tujuanOpdId int) error {
 	// 1. Hapus target terkait via tb_indikator_matrix
 	_, err := tx.ExecContext(ctx, `
@@ -420,6 +421,7 @@ func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahun(
 	// Delegasi ke FindAllByTahun dengan jenis='renstra' sebagai base
 	return repository.FindAllByTahun(ctx, tx, kodeOpd, tahun, jenisPeriode, "renstra")
 }
+
 func (repository *TujuanOpdRepositoryImpl) FindTujuanOpdByTahunByStrategicArahKebijakan(ctx context.Context, tx *sql.Tx, kodeOpd string, tahun string, jenisPeriode string) ([]domain.TujuanOpd, error) {
 	scriptTujuan := `
 		SELECT

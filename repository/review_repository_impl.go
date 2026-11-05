@@ -16,8 +16,8 @@ func NewReviewRepositoryImpl() *ReviewRepositoryImpl {
 }
 
 func (repository *ReviewRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
-	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, script, review.Id, review.IdPohonKinerja, review.Review, review.Keterangan, review.Jenis_pokin, review.CreatedBy)
+	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, catatan, substansi, jenis_pokin, created_by, tahun) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, review.Id, review.IdPohonKinerja, review.Review, review.Keterangan, review.Catatan, review.Substansi, review.Jenis_pokin, review.CreatedBy, review.Tahun)
 	if err != nil {
 		return domain.Review{}, err
 	}
@@ -25,8 +25,8 @@ func (repository *ReviewRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, 
 }
 
 func (repository *ReviewRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
-	script := "UPDATE tb_review SET review = ?, keterangan = ? WHERE id = ?"
-	_, err := tx.ExecContext(ctx, script, review.Review, review.Keterangan, review.Id)
+	script := "UPDATE tb_review SET review = ?, keterangan = ?, catatan = ?, substansi = ? WHERE id = ?"
+	_, err := tx.ExecContext(ctx, script, review.Review, review.Keterangan, review.Catatan, review.Substansi, review.Id)
 	if err != nil {
 		return domain.Review{}, err
 	}
@@ -43,10 +43,10 @@ func (repository *ReviewRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, 
 }
 
 func (repository *ReviewRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx, id int) (domain.Review, error) {
-	script := "SELECT id, id_pohon_kinerja, COALESCE(id_tujuan_opd, 0), review, keterangan, jenis_pokin, created_by, created_at, updated_at FROM tb_review WHERE id = ?"
+	script := "SELECT id, id_pohon_kinerja, COALESCE(id_tujuan_opd, 0), review, keterangan, COALESCE(catatan, ''), COALESCE(substansi, ''), jenis_pokin, created_by, tahun, created_at, updated_at FROM tb_review WHERE id = ?"
 	row := tx.QueryRowContext(ctx, script, id)
 	var review domain.Review
-	err := row.Scan(&review.Id, &review.IdPohonKinerja, &review.IdTujuanOpd, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
+	err := row.Scan(&review.Id, &review.IdPohonKinerja, &review.IdTujuanOpd, &review.Review, &review.Keterangan, &review.Catatan, &review.Substansi, &review.Jenis_pokin, &review.CreatedBy, &review.Tahun, &review.CreatedAt, &review.UpdatedAt)
 	if err != nil {
 		return domain.Review{}, err
 	}
@@ -54,7 +54,7 @@ func (repository *ReviewRepositoryImpl) FindById(ctx context.Context, tx *sql.Tx
 }
 
 func (repository *ReviewRepositoryImpl) FindByPohonKinerja(ctx context.Context, tx *sql.Tx, idPohonKinerja int) ([]domain.Review, error) {
-	script := "SELECT id, id_pohon_kinerja, review, keterangan, jenis_pokin, created_by, created_at, updated_at FROM tb_review WHERE id_pohon_kinerja = ?"
+	script := "SELECT id, id_pohon_kinerja, review, keterangan, COALESCE(catatan, ''), COALESCE(substansi, ''), jenis_pokin, created_by, created_at, updated_at FROM tb_review WHERE id_pohon_kinerja = ?"
 	rows, err := tx.QueryContext(ctx, script, idPohonKinerja)
 	if err != nil {
 		return []domain.Review{}, err
@@ -64,7 +64,7 @@ func (repository *ReviewRepositoryImpl) FindByPohonKinerja(ctx context.Context, 
 	var reviews []domain.Review
 	for rows.Next() {
 		var review domain.Review
-		err := rows.Scan(&review.Id, &review.IdPohonKinerja, &review.Review, &review.Keterangan, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
+		err := rows.Scan(&review.Id, &review.IdPohonKinerja, &review.Review, &review.Keterangan, &review.Catatan, &review.Substansi, &review.Jenis_pokin, &review.CreatedBy, &review.CreatedAt, &review.UpdatedAt)
 		if err != nil {
 			return []domain.Review{}, err
 		}
@@ -115,6 +115,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 			ph.updated_at,
             r.review,
             r.keterangan,
+            r.catatan,
+            r.substansi,
             r.created_by,
             r.jenis_pokin
         FROM tb_pohon_kinerja t
@@ -157,6 +159,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 			jenispohon   sql.NullString
 			review       sql.NullString
 			keterangan   sql.NullString
+			catatan      sql.NullString
+			substansi    sql.NullString
 			createdBy    sql.NullString
 			jenisPokin   sql.NullString
 			created_at   sql.NullString
@@ -176,6 +180,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 			&updated_at,
 			&review,
 			&keterangan,
+			&catatan,
+			&substansi,
 			&createdBy,
 			&jenisPokin,
 		)
@@ -206,6 +212,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewByTematik(ctx context.Conte
 				JenisPohon: jenispohon.String,
 				Review:     review.String,
 				Keterangan: keterangan.String,
+				Catatan:    catatan.String,
+				Substansi:  substansi.String,
 				CreatedBy:  createdBy.String,
 				JenisPokin: jenisPokin.String,
 				CreatedAt:  created_at.String,
@@ -233,6 +241,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewOpd(ctx context.Context, tx
             COALESCE(pk.jenis_pohon, '') as jenis_pohon,
             COALESCE(r.review, '') as review,
             COALESCE(r.keterangan, '') as keterangan,
+            COALESCE(r.catatan, '') as catatan,
+            COALESCE(r.substansi, '') as substansi,
             COALESCE(r.created_by, '') as created_by,
             COALESCE(r.created_at, CURRENT_TIMESTAMP) as created_at,
             COALESCE(r.updated_at, CURRENT_TIMESTAMP) as updated_at
@@ -272,6 +282,8 @@ func (repository *ReviewRepositoryImpl) FindAllReviewOpd(ctx context.Context, tx
 			&review.JenisPohon,
 			&review.Review,
 			&review.Keterangan,
+			&review.Catatan,
+			&review.Substansi,
 			&review.CreatedBy,
 			&createdAt,
 			&updatedAt,
@@ -319,6 +331,8 @@ func (repository *ReviewRepositoryImpl) FindByPokinIdBatch(ctx context.Context, 
 			r.id_pohon_kinerja, 
 			r.review, 
 			r.keterangan, 
+			COALESCE(r.catatan, '') as catatan,
+			COALESCE(r.substansi, '') as substansi, 
 			r.created_by, 
 			COALESCE(p.nama, '') as nama_reviewer,
 			r.jenis_pokin
@@ -342,6 +356,8 @@ func (repository *ReviewRepositoryImpl) FindByPokinIdBatch(ctx context.Context, 
 			&review.IdPohonKinerja,
 			&review.Review,
 			&review.Keterangan,
+			&review.Catatan,
+			&review.Substansi,
 			&review.CreatedBy,
 			&review.NamaReviewer,
 			&review.Jenis_pokin,
@@ -394,8 +410,8 @@ func (r *ReviewRepositoryImpl) CountReviewByPokinIdsBatch(ctx context.Context, t
 }
 
 func (repository *ReviewRepositoryImpl) CreateTujuanOpd(ctx context.Context, tx *sql.Tx, review domain.Review) (domain.Review, error) {
-	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, created_by, id_tujuan_opd) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := tx.ExecContext(ctx, script, review.Id, 0, review.Review, review.Keterangan, review.CreatedBy, review.IdTujuanOpd)
+	script := "INSERT INTO tb_review (id, id_pohon_kinerja, review, keterangan, catatan, created_by, id_tujuan_opd, tahun) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := tx.ExecContext(ctx, script, review.Id, 0, review.Review, review.Keterangan, review.Catatan, review.CreatedBy, review.IdTujuanOpd, review.Tahun)
 	if err != nil {
 		return domain.Review{}, err
 	}
@@ -456,6 +472,7 @@ func (repository *ReviewRepositoryImpl) FindByTujuanOpdIdsBatch(ctx context.Cont
 			COALESCE(r.id_tujuan_opd, 0) as id_tujuan_opd,
 			r.review,
 			r.keterangan,
+			r.catatan,
 			r.created_by,
 			COALESCE(p.nama, '') as nama_reviewer,
 			COALESCE(r.jenis_pokin, '') as jenis_pokin
@@ -480,6 +497,7 @@ func (repository *ReviewRepositoryImpl) FindByTujuanOpdIdsBatch(ctx context.Cont
 			&review.IdTujuanOpd,
 			&review.Review,
 			&review.Keterangan,
+			&review.Catatan,
 			&review.CreatedBy,
 			&review.NamaReviewer,
 			&review.Jenis_pokin,
@@ -493,4 +511,123 @@ func (repository *ReviewRepositoryImpl) FindByTujuanOpdIdsBatch(ctx context.Cont
 		return nil, err
 	}
 	return reviews, nil
+}
+
+func (repository *ReviewRepositoryImpl) FindLaporanReviewTujuanOpd(ctx context.Context, tx *sql.Tx, kodeOpd string) ([]domain.LaporanReviewTujuanOpd, error) {
+	script := `
+		SELECT
+			t.id,
+			t.kode_opd,
+			od.nama_opd,
+			t.kode_bidang_urusan,
+			bu.nama_bidang_urusan,
+			t.tujuan
+		FROM tb_tujuan_opd t
+		LEFT JOIN tb_operasional_daerah od
+			ON od.kode_opd = t.kode_opd
+		LEFT JOIN tb_bidang_urusan bu
+			ON bu.kode_bidang_urusan = t.kode_bidang_urusan
+		WHERE t.kode_opd = ?
+			AND EXISTS (
+				SELECT 1
+				FROM tb_review r
+				WHERE r.id_tujuan_opd = t.id
+			)
+		ORDER BY t.id ASC
+	`
+
+	rows, err := tx.QueryContext(ctx, script, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+
+	tujuanList := make([]domain.LaporanReviewTujuanOpd, 0)
+
+	for rows.Next() {
+		var tujuan domain.LaporanReviewTujuanOpd
+
+		err := rows.Scan(
+			&tujuan.Id,
+			&tujuan.KodeOpd,
+			&tujuan.NamaOpd,
+			&tujuan.KodeBidangUrusan,
+			&tujuan.NamaBidangUrusan,
+			&tujuan.Tujuan,
+		)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+
+		tujuanList = append(tujuanList, tujuan)
+	}
+
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	reviewScript := `
+		SELECT
+			r.id,
+			r.id_tujuan_opd,
+			r.id_pohon_kinerja,
+			r.review,
+			r.keterangan,
+			r.catatan,
+			r.created_by,
+			COALESCE(p.nama, '') AS nama_pegawai,
+			r.tahun
+		FROM tb_review r
+		LEFT JOIN tb_pegawai p
+			ON p.nip = r.created_by
+		WHERE r.id_tujuan_opd = ?
+		ORDER BY r.id ASC
+	`
+
+	for i := range tujuanList {
+		tujuanList[i].Review = make([]domain.LaporanReviewTujuanDetail, 0)
+
+		reviewRows, err := tx.QueryContext(ctx, reviewScript, tujuanList[i].Id)
+		if err != nil {
+			return nil, err
+		}
+
+		for reviewRows.Next() {
+			var detail domain.LaporanReviewTujuanDetail
+
+			err := reviewRows.Scan(
+				&detail.Id,
+				&detail.IdTujuanOpd,
+				&detail.IdPohonKinerja,
+				&detail.Review,
+				&detail.Keterangan,
+				&detail.Catatan,
+				&detail.CreatedBy,
+				&detail.NamaPegawai,
+				&detail.Tahun,
+			)
+			if err != nil {
+				reviewRows.Close()
+				return nil, err
+			}
+
+			tujuanList[i].Review = append(tujuanList[i].Review, detail)
+		}
+
+		if err := reviewRows.Err(); err != nil {
+			reviewRows.Close()
+			return nil, err
+		}
+
+		if err := reviewRows.Close(); err != nil {
+			return nil, err
+		}
+	}
+
+	return tujuanList, nil
 }

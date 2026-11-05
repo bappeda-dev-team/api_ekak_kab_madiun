@@ -29,6 +29,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 			ro.tw2,
 			ro.tw3,
 			ro.tw4,
+			ro.urutan,
 			ro.keterangan,
 			so.nama_sasaran_opd as nama_sasaran_opd
 		FROM tb_renaksi_opd ro
@@ -48,6 +49,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 			rod.tw3,
 			rod.tw4,
 			rod.tahun,
+			rod.urutan,
 			rod.keterangan,
 			rod.nama_sasaran_opd
 		FROM tb_rencana_kinerja rk
@@ -71,11 +73,9 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 			i.pagu_anggaran,
 			t.target,
 			t.satuan,
-			rkd.rekin_id,
-			sd.kode_subkegiatan
+			rkd.rekin_id
 		FROM tb_indikator i
-		JOIN subkegiatan_data sd ON sd.kode_subkegiatan = i.kode
-		JOIN rencana_kinerja_data rkd ON rkd.rekin_id = sd.rekin_id
+		JOIN rencana_kinerja_data rkd ON rkd.rekin_id = i.rencana_kinerja_id
 		LEFT JOIN tb_target t ON t.indikator_id = i.id AND t.tahun = rkd.tahun
 		WHERE i.kode_opd = rkd.kode_opd
 		AND i.tahun = rkd.tahun
@@ -111,14 +111,15 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 		rkd.tw2,
 		rkd.tw3,
 		rkd.tw4,
+		rod.urutan,
 		rod.keterangan
 	FROM renaksi_opd_data rod
 	JOIN rencana_kinerja_data rkd ON rkd.rekin_id = rod.rekin_id
 	LEFT JOIN subkegiatan_data sd ON sd.rekin_id = rkd.rekin_id
 	LEFT JOIN indikator_data id ON id.rekin_id = rkd.rekin_id 
-		AND id.kode_subkegiatan = sd.kode_subkegiatan
 	LEFT JOIN renaksi_anggaran ra ON ra.rekin_id = rkd.rekin_id
 	ORDER BY 
+		rod.urutan ASC,
 		rkd.rekin_id,
 		sd.kode_subkegiatan,
 		id.id
@@ -149,6 +150,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 			totalAnggaran                    int64
 			tahun                            string
 			tw1, tw2, tw3, tw4               sql.NullInt32
+			urutan                           int
 			keterangan                       sql.NullString
 		)
 
@@ -174,6 +176,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 			&tw2,
 			&tw3,
 			&tw4,
+			&urutan,
 			&keterangan,
 		)
 		if err != nil {
@@ -192,10 +195,12 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 				SasaranOpdId:   sasaranId,
 				NamaSasaranOpd: namaSasaranOpd,
 				TahunRenaksi:   tahun,
+				KodeOpd:        kodeOpd,
 				Tw1:            int(tw1.Int32),
 				Tw2:            int(tw2.Int32),
 				Tw3:            int(tw3.Int32),
 				Tw4:            int(tw4.Int32),
+				Urutan:         urutan,
 				Keterangan:     ket,
 				RencanaKinerja: []domain.RencanaKinerjaOpd{},
 			}
@@ -221,6 +226,7 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindBySasaranOpdAndTahun(ctx con
 				Tw2:                int(tw2.Int32),
 				Tw3:                int(tw3.Int32),
 				Tw4:                int(tw4.Int32),
+				Urutan:             urutan,
 				Keterangan:         ket,
 				SubKegiatan:        []domain.SubKegiatanOpdRenaksi{},
 			}
@@ -326,10 +332,10 @@ func (repository *RencanaAksiOpdRepositoryImpl) SyncJadwalPelaksanaan(ctx contex
 
 func (repository *RencanaAksiOpdRepositoryImpl) Create(ctx context.Context, tx *sql.Tx, rencanaAksiOpd domain.RencanaAksiOpd) (domain.RencanaAksiOpd, error) {
 	script := `
-	INSERT INTO tb_renaksi_opd (id, rekin_id, sasaran_id, tahun, keterangan)
-	VALUES (?, ?, ?, ?, ?)
+	INSERT INTO tb_renaksi_opd (id, rekin_id, sasaran_id, tahun, keterangan, urutan)
+	VALUES (?, ?, ?, ?, ?, ?)
 	`
-	_, err := tx.ExecContext(ctx, script, rencanaAksiOpd.Id, rencanaAksiOpd.RekinId, rencanaAksiOpd.SasaranOpdId, rencanaAksiOpd.TahunRenaksi, rencanaAksiOpd.Keterangan)
+	_, err := tx.ExecContext(ctx, script, rencanaAksiOpd.Id, rencanaAksiOpd.RekinId, rencanaAksiOpd.SasaranOpdId, rencanaAksiOpd.TahunRenaksi, rencanaAksiOpd.Keterangan, rencanaAksiOpd.Urutan)
 	if err != nil {
 		return domain.RencanaAksiOpd{}, err
 	}
@@ -337,20 +343,20 @@ func (repository *RencanaAksiOpdRepositoryImpl) Create(ctx context.Context, tx *
 	return rencanaAksiOpd, nil
 }
 
-func (repository *RencanaAksiOpdRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, rencanaAksiOpd domain.RencanaAksiOpd) domain.RencanaAksiOpd {
+func (repository *RencanaAksiOpdRepositoryImpl) Update(ctx context.Context, tx *sql.Tx, rencanaAksiOpd domain.RencanaAksiOpd) (domain.RencanaAksiOpd, error) {
 	script := `
 	UPDATE tb_renaksi_opd 
-	SET rekin_id = ?, keterangan = ?
+	SET rekin_id = ?, keterangan = ?, urutan = ?
 	WHERE id = ?
 
 
 	`
-	_, err := tx.ExecContext(ctx, script, rencanaAksiOpd.RekinId, rencanaAksiOpd.Keterangan, rencanaAksiOpd.Id)
+	_, err := tx.ExecContext(ctx, script, rencanaAksiOpd.RekinId, rencanaAksiOpd.Keterangan, rencanaAksiOpd.Urutan, rencanaAksiOpd.Id)
 	if err != nil {
-		return domain.RencanaAksiOpd{}
+		return domain.RencanaAksiOpd{}, err
 	}
 
-	return rencanaAksiOpd
+	return rencanaAksiOpd, nil
 }
 
 func (repository *RencanaAksiOpdRepositoryImpl) Delete(ctx context.Context, tx *sql.Tx, Id int) error {
@@ -376,12 +382,14 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
         WHERE tahun = (SELECT tahun FROM tb_renaksi_opd WHERE id = ?)
     )
     SELECT 
-        ro.id,
-        ro.rekin_id,
-        ro.sasaran_id,
-        ro.tahun,
-        ro.keterangan,
-        rk.nama_rencana_kinerja,
+		ro.id,
+		ro.rekin_id,
+		ro.sasaran_id,
+		ro.tahun,
+		ro.urutan,
+		ro.keterangan,
+		rk.kode_opd,
+		rk.nama_rencana_kinerja,
         so.nama_sasaran_opd,
         so.tahun_awal,
         so.tahun_akhir,
@@ -417,7 +425,9 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
 			id, sasaranId                int
 			rekinId                      string
 			tahun                        string
+			urutan                       int
 			keterangan                   sql.NullString
+			kodeOpd                      string
 			namaRencanaKinerja           string
 			namaSasaranOpd               string
 			tahunAwal, tahunAkhir        string
@@ -433,7 +443,9 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
 			&rekinId,
 			&sasaranId,
 			&tahun,
+			&urutan,
 			&keterangan,
+			&kodeOpd,
 			&namaRencanaKinerja,
 			&namaSasaranOpd,
 			&tahunAwal,
@@ -462,6 +474,8 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindById(ctx context.Context, tx
 				RekinId:            rekinId,
 				SasaranOpdId:       sasaranId,
 				TahunRenaksi:       tahun,
+				Urutan:             urutan,
+				KodeOpd:            kodeOpd,
 				Keterangan:         keteranganString,
 				NamaRencanaKinerja: namaRencanaKinerja,
 				SasaranOpd: domain.SasaranOpdDetailRenaksi{
@@ -565,8 +579,8 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindAllSasaranByTahun(ctx contex
         AND so.tahun_akhir = vp.tahun_akhir 
         AND so.jenis_periode = vp.jenis_periode
     )
-    LEFT JOIN tb_indikator i ON so.id = i.sasaran_opd_id
-    LEFT JOIN target_data t ON i.id = t.indikator_id
+    LEFT JOIN tb_indikator_matrix i ON so.id = i.sasaran_opd_id AND i.jenis = 'penetapan'
+    LEFT JOIN target_data t ON i.kode_indikator = t.indikator_id
     WHERE pk.kode_opd = ?
     AND ? BETWEEN so.tahun_awal AND so.tahun_akhir
     AND COALESCE(sov.is_hide, 0) = 0
@@ -680,4 +694,132 @@ func (repository *RencanaAksiOpdRepositoryImpl) FindAllSasaranByTahun(ctx contex
 	})
 
 	return result, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) FindLockContextByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (string, string, error) {
+	var kodeOpd, tahun string
+	err := tx.QueryRowContext(ctx, `
+		SELECT kode_opd, tahun
+		FROM tb_rencana_kinerja
+		WHERE id = ?
+	`, rekinId).Scan(&kodeOpd, &tahun)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", fmt.Errorf("rencana kinerja %s tidak ditemukan", rekinId)
+		}
+		return "", "", fmt.Errorf("gagal mengambil konteks lock rencana kinerja: %w", err)
+	}
+	return kodeOpd, tahun, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) GetSubKegiatanByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) (string, string, error) {
+	if _, err := tx.ExecContext(ctx, `SET SESSION group_concat_max_len = 65535`); err != nil {
+		return "", "", fmt.Errorf("gagal menyiapkan group_concat_max_len: %w", err)
+	}
+
+	script := `
+		SELECT
+			COALESCE(GROUP_CONCAT(kode_subkegiatan ORDER BY kode_subkegiatan SEPARATOR ', '), ''),
+			COALESCE(GROUP_CONCAT(nama_subkegiatan ORDER BY kode_subkegiatan SEPARATOR ', '), '')
+		FROM (
+			SELECT DISTINCT
+				st.kode_subkegiatan,
+				COALESCE(sk.nama_subkegiatan, '') AS nama_subkegiatan
+			FROM tb_subkegiatan_terpilih st
+			LEFT JOIN tb_subkegiatan sk ON sk.kode_subkegiatan = st.kode_subkegiatan
+			WHERE st.rekin_id = ?
+		) t
+	`
+
+	var kodeSubKegiatan, namaSubKegiatan string
+	if err := tx.QueryRowContext(ctx, script, rekinId).Scan(&kodeSubKegiatan, &namaSubKegiatan); err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", nil
+		}
+		return "", "", fmt.Errorf("gagal mengambil subkegiatan rencana kinerja %s: %w", rekinId, err)
+	}
+	return kodeSubKegiatan, namaSubKegiatan, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) FindLockContextById(ctx context.Context, tx *sql.Tx, id int) (string, string, int, string, error) {
+	var kodeOpd, tahun, rekinId string
+	var sasaranId int
+	err := tx.QueryRowContext(ctx, `
+		SELECT rk.kode_opd, ro.tahun, ro.sasaran_id, ro.rekin_id
+		FROM tb_renaksi_opd ro
+		JOIN tb_rencana_kinerja rk ON rk.id = ro.rekin_id
+		WHERE ro.id = ?
+	`, id).Scan(&kodeOpd, &tahun, &sasaranId, &rekinId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", 0, "", fmt.Errorf("rencana aksi opd %d tidak ditemukan", id)
+		}
+		return "", "", 0, "", fmt.Errorf("gagal mengambil konteks lock renaksi opd: %w", err)
+	}
+	return kodeOpd, tahun, sasaranId, rekinId, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) FindKodeOpdBySasaranOpdAndTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) (string, error) {
+	var kodeOpd string
+	err := tx.QueryRowContext(ctx, `
+		SELECT pk.kode_opd
+		FROM tb_sasaran_opd so
+		JOIN tb_pohon_kinerja pk ON pk.id = so.pokin_id
+		WHERE so.id = ?
+		  AND ? BETWEEN so.tahun_awal AND so.tahun_akhir
+		LIMIT 1
+	`, sasaranOpdId, tahun).Scan(&kodeOpd)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("sasaran opd %d untuk tahun %s tidak ditemukan", sasaranOpdId, tahun)
+		}
+		return "", fmt.Errorf("gagal mengambil kode opd sasaran: %w", err)
+	}
+	return kodeOpd, nil
+}
+
+// IsRekinUsedInSasaran memastikan satu rekin hanya terdaftar sekali pada satu sasaran opd.
+func (repository *RencanaAksiOpdRepositoryImpl) IsRekinUsedInSasaran(ctx context.Context, tx *sql.Tx, sasaranId int, rekinId string, excludeId int) (bool, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM tb_renaksi_opd
+		WHERE sasaran_id = ?
+		  AND rekin_id = ?
+		  AND id <> ?
+	`, sasaranId, rekinId, excludeId).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("gagal memeriksa penggunaan rencana kinerja pada sasaran: %w", err)
+	}
+	return count > 0, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) GetLastUrutanBySasaranAndTahun(ctx context.Context, tx *sql.Tx, sasaranId int, tahun string) (int, error) {
+	var lastUrutan int
+	err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(urutan), 0)
+		FROM tb_renaksi_opd
+		WHERE sasaran_id = ?
+		  AND tahun = ?
+	`, sasaranId, tahun).Scan(&lastUrutan)
+	if err != nil {
+		return 0, fmt.Errorf("gagal mengambil urutan terakhir rencana aksi opd: %w", err)
+	}
+	return lastUrutan, nil
+}
+
+func (repository *RencanaAksiOpdRepositoryImpl) IsUrutanUsed(ctx context.Context, tx *sql.Tx, sasaranId int, tahun string, urutan int, excludeId int) (bool, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM tb_renaksi_opd
+		WHERE sasaran_id = ?
+		  AND tahun = ?
+		  AND urutan = ?
+		  AND id <> ?
+	`, sasaranId, tahun, urutan, excludeId).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("gagal memeriksa urutan rencana aksi opd: %w", err)
+	}
+	return count > 0, nil
 }

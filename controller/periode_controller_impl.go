@@ -30,7 +30,7 @@ func (controller *PeriodeControllerImpl) Create(writer http.ResponseWriter, requ
 			Status: "BAD REQUEST",
 			Data:   err.Error(),
 		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
 		return
 	}
 
@@ -55,7 +55,7 @@ func (controller *PeriodeControllerImpl) Update(writer http.ResponseWriter, requ
 			Status: "BAD REQUEST",
 			Data:   err.Error(),
 		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
 		return
 	}
 
@@ -76,7 +76,7 @@ func (controller *PeriodeControllerImpl) FindByTahun(writer http.ResponseWriter,
 			Status: "failed find data periode",
 			Data:   nil,
 		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
 		return
 	}
 	webResponse := web.WebResponse{
@@ -96,7 +96,7 @@ func (controller *PeriodeControllerImpl) FindAll(writer http.ResponseWriter, req
 			Status: "failed find data periode",
 			Data:   nil,
 		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
 		return
 	}
 
@@ -118,7 +118,7 @@ func (controller *PeriodeControllerImpl) FindById(writer http.ResponseWriter, re
 			Status: "failed find data periode",
 			Data:   nil,
 		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (controller *PeriodeControllerImpl) Delete(writer http.ResponseWriter, requ
 			Status: "failed delete data periode",
 			Data:   err.Error(),
 		}
-		helper.WriteToResponseBody(writer, webResponse)
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
 		return
 	}
 
