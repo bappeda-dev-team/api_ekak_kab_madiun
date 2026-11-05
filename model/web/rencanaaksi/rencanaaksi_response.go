@@ -11,7 +11,7 @@ type RencanaAksiResponse struct {
 	PelaksanaanRencanaAksi []PelaksanaanRencanaAksiResponse `json:"pelaksanaan"`
 	JumlahBobot            int                              `json:"jumlah_bobot,omitempty"`
 	TotalBobotRencanaAksi  int                              `json:"total_bobot_rencana_aksi,omitempty"`
-	Action                 []web.ActionButton               `json:"action,omitempty"`
+	Action                 []web.ActionButton               `json:"action,omitempty" swaggerignore:"true"`
 }
 
 type BobotBulanan struct {

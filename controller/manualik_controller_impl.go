@@ -113,7 +113,7 @@ func (controller *ManualIKControllerImpl) FindManualIKSasaranOpdByIndikatorId(wr
 // @Param        rencana_kinerja_id  path  string  true  "ID Rencana Kinerja"
 // @Success      200  {object}  web.WebResponse{data=[]rencanakinerja.ManualIKResponse}
 // @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /manual_ik/rekin/{rencana_kinerja_id} [get]
 func (controller *ManualIKControllerImpl) FindManualIKByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	rekinId := params.ByName("rencana_kinerja_id")
@@ -147,7 +147,7 @@ func (controller *ManualIKControllerImpl) FindManualIKByRekin(writer http.Respon
 // @Param        tahun     path  string  true  "Tahun"     example("2025")
 // @Success      200  {object}  web.WebResponse{data=[]rencanakinerja.ManualIKResponse}
 // @Failure      400  {object}  web.WebResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /manual_ik/pegawai/{nip}/{kode_opd}/{tahun} [get]
 func (controller *ManualIKControllerImpl) FindManualIKByPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	nip := params.ByName("nip")

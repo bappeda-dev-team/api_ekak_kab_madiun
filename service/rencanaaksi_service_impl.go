@@ -5,12 +5,10 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
-	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/rencanaaksi"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -150,60 +148,15 @@ func (service *RencanaAksiServiceImpl) FindAll(ctx context.Context, rencanaKiner
 			return nil, fmt.Errorf("gagal mengambil data pelaksanaan rencana aksi: %v", err)
 		}
 
-		host := os.Getenv("host")
-		port := os.Getenv("port")
-
-		buttonActions := []web.ActionButton{
-			{
-				NameAction: "Find Id Rencana Aksi",
-				Method:     "GET",
-				Url:        fmt.Sprintf("%s:%s/detail-rencana_aksi/:rencanaaksiId", host, port),
-			},
-			{
-				NameAction: "Update Rencana Aksi",
-				Method:     "PUT",
-				Url:        fmt.Sprintf("%s:%s/rencana_aksi/update/rencanaaksi/:rencanaaksiId", host, port),
-			},
-			{
-				NameAction: "Delete Rencana Aksi",
-				Method:     "DELETE",
-				Url:        fmt.Sprintf("%s:%s/rencana_aksi/delete/rencanaaksi/:rencanaaksiId", host, port),
-			},
-			{
-				NameAction: "Create Pelaksanaan Rencana Aksi",
-				Method:     "POST",
-				Url:        fmt.Sprintf("%s:%s/pelaksanaan_rencana_aksi/create/:rencanaAksiId", host, port),
-			},
-		}
-
 		// Konversi domain.PelaksanaanRencanaAksi menjadi rencanaaksi.PelaksanaanRencanaAksiResponse
 		var pelaksanaanResponses []rencanaaksi.PelaksanaanRencanaAksiResponse
 		jumlahBobot := 0
 		for _, pelaksanaan := range pelaksanaanList {
-
-			buttonActions := []web.ActionButton{
-				{
-					NameAction: "Find Id Pelaksanaan Rencana Aksi",
-					Method:     "GET",
-					Url:        fmt.Sprintf("%s:%s/pelaksanaan_rencana_aksi/detail/:id", host, port),
-				},
-				{
-					NameAction: "Update Pelaksanaan Rencana Aksi",
-					Method:     "PUT",
-					Url:        fmt.Sprintf("%s:%s/pelaksanaan_rencana_aksi/update/:pelaksanaanRencanaAksiId", host, port),
-				},
-				{
-					NameAction: "Delete Pelaksanaan Rencana Aksi",
-					Method:     "DELETE",
-					Url:        fmt.Sprintf("%s:%s/pelaksanaan_rencana_aksi/delete/:id", host, port),
-				},
-			}
 			pelaksanaanResponses = append(pelaksanaanResponses, rencanaaksi.PelaksanaanRencanaAksiResponse{
 				Id:            pelaksanaan.Id,
 				RencanaAksiId: pelaksanaan.RencanaAksiId,
 				Bulan:         pelaksanaan.Bulan,
 				Bobot:         pelaksanaan.Bobot,
-				Action:        buttonActions,
 			})
 			jumlahBobot += pelaksanaan.Bobot
 		}
@@ -216,7 +169,6 @@ func (service *RencanaAksiServiceImpl) FindAll(ctx context.Context, rencanaKiner
 			NamaRencanaAksi:        rencanaAksi.NamaRencanaAksi,
 			PelaksanaanRencanaAksi: pelaksanaanResponses,
 			JumlahBobot:            jumlahBobot,
-			Action:                 buttonActions,
 		})
 	}
 

@@ -8,5 +8,5 @@ type PelaksanaanRencanaAksiResponse struct {
 	Bulan         int                `json:"bulan"`
 	Bobot         int                `json:"bobot"`
 	BobotAvail    int                `json:"bobot_tersedia,omitempty"`
-	Action        []web.ActionButton `json:"action,omitempty"`
+	Action        []web.ActionButton `json:"action,omitempty" swaggerignore:"true"`
 }

@@ -77,6 +77,18 @@ func (controller *RencanaAksiControllerImpl) Update(writer http.ResponseWriter, 
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// FindAllByRencanaKinerjaId godoc
+// @Summary      Rencana Aksi by Rencana Kinerja ID
+// @Description  Mendapatkan daftar rencana aksi berdasarkan ID rencana kinerja.
+// @Tags         Rencana Aksi
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        rencana_kinerja_id  path  string  true  "ID Rencana Kinerja"
+// @Success      200  {object}  web.WebRencanaAksiResponse{renaksi=[]rencanaaksi.RencanaAksiResponse}
+// @Failure      400  {object}  web.WebRencanaAksiResponse
+// @Security     None
+// @Router       /rencana_aksi/findall/{rencana_kinerja_id} [get]
 func (controller *RencanaAksiControllerImpl) FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	rencanaKinerjaId := params.ByName("rencana_kinerja_id")
 
@@ -100,6 +112,18 @@ func (controller *RencanaAksiControllerImpl) FindAll(writer http.ResponseWriter,
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// FindById godoc
+// @Summary      Rencana Aksi by ID
+// @Description  Mendapatkan detail rencana aksi berdasarkan ID.
+// @Tags         Rencana Aksi
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        id  path  string  true  "ID Rencana Aksi"
+// @Success      200  {object}  web.WebRencanaAksiResponse{renaksi=[]rencanaaksi.RencanaAksiResponse}
+// @Failure      400  {object}  web.WebRencanaAksiResponse
+// @Security     None
+// @Router       /detail-rencana_aksi/{id} [get]
 func (controller *RencanaAksiControllerImpl) FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	rencanaAksiId := params.ByName("rencanaaksiId")
 
@@ -190,7 +214,7 @@ func (controller *RencanaAksiControllerImpl) FindAllByRekin(writer http.Response
 // @Param        rencana_kinerja_id  path  string  true  "ID Rencana Kinerja"
 // @Success      200  {object}  web.WebRencanaAksiResponse{renaksi=[]rencanaaksi.RencanaAksiResponse}
 // @Failure      400  {object}  web.WebRencanaAksiResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /rencana_aksi/rekin/{rencana_kinerja_id} [get]
 func (controller *RencanaAksiControllerImpl) FindByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	rekinId := params.ByName("rencana_kinerja_id")
@@ -224,7 +248,7 @@ func (controller *RencanaAksiControllerImpl) FindByRekin(writer http.ResponseWri
 // @Param        tahun     path  string  true  "Tahun"     example("2025")
 // @Success      200  {object}  web.WebRencanaAksiResponse{renaksi=[]rencanaaksi.RencanaAksiPegawaiResponse}
 // @Failure      400  {object}  web.WebRencanaAksiResponse
-// @Security     BearerAuth
+// @Security     None
 // @Router       /rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun} [get]
 func (controller *RencanaAksiControllerImpl) FindByPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	nip := params.ByName("nip")
