@@ -163,6 +163,20 @@ func (controller *PkControllerImpl) BukaKunciPK(w http.ResponseWriter, r *http.R
 	helper.WriteToResponseBodyWstatus(w, webResponse)
 }
 
+// PkPenetapan godoc
+// @Summary      PK Pegawai
+// @Description  Perjanjian Kinerja Pegawai by Id Pegawai, Kode Opd, Tahun
+// @Tags         PK
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        id_pegawai query  string  true  "id pegawai (NIP)" example("1922222222111")
+// @Param        kode_opd  query     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
+// @Param        tahun  query     string  true  "Tahun"   example("2026")
+// @Success      200  {object}  web.WebResponse{data=[]pkopd.PkAsn}
+// @Failure      400  {object}  web.WebResponse
+// @Security     None
+// @Router       /pk/penetapan [get]
 func (controller *PkControllerImpl) PkPenetapan(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	req := r.URL.Query()
 	idPegawai := req.Get("id_pegawai")
