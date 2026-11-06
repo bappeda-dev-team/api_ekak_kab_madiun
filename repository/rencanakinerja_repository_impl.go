@@ -1650,6 +1650,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIdsArray(ctx context.
             r.nama_rencana_kinerja,
             r.tahun,
             r.pegawai_id,
+            tp.nama,
             r.kode_opd,
             sub.kode_subkegiatan,
             subkeg.nama_subkegiatan,
@@ -1659,6 +1660,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIdsArray(ctx context.
             prg.nama_program
         FROM tb_rencana_kinerja r
         JOIN tb_pohon_kinerja p ON r.id_pohon = p.id
+        JOIN tb_pegawai tp ON r.pegawai_id = tp.nip
         LEFT JOIN tb_subkegiatan_terpilih sub ON r.id = sub.rekin_id
         LEFT JOIN tb_subkegiatan subkeg ON sub.kode_subkegiatan = subkeg.kode_subkegiatan
         LEFT JOIN tb_master_kegiatan keg ON keg.kode_kegiatan = SUBSTRING_INDEX(subkeg.kode_subkegiatan, '.', 5)
@@ -1696,6 +1698,7 @@ func (repository *RencanaKinerjaRepositoryImpl) FindByPokinIdsArray(ctx context.
 			&rk.NamaRencanaKinerja,
 			&rk.Tahun,
 			&rk.PegawaiId,
+			&rk.NamaPegawai,
 			&rk.KodeOpd,
 			&kodeSub,
 			&namaSub,

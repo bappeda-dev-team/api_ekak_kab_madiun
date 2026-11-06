@@ -655,13 +655,13 @@ func (service *ReviewServiceImpl) CetakPDFReviewOpd(ctx context.Context, kodeOpd
 		9,  // No
 		45, // Nama Pohon / Level
 		50, // Indikator
-		18, // Target
-		18, // Satuan
-		30, // Kelengkapan
-		30, // Kesesuaian Level
-		60, // Substansi
-		60, // Keterangan lainnya
-		40, // User Pembuat
+		14, // Target
+		14, // Satuan
+		23, // Kelengkapan
+		23, // Kesesuaian Level
+		75, // Substansi
+		75, // Keterangan lainnya
+		32, // User Pembuat
 		40, // Waktu Review
 	}
 
