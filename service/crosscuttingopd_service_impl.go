@@ -24,16 +24,18 @@ type CrosscuttingOpdServiceImpl struct {
 	PegawaiRepository         repository.PegawaiRepository
 	OpdRepository             repository.OpdRepository
 	RekinRepository           repository.RencanaKinerjaRepository
+	PkRepository              repository.PkRepository
 	DB                        *sql.DB
 }
 
-func NewCrosscuttingOpdServiceImpl(crosscuttingOpdRepository repository.CrosscuttingOpdRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, pegawaiRepository repository.PegawaiRepository, opdRepository repository.OpdRepository, rekinRepository repository.RencanaKinerjaRepository, DB *sql.DB) *CrosscuttingOpdServiceImpl {
+func NewCrosscuttingOpdServiceImpl(crosscuttingOpdRepository repository.CrosscuttingOpdRepository, pohonKinerjaRepository repository.PohonKinerjaRepository, pegawaiRepository repository.PegawaiRepository, opdRepository repository.OpdRepository, rekinRepository repository.RencanaKinerjaRepository, pkRepository repository.PkRepository, DB *sql.DB) *CrosscuttingOpdServiceImpl {
 	return &CrosscuttingOpdServiceImpl{
 		CrosscuttingOpdRepository: crosscuttingOpdRepository,
 		PohonKinerjaRepository:    pohonKinerjaRepository,
 		PegawaiRepository:         pegawaiRepository,
 		OpdRepository:             opdRepository,
 		RekinRepository:           rekinRepository,
+		PkRepository:              pkRepository,
 		DB:                        DB,
 	}
 }
@@ -487,13 +489,14 @@ func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx contex
 
 	rekinMap := make(map[int][]laporancrosscutting.RencanaKinerjaResponse)
 
-	for pokinId, p := range rekins {
-		rekinMap[pokinId] = append(
-			rekinMap[pokinId],
+	for _, p := range rekins {
+		rekinMap[p.IdPohon] = append(rekinMap[p.IdPohon],
 			laporancrosscutting.RencanaKinerjaResponse{
 				Id:              p.Id,
 				PegawaiId:       p.PegawaiId,
 				NamaPegawai:     p.NamaPegawai,
+				KodeOpd:         p.KodeOpd,
+				KodeSubKegiatan: p.KodeSubKegiatan,
 				NamaSubKegiatan: p.NamaSubKegiatan,
 			},
 		)
@@ -571,7 +574,15 @@ func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx contex
 
 	// Batch fetch crosscutting dari tb_crosscutting (by crosscutting_to = id pokin)
 	crosscuttingBatch, _ := service.CrosscuttingOpdRepository.FindCrosscuttingByPokinIdsBatch(ctx, tx, pokinIds)
-	crosscuttingDikirimBatch, _ := service.CrosscuttingOpdRepository.FindCrosscuttingPenerimaByPokinIdsBatch(ctx, tx, pokinIds)
+	// crosscuttingDikirimBatch, _ := service.CrosscuttingOpdRepository.FindCrosscuttingPenerimaByPokinIdsBatch(ctx, tx, pokinIds)
+	crosscuttingDikirimBatch, err := service.CrosscuttingOpdRepository.FindCrosscuttingPenerimaByPokinIdsBatch(ctx, tx, pokinIds)
+
+	if err != nil {
+		log.Printf("ERROR CROSSCUTTING DIKIRIM: %v", err)
+		return laporancrosscutting.PohonKinerjaCrosscuttingAllResponse{}, err
+	}
+
+	log.Printf("CROSSCUTTING DIKIRIM: %+v", crosscuttingDikirimBatch)
 
 	// Kumpulkan ID pokin penerima dari crosscutting yang dikirim
 	pokinPenerimaSet := make(map[int]struct{})
@@ -587,6 +598,83 @@ func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx contex
 	pokinPenerimaIds := make([]int, 0, len(pokinPenerimaSet))
 	for id := range pokinPenerimaSet {
 		pokinPenerimaIds = append(pokinPenerimaIds, id)
+	}
+	
+
+	// Batch fetch rencana kinerja penerima
+	rekinDikirims, err := service.RekinRepository.FindByPokinIdsArray(ctx, tx, pokinPenerimaIds)
+	if err != nil {
+		return laporancrosscutting.PohonKinerjaCrosscuttingAllResponse{}, err
+	}
+
+	rekinDikirimMap := make(map[int][]laporancrosscutting.RencanaKinerjaResponse)
+
+	for _, p := range rekinDikirims {
+		rekinDikirimMap[p.IdPohon] = append(rekinDikirimMap[p.IdPohon],
+			laporancrosscutting.RencanaKinerjaResponse{
+				Id:              p.Id,
+				PegawaiId:       p.PegawaiId,
+				NamaPegawai:     p.NamaPegawai,
+				KodeOpd:         p.KodeOpd,
+				KodeSubKegiatan: p.KodeSubKegiatan,
+				NamaSubKegiatan: p.NamaSubKegiatan,
+			},
+		)
+	}
+
+	// =========================
+	// BATCH FETCH PAGU
+	// =========================
+
+	kodeSubKegiatanSet := make(map[string]struct{})
+
+	// Ambil kode subkegiatan REKIN utama
+	for _, rekinList := range rekinMap {
+		for _, rekin := range rekinList {
+			if rekin.KodeSubKegiatan != "" {
+				kodeSubKegiatanSet[rekin.KodeSubKegiatan] = struct{}{}
+			}
+		}
+	}
+
+	// Ambil kode subkegiatan REKIN penerima
+	for _, rekinList := range rekinDikirimMap {
+		for _, rekin := range rekinList {
+			if rekin.KodeSubKegiatan != "" {
+				kodeSubKegiatanSet[rekin.KodeSubKegiatan] = struct{}{}
+			}
+		}
+	}
+
+	// Ubah set menjadi slice
+	kodeSubKegiatans := make([]string, 0, len(kodeSubKegiatanSet))
+
+	for kode := range kodeSubKegiatanSet {
+		kodeSubKegiatans = append(kodeSubKegiatans, kode)
+	}
+
+	// Fetch pagu sekaligus
+	paguMap, err := service.PkRepository.FindPaguPkByKodeSubkegiatans(ctx, tx, kodeSubKegiatans)
+	if err != nil {
+		return laporancrosscutting.PohonKinerjaCrosscuttingAllResponse{}, err
+	}
+
+	// Masukkan pagu ke REKIN utama
+	for pokinId, rekinList := range rekinMap {
+		for i := range rekinList {
+			rekinList[i].Pagu = paguMap[rekinList[i].KodeSubKegiatan]
+		}
+
+		rekinMap[pokinId] = rekinList
+	}
+
+	// Masukkan pagu ke REKIN penerima
+	for pokinId, rekinList := range rekinDikirimMap {
+		for i := range rekinList {
+			rekinList[i].Pagu = paguMap[rekinList[i].KodeSubKegiatan]
+		}
+
+		rekinDikirimMap[pokinId] = rekinList
 	}
 
 	pelaksanaDikirims, _ := service.PohonKinerjaRepository.FindPelaksanaPokinBatch(ctx, tx, pokinPenerimaIds)
@@ -714,6 +802,12 @@ func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx contex
 				pelaksanaDikirim = []laporancrosscutting.PelaksanaOpdResponse{}
 			}
 
+			rekinDikirim := rekinDikirimMap[c.IdPokin]
+
+			if rekinDikirim == nil {
+				rekinDikirim = []laporancrosscutting.RencanaKinerjaResponse{}
+			}
+
 			items = append(items, laporancrosscutting.CrosscuttingDikirimResponse{
 				IdCrosscutting:         c.Id,
 				IdPokin:                c.IdPokin,
@@ -725,10 +819,13 @@ func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx contex
 				// IdRekin:                c.IdRekin,
 				IndikatorDikirim:       indikatorDikirim,
 				PelaksanaDikirim:       pelaksanaDikirim,
+				RekinDikirim:           rekinDikirim,
 			})
 		}
 		crosscuttingDikirimMap[pokinId] = items
 	}
+
+	
 	// Ambil kode OPD asal yang unik untuk fetch nama OPD sekali
 	opdAsalSet := make(map[string]struct{})
 	for _, list := range crosscuttingBatch {
@@ -823,7 +920,16 @@ func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx contex
 		response.PohonKinerja = append(
 			response.PohonKinerja,
 			laporancrosscutting.PohonKinerjaCrosscuttingItemResponse{
-				PohonKinerja:        p,
+				PohonKinerja: laporancrosscutting.PohonKinerja{
+					Id:          p.Id,
+					Parent:      p.Parent,
+					NamaPohon:   p.NamaPohon,
+					KodeOpd:     p.KodeOpd,
+					NamaOpd:     p.NamaOpd,
+					Tahun:       p.Tahun,
+					JenisPohon:  p.JenisPohon,
+					LevelPohon:  p.LevelPohon,
+				},
 				// Crosscutting:        crosscutting,
 				CrosscuttingDikirim: crosscuttingDikirim,
 				Indikator:           indikator,
