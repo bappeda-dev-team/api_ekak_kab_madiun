@@ -1137,7 +1137,11 @@ definitions:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       indikator_rankhir:
-        description: 'Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah'
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        description: 'Diisi untuk rankhir view: indikator per layer terpisah'
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
@@ -1147,6 +1151,12 @@ definitions:
         type: string
       nama:
         type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
       program:
         items:
           $ref: '#/definitions/programkegiatan.ProgramResponse'
@@ -1210,12 +1220,26 @@ definitions:
         type: string
       satuan:
         type: string
+      satuan_penetapan:
+        type: string
+      satuan_rankhir:
+        type: string
+      satuan_ranwal:
+        type: string
       status_target_renja:
         type: boolean
       tahun:
-        description: PaguAnggaran  int64  `json:"pagu_anggaran,omitempty"`
         type: string
       target:
+        description: single-slot (ranwal view)
+        type: string
+      target_penetapan:
+        description: penetapan view
+        type: string
+      target_rankhir:
+        type: string
+      target_ranwal:
+        description: 'dual-slot rankhir view: target_ranwal + target_rankhir'
         type: string
     type: object
   programkegiatan.IndikatorPeriodResponse:
@@ -1368,7 +1392,11 @@ definitions:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       indikator_rankhir:
-        description: 'Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah'
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        description: 'Diisi untuk rankhir view: indikator per layer terpisah'
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
@@ -1378,6 +1406,12 @@ definitions:
         type: string
       nama:
         type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
       subkegiatan:
         items:
           $ref: '#/definitions/programkegiatan.SubKegiatanResponse'
@@ -1430,6 +1464,22 @@ definitions:
       tahun:
         type: string
     type: object
+  programkegiatan.PaguRenjaLayerRequest:
+    properties:
+      kode_opd:
+        type: string
+      kode_subkegiatan:
+        type: string
+      pagu_indikatif:
+        type: integer
+      tahun:
+        type: string
+    required:
+    - kode_opd
+    - kode_subkegiatan
+    - pagu_indikatif
+    - tahun
+    type: object
   programkegiatan.ProgramResponse:
     properties:
       anggaran:
@@ -1449,7 +1499,11 @@ definitions:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       indikator_rankhir:
-        description: 'Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah'
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        description: 'Diisi untuk rankhir view: indikator per layer terpisah'
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
@@ -1463,6 +1517,12 @@ definitions:
         type: string
       nama:
         type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
     type: object
   programkegiatan.ProgramV2Response:
     properties:
@@ -1508,7 +1568,11 @@ definitions:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       indikator_rankhir:
-        description: 'Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah'
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        description: 'Diisi untuk rankhir view: indikator per layer terpisah'
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
@@ -1520,7 +1584,18 @@ definitions:
         type: string
       nama_pegawai:
         type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        description: flat pagu per layer
+        type: integer
       pegawai_id:
+        type: string
+      status:
+        description: Status hanya terisi untuk rankhir view — baris sintetis dari
+          renstra yg tidak ada rekin
         type: string
       tahun:
         type: string
@@ -1551,6 +1626,22 @@ definitions:
         type: array
       pegawai_id:
         type: string
+    type: object
+  programkegiatan.TargetRenjaLayerRequest:
+    properties:
+      kode_indikator:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    required:
+    - kode_indikator
+    - satuan
+    - tahun
+    - target
     type: object
   programkegiatan.TargetRenstraUpsertRequest:
     properties:
@@ -1588,6 +1679,13 @@ definitions:
         items:
           $ref: '#/definitions/programkegiatan.PaguAnggaranTotalResponse'
         type: array
+      pagu_total_penetapan:
+        type: integer
+      pagu_total_rankhir:
+        type: integer
+      pagu_total_ranwal:
+        description: total pagu per layer (level root/detail)
+        type: integer
       tahun:
         type: string
       tahun_akhir:
@@ -1639,7 +1737,11 @@ definitions:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
       indikator_rankhir:
-        description: 'Diisi hanya pada GetRenjaPenetapan: indikator per layer terpisah'
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        description: 'Diisi untuk rankhir view: indikator per layer terpisah'
         items:
           $ref: '#/definitions/programkegiatan.IndikatorMatrixResponse'
         type: array
@@ -1649,6 +1751,12 @@ definitions:
         type: string
       nama:
         type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
     type: object
   programkegiatan.UrusanV2Response:
     properties:
@@ -1985,6 +2093,280 @@ definitions:
         type: string
       target:
         type: string
+    type: object
+  renja.BidangUrusanResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_penetapan:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_rankhir:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
+      program:
+        items:
+          $ref: '#/definitions/renja.ProgramResponse'
+        type: array
+    type: object
+  renja.IndikatorMatrixResponse:
+    properties:
+      indikator:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      satuan:
+        type: string
+      satuan_penetapan:
+        type: string
+      satuan_rankhir:
+        type: string
+      satuan_ranwal:
+        type: string
+      status_target_renja:
+        type: boolean
+      tahun:
+        type: string
+      target:
+        type: string
+      target_penetapan:
+        type: string
+      target_rankhir:
+        type: string
+      target_ranwal:
+        type: string
+    type: object
+  renja.KegiatanResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_penetapan:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_rankhir:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
+      subkegiatan:
+        items:
+          $ref: '#/definitions/renja.SubKegiatanResponse'
+        type: array
+    type: object
+  renja.PenetapanMatrixResponse:
+    properties:
+      kode_opd:
+        type: string
+      pagu_total_penetapan:
+        type: integer
+      pagu_total_rankhir:
+        type: integer
+      pagu_total_ranwal:
+        type: integer
+      tahun:
+        type: string
+      urusan:
+        items:
+          $ref: '#/definitions/renja.UrusanResponse'
+        type: array
+    type: object
+  renja.ProgramResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_penetapan:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_rankhir:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      jenis:
+        type: string
+      kegiatan:
+        items:
+          $ref: '#/definitions/renja.KegiatanResponse'
+        type: array
+      kode:
+        type: string
+      nama:
+        type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
+    type: object
+  renja.RankhirMatrixResponse:
+    properties:
+      kode_opd:
+        type: string
+      pagu_total_penetapan:
+        type: integer
+      pagu_total_rankhir:
+        type: integer
+      pagu_total_ranwal:
+        type: integer
+      tahun:
+        type: string
+      urusan:
+        items:
+          $ref: '#/definitions/renja.UrusanResponse'
+        type: array
+    type: object
+  renja.RanwalMatrixResponse:
+    properties:
+      kode_opd:
+        type: string
+      pagu_total_penetapan:
+        type: integer
+      pagu_total_rankhir:
+        type: integer
+      pagu_total_ranwal:
+        type: integer
+      tahun:
+        type: string
+      urusan:
+        items:
+          $ref: '#/definitions/renja.UrusanResponse'
+        type: array
+    type: object
+  renja.SubKegiatanResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_penetapan:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_rankhir:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      nama_pegawai:
+        type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
+      pegawai_id:
+        type: string
+      status:
+        type: string
+      tahun:
+        type: string
+    type: object
+  renja.TargetLayerResponse:
+    properties:
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    type: object
+  renja.UrusanResponse:
+    properties:
+      bidang_urusan:
+        items:
+          $ref: '#/definitions/renja.BidangUrusanResponse'
+        type: array
+      indikator:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_penetapan:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_rankhir:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      indikator_ranwal:
+        items:
+          $ref: '#/definitions/renja.IndikatorMatrixResponse'
+        type: array
+      jenis:
+        type: string
+      kode:
+        type: string
+      nama:
+        type: string
+      pagu_penetapan:
+        type: integer
+      pagu_rankhir:
+        type: integer
+      pagu_ranwal:
+        type: integer
     type: object
   sasaranopd.IndikatorCreateRequest:
     properties:
@@ -3811,7 +4193,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Upsert batch indikator renja penetapan.
+      description: endpoint sudah tidak digunakan.
       parameters:
       - description: Request Body
         in: body
@@ -3848,7 +4230,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Upsert batch indikator renja rankhir.
+      description: endpoint sudah tidak digunakan.
       parameters:
       - description: Request Body
         in: body
@@ -3885,7 +4267,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Upsert batch indikator renja rancangan awal.
+      description: endpoint sudah tidak digunakan
       parameters:
       - description: Request Body
         in: body
@@ -3918,6 +4300,94 @@ paths:
       summary: Upsert Batch Indikator Renja Rancangan Awal
       tags:
       - Matrix Renja
+  /matrix_renja/pagu/penetapan:
+    post:
+      consumes:
+      - application/json
+      description: Simpan atau update pagu penetapan per subkegiatan (input manual
+        seperti renstra).
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.PaguRenjaLayerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Pagu Penetapan
+      tags:
+      - Matrix Renja
+  /matrix_renja/pagu/rankhir:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint tidak digunakan. Pagu rankhir dihitung otomatis dari SUM
+        rincian belanja (rencana aksi). Hanya target rankhir yang dapat diubah via
+        PUT /matrix_renja/target/rankhir.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.PaguRenjaLayerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Pagu Rankhir (nonaktif)
+      tags:
+      - Matrix Renja
+  /matrix_renja/pagu/ranwal:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint tidak digunakan. Pagu ranwal mengikuti pagu renstra (tb_pagu
+        jenis 'renstra') per tahun.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.PaguRenjaLayerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Pagu Ranwal (nonaktif)
+      tags:
+      - Matrix Renja
   /matrix_renja/penetapan/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -3948,7 +4418,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/programkegiatan.UrusanDetailResponse'
+                    $ref: '#/definitions/renja.PenetapanMatrixResponse'
                   type: array
               type: object
         "400":
@@ -3990,7 +4460,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/programkegiatan.UrusanDetailResponse'
+                    $ref: '#/definitions/renja.RankhirMatrixResponse'
                   type: array
               type: object
         "400":
@@ -4032,7 +4502,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/programkegiatan.UrusanDetailResponse'
+                    $ref: '#/definitions/renja.RanwalMatrixResponse'
                   type: array
               type: object
         "400":
@@ -4042,6 +4512,136 @@ paths:
       security:
       - BearerAuth: []
       summary: Matrix Renja Rancangan Awal
+      tags:
+      - Matrix Renja
+  /matrix_renja/target/penetapan:
+    put:
+      consumes:
+      - application/json
+      description: Simpan atau update target penetapan untuk satu indikator.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetRenjaLayerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/renja.TargetLayerResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Target Penetapan
+      tags:
+      - Matrix Renja
+  /matrix_renja/target/penetapan/{kode_indikator}/{tahun}:
+    delete:
+      consumes:
+      - application/json
+      description: Hapus target penetapan berdasarkan kode indikator dan tahun.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Target Penetapan
+      tags:
+      - Matrix Renja
+  /matrix_renja/target/rankhir:
+    put:
+      consumes:
+      - application/json
+      description: Simpan atau update target rancangan akhir untuk satu indikator.
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetRenjaLayerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/renja.TargetLayerResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Target Rankhir
+      tags:
+      - Matrix Renja
+  /matrix_renja/target/rankhir/{kode_indikator}/{tahun}:
+    delete:
+      consumes:
+      - application/json
+      description: Hapus target rankhir berdasarkan kode indikator dan tahun.
+      parameters:
+      - description: Kode Indikator
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Target Rankhir
       tags:
       - Matrix Renja
   /matrix_renstra/anggaran/upsert:
@@ -6751,7 +7351,7 @@ paths:
       - BearerAuth: []
       summary: Create Target Penetapan Tujuan OPD
       tags:
-      - Tujuan Opd Layer Target
+      - Tujuan Opd Penetapan Target
   /tujuan_opd/penetapan/target/delete/{kode_indikator}/{tahun}:
     delete:
       consumes:
