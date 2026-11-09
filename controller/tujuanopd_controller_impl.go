@@ -387,33 +387,38 @@ func (controller *TujuanOpdControllerImpl) FindTujuanOpdRankhir(writer http.Resp
 // @Security     BearerAuth
 // @Router       /tujuan_opd/renja/ranwal/indikator/create/{tujuanOpdId} [post]
 func (controller *TujuanOpdControllerImpl) CreateTujuanRenjaRanwalIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	tujuanOpdId := params.ByName("tujuanOpdId")
-	tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
-	indikatorCreateRequests := []tujuanopd.IndikatorCreateRequest{}
-	helper.ReadFromRequestBody(request, &indikatorCreateRequests)
-	indikatorResponses, err := controller.TujuanOpdService.CreateTujuanRenjaIndikator(request.Context(), tujuanOpdIdInt, "ranwal", indikatorCreateRequests)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+	// tujuanOpdId := params.ByName("tujuanOpdId")
+	// tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusBadRequest,
+	// 		Status: "BAD REQUEST",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// indikatorCreateRequests := []tujuanopd.IndikatorCreateRequest{}
+	// helper.ReadFromRequestBody(request, &indikatorCreateRequests)
+	// indikatorResponses, err := controller.TujuanOpdService.CreateTujuanRenjaIndikator(request.Context(), tujuanOpdIdInt, "ranwal", indikatorCreateRequests)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusInternalServerError,
+	// 		Status: "INTERNAL SERVER ERROR",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// helper.WriteToResponseBody(writer, web.WebResponse{
+	// 	Code:   http.StatusOK,
+	// 	Status: "success create tujuan renja ranwal indikator",
+	// 	Data:   indikatorResponses,
+	// })
 	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success create tujuan renja ranwal indikator",
-		Data:   indikatorResponses,
+		Code:   http.StatusBadRequest, // atau http.StatusMethodNotAllowed (405)
+		Status: "BAD REQUEST",
+		Data:   "endpoint sudah tidak digunakan",
 	})
 }
 
@@ -430,24 +435,29 @@ func (controller *TujuanOpdControllerImpl) CreateTujuanRenjaRanwalIndikator(writ
 // @Security     BearerAuth
 // @Router       /tujuan_opd/renja/ranwal/indikator/update/{kodeIndikator} [put]
 func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaRanwalIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	kodeIndikator := params.ByName("kodeIndikator")
+	// kodeIndikator := params.ByName("kodeIndikator")
 
-	indikatorUpdateRequests := tujuanopd.IndikatorUpdateRequest{}
-	helper.ReadFromRequestBody(request, &indikatorUpdateRequests)
-	indikatorResponses, err := controller.TujuanOpdService.UpdateTujuanRenjaIndikator(request.Context(), kodeIndikator, "ranwal", indikatorUpdateRequests)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+	// indikatorUpdateRequests := tujuanopd.IndikatorUpdateRequest{}
+	// helper.ReadFromRequestBody(request, &indikatorUpdateRequests)
+	// indikatorResponses, err := controller.TujuanOpdService.UpdateTujuanRenjaIndikator(request.Context(), kodeIndikator, "ranwal", indikatorUpdateRequests)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusInternalServerError,
+	// 		Status: "INTERNAL SERVER ERROR",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// helper.WriteToResponseBody(writer, web.WebResponse{
+	// 	Code:   http.StatusOK,
+	// 	Status: "success update tujuan renja ranwal indikator",
+	// 	Data:   indikatorResponses,
+	// })
 	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success update tujuan renja ranwal indikator",
-		Data:   indikatorResponses,
+		Code:   http.StatusBadRequest, // atau http.StatusMethodNotAllowed (405)
+		Status: "BAD REQUEST",
+		Data:   "endpoint sudah tidak digunakan",
 	})
 }
 
@@ -464,33 +474,38 @@ func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaRanwalIndikator(writ
 // @Security     BearerAuth
 // @Router       /tujuan_opd/renja/rankhir/indikator/create/{tujuanOpdId} [post]
 func (controller *TujuanOpdControllerImpl) CreateTujuanRenjaRankhirIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	tujuanOpdId := params.ByName("tujuanOpdId")
-	tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
-	indikatorCreateRequests := []tujuanopd.IndikatorCreateRequest{}
-	helper.ReadFromRequestBody(request, &indikatorCreateRequests)
-	indikatorResponses, err := controller.TujuanOpdService.CreateTujuanRenjaIndikator(request.Context(), tujuanOpdIdInt, "rankhir", indikatorCreateRequests)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+	// tujuanOpdId := params.ByName("tujuanOpdId")
+	// tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusBadRequest,
+	// 		Status: "BAD REQUEST",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// indikatorCreateRequests := []tujuanopd.IndikatorCreateRequest{}
+	// helper.ReadFromRequestBody(request, &indikatorCreateRequests)
+	// indikatorResponses, err := controller.TujuanOpdService.CreateTujuanRenjaIndikator(request.Context(), tujuanOpdIdInt, "rankhir", indikatorCreateRequests)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusInternalServerError,
+	// 		Status: "INTERNAL SERVER ERROR",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// helper.WriteToResponseBody(writer, web.WebResponse{
+	// 	Code:   http.StatusOK,
+	// 	Status: "success create tujuan renja rankhir indikator",
+	// 	Data:   indikatorResponses,
+	// })
 	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success create tujuan renja rankhir indikator",
-		Data:   indikatorResponses,
+		Code:   http.StatusBadRequest, // atau http.StatusMethodNotAllowed (405)
+		Status: "BAD REQUEST",
+		Data:   "endpoint sudah tidak digunakan",
 	})
 }
 
@@ -507,24 +522,29 @@ func (controller *TujuanOpdControllerImpl) CreateTujuanRenjaRankhirIndikator(wri
 // @Security     BearerAuth
 // @Router       /tujuan_opd/renja/rankhir/indikator/update/{kodeIndikator} [put]
 func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaRankhirIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	kodeIndikator := params.ByName("kodeIndikator")
+	// kodeIndikator := params.ByName("kodeIndikator")
 
-	indikatorUpdateRequests := tujuanopd.IndikatorUpdateRequest{}
-	helper.ReadFromRequestBody(request, &indikatorUpdateRequests)
-	indikatorResponses, err := controller.TujuanOpdService.UpdateTujuanRenjaIndikator(request.Context(), kodeIndikator, "rankhir", indikatorUpdateRequests)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+	// indikatorUpdateRequests := tujuanopd.IndikatorUpdateRequest{}
+	// helper.ReadFromRequestBody(request, &indikatorUpdateRequests)
+	// indikatorResponses, err := controller.TujuanOpdService.UpdateTujuanRenjaIndikator(request.Context(), kodeIndikator, "rankhir", indikatorUpdateRequests)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusInternalServerError,
+	// 		Status: "INTERNAL SERVER ERROR",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// helper.WriteToResponseBody(writer, web.WebResponse{
+	// 	Code:   http.StatusOK,
+	// 	Status: "success update tujuan renja ranwal indikator",
+	// 	Data:   indikatorResponses,
+	// })
 	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success update tujuan renja ranwal indikator",
-		Data:   indikatorResponses,
+		Code:   http.StatusBadRequest, // atau http.StatusMethodNotAllowed (405)
+		Status: "BAD REQUEST",
+		Data:   "endpoint sudah tidak digunakan",
 	})
 }
 
@@ -543,22 +563,28 @@ func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaRankhirIndikator(wri
 // @Router       /tujuan_opd/renja/indikator/delete/{kodeIndikator} [delete]
 func (controller *TujuanOpdControllerImpl) DeleteTujuanRenjaIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 
-	kodeIndikator := params.ByName("kodeIndikator")
-	err := controller.TujuanOpdService.DeleteTujuanRenjaIndikator(request.Context(), kodeIndikator)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+	// kodeIndikator := params.ByName("kodeIndikator")
+	// err := controller.TujuanOpdService.DeleteTujuanRenjaIndikator(request.Context(), kodeIndikator)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusInternalServerError,
+	// 		Status: "INTERNAL SERVER ERROR",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+
+	// helper.WriteToResponseBody(writer, web.WebResponse{
+	// 	Code:   http.StatusOK,
+	// 	Status: "success delete tujuan renja indikator",
+	// 	Data:   nil,
+	// })
 
 	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success delete tujuan renja indikator",
-		Data:   nil,
+		Code:   http.StatusBadRequest, // atau http.StatusMethodNotAllowed (405)
+		Status: "BAD REQUEST",
+		Data:   "endpoint sudah tidak digunakan",
 	})
 
 }
@@ -608,33 +634,38 @@ func (controller *TujuanOpdControllerImpl) FindTujuanOpdPenetapan(writer http.Re
 // @Security     BearerAuth
 // @Router       /tujuan_opd/renja/penetapan/indikator/create/{tujuanOpdId} [post]
 func (controller *TujuanOpdControllerImpl) CreateTujuanRenjaPenetapanIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	tujuanOpdId := params.ByName("tujuanOpdId")
-	tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusBadRequest,
-			Status: "BAD REQUEST",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
-	indikatorCreateRequests := []tujuanopd.IndikatorCreateRequest{}
-	helper.ReadFromRequestBody(request, &indikatorCreateRequests)
-	indikatorResponses, err := controller.TujuanOpdService.CreateTujuanRenjaIndikator(request.Context(), tujuanOpdIdInt, "penetapan", indikatorCreateRequests)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+	// tujuanOpdId := params.ByName("tujuanOpdId")
+	// tujuanOpdIdInt, err := strconv.Atoi(tujuanOpdId)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusBadRequest,
+	// 		Status: "BAD REQUEST",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// indikatorCreateRequests := []tujuanopd.IndikatorCreateRequest{}
+	// helper.ReadFromRequestBody(request, &indikatorCreateRequests)
+	// indikatorResponses, err := controller.TujuanOpdService.CreateTujuanRenjaIndikator(request.Context(), tujuanOpdIdInt, "penetapan", indikatorCreateRequests)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusInternalServerError,
+	// 		Status: "INTERNAL SERVER ERROR",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// helper.WriteToResponseBody(writer, web.WebResponse{
+	// 	Code:   http.StatusOK,
+	// 	Status: "success create tujuan renja penetapan indikator",
+	// 	Data:   indikatorResponses,
+	// })
 	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success create tujuan renja penetapan indikator",
-		Data:   indikatorResponses,
+		Code:   http.StatusBadRequest, // atau http.StatusMethodNotAllowed (405)
+		Status: "BAD REQUEST",
+		Data:   "endpoint sudah tidak digunakan",
 	})
 }
 
@@ -651,24 +682,29 @@ func (controller *TujuanOpdControllerImpl) CreateTujuanRenjaPenetapanIndikator(w
 // @Security     BearerAuth
 // @Router       /tujuan_opd/renja/penetapan/indikator/update/{kodeIndikator} [put]
 func (controller *TujuanOpdControllerImpl) UpdateTujuanRenjaPenetapanIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	kodeIndikator := params.ByName("kodeIndikator")
+	// kodeIndikator := params.ByName("kodeIndikator")
 
-	indikatorUpdateRequests := tujuanopd.IndikatorUpdateRequest{}
-	helper.ReadFromRequestBody(request, &indikatorUpdateRequests)
-	indikatorResponses, err := controller.TujuanOpdService.UpdateTujuanRenjaIndikator(request.Context(), kodeIndikator, "penetapan", indikatorUpdateRequests)
-	if err != nil {
-		webResponse := web.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-			Data:   err.Error(),
-		}
-		helper.WriteToResponseBody(writer, webResponse)
-		return
-	}
+	// indikatorUpdateRequests := tujuanopd.IndikatorUpdateRequest{}
+	// helper.ReadFromRequestBody(request, &indikatorUpdateRequests)
+	// indikatorResponses, err := controller.TujuanOpdService.UpdateTujuanRenjaIndikator(request.Context(), kodeIndikator, "penetapan", indikatorUpdateRequests)
+	// if err != nil {
+	// 	webResponse := web.WebResponse{
+	// 		Code:   http.StatusInternalServerError,
+	// 		Status: "INTERNAL SERVER ERROR",
+	// 		Data:   err.Error(),
+	// 	}
+	// 	helper.WriteToResponseBody(writer, webResponse)
+	// 	return
+	// }
+	// helper.WriteToResponseBody(writer, web.WebResponse{
+	// 	Code:   http.StatusOK,
+	// 	Status: "success update tujuan renja penetapan indikator",
+	// 	Data:   indikatorResponses,
+	// })
 	helper.WriteToResponseBody(writer, web.WebResponse{
-		Code:   http.StatusOK,
-		Status: "success update tujuan renja penetapan indikator",
-		Data:   indikatorResponses,
+		Code:   http.StatusBadRequest, // atau http.StatusMethodNotAllowed (405)
+		Status: "BAD REQUEST",
+		Data:   "endpoint sudah tidak digunakan",
 	})
 }
 
@@ -740,7 +776,7 @@ func (controller *TujuanOpdControllerImpl) CreateTargetRankhirOpdLayer(writer ht
 // CreateTargetOpdPenetapan godoc
 // @Summary      Create Target Penetapan Tujuan OPD
 // @Description  Membuat target baru untuk penetapan. Indikator harus sudah ada di renstra. Gagal jika duplikat (kode_indikator+tahun+jenis sudah ada).
-// @Tags         Tujuan Opd Layer Target
+// @Tags         Tujuan Opd Penetapan Target
 // @Accept       json
 // @Produce      json
 // @Param        request  body      tujuanopd.LayerTargetBatchRequest  true   "Batch targets"
