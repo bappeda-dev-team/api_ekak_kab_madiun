@@ -1062,7 +1062,7 @@ func (repository *CrosscuttingOpdRepositoryImpl) FindCrosscuttingPenerimaByPokin
         SELECT
             c.id,
             c.crosscutting_from,
-            pk_to.id,
+            COALESCE(pk_to.id, 0) AS id_pokin,
             COALESCE(c.keterangan_crosscutting, '') AS keterangan_crosscutting,
            COALESCE(NULLIF(TRIM(pk_to.kode_opd), ''), NULLIF(TRIM(c.kode_opd), ''), '') AS kode_opd_tujuan,
             COALESCE(pk_to.nama_pohon, '') AS nama_pohon_tujuan,
