@@ -6,6 +6,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/pohonkinerja"
 	"ekak_kabupaten_madiun/service"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -474,4 +475,25 @@ func (controller *CrosscuttingOpdControllerImpl) FindAllLaporanCrosscutting(writ
 		Data:   crosscuttingResponses,
 	}
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func (controller *CrosscuttingOpdControllerImpl) CetakLaporanCrosscutting(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	pdfBytes, err := controller.CrosscuttingOpdService.CetakLaporanCrosscutting(request.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/pdf")
+	writer.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="review-opd-%s.pdf"`, tahun))
+
+	writer.WriteHeader(http.StatusOK)
+	_, err = writer.Write(pdfBytes)
 }

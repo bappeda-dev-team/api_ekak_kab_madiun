@@ -17,4 +17,5 @@ type CrosscuttingOpdService interface {
 	FindOPDCrosscuttingFrom(ctx context.Context, crosscuttingTo int) (pohonkinerja.CrosscuttingFromResponse, error)
 	DeleteCrosscuttingDiterima(ctx context.Context, crosscuttingId int) error
 	FindAllLaporanCrosscutting(ctx context.Context, kodeOpd, tahun string) (laporancrosscutting.PohonKinerjaCrosscuttingAllResponse, error)
+	CetakLaporanCrosscutting(ctx context.Context, kodeOpd string, tahun string) ([]byte, error)
 }
