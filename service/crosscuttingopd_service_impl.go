@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
@@ -13,8 +14,10 @@ import (
 	"log"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/go-pdf/fpdf"
 	"github.com/google/uuid"
 )
 
@@ -949,3 +952,705 @@ func (service *CrosscuttingOpdServiceImpl) FindAllLaporanCrosscutting(ctx contex
 
 	return response, nil
 }
+
+
+
+func (service *CrosscuttingOpdServiceImpl) CetakLaporanCrosscutting(
+	ctx context.Context,
+	kodeOpd string,
+	tahun string,
+) ([]byte, error) {
+
+	if kodeOpd == "" {
+		return nil, fmt.Errorf("kode opd tidak boleh kosong")
+	}
+
+	if tahun == "" {
+		return nil, fmt.Errorf("tahun tidak boleh kosong")
+	}
+
+	// =========================
+	// AMBIL DATA LAPORAN
+	// =========================
+
+	laporan, err := service.FindAllLaporanCrosscutting(ctx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	// =========================
+	// INISIALISASI PDF
+	// =========================
+
+	pdf := fpdf.NewCustom(&fpdf.InitType{
+		OrientationStr: "L",
+		UnitStr:        "mm",
+		SizeStr:        "",
+		Size: fpdf.SizeType{
+			Wd: 297,
+			Ht: 420,
+		},
+		FontDirStr: "",
+	})
+
+	pdf.SetTitle("Laporan Crosscutting", false)
+	pdf.SetAuthor("Pohon Kinerja", false)
+
+	pdf.SetMargins(10, 10, 10)
+	pdf.SetAutoPageBreak(true, 10)
+
+	pdf.AddPage()
+
+	// =========================
+	// JUDUL
+	// =========================
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.CellFormat(
+		0, 8,
+		"LAPORAN CROSSCUTTING",
+		"", 1, "C", false, 0, "",
+	)
+
+	pdf.Ln(3)
+
+	// =========================
+	// INFORMASI
+	// =========================
+
+	pdf.SetFont("Arial", "", 10)
+
+	pdf.CellFormat(20, 6, "OPD", "", 0, "L", false, 0, "")
+	pdf.CellFormat(5, 6, ":", "", 0, "L", false, 0, "")
+
+	pdf.CellFormat(
+		0, 6,
+		laporan.KodeOpd+" / "+laporan.NamaOpd,
+		"", 1, "L", false, 0, "",
+	)
+
+	pdf.CellFormat(20, 6, "Tahun", "", 0, "L", false, 0, "")
+	pdf.CellFormat(5, 6, ":", "", 0, "L", false, 0, "")
+
+	pdf.CellFormat(
+		0, 6,
+		tahun,
+		"", 1, "L", false, 0, "",
+	)
+
+	pdf.Ln(5)
+
+	// =========================
+	// KONFIGURASI TABEL
+	// =========================
+
+	colWidths := []float64{
+		9, 25, 25, 14, 14, 23, 23, 50,
+		50, 32, 20, 20, 20, 25, 25, 25,
+	}
+
+	headers := []string{
+		"No",
+		"Keterangan Crosscutting",
+		"OPD Koordinator",
+		"Pohon Kinerja",
+		"Indikator",
+		"Target/Satuan",
+		"Nama Pelaksana",
+		"Sub Kegiatan",
+		"Pagu Anggaran",
+		"OPD Anggota",
+		"Pohon Kinerja",
+		"Indikator",
+		"Target/Satuan",
+		"Nama Pelaksana",
+		"Sub Kegiatan",
+		"Pagu Anggaran",
+	}
+
+	nomorKolom := []string{
+		"1", "2", "3", "4", "5", "6", "7", "8",
+		"9", "10", "11", "12", "13", "14", "15", "16",
+	}
+
+	// =========================
+	// FORMAT PAGU
+	// =========================
+
+	formatRupiah := func(nilai int64) string {
+		angka := fmt.Sprintf("%d", nilai)
+
+		var hasil string
+		for i, c := range angka {
+			if i > 0 && (len(angka)-i)%3 == 0 {
+				hasil += "."
+			}
+			hasil += string(c)
+		}
+
+		return "Rp " + hasil
+	}
+
+	// =========================
+	// HEADER TABEL
+	// =========================
+
+	gambarHeader := func() {
+		pdf.SetFont("Arial", "B", 8)
+
+		headerY := pdf.GetY()
+		headerHeight := 8.0
+		nomorHeight := 6.0
+		lineHeight := 4.0
+
+		x := 10.0
+
+		for i := range headers {
+			pdf.Rect(
+				x,
+				headerY,
+				colWidths[i],
+				headerHeight,
+				"D",
+			)
+
+			lines := pdf.SplitText(
+				headers[i],
+				colWidths[i]-2,
+			)
+
+			tinggiTeks := float64(len(lines)) * lineHeight
+			posisiY := headerY + (headerHeight-tinggiTeks)/2
+
+			pdf.SetXY(x+1, posisiY)
+
+			pdf.MultiCell(
+				colWidths[i]-2,
+				lineHeight,
+				headers[i],
+				"",
+				"C",
+				false,
+			)
+
+			x += colWidths[i]
+		}
+
+		nomorY := headerY + headerHeight
+
+		pdf.SetFont("Arial", "I", 8)
+
+		x = 10
+
+		for i, nomor := range nomorKolom {
+			pdf.Rect(
+				x,
+				nomorY,
+				colWidths[i],
+				nomorHeight,
+				"D",
+			)
+
+			pdf.SetXY(x, nomorY)
+
+			pdf.CellFormat(
+				colWidths[i],
+				nomorHeight,
+				nomor,
+				"",
+				0,
+				"C",
+				false,
+				0,
+				"",
+			)
+
+			x += colWidths[i]
+		}
+
+		pdf.SetXY(10, nomorY+nomorHeight)
+	}
+
+	gambarHeader()
+
+	// =========================
+	// HELPER FORMAT DATA
+	// =========================
+
+	joinText := func(items []string) string {
+		if len(items) == 0 {
+			return "-"
+		}
+
+		result := make([]string, 0, len(items))
+
+		for _, item := range items {
+			item = strings.TrimSpace(item)
+
+			if item != "" {
+				result = append(result, item)
+			}
+		}
+
+		if len(result) == 0 {
+			return "-"
+		}
+
+		return strings.Join(result, "\n")
+	}
+
+	// =========================
+	// FORMAT INDIKATOR
+	// =========================
+
+	formatIndikator := func(
+		indikatorList []laporancrosscutting.IndikatorResponse,
+	) string {
+
+		var result []string
+
+		for _, indikator := range indikatorList {
+			nama := strings.TrimSpace(indikator.NamaIndikator)
+
+			if nama != "" {
+				result = append(result, nama)
+			}
+		}
+
+		return joinText(result)
+	}
+
+	// =========================
+	// FORMAT TARGET DAN SATUAN
+	// =========================
+
+	formatTarget := func(
+		indikatorList []laporancrosscutting.IndikatorResponse,
+	) string {
+
+		var result []string
+
+		for _, indikator := range indikatorList {
+			if len(indikator.Target) == 0 {
+				continue
+			}
+
+			for _, target := range indikator.Target {
+				nilai := strings.TrimSpace(target.TargetIndikator)
+				satuan := strings.TrimSpace(target.SatuanIndikator)
+
+				if nilai == "" && satuan == "" {
+					continue
+				}
+
+				result = append(
+					result,
+					nilai+" "+satuan,
+				)
+			}
+		}
+
+		return joinText(result)
+	}
+
+	// =========================
+	// FORMAT PELAKSANA
+	// =========================
+
+	formatPelaksana := func(
+		pelaksanaList []laporancrosscutting.PelaksanaOpdResponse,
+	) string {
+
+		var result []string
+
+		for _, p := range pelaksanaList {
+			if strings.TrimSpace(p.NamaPegawai) != "" {
+				result = append(result, p.NamaPegawai)
+			}
+		}
+
+		return joinText(result)
+	}
+
+	// =========================
+	// FORMAT SUB KEGIATAN
+	// =========================
+
+	formatSubKegiatan := func(
+		rekinList []laporancrosscutting.RencanaKinerjaResponse,
+	) string {
+
+		var result []string
+
+		for _, rekin := range rekinList {
+			nama := strings.TrimSpace(rekin.NamaSubKegiatan)
+
+			if nama != "" {
+				result = append(result, nama)
+			}
+		}
+
+		return joinText(result)
+	}
+
+	// =========================
+	// FORMAT PAGU ANGGARAN
+	// =========================
+
+	formatPagu := func(
+		rekinList []laporancrosscutting.RencanaKinerjaResponse,
+	) string {
+
+		var result []string
+
+		for _, rekin := range rekinList {
+			result = append(
+				result,
+				formatRupiah(rekin.Pagu),
+			)
+		}
+
+		return joinText(result)
+	}
+
+	// =========================
+	// HELPER GAMBAR CELL
+	// =========================
+
+	lineHeight := 3.5
+	paddingY := 2.0
+
+	gambarCell := func(
+		x, y, width, height float64,
+		value string,
+		align string,
+	) {
+		if strings.TrimSpace(value) == "" {
+			value = "-"
+		}
+
+		pdf.Rect(x, y, width, height, "D")
+
+		lines := pdf.SplitText(value, width-2)
+		textHeight := float64(len(lines)) * lineHeight
+		textY := y + (height-textHeight)/2
+
+		pdf.SetFont("Arial", "", 8)
+		pdf.SetXY(x+1, textY)
+
+		pdf.MultiCell(
+			width-2,
+			lineHeight,
+			value,
+			"",
+			align,
+			false,
+		)
+	}
+
+	// =========================
+	// HELPER MERGE CELL
+	// =========================
+
+	gambarMergeCell := func(
+		x, y, width, height float64,
+		value string,
+		align string,
+	) {
+		// Merge cell menggunakan satu kotak
+		// dengan tinggi gabungan beberapa baris.
+		gambarCell(
+			x,
+			y,
+			width,
+			height,
+			value,
+			align,
+		)
+	}
+
+	// =========================
+	// LOOP DATA LAPORAN
+	// =========================
+
+	nomor := 1
+
+	for _, item := range laporan.PohonKinerja {
+
+		// =========================
+		// DATA KOORDINATOR
+		// =========================
+
+		namaPohonUtama := strings.TrimSpace(
+			item.PohonKinerja.NamaPohon,
+		)
+
+		if namaPohonUtama == "" {
+			namaPohonUtama = "-"
+		}
+
+		indikatorUtama := formatIndikator(item.Indikator)
+		targetUtama := formatTarget(item.Indikator)
+		pelaksanaUtama := formatPelaksana(item.Pelaksana)
+		subKegiatanUtama := formatSubKegiatan(item.RencanaKinerja)
+		paguUtama := formatPagu(item.RencanaKinerja)
+
+		// =========================
+		// KETERANGAN CROSSCUTTING
+		// =========================
+
+		var keteranganList []string
+
+		for _, cc := range item.CrosscuttingDikirim {
+			keterangan := strings.TrimSpace(
+				cc.KeteranganCrosscutting,
+			)
+
+			if keterangan != "" {
+				keteranganList = append(
+					keteranganList,
+					keterangan,
+				)
+			}
+		}
+
+		keterangan := joinText(keteranganList)
+
+		// =========================
+		// DATA KOLOM 1-9
+		// =========================
+
+		dataKoordinator := []string{
+			fmt.Sprintf("%d", nomor),
+			keterangan,
+			laporan.NamaOpd,
+			namaPohonUtama,
+			indikatorUtama,
+			targetUtama,
+			pelaksanaUtama,
+			subKegiatanUtama,
+			paguUtama,
+		}
+
+		// =========================
+		// DATA ANGGOTA
+		// =========================
+
+		anggotaRows := make([][]string, 0)
+
+		for _, cc := range item.CrosscuttingDikirim {
+
+			namaOpdAnggota := strings.TrimSpace(
+				cc.NamaOpdTujuan,
+			)
+
+			if namaOpdAnggota == "" {
+				namaOpdAnggota = "-"
+			}
+
+			namaPohonPenerima := strings.TrimSpace(
+				cc.NamaPohonTujuan,
+			)
+
+			if namaPohonPenerima == "" {
+				namaPohonPenerima = "-"
+			}
+
+			indikatorPenerima := formatIndikator(
+				cc.IndikatorDikirim,
+			)
+
+			targetPenerima := formatTarget(
+				cc.IndikatorDikirim,
+			)
+
+			pelaksanaPenerima := formatPelaksana(
+				cc.PelaksanaDikirim,
+			)
+
+			subKegiatanPenerima := formatSubKegiatan(
+				cc.RekinDikirim,
+			)
+
+			paguPenerima := formatPagu(
+				cc.RekinDikirim,
+			)
+
+			anggotaRows = append(
+				anggotaRows,
+				[]string{
+					namaOpdAnggota,
+					namaPohonPenerima,
+					indikatorPenerima,
+					targetPenerima,
+					pelaksanaPenerima,
+					subKegiatanPenerima,
+					paguPenerima,
+				},
+			)
+		}
+
+		// Jika tidak ada anggota, tetap tampilkan satu baris.
+		if len(anggotaRows) == 0 {
+			anggotaRows = append(
+				anggotaRows,
+				[]string{
+					"-", "-", "-", "-", "-", "-", "-",
+				},
+			)
+		}
+
+		// =========================
+		// HITUNG TINGGI SETIAP BARIS
+		// =========================
+
+		rowHeights := make([]float64, len(anggotaRows))
+		totalHeight := 0.0
+
+		for rowIndex, row := range anggotaRows {
+
+			maxLines := 1
+
+			// Hitung berdasarkan kolom anggota (10-16).
+			for colIndex, value := range row {
+
+				lines := pdf.SplitText(
+					value,
+					colWidths[colIndex+9]-2,
+				)
+
+				if len(lines) > maxLines {
+					maxLines = len(lines)
+				}
+			}
+
+			rowHeight := float64(maxLines)*lineHeight + paddingY
+
+			rowHeights[rowIndex] = rowHeight
+			totalHeight += rowHeight
+		}
+
+		// =========================
+		// PASTIKAN MERGE KOORDINATOR CUKUP TINGGI
+		// =========================
+
+		minimumHeight := 0.0
+
+		for colIndex, value := range dataKoordinator {
+
+			lines := pdf.SplitText(
+				value,
+				colWidths[colIndex]-2,
+			)
+
+			requiredHeight := float64(len(lines))*lineHeight + paddingY
+
+			if requiredHeight > minimumHeight {
+				minimumHeight = requiredHeight
+			}
+		}
+
+		// Jika teks koordinator lebih tinggi daripada
+		// gabungan baris anggota, tambahkan tinggi baris pertama.
+		if totalHeight < minimumHeight {
+			tambahan := minimumHeight - totalHeight
+
+			rowHeights[0] += tambahan
+			totalHeight += tambahan
+		}
+
+		// =========================
+		// CEK HALAMAN
+		// =========================
+
+		if pdf.GetY()+totalHeight > 410 {
+			pdf.AddPage()
+			gambarHeader()
+		}
+
+		startY := pdf.GetY()
+
+		// =========================
+		// MERGE KOLOM KOORDINATOR (1-9)
+		// =========================
+
+		x := 10.0
+
+		for colIndex, value := range dataKoordinator {
+
+			align := "L"
+
+			if colIndex == 0 {
+				align = "C"
+			}
+
+			// Satu cell mencakup seluruh tinggi baris anggota.
+			gambarMergeCell(
+				x,
+				startY,
+				colWidths[colIndex],
+				totalHeight,
+				value,
+				align,
+			)
+
+			x += colWidths[colIndex]
+		}
+
+		// =========================
+		// GAMBAR DATA ANGGOTA (10-16)
+		// =========================
+
+		for rowIndex, row := range anggotaRows {
+
+			rowY := startY
+
+			// Posisi Y berdasarkan tinggi baris sebelumnya.
+			for i := 0; i < rowIndex; i++ {
+				rowY += rowHeights[i]
+			}
+
+			x = 10.0
+
+			// Lewati kolom koordinator 1-9.
+			for i := 0; i < 9; i++ {
+				x += colWidths[i]
+			}
+
+			// Gambar kolom anggota 10-16.
+			for colIndex, value := range row {
+
+				gambarCell(
+					x,
+					rowY,
+					colWidths[colIndex+9],
+					rowHeights[rowIndex],
+					value,
+					"L",
+				)
+
+				x += colWidths[colIndex+9]
+			}
+		}
+
+		// Pindah ke bawah seluruh kelompok data.
+		pdf.SetXY(10, startY+totalHeight)
+
+		nomor++
+	}
+
+	// =========================
+	// OUTPUT PDF
+	// =========================
+
+	var buffer bytes.Buffer
+
+	err = pdf.Output(&buffer)
+	if err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), nil
+}
+
+
