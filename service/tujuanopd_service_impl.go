@@ -1316,7 +1316,6 @@ func buildTujuanOpdPenetapanDualJenis(
 	return result
 }
 
-
 func (service *TujuanOpdServiceImpl) SetTujuanOpdLocked(
 	ctx context.Context, tujuanOpdId int, locked bool,
 ) error {
@@ -1613,8 +1612,9 @@ func buildIndikatorJenisDisplay(dbJenis string, opts *TujuanOpdBidangResponseOpt
 
 // buildIndikatorDualSlotResponse mengonversi domain.Indikator dengan 2-slot target ke
 // IndikatorResponse dengan field terpisah berdasarkan jenis:
-//   rankhir view  → TargetRanwal  + TargetRankhir
-//   penetapan view→ TargetRankhir + TargetPenetapan
+//
+//	rankhir view  → TargetRanwal  + TargetRankhir
+//	penetapan view→ TargetRankhir + TargetPenetapan
 func buildIndikatorDualSlotResponse(ind domain.Indikator, tujuanId int) tujuanopd.IndikatorResponse {
 	resp := tujuanopd.IndikatorResponse{
 		Id:                  ind.Id,

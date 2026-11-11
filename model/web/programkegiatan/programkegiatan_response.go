@@ -29,12 +29,18 @@ type IndikatorMatrixResponse struct {
 	KodeOpd       string `json:"kode_opd,omitempty"`
 	ProgramId     string `json:"program_id,omitempty"`
 	Indikator     string `json:"indikator"`
-	// PaguAnggaran  int64  `json:"pagu_anggaran,omitempty"`
-	Tahun        string `json:"tahun"`
-	TargetId     string `json:"target_id"`
-	Target       string `json:"target"`
-	Satuan       string `json:"satuan"`
-	StatusTarget bool   `json:"status_target_renja,omitempty"`
+	Tahun         string `json:"tahun"`
+	Target        string `json:"target"`
+	Satuan        string `json:"satuan"`
+	StatusTarget  bool   `json:"status_target_renja,omitempty"`
+	// dual-slot rankhir view: target_ranwal + target_rankhir
+	TargetRanwal  string `json:"target_ranwal,omitempty"`
+	SatuanRanwal  string `json:"satuan_ranwal,omitempty"`
+	TargetRankhir string `json:"target_rankhir,omitempty"`
+	SatuanRankhir string `json:"satuan_rankhir,omitempty"`
+	// penetapan view
+	TargetPenetapan string `json:"target_penetapan,omitempty"`
+	SatuanPenetapan string `json:"satuan_penetapan,omitempty"`
 }
 
 type TargetResponse struct {
@@ -64,6 +70,10 @@ type UrusanDetailResponse struct {
 	PaguAnggaranTotal []PaguAnggaranTotalResponse `json:"pagu_total"`
 	Urusan            []UrusanResponse            `json:"urusan"`
 	Tahun             string                      `json:"tahun,omitempty"`
+	// total pagu per layer (level root/detail)
+	PaguRanwal    int64 `json:"pagu_total_ranwal,omitempty"`
+	PaguRankhir   int64 `json:"pagu_total_rankhir,omitempty"`
+	PaguPenetapan int64 `json:"pagu_total_penetapan,omitempty"`
 }
 
 type UrusanResponse struct {
@@ -71,9 +81,16 @@ type UrusanResponse struct {
 	Nama              string                      `json:"nama"`
 	Jenis             string                      `json:"jenis"`
 	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	PaguRanwal        int64                       `json:"pagu_ranwal,omitempty"`
+	PaguRankhir       int64                       `json:"pagu_rankhir,omitempty"`
+	PaguPenetapan     int64                       `json:"pagu_penetapan,omitempty"`
 	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
 	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
-	BidangUrusan      []BidangUrusanResponse      `json:"bidang_urusan"`
+	// Diisi untuk rankhir view: indikator per layer terpisah
+	IndikatorRanwal    []IndikatorMatrixResponse `json:"indikator_ranwal,omitempty"`
+	IndikatorRankhir   []IndikatorMatrixResponse `json:"indikator_rankhir,omitempty"`
+	IndikatorPenetapan []IndikatorMatrixResponse `json:"indikator_penetapan,omitempty"`
+	BidangUrusan       []BidangUrusanResponse    `json:"bidang_urusan"`
 }
 
 type BidangUrusanResponse struct {
@@ -81,9 +98,16 @@ type BidangUrusanResponse struct {
 	Nama              string                      `json:"nama"`
 	Jenis             string                      `json:"jenis"`
 	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	PaguRanwal        int64                       `json:"pagu_ranwal,omitempty"`
+	PaguRankhir       int64                       `json:"pagu_rankhir,omitempty"`
+	PaguPenetapan     int64                       `json:"pagu_penetapan,omitempty"`
 	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
 	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
-	Program           []ProgramResponse           `json:"program"`
+	// Diisi untuk rankhir view: indikator per layer terpisah
+	IndikatorRanwal    []IndikatorMatrixResponse `json:"indikator_ranwal,omitempty"`
+	IndikatorRankhir   []IndikatorMatrixResponse `json:"indikator_rankhir,omitempty"`
+	IndikatorPenetapan []IndikatorMatrixResponse `json:"indikator_penetapan,omitempty"`
+	Program            []ProgramResponse         `json:"program"`
 }
 
 type ProgramResponse struct {
@@ -91,9 +115,16 @@ type ProgramResponse struct {
 	Nama              string                      `json:"nama"`
 	Jenis             string                      `json:"jenis"`
 	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	PaguRanwal        int64                       `json:"pagu_ranwal,omitempty"`
+	PaguRankhir       int64                       `json:"pagu_rankhir,omitempty"`
+	PaguPenetapan     int64                       `json:"pagu_penetapan,omitempty"`
 	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
 	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
-	Kegiatan          []KegiatanResponse          `json:"kegiatan"`
+	// Diisi untuk rankhir view: indikator per layer terpisah
+	IndikatorRanwal    []IndikatorMatrixResponse `json:"indikator_ranwal,omitempty"`
+	IndikatorRankhir   []IndikatorMatrixResponse `json:"indikator_rankhir,omitempty"`
+	IndikatorPenetapan []IndikatorMatrixResponse `json:"indikator_penetapan,omitempty"`
+	Kegiatan           []KegiatanResponse        `json:"kegiatan"`
 }
 
 type KegiatanResponse struct {
@@ -101,22 +132,39 @@ type KegiatanResponse struct {
 	Nama              string                      `json:"nama"`
 	Jenis             string                      `json:"jenis"`
 	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	PaguRanwal        int64                       `json:"pagu_ranwal,omitempty"`
+	PaguRankhir       int64                       `json:"pagu_rankhir,omitempty"`
+	PaguPenetapan     int64                       `json:"pagu_penetapan,omitempty"`
 	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
 	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
-	SubKegiatan       []SubKegiatanResponse       `json:"subkegiatan"`
+	// Diisi untuk rankhir view: indikator per layer terpisah
+	IndikatorRanwal    []IndikatorMatrixResponse `json:"indikator_ranwal,omitempty"`
+	IndikatorRankhir   []IndikatorMatrixResponse `json:"indikator_rankhir,omitempty"`
+	IndikatorPenetapan []IndikatorMatrixResponse `json:"indikator_penetapan,omitempty"`
+	SubKegiatan        []SubKegiatanResponse     `json:"subkegiatan"`
 }
 
 type SubKegiatanResponse struct {
-	Kode              string                      `json:"kode"`
-	Nama              string                      `json:"nama"`
-	Jenis             string                      `json:"jenis"`
-	Tahun             string                      `json:"tahun,omitempty"`
-	PegawaiId         string                      `json:"pegawai_id"`
-	NamaPegawai       string                      `json:"nama_pegawai"`
-	Anggaran          []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
-	TotalAnggaran     int64                       `json:"total_anggaran,omitempty"`
+	Kode        string `json:"kode"`
+	Nama        string `json:"nama"`
+	Jenis       string `json:"jenis"`
+	Tahun       string `json:"tahun,omitempty"`
+	PegawaiId   string `json:"pegawai_id"`
+	NamaPegawai string `json:"nama_pegawai"`
+	// Status hanya terisi untuk rankhir view — baris sintetis dari renstra yg tidak ada rekin
+	Status        string                      `json:"status,omitempty"`
+	Anggaran      []PaguAnggaranTotalResponse `json:"anggaran,omitempty"`
+	TotalAnggaran int64                       `json:"total_anggaran,omitempty"`
+	// flat pagu per layer
+	PaguRanwal        int64                       `json:"pagu_ranwal,omitempty"`
+	PaguRankhir       int64                       `json:"pagu_rankhir,omitempty"`
+	PaguPenetapan     int64                       `json:"pagu_penetapan,omitempty"`
 	Indikator         []IndikatorMatrixResponse   `json:"indikator"`
 	IndikatorBaseline []IndikatorBaselineResponse `json:"indikator_baseline"`
+	// Diisi untuk rankhir view: indikator per layer terpisah
+	IndikatorRanwal    []IndikatorMatrixResponse `json:"indikator_ranwal,omitempty"`
+	IndikatorRankhir   []IndikatorMatrixResponse `json:"indikator_rankhir,omitempty"`
+	IndikatorPenetapan []IndikatorMatrixResponse `json:"indikator_penetapan,omitempty"`
 }
 
 type PaguAnggaranTotalResponse struct {
@@ -259,4 +307,13 @@ type IndikatorUpsertResponse struct {
 	IndikatorId string `json:"indikator_id"`
 	Target      string `json:"target"`
 	Satuan      string `json:"satuan"`
+}
+
+// TargetRenjaLayerResponse — deprecated: gunakan renja.TargetLayerResponse untuk matrix renja.
+type TargetRenjaLayerResponse struct {
+	KodeIndikator string `json:"kode_indikator"`
+	Tahun         string `json:"tahun"`
+	Target        string `json:"target"`
+	Satuan        string `json:"satuan"`
+	Jenis         string `json:"jenis"`
 }

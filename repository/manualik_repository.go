@@ -21,4 +21,6 @@ type ManualIKRepository interface {
 	CloneManualIK(ctx context.Context, tx *sql.Tx, indikatorIdLama string, indikatorIdBaru string) error
 	FindByIndikatorIds(ctx context.Context, tx *sql.Tx, indikatorIds []string) ([]domain.ManualIK, error)
 	CreateBatch(ctx context.Context, tx *sql.Tx, manualIks []domain.ManualIK) error
+	FindByPegawai(ctx context.Context, tx *sql.Tx, nip string, kodeOpd string, tahun string) ([]domain.ManualIK, error)
+	FindByRekinId(ctx context.Context, tx *sql.Tx, rekinId string) ([]domain.ManualIK, error)
 }

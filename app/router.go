@@ -110,6 +110,8 @@ func NewRouter(
 
 	//rencana_aksi
 	router.GET("/rencana_aksi/findall/:rencana_kinerja_id", rencanaAksiController.FindAll)
+	router.GET("/rencana_aksi/rekin/:rencana_kinerja_id", rencanaAksiController.FindByRekin)
+	router.GET("/rencana_aksi/pegawai/:nip/:kode_opd/:tahun", rencanaAksiController.FindByPegawai)
 	// router.GET("/rencana_kinerja/:rekin_id/rincian_kak", rencanaAksiController.FindAll)
 	router.GET("/detail-rencana_aksi/:rencanaaksiId", rencanaAksiController.FindById)
 	router.POST("/rencana_aksi/create/rencanaaksi/:rekin_id", rencanaAksiController.Create)
@@ -386,6 +388,8 @@ func NewRouter(
 	router.PUT("/manual_ik/update/:indikatorId", manualIKController.Update)
 	router.GET("/manual_ik/detail/:indikatorId", manualIKController.FindManualIKByIndikatorId)
 	router.GET("/manual_ik/sasaran_opd/:indikatorId/:tahun", manualIKController.FindManualIKSasaranOpdByIndikatorId)
+	router.GET("/manual_ik/pegawai/:nip/:kode_opd/:tahun", manualIKController.FindManualIKByPegawai)
+	router.GET("/manual_ik/rekin/:rencana_kinerja_id", manualIKController.FindManualIKByRekin)
 
 	//review
 	router.POST("/review_pokin/create/:pokinId", reviewController.Create)
@@ -669,6 +673,15 @@ func NewRouter(
 	router.POST("/matrix_renja/indikator/rankhir/upsert", matrixRenjaController.UpsertBatchIndikatorRenjaRankhir)
 	router.POST("/matrix_renja/indikator/penetapan/upsert", matrixRenjaController.UpsertBatchIndikatorRenjaPenetapan)
 	router.POST("/matrix_renja/anggaran_penetapan/upsert", matrixRenjaController.UpsertAnggaran)
+	// CRUD target per layer
+	router.PUT("/matrix_renja/target/rankhir", matrixRenjaController.UpsertTargetRankhir)
+	router.PUT("/matrix_renja/target/penetapan", matrixRenjaController.UpsertTargetPenetapan)
+	router.DELETE("/matrix_renja/target/rankhir/:kode_indikator/:tahun", matrixRenjaController.DeleteTargetRankhir)
+	router.DELETE("/matrix_renja/target/penetapan/:kode_indikator/:tahun", matrixRenjaController.DeleteTargetPenetapan)
+	// CRUD pagu per jenis
+	router.POST("/matrix_renja/pagu/ranwal", matrixRenjaController.UpsertPaguRanwal)
+	router.POST("/matrix_renja/pagu/rankhir", matrixRenjaController.UpsertPaguRankhir)
+	router.POST("/matrix_renja/pagu/penetapan", matrixRenjaController.UpsertPaguPenetapan)
 
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)

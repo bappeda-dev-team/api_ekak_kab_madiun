@@ -332,6 +332,7 @@ func (controller *SasaranOpdControllerImpl) FindByNipAndOpd(writer http.Response
 // @Summary      Sasaran Opd Renstra
 // @Description  Mendapatkan data sasaran opd renstra berdasarkan kode OPD dan tahun.
 // @Tags         Sasaran Opd Renstra
+// @Tags         IntegrasiKabMadiun
 // @Accept       json
 // @Produce      json
 // @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")
@@ -631,6 +632,7 @@ func (controller *SasaranOpdControllerImpl) DeleteIndikatorTargetRenja(writer ht
 // @Summary      Sasaran Opd Penetapan
 // @Description  Mendapatkan data sasaran opd penetapan berdasarkan kode OPD dan tahun.
 // @Tags         Sasaran Opd Renja Penetapan
+// @Tags         IntegrasiKabMadiun
 // @Accept       json
 // @Produce      json
 // @Param        kode_opd  path     string  true  "Kode OPD"   example("1.01.1.01.0.00.01.0000")

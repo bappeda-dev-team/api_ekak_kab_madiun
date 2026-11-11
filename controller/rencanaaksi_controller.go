@@ -13,4 +13,6 @@ type RencanaAksiController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindByPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	FindByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

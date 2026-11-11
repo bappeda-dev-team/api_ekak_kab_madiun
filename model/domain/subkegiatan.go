@@ -60,6 +60,30 @@ type SubKegiatanQuery struct {
 	PaguAnggaran             sql.NullInt64
 	TotalAnggaranSubKegiatan int64
 	JenisPagu                string
+	// penetapan: pagu dari tb_pagu jenis='penetapan' (0 jika belum ada)
+	PaguPenetapan  int64
+	// penetapan: jenis layer indikator ("rankhir" atau "penetapan")
+	JenisIndikator string
+
+	// flat pagu per layer (ranwal & rankhir) — digunakan oleh GET ranwal/rankhir/penetapan v2
+	PaguRanwal  int64
+	PaguRankhir int64
+
+	// dual-target untuk rankhir view (slot ranwal + slot rankhir per indikator)
+	TargetRanwalId  string
+	TargetRanwal    string
+	SatuanRanwal    string
+	TargetRankhirId string
+	TargetRankhir   string
+	SatuanRankhir   string
+
+	// slot penetapan (untuk penetapan view)
+	TargetPenetapanId string
+	TargetPenetapan   string
+	SatuanPenetapan   string
+
+	// status subkegiatan (untuk rankhir view — baris sintetis dari renstra yg tidak ada rekin tahun ini)
+	StatusSubkegiatan string
 }
 
 type SubKegiatanKAKQuery struct {
