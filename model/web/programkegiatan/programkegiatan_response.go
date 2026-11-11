@@ -30,6 +30,7 @@ type IndikatorMatrixResponse struct {
 	ProgramId     string `json:"program_id,omitempty"`
 	Indikator     string `json:"indikator"`
 	Tahun         string `json:"tahun"`
+	TargetId      string `json:"target_id"`
 	Target        string `json:"target"`
 	Satuan        string `json:"satuan"`
 	StatusTarget  bool   `json:"status_target_renja,omitempty"`
