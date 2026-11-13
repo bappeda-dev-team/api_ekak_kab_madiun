@@ -96,10 +96,11 @@ type AtasanCandidate struct {
 }
 
 type IndikatorPk struct {
-	IdRekin     string        `json:"id_rekin"`
-	IdIndikator string        `json:"id_indikator"`
-	Indikator   string        `json:"indikator"`
-	Targets     []TargetIndPk `json:"targets"`
+	IdRekin     string             `json:"id_rekin"`
+	IdIndikator string             `json:"id_indikator"`
+	Indikator   string             `json:"indikator"`
+	ManualIk    ManualIKPKResponse `json:"manual_ik"`
+	Targets     []TargetIndPk      `json:"targets"`
 }
 
 type TargetIndPk struct {
@@ -114,4 +115,30 @@ type KunciPKResponse struct {
 	IdPegawai  string `json:"id_pegawai"`
 	StatusPk   string `json:"status_pk"`   // terkunci, terbuka, revisi
 	PkTerkunci bool   `json:"pk_terkunci"` // true, false, false
+}
+
+type ManualIKPKResponse struct {
+	Id                  int          `json:"id,omitempty"`
+	IndikatorId         string       `json:"indikator_id,omitempty"`
+	ParentPohon         int          `json:"parent,omitempty"`
+	NamaParent          string       `json:"nama_parent,omitempty"`
+	Perspektif          string       `json:"perspektif,omitempty"`
+	TujuanRekin         string       `json:"tujuan_rekin,omitempty"`
+	Definisi            string       `json:"definisi,omitempty"`
+	KeyActivities       string       `json:"key_activities,omitempty"`
+	Formula             string       `json:"formula,omitempty"`
+	JenisIndikator      string       `json:"jenis_indikator,omitempty"`
+	OutputData          OutputDataPK `json:"output_data"`
+	UnitPenanggungJawab string       `json:"unit_penanggung_jawab,omitempty"`
+	UnitPenyediaData    string       `json:"unit_penyedia_data,omitempty"`
+	SumberData          string       `json:"sumber_data,omitempty"`
+	JangkaWaktuAwal     string       `json:"jangka_waktu_awal,omitempty"`
+	JangkaWaktuAkhir    string       `json:"jangka_waktu_akhir,omitempty"`
+	PeriodePelaporan    string       `json:"periode_pelaporan,omitempty"`
+}
+
+type OutputDataPK struct {
+	Kinerja  bool `json:"kinerja,omitempty"`
+	Penduduk bool `json:"penduduk,omitempty"`
+	Spatial  bool `json:"spatial,omitempty"`
 }

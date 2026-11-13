@@ -3,7 +3,7 @@ package rencanakinerja
 type ManualIKResponse struct {
 	Id                  int           `json:"id,omitempty"`
 	IndikatorId         string        `json:"indikator_id,omitempty"`
-	DataIndikator       RekinResponse `json:"rencana_kinerja,omitempty"`
+	DataIndikator       RekinResponse `json:"rencana_kinerja"`
 	ParentPohon         int           `json:"parent,omitempty"`
 	NamaParent          string        `json:"nama_parent,omitempty"`
 	Perspektif          string        `json:"perspektif,omitempty"`
@@ -12,7 +12,7 @@ type ManualIKResponse struct {
 	KeyActivities       string        `json:"key_activities,omitempty"`
 	Formula             string        `json:"formula,omitempty"`
 	JenisIndikator      string        `json:"jenis_indikator,omitempty"`
-	OutputData          OutputData    `json:"output_data,omitempty"`
+	OutputData          OutputData    `json:"output_data"`
 	UnitPenanggungJawab string        `json:"unit_penanggung_jawab,omitempty"`
 	UnitPenyediaData    string        `json:"unit_penyedia_data,omitempty"`
 	SumberData          string        `json:"sumber_data,omitempty"`

@@ -868,3 +868,84 @@ func (repository *PkRepositoryImpl) UpdatePkPegawais(
 
 	return nil
 }
+
+func (repository *PkRepositoryImpl) ManualIksByIndikatorIds(ctx context.Context, tx *sql.Tx, idIndikators []string) (map[string]domain.ManualIK, error) {
+	const op = "pk_repository.ManualIksByIndikatorIds"
+
+	if len(idIndikators) == 0 {
+		return map[string]domain.ManualIK{}, nil
+	}
+
+	baseQuery := `
+          SELECT m.id,
+		m.indikator_id,
+		m.perspektif,
+		m.tujuan_rekin,
+		m.definisi,
+		m.key_activities,
+		m.formula,
+		m.jenis_indikator,
+		m.kinerja,
+		m.penduduk,
+		m.spasial,
+		m.unit_penanggung_jawab,
+		m.unit_penyedia_data,
+		m.sumber_data,
+		m.jangka_waktu_awal,
+		m.jangka_waktu_akhir,
+		m.periode_pelaporan
+          FROM tb_manual_ik m
+          WHERE m.indikator_id IN (?)
+		ORDER BY m.id
+    `
+
+	query, args := helper.BuildInQueryString(baseQuery, idIndikators)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	// indikatorId -> manualIk
+	// indikatorId -> manualIK
+	result := make(map[string]domain.ManualIK, len(idIndikators))
+
+	for rows.Next() {
+		// declare a fresh struct per row so values never leak between rows
+		var m domain.ManualIK
+
+		if err := rows.Scan(
+			&m.Id,
+			&m.IndikatorId,
+			&m.Perspektif,
+			&m.TujuanRekin,
+			&m.Definisi,
+			&m.KeyActivities,
+			&m.Formula,
+			&m.JenisIndikator,
+			&m.Kinerja,
+			&m.Penduduk,
+			&m.Spatial,
+			&m.UnitPenanggungJawab,
+			&m.UnitPenyediaData,
+			&m.SumberData,
+			&m.JangkaWaktuAwal,
+			&m.JangkaWaktuAkhir,
+			&m.PeriodePelaporan,
+		); err != nil {
+			return nil, fmt.Errorf("%s: scan failed: %w", op, err)
+		}
+
+		// ORDER BY m.id means the first row seen per indikator_id wins;
+		// remove this check if you want the last one to win instead
+		if _, exists := result[m.IndikatorId]; !exists {
+			result[m.IndikatorId] = m
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows error: %w", op, err)
+	}
+
+	return result, nil
+}

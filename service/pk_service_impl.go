@@ -1258,6 +1258,17 @@ func (service *PkServiceImpl) FindPkPenetapan(
 		log.Printf("Error find indikator pk penetapan: %v", err)
 		return nil, err
 	}
+	indIds := make([]string, 0)
+	for _, indRekins := range indikatorRekins {
+		for _, indRekin := range indRekins {
+			indIds = append(indIds, indRekin.Id)
+		}
+	}
+	manualIks, err := service.pkRepository.ManualIksByIndikatorIds(ctx, tx, indIds)
+	if err != nil {
+		log.Printf("Error find manual iks: %v", err)
+		return nil, err
+	}
 	renaksiRekins, err := service.pkRepository.RenaksiPkByIdRekins(ctx, tx, idRekins)
 	if err != nil {
 		log.Printf("Error find renaksi pk penetapan: %v", err)
@@ -1279,12 +1290,34 @@ func (service *PkServiceImpl) FindPkPenetapan(
 						Satuan:      tar.Satuan,
 					})
 			}
+			manualIK := manualIks[ind.Id]
 			indikatorPks = append(indikatorPks,
 				pkopd.IndikatorPk{
 					IdRekin:     ind.RencanaKinerjaId,
 					IdIndikator: ind.Id,
 					Indikator:   ind.Indikator,
-					Targets:     targets,
+					ManualIk: pkopd.ManualIKPKResponse{
+						Id:             manualIK.Id,
+						IndikatorId:    manualIK.IndikatorId,
+						Perspektif:     manualIK.Perspektif,
+						TujuanRekin:    manualIK.TujuanRekin,
+						Definisi:       manualIK.Definisi,
+						KeyActivities:  manualIK.KeyActivities,
+						Formula:        manualIK.Formula,
+						JenisIndikator: manualIK.JenisIndikator,
+						OutputData: pkopd.OutputDataPK{
+							Kinerja:  manualIK.Kinerja,
+							Penduduk: manualIK.Penduduk,
+							Spatial:  manualIK.Spatial,
+						},
+						UnitPenanggungJawab: manualIK.UnitPenanggungJawab,
+						UnitPenyediaData:    manualIK.UnitPenyediaData,
+						SumberData:          manualIK.SumberData,
+						JangkaWaktuAwal:     manualIK.JangkaWaktuAwal,
+						JangkaWaktuAkhir:    manualIK.JangkaWaktuAkhir,
+						PeriodePelaporan:    manualIK.PeriodePelaporan,
+					},
+					Targets: targets,
 				})
 		}
 		// renaksi pk

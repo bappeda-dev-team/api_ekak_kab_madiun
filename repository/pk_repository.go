@@ -22,4 +22,5 @@ type PkRepository interface {
 	IndikatorTargetPkByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) (map[string][]domain.Indikator, error)
 	RenaksiPkByIdRekins(ctx context.Context, tx *sql.Tx, idRekins []string) (map[string][]domain.RencanaAksi, error)
 	UpdatePkPegawais(ctx context.Context, tx *sql.Tx, pks []domain.PkOpd) error
+	ManualIksByIndikatorIds(ctx context.Context, tx *sql.Tx, idIndikators []string) (map[string]domain.ManualIK, error)
 }
