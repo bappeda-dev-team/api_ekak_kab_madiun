@@ -11,6 +11,147 @@ definitions:
       tahun:
         type: string
     type: object
+  pkopd.BobotBulanan:
+    properties:
+      bobot:
+        type: integer
+      bulan:
+        type: integer
+    type: object
+  pkopd.IndikatorPk:
+    properties:
+      id_indikator:
+        type: string
+      id_rekin:
+        type: string
+      indikator:
+        type: string
+      manual_ik:
+        $ref: '#/definitions/pkopd.ManualIKPKResponse'
+      targets:
+        items:
+          $ref: '#/definitions/pkopd.TargetIndPk'
+        type: array
+    type: object
+  pkopd.ManualIKPKResponse:
+    properties:
+      definisi:
+        type: string
+      formula:
+        type: string
+      id:
+        type: integer
+      indikator_id:
+        type: string
+      jangka_waktu_akhir:
+        type: string
+      jangka_waktu_awal:
+        type: string
+      jenis_indikator:
+        type: string
+      key_activities:
+        type: string
+      nama_parent:
+        type: string
+      output_data:
+        $ref: '#/definitions/pkopd.OutputDataPK'
+      parent:
+        type: integer
+      periode_pelaporan:
+        type: string
+      perspektif:
+        type: string
+      sumber_data:
+        type: string
+      tujuan_rekin:
+        type: string
+      unit_penanggung_jawab:
+        type: string
+      unit_penyedia_data:
+        type: string
+    type: object
+  pkopd.OutputDataPK:
+    properties:
+      kinerja:
+        type: boolean
+      penduduk:
+        type: boolean
+      spatial:
+        type: boolean
+    type: object
+  pkopd.PkAsn:
+    properties:
+      id:
+        type: string
+      id_parent_pohon:
+        type: integer
+      id_pohon:
+        type: integer
+      id_rekin_atasan:
+        type: string
+      id_rekin_pemilik_pk:
+        type: string
+      id_sasaran_opd:
+        type: integer
+      indikators:
+        items:
+          $ref: '#/definitions/pkopd.IndikatorPk'
+        type: array
+      keterangan:
+        type: string
+      kode_opd:
+        type: string
+      level_pk:
+        type: integer
+      nama_atasan:
+        type: string
+      nama_opd:
+        type: string
+      nama_pemilik_pk:
+        type: string
+      nip_atasan:
+        type: string
+      nip_pemilik_pk:
+        type: string
+      rekin_atasan:
+        type: string
+      rekin_pemilik_pk:
+        type: string
+      renaksi:
+        items:
+          $ref: '#/definitions/pkopd.RenaksiItem'
+        type: array
+      tahun:
+        type: integer
+    type: object
+  pkopd.RenaksiItem:
+    properties:
+      id_renaksi:
+        type: string
+      kode_opd:
+        type: string
+      nama_rencana_aksi:
+        type: string
+      pelaksanaan:
+        items:
+          $ref: '#/definitions/pkopd.BobotBulanan'
+        type: array
+      rekin_id:
+        type: string
+      urutan:
+        type: integer
+    type: object
+  pkopd.TargetIndPk:
+    properties:
+      id_indikator:
+        type: string
+      id_target:
+        type: string
+      satuan:
+        type: string
+      target:
+        type: string
+    type: object
   rencanaaksi.PelaksanaanRencanaAksiResponse:
     properties:
       bobot:
@@ -766,6 +907,54 @@ paths:
       summary: Manual IK by Rencana Kinerja
       tags:
       - Manual IK
+      - IntegrasiKabMadiun
+  /pk/penetapan:
+    get:
+      consumes:
+      - application/json
+      description: Perjanjian Kinerja Pegawai by Id Pegawai, Kode Opd, Tahun
+      parameters:
+      - description: id pegawai (NIP)
+        example: '"1922222222111"'
+        in: query
+        name: id_pegawai
+        required: true
+        type: string
+      - description: Kode OPD
+        example: '"1.01.1.01.0.00.01.0000"'
+        in: query
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        example: '"2026"'
+        in: query
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/pkopd.PkAsn'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - None: []
+      summary: PK Pegawai
+      tags:
+      - PK
       - IntegrasiKabMadiun
   /rencana_aksi/findall/{rencana_kinerja_id}:
     get:
