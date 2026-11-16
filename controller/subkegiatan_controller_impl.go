@@ -267,3 +267,30 @@ func (controller *SubKegiatanControllerImpl) FindSubKegiatanKAK(writer http.Resp
 		Data:   subKegiatanKAKResponse,
 	})
 }
+
+// FindAllWithIndikator godoc
+// @Summary      Daftar Sub Kegiatan dengan Indikator Master (V2)
+// @Description  Mengambil semua sub kegiatan dari master beserta indikator dari tb_master_indikator_program_kegiatan (match kode = kode_subkegiatan). Tanpa target; data indikator di-inject via database.
+// @Tags         Sub Kegiatan
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  web.WebResponse{data=[]subkegiatan.SubKegiatanWithIndikatorV2Response}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /sub_kegiatan/findall/v2 [get]
+func (controller *SubKegiatanControllerImpl) FindAllWithIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	subKegiatanResponses, err := controller.SubKegiatanService.FindAllWithIndikator(request.Context())
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "INTERNAL SERVER ERROR",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "success get data sub kegiatan v2",
+		Data:   subKegiatanResponses,
+	})
+}

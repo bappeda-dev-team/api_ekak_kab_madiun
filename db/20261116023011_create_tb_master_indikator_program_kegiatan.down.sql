@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS tb_master_indikator_program_kegiatan;

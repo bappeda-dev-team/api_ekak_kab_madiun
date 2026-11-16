@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/domain/domainmaster"
 )
 
 type SubKegiatanRepository interface {
@@ -19,4 +20,6 @@ type SubKegiatanRepository interface {
 	FindTargetByIndikatorId(ctx context.Context, tx *sql.Tx, indikatorId string) ([]domain.Target, error)
 	FindByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string) (domain.SubKegiatan, error)
 	FindSubKegiatanKAK(ctx context.Context, tx *sql.Tx, kodeSubKegiatan string, kode string, tahun string) (domain.SubKegiatanKAKQuery, error)
+	FindMasterIndikatorProgramKegiatanByKodes(ctx context.Context, tx *sql.Tx, kodes []string) (map[string][]domainmaster.MasterIndikatorProgramKegiatan, error)
+	FindAllMasterV2(ctx context.Context, tx *sql.Tx) ([]domain.SubKegiatan, error)
 }

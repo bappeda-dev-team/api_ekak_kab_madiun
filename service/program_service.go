@@ -11,4 +11,5 @@ type ProgramService interface {
 	Delete(ctx context.Context, id string) error
 	FindById(ctx context.Context, id string) (programkegiatan.ProgramKegiatanResponse, error)
 	FindAll(ctx context.Context) ([]programkegiatan.ProgramKegiatanResponse, error)
+	FindAllWithIndikator(ctx context.Context) ([]programkegiatan.ProgramKegiatanWithIndikatorV2Response, error)
 }
