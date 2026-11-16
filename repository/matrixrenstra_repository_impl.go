@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
 	"fmt"
 	"strings"
@@ -1036,5 +1037,47 @@ func (repo *MatrixRenstraRepositoryImpl) FindIndikatorLama(ctx context.Context, 
 		result = append(result, r)
 	}
 
+	return result, nil
+}
+
+func (repository *MatrixRenstraRepositoryImpl) FindIndikatorMasterPeriod(ctx context.Context, tx *sql.Tx, kodes []string) ([]domain.Indikator, error) {
+	const op = "matrixrenstra_repository.FindIndikatorMasterPeriod"
+
+	if len(kodes) == 0 {
+		return []domain.Indikator{}, nil
+	}
+
+	baseQuery := `
+          SELECT ind.kode_indikator,
+                 ind.kode,
+                 ind.indikator
+          FROM tb_master_indikator_program_kegiatan ind
+          WHERE ind.kode IN (?)
+		ORDER BY ind.id
+    `
+
+	query, args := helper.BuildInQueryString(baseQuery, kodes)
+
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.Indikator, 0)
+
+	for rows.Next() {
+		var indikator domain.Indikator
+
+		if err := rows.Scan(
+			&indikator.KodeIndikator,
+			&indikator.Kode,
+			&indikator.Indikator,
+		); err != nil {
+			return nil, err
+		}
+
+		result = append(result, indikator)
+	}
 	return result, nil
 }

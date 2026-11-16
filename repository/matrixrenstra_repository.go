@@ -22,4 +22,5 @@ type MatrixRenstraRepository interface {
 	DeleteIndicatorsExcept(ctx context.Context, tx *sql.Tx, kode, kodeOpd, tahun string, keepList []string) error
 	FindIndikatorRenstra(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error)
 	FindIndikatorLama(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error)
+	FindIndikatorMasterPeriod(ctx context.Context, tx *sql.Tx, kodes []string) ([]domain.Indikator, error)
 }

@@ -219,6 +219,10 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			}
 		}
 	}
+	indMaster, err := service.MatrixRenstraRepository.FindIndikatorMasterPeriod(ctx, tx, kodes)
+	if err != nil {
+		return nil, err
+	}
 	outcomeList, err := service.OutcomeMatrixRepository.FindByKodeAndKodeOpd(ctx, tx, kodes, kodeOpd)
 	if err != nil {
 		return nil, err
@@ -236,6 +240,20 @@ func (service *MatrixRenstraServiceImpl) GetByKodeSubKegiatanVersiKedua(ctx cont
 			Indikator:     ind.Indikator,
 			Tahun:         ind.Tahun,
 			Target:        fillTargetByTahunRange(tahunRange, ind.Target),
+		})
+	}
+	// Fallback: gunakan indikator master jika kode belum memiliki indikator renstra
+	for _, ind := range indMaster {
+		if _, exists := indByKode[ind.Kode]; exists {
+			continue
+		}
+
+		indByKode[ind.Kode] = append(indByKode[ind.Kode], programkegiatan.IndikatorPeriodResponse{
+			KodeIndikator: ind.KodeIndikator,
+			Kode:          ind.Kode,
+			KodeOpd:       kodeOpd,
+			Indikator:     ind.Indikator,
+			Target:        fillTargetByTahunRange(tahunRange, nil),
 		})
 	}
 
