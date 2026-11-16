@@ -17,4 +17,5 @@ type RencanaAksiRepository interface {
 	GetTotalBobotForRencanaKinerja(ctx context.Context, tx *sql.Tx, rencanaKinerjaId string) (int, error)
 	FindRenaksiByRekinIds(ctx context.Context, tx *sql.Tx, rekinIds []string) ([]domain.RencanaAksi, error)
 	BatchCreate(ctx context.Context, tx *sql.Tx, renaksis []domain.RencanaAksi) error
+	FindByPegawai(ctx context.Context, tx *sql.Tx, nip string, kodeOpd string, tahun string) ([]domain.RencanaAksi, error)
 }

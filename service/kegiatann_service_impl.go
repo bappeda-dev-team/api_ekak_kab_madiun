@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"ekak_kabupaten_madiun/model/web/kegiatan"
+	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
 	"fmt"
 
@@ -315,6 +316,42 @@ func (service *KegiatanServiceImpl) FindAll(ctx context.Context) ([]kegiatan.Keg
 	}
 
 	return kegiatanResponses, nil
+}
+
+func (service *KegiatanServiceImpl) FindAllWithIndikator(ctx context.Context) ([]kegiatan.KegiatanWithIndikatorV2Response, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	kegiatans, err := service.KegiatanRepository.FindAll(ctx, tx)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data kegiatan: %v", err)
+	}
+
+	kodes := make([]string, 0, len(kegiatans))
+	for _, k := range kegiatans {
+		if k.KodeKegiatan != "" {
+			kodes = append(kodes, k.KodeKegiatan)
+		}
+	}
+
+	indikatorByKode, err := service.KegiatanRepository.FindMasterIndikatorProgramKegiatanByKodes(ctx, tx, kodes)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil indikator master: %v", err)
+	}
+
+	responses := make([]kegiatan.KegiatanWithIndikatorV2Response, 0, len(kegiatans))
+	for _, k := range kegiatans {
+		responses = append(responses, kegiatan.KegiatanWithIndikatorV2Response{
+			Id:           k.Id,
+			NamaKegiatan: k.NamaKegiatan,
+			KodeKegiatan: k.KodeKegiatan,
+			Indikator:    programkegiatan.MapMasterIndikatorResponses(indikatorByKode[k.KodeKegiatan]),
+		})
+	}
+	return responses, nil
 }
 
 func (service *KegiatanServiceImpl) Delete(ctx context.Context, kegiatanId string) error {

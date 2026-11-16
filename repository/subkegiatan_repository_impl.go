@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/domain/domainmaster"
 	"fmt"
 	"log"
 	"strings"
@@ -451,4 +452,28 @@ func (repository *SubKegiatanRepositoryImpl) FindSubKegiatanKAK(ctx context.Cont
 	}
 
 	return result, nil
+}
+
+func (repository *SubKegiatanRepositoryImpl) FindMasterIndikatorProgramKegiatanByKodes(
+	ctx context.Context, tx *sql.Tx, kodes []string,
+) (map[string][]domainmaster.MasterIndikatorProgramKegiatan, error) {
+	return queryMasterIndikatorProgramKegiatanByKodes(ctx, tx, kodes)
+}
+
+func (repository *SubKegiatanRepositoryImpl) FindAllMasterV2(ctx context.Context, tx *sql.Tx) ([]domain.SubKegiatan, error) {
+	query := `SELECT id, kode_subkegiatan, nama_subkegiatan FROM tb_subkegiatan ORDER BY kode_subkegiatan ASC`
+	rows, err := tx.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []domain.SubKegiatan
+	for rows.Next() {
+		var sk domain.SubKegiatan
+		if err := rows.Scan(&sk.Id, &sk.KodeSubKegiatan, &sk.NamaSubKegiatan); err != nil {
+			return nil, err
+		}
+		list = append(list, sk)
+	}
+	return list, rows.Err()
 }

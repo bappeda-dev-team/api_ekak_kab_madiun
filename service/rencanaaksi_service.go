@@ -11,4 +11,6 @@ type RencanaAksiService interface {
 	FindAll(ctx context.Context, rencanaKinerjaId string) ([]rencanaaksi.RencanaAksiResponse, error)
 	FindById(ctx context.Context, id string) (rencanaaksi.RencanaAksiResponse, error)
 	Delete(ctx context.Context, id string) error
+	FindByPegawai(ctx context.Context, nip string, kodeOpd string, tahun string) ([]rencanaaksi.RencanaAksiPegawaiResponse, error)
+	FindByRekin(ctx context.Context, rekinId string) ([]rencanaaksi.RencanaAksiResponse, error)
 }

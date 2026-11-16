@@ -149,3 +149,9 @@ func (repository *KegiatanRepositoryImpl) FindTargetByIndikatorId(ctx context.Co
 	}
 	return targets, nil
 }
+
+func (repository *KegiatanRepositoryImpl) FindMasterIndikatorProgramKegiatanByKodes(
+	ctx context.Context, tx *sql.Tx, kodes []string,
+) (map[string][]domainmaster.MasterIndikatorProgramKegiatan, error) {
+	return queryMasterIndikatorProgramKegiatanByKodes(ctx, tx, kodes)
+}

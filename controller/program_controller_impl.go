@@ -128,3 +128,30 @@ func (controller *ProgramControllerImpl) FindAll(writer http.ResponseWriter, req
 	}
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+// FindAllWithIndikator godoc
+// @Summary      Daftar Program dengan Indikator Master (V2)
+// @Description  Mengambil semua program dari master beserta indikator dari tb_master_indikator_program_kegiatan (match kode = kode_program). Tanpa target; data indikator di-inject via database.
+// @Tags         Program Kegiatan
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  web.WebResponse{data=[]programkegiatan.ProgramKegiatanWithIndikatorV2Response}
+// @Failure      500  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /program_kegiatan/findall/v2 [get]
+func (controller *ProgramControllerImpl) FindAllWithIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	programResponses, err := controller.ProgramService.FindAllWithIndikator(request.Context())
+	if err != nil {
+		helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
+			Code:   http.StatusInternalServerError,
+			Status: "Internal Server Error",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
+		Code:   http.StatusOK,
+		Status: "Success",
+		Data:   programResponses,
+	})
+}

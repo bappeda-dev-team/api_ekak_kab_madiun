@@ -15,4 +15,12 @@ type MatrixRenjaRepository interface {
 	UpsertAnggaran(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun string, pagu int64) error
 	DeleteIndicatorsExcept(ctx context.Context, tx *sql.Tx, kode, kodeOpd, tahun, jenis string, keepList []string) error
 	GetRenjaPenetapan(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, jenisPagu string) ([]domain.SubKegiatanQuery, error)
+
+	// CRUD target per layer (rankhir / penetapan)
+	UpsertTargetRenjaLayer(ctx context.Context, tx *sql.Tx, kodeIndikator, tahun, target, satuan, jenis string) error
+	DeleteTargetRenjaLayer(ctx context.Context, tx *sql.Tx, kodeIndikator, tahun, jenis string) error
+	FindTargetRenjaLayer(ctx context.Context, tx *sql.Tx, kodeIndikator, tahun, jenis string) (domain.Target, error)
+
+	// CRUD pagu per jenis (ranwal / rankhir / penetapan) — generik
+	UpsertPaguRenjaByJenis(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun, jenis string, pagu int64) error
 }

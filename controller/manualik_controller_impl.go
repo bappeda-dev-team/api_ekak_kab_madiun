@@ -102,3 +102,74 @@ func (controller *ManualIKControllerImpl) FindManualIKSasaranOpdByIndikatorId(wr
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+// FindManualIKByRekin godoc
+// @Summary      Manual IK by Rencana Kinerja
+// @Description  Mengambil seluruh Manual IK yang terikat pada sebuah Rencana Kinerja berdasarkan ID rencana kinerja.
+// @Tags         Manual IK
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        rencana_kinerja_id  path  string  true  "ID Rencana Kinerja"
+// @Success      200  {object}  web.WebResponse{data=[]rencanakinerja.ManualIKResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /manual_ik/rekin/{rencana_kinerja_id} [get]
+func (controller *ManualIKControllerImpl) FindManualIKByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rekinId := params.ByName("rencana_kinerja_id")
+
+	responses, err := controller.ManualIKService.FindManualIKByRekin(request.Context(), rekinId)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   responses,
+	})
+}
+
+// FindManualIKByPegawai godoc
+// @Summary      Manual IK by Pegawai
+// @Description  Mengambil daftar Manual IK berdasarkan NIP pegawai, kode OPD, dan tahun. Manual IK diambil dari indikator yang melekat pada rencana kinerja pegawai.
+// @Tags         Manual IK
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        nip       path  string  true  "NIP Pegawai"
+// @Param        kode_opd  path  string  true  "Kode OPD"  example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path  string  true  "Tahun"     example("2025")
+// @Success      200  {object}  web.WebResponse{data=[]rencanakinerja.ManualIKResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /manual_ik/pegawai/{nip}/{kode_opd}/{tahun} [get]
+func (controller *ManualIKControllerImpl) FindManualIKByPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	nip := params.ByName("nip")
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	manualIKResponses, err := controller.ManualIKService.FindManualIKByPegawai(request.Context(), nip, kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebResponse{
+			Code:   400,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: "OK",
+		Data:   manualIKResponses,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

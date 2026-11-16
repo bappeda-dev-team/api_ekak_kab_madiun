@@ -110,3 +110,19 @@ type IndikatorRenjaCreateRequest struct {
 	Target        string `json:"target" validate:"required"`
 	Satuan        string `json:"satuan" validate:"required"`
 }
+
+// TargetRenjaLayerRequest: upsert satu target untuk layer rankhir atau penetapan.
+type TargetRenjaLayerRequest struct {
+	KodeIndikator string `json:"kode_indikator" validate:"required"`
+	Tahun         string `json:"tahun" validate:"required"`
+	Target        string `json:"target" validate:"required"`
+	Satuan        string `json:"satuan" validate:"required"`
+}
+
+// PaguRenjaLayerRequest: upsert pagu per jenis (ranwal/rankhir/penetapan).
+type PaguRenjaLayerRequest struct {
+	KodeSubKegiatan string `json:"kode_subkegiatan" validate:"required"`
+	KodeOpd         string `json:"kode_opd" validate:"required"`
+	Tahun           string `json:"tahun" validate:"required"`
+	Pagu            int64  `json:"pagu_indikatif" validate:"required"`
+}

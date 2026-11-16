@@ -179,3 +179,74 @@ func (controller *RencanaAksiControllerImpl) FindAllByRekin(writer http.Response
 
 	helper.WriteToResponseBody(writer, webResponse)
 }
+
+// FindByRekin godoc
+// @Summary      Rencana Aksi by Rencana Kinerja
+// @Description  Mengambil seluruh rencana aksi beserta bobot pelaksanaan berdasarkan ID rencana kinerja.
+// @Tags         Rencana Aksi
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        rencana_kinerja_id  path  string  true  "ID Rencana Kinerja"
+// @Success      200  {object}  web.WebRencanaAksiResponse{renaksi=[]rencanaaksi.RencanaAksiResponse}
+// @Failure      400  {object}  web.WebRencanaAksiResponse
+// @Security     BearerAuth
+// @Router       /rencana_aksi/rekin/{rencana_kinerja_id} [get]
+func (controller *RencanaAksiControllerImpl) FindByRekin(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	rekinId := params.ByName("rencana_kinerja_id")
+
+	responses, err := controller.RencanaAksiService.FindByRekin(request.Context(), rekinId)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebRencanaAksiResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	helper.WriteToResponseBody(writer, web.WebRencanaAksiResponse{
+		Code:   http.StatusOK,
+		Status: "Success Get Rencana Aksi by Rencana Kinerja",
+		Data:   responses,
+	})
+}
+
+// FindByPegawai godoc
+// @Summary      Rencana Aksi by Pegawai
+// @Description  Mengambil seluruh rencana aksi beserta bobot pelaksanaan berdasarkan NIP, kode OPD, dan tahun. Data difilter dari rencana kinerja pegawai (pegawai_id = NIP).
+// @Tags         Rencana Aksi
+// @Tags         IntegrasiKabMadiun
+// @Accept       json
+// @Produce      json
+// @Param        nip       path  string  true  "NIP Pegawai"
+// @Param        kode_opd  path  string  true  "Kode OPD"  example("1.01.1.01.0.00.01.0000")
+// @Param        tahun     path  string  true  "Tahun"     example("2025")
+// @Success      200  {object}  web.WebRencanaAksiResponse{renaksi=[]rencanaaksi.RencanaAksiPegawaiResponse}
+// @Failure      400  {object}  web.WebRencanaAksiResponse
+// @Security     BearerAuth
+// @Router       /rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun} [get]
+func (controller *RencanaAksiControllerImpl) FindByPegawai(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	nip := params.ByName("nip")
+	kodeOpd := params.ByName("kode_opd")
+	tahun := params.ByName("tahun")
+
+	rencanaAksiResponses, err := controller.RencanaAksiService.FindByPegawai(request.Context(), nip, kodeOpd, tahun)
+	if err != nil {
+		webResponse := web.WebRencanaAksiResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data:   err.Error(),
+		}
+		helper.WriteToResponseBody(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebRencanaAksiResponse{
+		Code:   http.StatusOK,
+		Status: "Success Get Rencana Aksi Pegawai",
+		Data:   rencanaAksiResponses,
+	}
+
+	helper.WriteToResponseBody(writer, webResponse)
+}

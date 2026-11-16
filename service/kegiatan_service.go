@@ -11,4 +11,5 @@ type KegiatanService interface {
 	Delete(ctx context.Context, id string) error
 	FindById(ctx context.Context, id string) (kegiatan.KegiatanResponse, error)
 	FindAll(ctx context.Context) ([]kegiatan.KegiatanResponse, error)
+	FindAllWithIndikator(ctx context.Context) ([]kegiatan.KegiatanWithIndikatorV2Response, error)
 }

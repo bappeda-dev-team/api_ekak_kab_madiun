@@ -331,3 +331,110 @@ func (repository *RencanaAksiRepositoryImpl) BatchCreate(
 
 	return nil
 }
+
+func (repository *RencanaAksiRepositoryImpl) FindByPegawai(
+	ctx context.Context,
+	tx *sql.Tx,
+	nip string,
+	kodeOpd string,
+	tahun string,
+) ([]domain.RencanaAksi, error) {
+	script := `
+		SELECT
+			rk.id AS rekin_id,
+			rk.nama_rencana_kinerja,
+			rk.pegawai_id,
+			rk.kode_opd,
+			rk.tahun,
+			ra.id AS rencana_aksi_id,
+			ra.urutan,
+			ra.nama_rencana_aksi,
+			COALESCE(pra.id, '') AS pelaksanaan_id,
+			COALESCE(pra.bulan, 0) AS bulan,
+			COALESCE(pra.bobot, 0) AS bobot
+		FROM tb_rencana_kinerja rk
+		INNER JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rk.id
+		LEFT JOIN tb_pelaksanaan_rencana_aksi pra ON pra.rencana_aksi_id = ra.id
+		WHERE rk.pegawai_id = ?
+		  AND rk.kode_opd = ?
+		  AND rk.tahun = ?
+		ORDER BY rk.id, ra.urutan, pra.bulan
+	`
+
+	rows, err := tx.QueryContext(ctx, script, nip, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	order := make([]string, 0)
+	resultMap := make(map[string]domain.RencanaAksi)
+	pelaksanaanSeen := make(map[string]map[string]bool)
+
+	for rows.Next() {
+		var (
+			rekinId, namaRekin, pegawaiId, kodeOpdRow, tahunRow string
+			rencanaAksiId                                       string
+			urutan                                              int
+			namaRencanaAksi                                     string
+			pelaksanaanId                                       string
+			bulan, bobot                                        int
+		)
+
+		if scanErr := rows.Scan(
+			&rekinId,
+			&namaRekin,
+			&pegawaiId,
+			&kodeOpdRow,
+			&tahunRow,
+			&rencanaAksiId,
+			&urutan,
+			&namaRencanaAksi,
+			&pelaksanaanId,
+			&bulan,
+			&bobot,
+		); scanErr != nil {
+			return nil, scanErr
+		}
+
+		existing, exists := resultMap[rencanaAksiId]
+		if !exists {
+			existing = domain.RencanaAksi{
+				Id:                 rencanaAksiId,
+				RencanaKinerjaId:   rekinId,
+				NamaRencanaKinerja: namaRekin,
+				PegawaiId:          pegawaiId,
+				Tahun:              tahunRow,
+				KodeOpd:            kodeOpdRow,
+				Urutan:             urutan,
+				NamaRencanaAksi:    namaRencanaAksi,
+				Pelaksanaan:        []domain.PelaksanaanRencanaAksi{},
+			}
+			resultMap[rencanaAksiId] = existing
+			order = append(order, rencanaAksiId)
+			pelaksanaanSeen[rencanaAksiId] = make(map[string]bool)
+		}
+
+		if pelaksanaanId != "" && !pelaksanaanSeen[rencanaAksiId][pelaksanaanId] {
+			pelaksanaanSeen[rencanaAksiId][pelaksanaanId] = true
+			existing.Pelaksanaan = append(existing.Pelaksanaan, domain.PelaksanaanRencanaAksi{
+				Id:            pelaksanaanId,
+				RencanaAksiId: rencanaAksiId,
+				Bulan:         bulan,
+				Bobot:         bobot,
+			})
+			resultMap[rencanaAksiId] = existing
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	results := make([]domain.RencanaAksi, 0, len(order))
+	for _, id := range order {
+		results = append(results, resultMap[id])
+	}
+
+	return results, nil
+}

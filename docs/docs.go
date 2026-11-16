@@ -18,6 +18,122 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/bidang_urusan/findall/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan daftar bidang urusan berdasarkan kode OPD.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bidang Urusan",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Bidang Urusan by Kode OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/bidangurusanresponse.BidangUrusanResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/get_rencana_kinerja/pegawai/{pegawai_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan daftar rencana kinerja pegawai berdasarkan ID pegawai. Filter opsional: kode_opd dan tahun (query).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rencana Kinerja",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Sasaran Kinerja Pegawai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Pegawai",
+                        "name": "pegawai_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaKinerjaResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/ikm": {
             "get": {
                 "description": "Get all indikator IKM berdasarkan tahun awal dan akhir",
@@ -1007,6 +1123,140 @@ const docTemplate = `{
                 }
             }
         },
+        "/manual_ik/pegawai/{nip}/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar Manual IK berdasarkan NIP pegawai, kode OPD, dan tahun. Manual IK diambil dari indikator yang melekat pada rencana kinerja pegawai.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Manual IK",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Manual IK by Pegawai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NIP Pegawai",
+                        "name": "nip",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanakinerja.ManualIKResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manual_ik/rekin/{rencana_kinerja_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh Manual IK yang terikat pada sebuah Rencana Kinerja berdasarkan ID rencana kinerja.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Manual IK",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Manual IK by Rencana Kinerja",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Rencana Kinerja",
+                        "name": "rencana_kinerja_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanakinerja.ManualIKResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renja/anggaran_penetapan/upsert": {
             "post": {
                 "security": [
@@ -1071,7 +1321,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upsert batch indikator renja penetapan.",
+                "description": "endpoint sudah tidak digunakan.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1134,7 +1384,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upsert batch indikator renja rankhir.",
+                "description": "endpoint sudah tidak digunakan.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1197,7 +1447,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upsert batch indikator renja rancangan awal.",
+                "description": "endpoint sudah tidak digunakan",
                 "consumes": [
                     "application/json"
                 ],
@@ -1242,6 +1492,141 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/pagu/penetapan": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Simpan atau update pagu penetapan per subkegiatan (input manual seperti renstra).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Pagu Penetapan",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.PaguRenjaLayerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/pagu/rankhir": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Endpoint tidak digunakan. Pagu rankhir dihitung otomatis dari SUM rincian belanja (rencana aksi). Hanya target rankhir yang dapat diubah via PUT /matrix_renja/target/rankhir.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Pagu Rankhir (nonaktif)",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.PaguRenjaLayerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/pagu/ranwal": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Endpoint tidak digunakan. Pagu ranwal mengikuti pagu renstra (tb_pagu jenis 'renstra') per tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Pagu Ranwal (nonaktif)",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.PaguRenjaLayerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     },
                     "400": {
@@ -1303,7 +1688,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/programkegiatan.UrusanDetailResponse"
+                                                "$ref": "#/definitions/renja.PenetapanMatrixResponse"
                                             }
                                         }
                                     }
@@ -1370,7 +1755,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/programkegiatan.UrusanDetailResponse"
+                                                "$ref": "#/definitions/renja.RankhirMatrixResponse"
                                             }
                                         }
                                     }
@@ -1437,12 +1822,226 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/programkegiatan.UrusanDetailResponse"
+                                                "$ref": "#/definitions/renja.RanwalMatrixResponse"
                                             }
                                         }
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/target/penetapan": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Simpan atau update target penetapan untuk satu indikator.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Target Penetapan",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetRenjaLayerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/renja.TargetLayerResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/target/penetapan/{kode_indikator}/{tahun}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hapus target penetapan berdasarkan kode indikator dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Delete Target Penetapan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/target/rankhir": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Simpan atau update target rancangan akhir untuk satu indikator.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Upsert Target Rankhir",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetRenjaLayerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/renja.TargetLayerResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/target/rankhir/{kode_indikator}/{tahun}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hapus target rankhir berdasarkan kode indikator dan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Delete Target Rankhir",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode Indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
                         }
                     },
                     "400": {
@@ -3050,6 +3649,140 @@ const docTemplate = `{
                 }
             }
         },
+        "/rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh rencana aksi beserta bobot pelaksanaan berdasarkan NIP, kode OPD, dan tahun. Data difilter dari rencana kinerja pegawai (pegawai_id = NIP).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rencana Aksi",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Rencana Aksi by Pegawai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NIP Pegawai",
+                        "name": "nip",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"1.01.1.01.0.00.01.0000\"",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebRencanaAksiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "renaksi": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanaaksi.RencanaAksiPegawaiResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaAksiResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rencana_aksi/rekin/{rencana_kinerja_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil seluruh rencana aksi beserta bobot pelaksanaan berdasarkan ID rencana kinerja.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rencana Aksi",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Rencana Aksi by Rencana Kinerja",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Rencana Kinerja",
+                        "name": "rencana_kinerja_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebRencanaAksiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "renaksi": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rencanaaksi.RencanaAksiResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebRencanaAksiResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/rencana_kinerja/create_level1": {
             "post": {
                 "security": [
@@ -4477,7 +5210,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Renja Penetapan"
+                    "Sasaran Opd Renja Penetapan",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Sasaran Opd Penetapan",
                 "parameters": [
@@ -5092,7 +5826,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Sasaran Opd Renstra"
+                    "Sasaran Opd Renstra",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Sasaran Opd Renstra",
                 "parameters": [
@@ -5634,6 +6369,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/sasaran_pemda/v2/penetapan/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil daftar sasaran pemda penetapan (dual target) dengan filter tematik berdasarkan tahun.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sasaran Pemda Penetapan",
+                    "IntegrasiKabMadiun"
+                ],
+                "summary": "Sasaran Pemda Penetapan V2",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2025\"",
+                        "description": "Tahun yang akan diambil",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/sasaranpemda.SasaranPemdaPenetapanDualResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sub_kegiatan/findall": {
             "get": {
                 "security": [
@@ -5703,73 +6498,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/web.WebResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/trialtujuan_opd/penetapan/{kode_opd}/{tahun}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mendapatkan data tujuan opd penetapan berdasarkan kode OPD dan tahun.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tujuan Opd Penetapan"
-                ],
-                "summary": "Tujuan Opd Penetapan",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "\"1.01.1.01.0.00.01.0000\"",
-                        "description": "Kode OPD",
-                        "name": "kode_opd",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"2025\"",
-                        "description": "Tahun",
-                        "name": "tahun",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/web.WebResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/tujuanopd.TujuanOpdPenetapanResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -6064,7 +6792,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Tujuan Opd Layer Target"
+                    "Tujuan Opd Penetapan Target"
                 ],
                 "summary": "Create Target Penetapan Tujuan OPD",
                 "parameters": [
@@ -6253,7 +6981,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Tujuan Opd Renja Penetapan"
+                    "Tujuan Opd Renja Penetapan",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Tujuan Opd Renja Penetapan",
                 "parameters": [
@@ -6288,7 +7017,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/tujuanopd.TujuanOpdwithBidangUrusanResponse"
+                                                "$ref": "#/definitions/tujuanopd.TujuanOpdPenetapanResponse"
                                             }
                                         }
                                     }
@@ -7221,7 +7950,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Tujuan Opd Renstra"
+                    "Tujuan Opd Renstra",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Tujuan Opd Renstra",
                 "parameters": [
@@ -7608,8 +8338,15 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Menampilkan 2 target per indikator: ranwal dan rankhir. Tanpa fallback antar jenis.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
-                    "Tujuan Pemda"
+                    "Tujuan Pemda",
+                    "IntegrasiKabMadiun"
                 ],
                 "summary": "Tujuan Pemda Penetapan (Dual Target)",
                 "parameters": [
@@ -7618,14 +8355,6 @@ const docTemplate = `{
                         "example": "\"2025\"",
                         "description": "Tahun",
                         "name": "tahun",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"RPJMD\"",
-                        "description": "Jenis Periode",
-                        "name": "jenis_periode",
                         "in": "path",
                         "required": true
                     }
@@ -8351,6 +9080,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "bidangurusanresponse.BidangUrusanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kode_bidang_urusan": {
+                    "type": "string"
+                },
+                "nama_bidang_urusan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
         "ikk.IkkFullResponse": {
             "type": "object",
             "properties": {
@@ -9480,6 +10226,9 @@ const docTemplate = `{
         "pohonkinerja.ReviewCreateRequest": {
             "type": "object",
             "properties": {
+                "catatan": {
+                    "type": "string"
+                },
                 "created_by": {
                     "type": "string"
                 },
@@ -9497,12 +10246,21 @@ const docTemplate = `{
                 },
                 "review": {
                     "type": "string"
+                },
+                "substansi": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
                 }
             }
         },
         "pohonkinerja.ReviewDetailResponse": {
             "type": "object",
             "properties": {
+                "catatan": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -9528,6 +10286,35 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "review": {
+                    "type": "string"
+                },
+                "substansi": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "pohonkinerja.ReviewOpdItemResponse": {
+            "type": "object",
+            "properties": {
+                "catatan": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "keterangan": {
+                    "type": "string"
+                },
+                "review": {
+                    "type": "string"
+                },
+                "substansi": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -9538,19 +10325,16 @@ const docTemplate = `{
         "pohonkinerja.ReviewOpdResponse": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
                 "id_pohon": {
                     "type": "integer"
                 },
-                "jenis_pohon": {
-                    "type": "string"
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.IndikatorResponse"
+                    }
                 },
-                "keterangan": {
+                "jenis_pohon": {
                     "type": "string"
                 },
                 "level_pohon": {
@@ -9563,16 +10347,19 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "review": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pohonkinerja.ReviewOpdItemResponse"
+                    }
                 }
             }
         },
         "pohonkinerja.ReviewResponse": {
             "type": "object",
             "properties": {
+                "catatan": {
+                    "type": "string"
+                },
                 "created_by": {
                     "type": "string"
                 },
@@ -9595,6 +10382,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "review": {
+                    "type": "string"
+                },
+                "substansi": {
                     "type": "string"
                 }
             }
@@ -9639,6 +10429,9 @@ const docTemplate = `{
                 },
                 "review": {
                     "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
                 }
             }
         },
@@ -9691,6 +10484,9 @@ const docTemplate = `{
         "pohonkinerja.ReviewUpdateRequest": {
             "type": "object",
             "properties": {
+                "catatan": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -9701,6 +10497,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "review": {
+                    "type": "string"
+                },
+                "substansi": {
                     "type": "string"
                 }
             }
@@ -10138,6 +10937,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "description": "Diisi untuk rankhir view: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -10146,6 +10964,15 @@ const docTemplate = `{
                 },
                 "nama": {
                     "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
                 },
                 "program": {
                     "type": "array",
@@ -10243,17 +11070,36 @@ const docTemplate = `{
                 "satuan": {
                     "type": "string"
                 },
+                "satuan_penetapan": {
+                    "type": "string"
+                },
+                "satuan_rankhir": {
+                    "type": "string"
+                },
+                "satuan_ranwal": {
+                    "type": "string"
+                },
                 "status_target_renja": {
                     "type": "boolean"
                 },
                 "tahun": {
-                    "description": "PaguAnggaran  int64  ` + "`" + `json:\"pagu_anggaran,omitempty\"` + "`" + `",
                     "type": "string"
                 },
                 "target": {
                     "type": "string"
                 },
                 "target_id": {
+                    "type": "string"
+                },
+                "target_penetapan": {
+                    "description": "penetapan view",
+                    "type": "string"
+                },
+                "target_rankhir": {
+                    "type": "string"
+                },
+                "target_ranwal": {
+                    "description": "dual-slot rankhir view: target_ranwal + target_rankhir",
                     "type": "string"
                 }
             }
@@ -10476,6 +11322,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "description": "Diisi untuk rankhir view: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -10484,6 +11349,15 @@ const docTemplate = `{
                 },
                 "nama": {
                     "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
                 },
                 "subkegiatan": {
                     "type": "array",
@@ -10565,6 +11439,29 @@ const docTemplate = `{
                 }
             }
         },
+        "programkegiatan.PaguRenjaLayerRequest": {
+            "type": "object",
+            "required": [
+                "kode_opd",
+                "kode_subkegiatan",
+                "pagu_indikatif",
+                "tahun"
+            ],
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "pagu_indikatif": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
         "programkegiatan.ProgramResponse": {
             "type": "object",
             "properties": {
@@ -10586,6 +11483,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "description": "Diisi untuk rankhir view: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -10600,6 +11516,15 @@ const docTemplate = `{
                 },
                 "nama": {
                     "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
                 }
             }
         },
@@ -10662,6 +11587,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "description": "Diisi untuk rankhir view: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -10674,7 +11618,21 @@ const docTemplate = `{
                 "nama_pegawai": {
                     "type": "string"
                 },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "description": "flat pagu per layer",
+                    "type": "integer"
+                },
                 "pegawai_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status hanya terisi untuk rankhir view — baris sintetis dari renstra yg tidak ada rekin",
                     "type": "string"
                 },
                 "tahun": {
@@ -10719,6 +11677,29 @@ const docTemplate = `{
                     }
                 },
                 "pegawai_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.TargetRenjaLayerRequest": {
+            "type": "object",
+            "required": [
+                "kode_indikator",
+                "satuan",
+                "tahun",
+                "target"
+            ],
+            "properties": {
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
                     "type": "string"
                 }
             }
@@ -10777,6 +11758,16 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/programkegiatan.PaguAnggaranTotalResponse"
                     }
+                },
+                "pagu_total_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_total_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_total_ranwal": {
+                    "description": "total pagu per layer (level root/detail)",
+                    "type": "integer"
                 },
                 "tahun": {
                     "type": "string"
@@ -10848,6 +11839,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/programkegiatan.IndikatorBaselineResponse"
                     }
                 },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "description": "Diisi untuk rankhir view: indikator per layer terpisah",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorMatrixResponse"
+                    }
+                },
                 "jenis": {
                     "type": "string"
                 },
@@ -10856,6 +11866,15 @@ const docTemplate = `{
                 },
                 "nama": {
                     "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
                 }
             }
         },
@@ -11175,6 +12194,99 @@ const docTemplate = `{
                 }
             }
         },
+        "rencanaaksi.PelaksanaanRencanaAksiResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "bobot": {
+                    "type": "integer"
+                },
+                "bobot_tersedia": {
+                    "type": "integer"
+                },
+                "bulan": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "rencana_aksi_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "rencanaaksi.RencanaAksiPegawaiResponse": {
+            "type": "object",
+            "properties": {
+                "jumlah_bobot": {
+                    "type": "integer"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_rencana_kinerja": {
+                    "type": "string"
+                },
+                "nip": {
+                    "type": "string"
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "rencana_aksi": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanaaksi.RencanaAksiResponse"
+                    }
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "rencanaaksi.RencanaAksiResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "jumlah_bobot": {
+                    "type": "integer"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "nama_rencana_aksi": {
+                    "type": "string"
+                },
+                "pelaksanaan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanaaksi.PelaksanaanRencanaAksiResponse"
+                    }
+                },
+                "rekin_id": {
+                    "type": "string"
+                },
+                "total_bobot_rencana_aksi": {
+                    "type": "integer"
+                },
+                "urutan": {
+                    "type": "integer"
+                }
+            }
+        },
         "rencanakinerja.DataOutput": {
             "type": "object",
             "properties": {
@@ -11260,6 +12372,93 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/rencanakinerja.TargetResponse"
+                    }
+                }
+            }
+        },
+        "rencanakinerja.ManualIKResponse": {
+            "type": "object",
+            "properties": {
+                "definisi": {
+                    "type": "string"
+                },
+                "formula": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator_id": {
+                    "type": "string"
+                },
+                "jangka_waktu_akhir": {
+                    "type": "string"
+                },
+                "jangka_waktu_awal": {
+                    "type": "string"
+                },
+                "jenis_indikator": {
+                    "type": "string"
+                },
+                "key_activities": {
+                    "type": "string"
+                },
+                "nama_parent": {
+                    "type": "string"
+                },
+                "output_data": {
+                    "$ref": "#/definitions/rencanakinerja.OutputData"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "periode_pelaporan": {
+                    "type": "string"
+                },
+                "perspektif": {
+                    "type": "string"
+                },
+                "rencana_kinerja": {
+                    "$ref": "#/definitions/rencanakinerja.RekinResponse"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "tujuan_rekin": {
+                    "type": "string"
+                },
+                "unit_penanggung_jawab": {
+                    "type": "string"
+                },
+                "unit_penyedia_data": {
+                    "type": "string"
+                }
+            }
+        },
+        "rencanakinerja.OutputData": {
+            "type": "object",
+            "properties": {
+                "kinerja": {
+                    "type": "boolean"
+                },
+                "penduduk": {
+                    "type": "boolean"
+                },
+                "spatial": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "rencanakinerja.RekinResponse": {
+            "type": "object",
+            "properties": {
+                "Nama_rencana_kinerja": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rencanakinerja.IndikatorResponse"
                     }
                 }
             }
@@ -11466,6 +12665,425 @@ const docTemplate = `{
                 },
                 "target": {
                     "type": "string"
+                }
+            }
+        },
+        "renja.BidangUrusanResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
+                },
+                "program": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.ProgramResponse"
+                    }
+                }
+            }
+        },
+        "renja.IndikatorMatrixResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "satuan_penetapan": {
+                    "type": "string"
+                },
+                "satuan_rankhir": {
+                    "type": "string"
+                },
+                "satuan_ranwal": {
+                    "type": "string"
+                },
+                "status_target_renja": {
+                    "type": "boolean"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "target_id": {
+                    "type": "string"
+                },
+                "target_penetapan": {
+                    "type": "string"
+                },
+                "target_rankhir": {
+                    "type": "string"
+                },
+                "target_ranwal": {
+                    "type": "string"
+                }
+            }
+        },
+        "renja.KegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
+                },
+                "subkegiatan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.SubKegiatanResponse"
+                    }
+                }
+            }
+        },
+        "renja.PenetapanMatrixResponse": {
+            "type": "object",
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "pagu_total_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_total_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_total_ranwal": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "urusan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.UrusanResponse"
+                    }
+                }
+            }
+        },
+        "renja.ProgramResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kegiatan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.KegiatanResponse"
+                    }
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
+                }
+            }
+        },
+        "renja.RankhirMatrixResponse": {
+            "type": "object",
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "pagu_total_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_total_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_total_ranwal": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "urusan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.UrusanResponse"
+                    }
+                }
+            }
+        },
+        "renja.RanwalMatrixResponse": {
+            "type": "object",
+            "properties": {
+                "kode_opd": {
+                    "type": "string"
+                },
+                "pagu_total_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_total_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_total_ranwal": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "urusan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.UrusanResponse"
+                    }
+                }
+            }
+        },
+        "renja.SubKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "nama_pegawai": {
+                    "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
+                },
+                "pegawai_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "renja.TargetLayerResponse": {
+            "type": "object",
+            "properties": {
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "renja.UrusanResponse": {
+            "type": "object",
+            "properties": {
+                "bidang_urusan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.BidangUrusanResponse"
+                    }
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "indikator_ranwal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/renja.IndikatorMatrixResponse"
+                    }
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "pagu_penetapan": {
+                    "type": "integer"
+                },
+                "pagu_rankhir": {
+                    "type": "integer"
+                },
+                "pagu_ranwal": {
+                    "type": "integer"
                 }
             }
         },
@@ -11935,6 +13553,41 @@ const docTemplate = `{
                 }
             }
         },
+        "sasaranpemda.IndikatorPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "definisi_operasional": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "rumus_perhitungan": {
+                    "type": "string"
+                },
+                "sumber_data": {
+                    "type": "string"
+                },
+                "target_penetapan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.TargetResponse"
+                    }
+                },
+                "target_rankhir": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.TargetResponse"
+                    }
+                }
+            }
+        },
         "sasaranpemda.IndikatorResponse": {
             "type": "object",
             "properties": {
@@ -11996,6 +13649,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tahun_awal": {
+                    "type": "string"
+                }
+            }
+        },
+        "sasaranpemda.SasaranPemdaPenetapanDualResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sasaranpemda.IndikatorPenetapanDualResponse"
+                    }
+                },
+                "periode": {
+                    "$ref": "#/definitions/sasaranpemda.PeriodeResponse"
+                },
+                "sasaran_pemda": {
                     "type": "string"
                 }
             }
@@ -13161,6 +14834,24 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "web.WebRencanaAksiResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "renaksi": {},
+                "rencana_aksi_action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/web.ActionButton"
+                    }
+                },
+                "status": {
                     "type": "string"
                 }
             }
