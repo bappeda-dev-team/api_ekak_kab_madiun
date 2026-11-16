@@ -1,8 +1,16 @@
 package kegiatan
 
 import (
+	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"time"
 )
+
+type KegiatanWithIndikatorV2Response struct {
+	Id           string                                       `json:"id"`
+	NamaKegiatan string                                       `json:"nama_kegiatan"`
+	KodeKegiatan string                                       `json:"kode_kegiatan"`
+	Indikator    []programkegiatan.MasterIndikatorProgramKegiatanResponse `json:"indikator"`
+}
 
 type KegiatanResponse struct {
 	Id           string    `json:"id"`

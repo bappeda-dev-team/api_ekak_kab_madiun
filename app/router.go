@@ -207,6 +207,7 @@ func NewRouter(
 	router.PUT("/sub_kegiatan/update/:id", subKegiatanController.Update)
 	router.GET("/sub_kegiatan/detail/:id", subKegiatanController.FindById)
 	router.GET("/sub_kegiatan/findall", subKegiatanController.FindAll)
+	router.GET("/sub_kegiatan/findall/v2", subKegiatanController.FindAllWithIndikator)
 	router.GET("/sub_kegiatan/pilihan/:kode_opd", subKegiatanController.FindAll)
 	router.GET("/sub_kegiatan/byrekinid/:rencana_kinerja_id", subKegiatanController.FindAll)
 	router.DELETE("/sub_kegiatan/delete/:id", subKegiatanController.Delete)
@@ -316,6 +317,7 @@ func NewRouter(
 	router.GET("/program_kegiatan/detail/:id", programController.FindById)
 	router.DELETE("/program_kegiatan/delete/:id", programController.Delete)
 	router.GET("/program_kegiatan/findall", programController.FindAll)
+	router.GET("/program_kegiatan/findall/v2", programController.FindAllWithIndikator)
 
 	//urusan
 	router.POST("/urusan/create", urusanController.Create)
@@ -340,6 +342,7 @@ func NewRouter(
 	router.GET("/kegiatan/detail/:id", kegiatanController.FindById)
 	router.DELETE("/kegiatan/delete/:id", kegiatanController.Delete)
 	router.GET("/kegiatan/findall", kegiatanController.FindAll)
+	router.GET("/kegiatan/findall/v2", kegiatanController.FindAllWithIndikator)
 
 	//rincian kak
 	router.GET("/rencana_kinerja/:rencana_kinerja_id/pegawai/:pegawai_id/input_rincian_kak", rencanaKinerjaController.FindAllRincianKak)

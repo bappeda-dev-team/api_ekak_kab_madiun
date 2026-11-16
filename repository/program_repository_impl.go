@@ -317,3 +317,42 @@ func (repository *ProgramRepositoryImpl) FindIndikatorTargetByKodeRelasiBatch(
 
 	return result, nil
 }
+
+// queryMasterIndikatorProgramKegiatanByKodes — dipakai program/kegiatan/subkegiatan (match indikator.kode = kode master).
+func queryMasterIndikatorProgramKegiatanByKodes(
+	ctx context.Context,
+	tx *sql.Tx,
+	kodes []string,
+) (map[string][]domainmaster.MasterIndikatorProgramKegiatan, error) {
+	if len(kodes) == 0 {
+		return map[string][]domainmaster.MasterIndikatorProgramKegiatan{}, nil
+	}
+	baseQuery := `
+		SELECT id, kode_indikator, kode, indikator
+		FROM tb_master_indikator_program_kegiatan
+		WHERE kode IN (?)
+		ORDER BY kode ASC, id ASC
+	`
+	query, args := helper.BuildInQueryString(baseQuery, kodes)
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]domainmaster.MasterIndikatorProgramKegiatan)
+	for rows.Next() {
+		var row domainmaster.MasterIndikatorProgramKegiatan
+		if err := rows.Scan(&row.Id, &row.KodeIndikator, &row.Kode, &row.Indikator); err != nil {
+			return nil, err
+		}
+		result[row.Kode] = append(result[row.Kode], row)
+	}
+	return result, rows.Err()
+}
+
+func (repository *ProgramRepositoryImpl) FindMasterIndikatorProgramKegiatanByKodes(
+	ctx context.Context, tx *sql.Tx, kodes []string,
+) (map[string][]domainmaster.MasterIndikatorProgramKegiatan, error) {
+	return queryMasterIndikatorProgramKegiatanByKodes(ctx, tx, kodes)
+}
