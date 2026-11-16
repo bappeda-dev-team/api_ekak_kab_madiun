@@ -726,6 +726,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/kegiatan/findall/v2": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil semua kegiatan dari master beserta indikator dari tb_master_indikator_program_kegiatan (match kode = kode_kegiatan). Tanpa target; data indikator di-inject via database.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kegiatan"
+                ],
+                "summary": "Daftar Kegiatan dengan Indikator Master (V2)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/kegiatan.KegiatanWithIndikatorV2Response"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/leaderboard_rekin_hidden/upsert": {
             "post": {
                 "security": [
@@ -2994,6 +3043,55 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/program_kegiatan/findall/v2": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil semua program dari master beserta indikator dari tb_master_indikator_program_kegiatan (match kode = kode_program). Tanpa target; data indikator di-inject via database.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Program Kegiatan"
+                ],
+                "summary": "Daftar Program dengan Indikator Master (V2)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.ProgramKegiatanWithIndikatorV2Response"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -5780,6 +5878,55 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/subkegiatan.SubKegiatanPaginatedResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sub_kegiatan/findall/v2": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil semua sub kegiatan dari master beserta indikator dari tb_master_indikator_program_kegiatan (match kode = kode_subkegiatan). Tanpa target; data indikator di-inject via database.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sub Kegiatan"
+                ],
+                "summary": "Daftar Sub Kegiatan dengan Indikator Master (V2)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/subkegiatan.SubKegiatanWithIndikatorV2Response"
+                                            }
                                         }
                                     }
                                 }
@@ -8636,6 +8783,26 @@ const docTemplate = `{
                 }
             }
         },
+        "kegiatan.KegiatanWithIndikatorV2Response": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.MasterIndikatorProgramKegiatanResponse"
+                    }
+                },
+                "kode_kegiatan": {
+                    "type": "string"
+                },
+                "nama_kegiatan": {
+                    "type": "string"
+                }
+            }
+        },
         "opdmaster.OpdResponseForAll": {
             "type": "object",
             "properties": {
@@ -10539,6 +10706,23 @@ const docTemplate = `{
                 }
             }
         },
+        "programkegiatan.MasterIndikatorProgramKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                }
+            }
+        },
         "programkegiatan.OutcomeMatrixItemResponse": {
             "type": "object",
             "properties": {
@@ -10590,6 +10774,32 @@ const docTemplate = `{
                 },
                 "pagu_indikatif": {
                     "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.ProgramKegiatanWithIndikatorV2Response": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.MasterIndikatorProgramKegiatanResponse"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "kode_program": {
+                    "type": "string"
+                },
+                "nama_program": {
+                    "type": "string"
                 },
                 "tahun": {
                     "type": "string"
@@ -12731,6 +12941,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "subkegiatan.SubKegiatanWithIndikatorV2Response": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.MasterIndikatorProgramKegiatanResponse"
+                    }
+                },
+                "kode_subkegiatan": {
+                    "type": "string"
+                },
+                "nama_sub_kegiatan": {
                     "type": "string"
                 }
             }

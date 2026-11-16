@@ -174,6 +174,19 @@ definitions:
           $ref: '#/definitions/iku.TargetResponse'
         type: array
     type: object
+  kegiatan.KegiatanWithIndikatorV2Response:
+    properties:
+      id:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.MasterIndikatorProgramKegiatanResponse'
+        type: array
+      kode_kegiatan:
+        type: string
+      nama_kegiatan:
+        type: string
+    type: object
   opdmaster.OpdResponseForAll:
     properties:
       kode_opd:
@@ -1442,6 +1455,17 @@ definitions:
           $ref: '#/definitions/programkegiatan.SubKegiatanV2Response'
         type: array
     type: object
+  programkegiatan.MasterIndikatorProgramKegiatanResponse:
+    properties:
+      id:
+        type: integer
+      indikator:
+        type: string
+      kode:
+        type: string
+      kode_indikator:
+        type: string
+    type: object
   programkegiatan.OutcomeMatrixItemResponse:
     properties:
       id:
@@ -1479,6 +1503,23 @@ definitions:
     - kode_subkegiatan
     - pagu_indikatif
     - tahun
+    type: object
+  programkegiatan.ProgramKegiatanWithIndikatorV2Response:
+    properties:
+      id:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.MasterIndikatorProgramKegiatanResponse'
+        type: array
+      is_active:
+        type: boolean
+      kode_program:
+        type: string
+      nama_program:
+        type: string
+      tahun:
+        type: string
     type: object
   programkegiatan.ProgramResponse:
     properties:
@@ -2895,6 +2936,19 @@ definitions:
       tahun:
         type: string
     type: object
+  subkegiatan.SubKegiatanWithIndikatorV2Response:
+    properties:
+      id:
+        type: string
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.MasterIndikatorProgramKegiatanResponse'
+        type: array
+      kode_subkegiatan:
+        type: string
+      nama_sub_kegiatan:
+        type: string
+    type: object
   subkegiatan.TargetResponse:
     properties:
       id_target:
@@ -4006,6 +4060,35 @@ paths:
       summary: Update IKU Opd Active
       tags:
       - IKU Renja Opd
+  /kegiatan/findall/v2:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua kegiatan dari master beserta indikator dari tb_master_indikator_program_kegiatan
+        (match kode = kode_kegiatan). Tanpa target; data indikator di-inject via database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/kegiatan.KegiatanWithIndikatorV2Response'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Kegiatan dengan Indikator Master (V2)
+      tags:
+      - Kegiatan
   /leaderboard_rekin_hidden/upsert:
     post:
       consumes:
@@ -5391,6 +5474,35 @@ paths:
       summary: Update Parent Pohon Kinerja Opd Clone
       tags:
       - Clone Pohon Kinerja Opd
+  /program_kegiatan/findall/v2:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua program dari master beserta indikator dari tb_master_indikator_program_kegiatan
+        (match kode = kode_program). Tanpa target; data indikator di-inject via database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.ProgramKegiatanWithIndikatorV2Response'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Program dengan Indikator Master (V2)
+      tags:
+      - Program Kegiatan
   /rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun}:
     get:
       consumes:
@@ -7098,6 +7210,36 @@ paths:
       security:
       - BearerAuth: []
       summary: Daftar Sub Kegiatan (Paginasi)
+      tags:
+      - Sub Kegiatan
+  /sub_kegiatan/findall/v2:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua sub kegiatan dari master beserta indikator dari
+        tb_master_indikator_program_kegiatan (match kode = kode_subkegiatan). Tanpa
+        target; data indikator di-inject via database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/subkegiatan.SubKegiatanWithIndikatorV2Response'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Sub Kegiatan dengan Indikator Master (V2)
       tags:
       - Sub Kegiatan
   /tujuan_opd/detail/{tujuanOpdId}:
