@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/domain"
+	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/model/web/subkegiatan"
 	"ekak_kabupaten_madiun/repository"
 	"errors"
@@ -422,4 +423,40 @@ func (service *SubKegiatanServiceImpl) FindSubKegiatanKAK(ctx context.Context, k
 	}
 
 	return response, nil
+}
+
+func (service *SubKegiatanServiceImpl) FindAllWithIndikator(ctx context.Context) ([]subkegiatan.SubKegiatanWithIndikatorV2Response, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	items, err := service.subKegiatanRepository.FindAllMasterV2(ctx, tx)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil sub kegiatan: %v", err)
+	}
+
+	kodes := make([]string, 0, len(items))
+	for _, sk := range items {
+		if sk.KodeSubKegiatan != "" {
+			kodes = append(kodes, sk.KodeSubKegiatan)
+		}
+	}
+
+	indikatorByKode, err := service.subKegiatanRepository.FindMasterIndikatorProgramKegiatanByKodes(ctx, tx, kodes)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil indikator master: %v", err)
+	}
+
+	responses := make([]subkegiatan.SubKegiatanWithIndikatorV2Response, 0, len(items))
+	for _, sk := range items {
+		responses = append(responses, subkegiatan.SubKegiatanWithIndikatorV2Response{
+			Id:              sk.Id,
+			KodeSubKegiatan: sk.KodeSubKegiatan,
+			NamaSubKegiatan: sk.NamaSubKegiatan,
+			Indikator:       programkegiatan.MapMasterIndikatorResponses(indikatorByKode[sk.KodeSubKegiatan]),
+		})
+	}
+	return responses, nil
 }

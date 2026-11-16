@@ -12,4 +12,5 @@ type SubKegiatanService interface {
 	FindAll(ctx context.Context, filter subkegiatan.SubKegiatanFindAllFilter) (subkegiatan.SubKegiatanPaginatedResponse, error)
 	Delete(ctx context.Context, subKegiatanId string) error
 	FindSubKegiatanKAK(ctx context.Context, kodeSubKegiatan string, kode string, tahun string) (subkegiatan.SubKegiatanKAKResponse, error)
+	FindAllWithIndikator(ctx context.Context) ([]subkegiatan.SubKegiatanWithIndikatorV2Response, error)
 }

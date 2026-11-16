@@ -1,6 +1,16 @@
 package subkegiatan
 
-import "ekak_kabupaten_madiun/model/web"
+import (
+	"ekak_kabupaten_madiun/model/web"
+	"ekak_kabupaten_madiun/model/web/programkegiatan"
+)
+
+type SubKegiatanWithIndikatorV2Response struct {
+	Id              string                                                   `json:"id"`
+	KodeSubKegiatan string                                                   `json:"kode_subkegiatan"`
+	NamaSubKegiatan string                                                   `json:"nama_sub_kegiatan"`
+	Indikator       []programkegiatan.MasterIndikatorProgramKegiatanResponse `json:"indikator"`
+}
 
 type SubKegiatanResponse struct {
 	SubKegiatanTerpilihId string                         `json:"subkegiatanterpilih_id,omitempty"`
