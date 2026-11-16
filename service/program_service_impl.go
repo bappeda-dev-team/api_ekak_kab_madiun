@@ -381,3 +381,41 @@ func (service *ProgramServiceImpl) FindAll(ctx context.Context) ([]programkegiat
 
 	return programResponses, nil
 }
+
+func (service *ProgramServiceImpl) FindAllWithIndikator(ctx context.Context) ([]programkegiatan.ProgramKegiatanWithIndikatorV2Response, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+	defer helper.CommitOrRollback(tx)
+
+	programs, err := service.programRepository.FindAll(ctx, tx)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data program: %v", err)
+	}
+
+	kodes := make([]string, 0, len(programs))
+	for _, p := range programs {
+		if p.KodeProgram != "" {
+			kodes = append(kodes, p.KodeProgram)
+		}
+	}
+
+	indikatorByKode, err := service.programRepository.FindMasterIndikatorProgramKegiatanByKodes(ctx, tx, kodes)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil indikator master: %v", err)
+	}
+
+	responses := make([]programkegiatan.ProgramKegiatanWithIndikatorV2Response, 0, len(programs))
+	for _, p := range programs {
+		responses = append(responses, programkegiatan.ProgramKegiatanWithIndikatorV2Response{
+			Id:          p.Id,
+			KodeProgram: p.KodeProgram,
+			NamaProgram: p.NamaProgram,
+			Tahun:       p.Tahun,
+			IsActive:    p.IsActive,
+			Indikator:   programkegiatan.MapMasterIndikatorResponses(indikatorByKode[p.KodeProgram]),
+		})
+	}
+	return responses, nil
+}

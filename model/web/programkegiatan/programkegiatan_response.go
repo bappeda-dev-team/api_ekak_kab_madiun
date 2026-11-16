@@ -1,5 +1,40 @@
 package programkegiatan
 
+import "ekak_kabupaten_madiun/model/domain/domainmaster"
+
+func MapMasterIndikatorResponses(rows []domainmaster.MasterIndikatorProgramKegiatan) []MasterIndikatorProgramKegiatanResponse {
+	if len(rows) == 0 {
+		return []MasterIndikatorProgramKegiatanResponse{}
+	}
+	out := make([]MasterIndikatorProgramKegiatanResponse, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, MasterIndikatorProgramKegiatanResponse{
+			Id:            r.Id,
+			KodeIndikator: r.KodeIndikator,
+			Kode:          r.Kode,
+			Indikator:     r.Indikator,
+		})
+	}
+	return out
+}
+
+// MasterIndikatorProgramKegiatanResponse — indikator master program/kegiatan/subkegiatan (V2, tanpa target).
+type MasterIndikatorProgramKegiatanResponse struct {
+	Id            int    `json:"id"`
+	KodeIndikator string `json:"kode_indikator"`
+	Kode          string `json:"kode"`
+	Indikator     string `json:"indikator"`
+}
+
+type ProgramKegiatanWithIndikatorV2Response struct {
+	Id          string                                 `json:"id"`
+	KodeProgram string                                 `json:"kode_program"`
+	NamaProgram string                                 `json:"nama_program"`
+	Tahun       string                                 `json:"tahun"`
+	IsActive    bool                                   `json:"is_active"`
+	Indikator   []MasterIndikatorProgramKegiatanResponse `json:"indikator"`
+}
+
 type ProgramKegiatanResponse struct {
 	Id          string              `json:"id"`
 	KodeProgram string              `json:"kode_program"`
