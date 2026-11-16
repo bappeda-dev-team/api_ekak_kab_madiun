@@ -142,14 +142,14 @@ func (controller *ProgramControllerImpl) FindAll(writer http.ResponseWriter, req
 func (controller *ProgramControllerImpl) FindAllWithIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	programResponses, err := controller.ProgramService.FindAllWithIndikator(request.Context())
 	if err != nil {
-		helper.WriteToResponseBody(writer, web.WebResponse{
+		helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: "Internal Server Error",
 			Data:   err.Error(),
 		})
 		return
 	}
-	helper.WriteToResponseBody(writer, web.WebResponse{
+	helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 		Code:   http.StatusOK,
 		Status: "Success",
 		Data:   programResponses,

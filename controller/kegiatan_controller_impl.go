@@ -164,14 +164,14 @@ func (controller *KegiatanControllerImpl) FindAll(writer http.ResponseWriter, re
 func (controller *KegiatanControllerImpl) FindAllWithIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	kegiatanResponses, err := controller.KegiatanService.FindAllWithIndikator(request.Context())
 	if err != nil {
-		helper.WriteToResponseBody(writer, web.WebResponse{
+		helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: "INTERNAL SERVER ERROR",
 			Data:   err.Error(),
 		})
 		return
 	}
-	helper.WriteToResponseBody(writer, web.WebResponse{
+	helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 		Code:   http.StatusOK,
 		Status: "OK",
 		Data:   kegiatanResponses,

@@ -281,14 +281,14 @@ func (controller *SubKegiatanControllerImpl) FindSubKegiatanKAK(writer http.Resp
 func (controller *SubKegiatanControllerImpl) FindAllWithIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	subKegiatanResponses, err := controller.SubKegiatanService.FindAllWithIndikator(request.Context())
 	if err != nil {
-		helper.WriteToResponseBody(writer, web.WebResponse{
+		helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: "INTERNAL SERVER ERROR",
 			Data:   err.Error(),
 		})
 		return
 	}
-	helper.WriteToResponseBody(writer, web.WebResponse{
+	helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 		Code:   http.StatusOK,
 		Status: "success get data sub kegiatan v2",
 		Data:   subKegiatanResponses,
