@@ -314,12 +314,12 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 	for _, kodeUrusan := range urusanOrder {
 
 		urusanResp := renja.UrusanResponse{
-			Kode:         kodeUrusan,
-			Nama:         urusanData[kodeUrusan],
-			Jenis:        "urusans",
-			PaguRanwal:   paguUrusan[kodeUrusan],
-			Indikator:    getIndikator(kodeUrusan),
-			BidangUrusan: make([]renja.BidangUrusanResponse, 0),
+			Kode:            kodeUrusan,
+			Nama:            urusanData[kodeUrusan],
+			Jenis:           "urusans",
+			PaguRanwal:      paguUrusan[kodeUrusan],
+			IndikatorRanwal: getIndikator(kodeUrusan),
+			BidangUrusan:    make([]renja.BidangUrusanResponse, 0),
 		}
 
 		for _, kodeBidang := range bidangByUrusan[kodeUrusan] {
@@ -327,12 +327,12 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 			bd := bidangData[kodeBidang]
 
 			bidangResp := renja.BidangUrusanResponse{
-				Kode:       kodeBidang,
-				Nama:       bd.nama,
-				Jenis:      "bidang_urusans",
-				PaguRanwal: paguBidang[kodeBidang],
-				Indikator:  getIndikator(kodeBidang),
-				Program:    make([]renja.ProgramResponse, 0),
+				Kode:            kodeBidang,
+				Nama:            bd.nama,
+				Jenis:           "bidang_urusans",
+				PaguRanwal:      paguBidang[kodeBidang],
+				IndikatorRanwal: getIndikator(kodeBidang),
+				Program:         make([]renja.ProgramResponse, 0),
 			}
 
 			for _, kodePrg := range prgByBidang[kodeBidang] {
@@ -340,12 +340,12 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 				pd := prgData[kodePrg]
 
 				prgResp := renja.ProgramResponse{
-					Kode:       kodePrg,
-					Nama:       pd.nama,
-					Jenis:      "programs",
-					PaguRanwal: paguPrg[kodePrg],
-					Indikator:  getIndikator(kodePrg),
-					Kegiatan:   make([]renja.KegiatanResponse, 0),
+					Kode:            kodePrg,
+					Nama:            pd.nama,
+					Jenis:           "programs",
+					PaguRanwal:      paguPrg[kodePrg],
+					IndikatorRanwal: getIndikator(kodePrg),
+					Kegiatan:        make([]renja.KegiatanResponse, 0),
 				}
 
 				for _, kodeKeg := range kegByPrg[kodePrg] {
@@ -353,12 +353,12 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 					kd := kegData[kodeKeg]
 
 					kegResp := renja.KegiatanResponse{
-						Kode:        kodeKeg,
-						Nama:        kd.nama,
-						Jenis:       "kegiatans",
-						PaguRanwal:  paguKeg[kodeKeg],
-						Indikator:   getIndikator(kodeKeg),
-						SubKegiatan: make([]renja.SubKegiatanResponse, 0),
+						Kode:            kodeKeg,
+						Nama:            kd.nama,
+						Jenis:           "kegiatans",
+						PaguRanwal:      paguKeg[kodeKeg],
+						IndikatorRanwal: getIndikator(kodeKeg),
+						SubKegiatan:     make([]renja.SubKegiatanResponse, 0),
 					}
 
 					for _, kodeSubkeg := range subkegByKeg[kodeKeg] {
@@ -368,14 +368,14 @@ func (service *MatrixRenjaServiceImpl) transformToResponse(data []domain.SubKegi
 						kegResp.SubKegiatan = append(
 							kegResp.SubKegiatan,
 							renja.SubKegiatanResponse{
-								Kode:        kodeSubkeg,
-								Nama:        sd.nama,
-								Jenis:       "subkegiatans",
-								Tahun:       tahun,
-								PegawaiId:   sd.pegawaiId,
-								NamaPegawai: sd.namaPegawai,
-								PaguRanwal:  paguSubkeg[kodeSubkeg],
-								Indikator:   getIndikator(kodeSubkeg),
+								Kode:            kodeSubkeg,
+								Nama:            sd.nama,
+								Jenis:           "subkegiatans",
+								Tahun:           tahun,
+								PegawaiId:       sd.pegawaiId,
+								NamaPegawai:     sd.namaPegawai,
+								PaguRanwal:      paguSubkeg[kodeSubkeg],
+								IndikatorRanwal: getIndikator(kodeSubkeg),
 							},
 						)
 					}
@@ -890,7 +890,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRankhir(data []domain.
 		resp renja.IndikatorMatrixResponse
 	}
 
-	indRanwalByKode  := make(map[string]map[string]*indEntry)
+	indRanwalByKode := make(map[string]map[string]*indEntry)
 	indRankhirByKode := make(map[string]map[string]*indEntry)
 
 	addToMap := func(m map[string]map[string]*indEntry, item domain.SubKegiatanQuery, target, satuan, targetId string) {
@@ -938,35 +938,35 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRankhir(data []domain.
 		}
 		return out
 	}
-	getIndRanwal  := func(kode string) []renja.IndikatorMatrixResponse { return flatten(indRanwalByKode, kode) }
+	getIndRanwal := func(kode string) []renja.IndikatorMatrixResponse { return flatten(indRanwalByKode, kode) }
 	getIndRankhir := func(kode string) []renja.IndikatorMatrixResponse { return flatten(indRankhirByKode, kode) }
 
 	// ── Metadata structs ───────────────────────────────────────────────────
 	type subkegMeta struct{ nama, kodeKeg, pegawaiId, namaPegawai, status string }
-	type kegMeta    struct{ nama, kodePrg string }
-	type prgMeta    struct{ nama, kodeBidang string }
+	type kegMeta struct{ nama, kodePrg string }
+	type prgMeta struct{ nama, kodeBidang string }
 	type bidangMeta struct{ nama, kodeUrusan string }
 
 	subkegData := make(map[string]subkegMeta)
-	kegData    := make(map[string]kegMeta)
-	prgData    := make(map[string]prgMeta)
+	kegData := make(map[string]kegMeta)
+	prgData := make(map[string]prgMeta)
 	bidangData := make(map[string]bidangMeta)
 	urusanData := make(map[string]string)
 
 	// pagu_ranwal : semua subkegiatan (termasuk sintetis renstra)
 	// pagu_rankhir: HANYA subkegiatan yg ada di rekin (sintetis selalu 0 krn tidak ada rincian_belanja)
-	paguRanwalSubkeg  := make(map[string]int64)
+	paguRanwalSubkeg := make(map[string]int64)
 	paguRankhirSubkeg := make(map[string]int64)
 
-	seenSubkeg  := make(map[string]struct{})
-	seenKeg     := make(map[string]struct{})
-	seenPrg     := make(map[string]struct{})
-	seenBidang  := make(map[string]struct{})
-	seenUrusan  := make(map[string]struct{})
+	seenSubkeg := make(map[string]struct{})
+	seenKeg := make(map[string]struct{})
+	seenPrg := make(map[string]struct{})
+	seenBidang := make(map[string]struct{})
+	seenUrusan := make(map[string]struct{})
 
-	subkegByKeg    := make(map[string][]string)
-	kegByPrg       := make(map[string][]string)
-	prgByBidang    := make(map[string][]string)
+	subkegByKeg := make(map[string][]string)
+	kegByPrg := make(map[string][]string)
+	prgByBidang := make(map[string][]string)
 	bidangByUrusan := make(map[string][]string)
 	var urusanOrder []string
 
@@ -1024,42 +1024,46 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRankhir(data []domain.
 	}
 
 	// ── Agregasi pagu bottom-up (ranwal + rankhir terpisah) ───────────────
-	paguRanwalKeg    := make(map[string]int64)
-	paguRankhirKeg   := make(map[string]int64)
-	paguRanwalPrg    := make(map[string]int64)
-	paguRankhirPrg   := make(map[string]int64)
-	paguRanwalBidang  := make(map[string]int64)
+	paguRanwalKeg := make(map[string]int64)
+	paguRankhirKeg := make(map[string]int64)
+	paguRanwalPrg := make(map[string]int64)
+	paguRankhirPrg := make(map[string]int64)
+	paguRanwalBidang := make(map[string]int64)
 	paguRankhirBidang := make(map[string]int64)
-	paguRanwalUrusan  := make(map[string]int64)
+	paguRanwalUrusan := make(map[string]int64)
 	paguRankhirUrusan := make(map[string]int64)
 
 	for kk, list := range subkegByKeg {
 		for _, ks := range list {
-			paguRanwalKeg[kk]  += paguRanwalSubkeg[ks]
+			paguRanwalKeg[kk] += paguRanwalSubkeg[ks]
 			paguRankhirKeg[kk] += paguRankhirSubkeg[ks]
 		}
 	}
 	for kp, list := range kegByPrg {
 		for _, kk := range list {
-			paguRanwalPrg[kp]  += paguRanwalKeg[kk]
+			paguRanwalPrg[kp] += paguRanwalKeg[kk]
 			paguRankhirPrg[kp] += paguRankhirKeg[kk]
 		}
 	}
 	for kb, list := range prgByBidang {
 		for _, kp := range list {
-			paguRanwalBidang[kb]  += paguRanwalPrg[kp]
+			paguRanwalBidang[kb] += paguRanwalPrg[kp]
 			paguRankhirBidang[kb] += paguRankhirPrg[kp]
 		}
 	}
 	for ku, list := range bidangByUrusan {
 		for _, kb := range list {
-			paguRanwalUrusan[ku]  += paguRanwalBidang[kb]
+			paguRanwalUrusan[ku] += paguRanwalBidang[kb]
 			paguRankhirUrusan[ku] += paguRankhirBidang[kb]
 		}
 	}
 	var totalRanwal, totalRankhir int64
-	for _, p := range paguRanwalUrusan  { totalRanwal  += p }
-	for _, p := range paguRankhirUrusan { totalRankhir += p }
+	for _, p := range paguRanwalUrusan {
+		totalRanwal += p
+	}
+	for _, p := range paguRankhirUrusan {
+		totalRankhir += p
+	}
 
 	// ── PASS 2: bangun hierarki ────────────────────────────────────────────
 	urusanDetail := renja.UrusanDetailResponse{
@@ -1072,69 +1076,69 @@ func (service *MatrixRenjaServiceImpl) transformToResponseRankhir(data []domain.
 
 	for _, ku := range urusanOrder {
 		urusanResp := renja.UrusanResponse{
-			Kode:            ku,
-			Nama:            urusanData[ku],
-			Jenis:           "urusans",
-			PaguRanwal:      paguRanwalUrusan[ku],
-			PaguRankhir:     paguRankhirUrusan[ku],
-			Indikator:       []renja.IndikatorMatrixResponse{},
+			Kode:             ku,
+			Nama:             urusanData[ku],
+			Jenis:            "urusans",
+			PaguRanwal:       paguRanwalUrusan[ku],
+			PaguRankhir:      paguRankhirUrusan[ku],
+			Indikator:        []renja.IndikatorMatrixResponse{},
 			IndikatorRanwal:  getIndRanwal(ku),
 			IndikatorRankhir: getIndRankhir(ku),
-			BidangUrusan:    make([]renja.BidangUrusanResponse, 0),
+			BidangUrusan:     make([]renja.BidangUrusanResponse, 0),
 		}
 		for _, kb := range bidangByUrusan[ku] {
 			bd := bidangData[kb]
 			bidangResp := renja.BidangUrusanResponse{
-				Kode:            kb,
-				Nama:            bd.nama,
-				Jenis:           "bidang_urusans",
-				PaguRanwal:      paguRanwalBidang[kb],
-				PaguRankhir:     paguRankhirBidang[kb],
-				Indikator:       []renja.IndikatorMatrixResponse{},
+				Kode:             kb,
+				Nama:             bd.nama,
+				Jenis:            "bidang_urusans",
+				PaguRanwal:       paguRanwalBidang[kb],
+				PaguRankhir:      paguRankhirBidang[kb],
+				Indikator:        []renja.IndikatorMatrixResponse{},
 				IndikatorRanwal:  getIndRanwal(kb),
 				IndikatorRankhir: getIndRankhir(kb),
-				Program:         make([]renja.ProgramResponse, 0),
+				Program:          make([]renja.ProgramResponse, 0),
 			}
 			for _, kp := range prgByBidang[kb] {
 				pd := prgData[kp]
 				prgResp := renja.ProgramResponse{
-					Kode:            kp,
-					Nama:            pd.nama,
-					Jenis:           "programs",
-					PaguRanwal:      paguRanwalPrg[kp],
-					PaguRankhir:     paguRankhirPrg[kp],
-					Indikator:       []renja.IndikatorMatrixResponse{},
+					Kode:             kp,
+					Nama:             pd.nama,
+					Jenis:            "programs",
+					PaguRanwal:       paguRanwalPrg[kp],
+					PaguRankhir:      paguRankhirPrg[kp],
+					Indikator:        []renja.IndikatorMatrixResponse{},
 					IndikatorRanwal:  getIndRanwal(kp),
 					IndikatorRankhir: getIndRankhir(kp),
-					Kegiatan:        make([]renja.KegiatanResponse, 0),
+					Kegiatan:         make([]renja.KegiatanResponse, 0),
 				}
 				for _, kk := range kegByPrg[kp] {
 					kd := kegData[kk]
 					kegResp := renja.KegiatanResponse{
-						Kode:            kk,
-						Nama:            kd.nama,
-						Jenis:           "kegiatans",
-						PaguRanwal:      paguRanwalKeg[kk],
-						PaguRankhir:     paguRankhirKeg[kk],
-						Indikator:       []renja.IndikatorMatrixResponse{},
+						Kode:             kk,
+						Nama:             kd.nama,
+						Jenis:            "kegiatans",
+						PaguRanwal:       paguRanwalKeg[kk],
+						PaguRankhir:      paguRankhirKeg[kk],
+						Indikator:        []renja.IndikatorMatrixResponse{},
 						IndikatorRanwal:  getIndRanwal(kk),
 						IndikatorRankhir: getIndRankhir(kk),
-						SubKegiatan:     make([]renja.SubKegiatanResponse, 0),
+						SubKegiatan:      make([]renja.SubKegiatanResponse, 0),
 					}
 					for _, ks := range subkegByKeg[kk] {
 						sd := subkegData[ks]
 						kegResp.SubKegiatan = append(kegResp.SubKegiatan,
 							renja.SubKegiatanResponse{
-								Kode:            ks,
-								Nama:            sd.nama,
-								Jenis:           "subkegiatans",
-								Tahun:           tahun,
-								PegawaiId:       sd.pegawaiId,
-								NamaPegawai:     sd.namaPegawai,
-								Status:          sd.status,
-								PaguRanwal:      paguRanwalSubkeg[ks],
-								PaguRankhir:     paguRankhirSubkeg[ks],
-								Indikator:       []renja.IndikatorMatrixResponse{},
+								Kode:             ks,
+								Nama:             sd.nama,
+								Jenis:            "subkegiatans",
+								Tahun:            tahun,
+								PegawaiId:        sd.pegawaiId,
+								NamaPegawai:      sd.namaPegawai,
+								Status:           sd.status,
+								PaguRanwal:       paguRanwalSubkeg[ks],
+								PaguRankhir:      paguRankhirSubkeg[ks],
+								Indikator:        []renja.IndikatorMatrixResponse{},
 								IndikatorRanwal:  getIndRanwal(ks),
 								IndikatorRankhir: getIndRankhir(ks),
 							},
@@ -1168,7 +1172,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponsePenetapan(data []domai
 
 	// indRankhirByKode  : indikator jenis rankhir (atau fallback renstra)
 	// indPenetapanByKode: indikator jenis penetapan saja
-	indRankhirByKode   := make(map[string]map[string]*indEntry)
+	indRankhirByKode := make(map[string]map[string]*indEntry)
 	indPenetapanByKode := make(map[string]map[string]*indEntry)
 
 	addToMap := func(m map[string]map[string]*indEntry, item domain.SubKegiatanQuery) {
@@ -1228,34 +1232,34 @@ func (service *MatrixRenjaServiceImpl) transformToResponsePenetapan(data []domai
 		return out
 	}
 
-	getIndRankhir   := func(kode string) []renja.IndikatorMatrixResponse { return flatten(indRankhirByKode, kode) }
+	getIndRankhir := func(kode string) []renja.IndikatorMatrixResponse { return flatten(indRankhirByKode, kode) }
 	getIndPenetapan := func(kode string) []renja.IndikatorMatrixResponse { return flatten(indPenetapanByKode, kode) }
 
 	// ── Metadata structs ──────────────────────────────────────────────────────
 	type subkegMeta struct{ nama, kodeKeg, pegawaiId, namaPegawai string }
-	type kegMeta    struct{ nama, kodePrg string }
-	type prgMeta    struct{ nama, kodeBidang string }
+	type kegMeta struct{ nama, kodePrg string }
+	type prgMeta struct{ nama, kodeBidang string }
 	type bidangMeta struct{ nama, kodeUrusan string }
 
 	subkegData := make(map[string]subkegMeta)
-	kegData    := make(map[string]kegMeta)
-	prgData    := make(map[string]prgMeta)
+	kegData := make(map[string]kegMeta)
+	prgData := make(map[string]prgMeta)
 	bidangData := make(map[string]bidangMeta)
 	urusanData := make(map[string]string)
 
 	// Flat pagu per sub kegiatan: rankhir (SUM belanja) + penetapan (tb_pagu jenis='penetapan')
-	paguRankhirSubkeg  := make(map[string]int64)
+	paguRankhirSubkeg := make(map[string]int64)
 	paguPenetapanSubkeg := make(map[string]int64)
 
 	seenSubkeg := make(map[string]struct{})
-	seenKeg    := make(map[string]struct{})
-	seenPrg    := make(map[string]struct{})
+	seenKeg := make(map[string]struct{})
+	seenPrg := make(map[string]struct{})
 	seenBidang := make(map[string]struct{})
 	seenUrusan := make(map[string]struct{})
 
-	subkegByKeg    := make(map[string][]string)
-	kegByPrg       := make(map[string][]string)
-	prgByBidang    := make(map[string][]string)
+	subkegByKeg := make(map[string][]string)
+	kegByPrg := make(map[string][]string)
+	prgByBidang := make(map[string][]string)
 	bidangByUrusan := make(map[string][]string)
 
 	var urusanOrder []string
@@ -1279,7 +1283,7 @@ func (service *MatrixRenjaServiceImpl) transformToResponsePenetapan(data []domai
 			}
 			// PaguRankhir  = dari SUM(rincian_belanja)
 			// PaguPenetapan = dari tb_pagu jenis='penetapan'
-			paguRankhirSubkeg[item.KodeSubKegiatan]  = item.PaguRankhir
+			paguRankhirSubkeg[item.KodeSubKegiatan] = item.PaguRankhir
 			paguPenetapanSubkeg[item.KodeSubKegiatan] = item.PaguPenetapan
 			subkegByKeg[item.KodeKegiatan] = append(subkegByKeg[item.KodeKegiatan], item.KodeSubKegiatan)
 		}
@@ -1318,43 +1322,47 @@ func (service *MatrixRenjaServiceImpl) transformToResponsePenetapan(data []domai
 	}
 
 	// ── Agregasi flat-pagu bottom-up (rankhir + penetapan) ───────────────────
-	paguRankhirKeg    := make(map[string]int64)
-	paguPenetapanKeg  := make(map[string]int64)
-	paguRankhirPrg    := make(map[string]int64)
-	paguPenetapanPrg  := make(map[string]int64)
-	paguRankhirBidang   := make(map[string]int64)
+	paguRankhirKeg := make(map[string]int64)
+	paguPenetapanKeg := make(map[string]int64)
+	paguRankhirPrg := make(map[string]int64)
+	paguPenetapanPrg := make(map[string]int64)
+	paguRankhirBidang := make(map[string]int64)
 	paguPenetapanBidang := make(map[string]int64)
-	paguRankhirUrusan   := make(map[string]int64)
+	paguRankhirUrusan := make(map[string]int64)
 	paguPenetapanUrusan := make(map[string]int64)
 
 	for kodeKeg, list := range subkegByKeg {
 		for _, ks := range list {
-			paguRankhirKeg[kodeKeg]   += paguRankhirSubkeg[ks]
+			paguRankhirKeg[kodeKeg] += paguRankhirSubkeg[ks]
 			paguPenetapanKeg[kodeKeg] += paguPenetapanSubkeg[ks]
 		}
 	}
 	for kodePrg, list := range kegByPrg {
 		for _, kk := range list {
-			paguRankhirPrg[kodePrg]   += paguRankhirKeg[kk]
+			paguRankhirPrg[kodePrg] += paguRankhirKeg[kk]
 			paguPenetapanPrg[kodePrg] += paguPenetapanKeg[kk]
 		}
 	}
 	for kodeBidang, list := range prgByBidang {
 		for _, kp := range list {
-			paguRankhirBidang[kodeBidang]   += paguRankhirPrg[kp]
+			paguRankhirBidang[kodeBidang] += paguRankhirPrg[kp]
 			paguPenetapanBidang[kodeBidang] += paguPenetapanPrg[kp]
 		}
 	}
 	for kodeUrusan, list := range bidangByUrusan {
 		for _, kb := range list {
-			paguRankhirUrusan[kodeUrusan]   += paguRankhirBidang[kb]
+			paguRankhirUrusan[kodeUrusan] += paguRankhirBidang[kb]
 			paguPenetapanUrusan[kodeUrusan] += paguPenetapanBidang[kb]
 		}
 	}
 
 	var totalRankhir, totalPenetapan int64
-	for _, p := range paguRankhirUrusan   { totalRankhir   += p }
-	for _, p := range paguPenetapanUrusan { totalPenetapan += p }
+	for _, p := range paguRankhirUrusan {
+		totalRankhir += p
+	}
+	for _, p := range paguPenetapanUrusan {
+		totalPenetapan += p
+	}
 
 	// ── PASS 2: bangun hierarki dengan flat pagu (rankhir+penetapan) + dual indikator ──
 	urusanDetail := renja.UrusanDetailResponse{
