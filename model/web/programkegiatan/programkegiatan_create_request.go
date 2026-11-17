@@ -57,6 +57,9 @@ type IndikatorRenstraUpdateRequest struct {
 }
 
 type TargetRenstraUpsertRequest struct {
+	Indikator     string `json:"indikator"`
+	KodeOpd       string `json:"kode_opd"`
+	Kode          string `json:"kode"`
 	KodeIndikator string `json:"kode_indikator"`
 	Id            string `json:"id,omitempty"`
 	Tahun         string `json:"tahun"`

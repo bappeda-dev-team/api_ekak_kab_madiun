@@ -432,33 +432,49 @@ func (repository *MatrixRenjaRepositoryImpl) fetchIndikatorRenjaPeriod(
             COALESCE(t_rs.target,''), COALESCE(t_rs.satuan,'')
         FROM tb_indikator_matrix im
         LEFT JOIN tb_target t_rw
-            ON t_rw.indikator_id = im.kode_indikator AND t_rw.jenis = 'ranwal'    AND t_rw.tahun = ?
+            ON t_rw.indikator_id = im.kode_indikator
+           AND t_rw.jenis = 'ranwal'
+           AND t_rw.tahun = ?
         LEFT JOIN tb_target t_rk
-            ON t_rk.indikator_id = im.kode_indikator AND t_rk.jenis = 'rankhir'   AND t_rk.tahun = ?
+            ON t_rk.indikator_id = im.kode_indikator
+           AND t_rk.jenis = 'rankhir'
+           AND t_rk.tahun = ?
         LEFT JOIN tb_target t_pt
-            ON t_pt.indikator_id = im.kode_indikator AND t_pt.jenis = 'penetapan' AND t_pt.tahun = ?
+            ON t_pt.indikator_id = im.kode_indikator
+           AND t_pt.jenis = 'penetapan'
+           AND t_pt.tahun = ?
         LEFT JOIN tb_target t_rs
             ON t_rs.indikator_id = im.kode_indikator
            AND t_rs.tahun = ?
         WHERE im.kode_opd = ?
           AND (
-              (im.jenis = 'renstra' AND (
-                  EXISTS (
-                      SELECT 1 FROM tb_target tx
-                      WHERE tx.indikator_id = im.kode_indikator AND tx.tahun = ?
+              im.tahun IS NULL
+              OR im.tahun = ''
+              OR (
+                  (im.jenis = 'renstra' AND (
+                      EXISTS (
+                          SELECT 1
+                          FROM tb_target tx
+                          WHERE tx.indikator_id = im.kode_indikator
+                            AND tx.tahun = ?
+                      )
+                      OR im.tahun BETWEEN ? AND ?
+                  ))
+                  OR (
+                      im.jenis IN ('renstra','ranwal','rankhir','penetapan')
+                      AND im.tahun = ?
                   )
-                  OR im.tahun BETWEEN ? AND ?
-              ))
-           OR (im.jenis IN ('ranwal','rankhir','penetapan') AND im.tahun = ?)
+              )
           )
         ORDER BY im.kode, im.kode_indikator
     `
+
 	rows, err := tx.QueryContext(ctx, query,
-		tahun, tahun, tahun, tahun, // t_rw, t_rk, t_pt, t_rs tahun filter
-		kodeOpd,               // im.kode_opd
-		tahun,                 // EXISTS: punya target tahun renja
-		tahunAwal, tahunAkhir, // renstra im.tahun BETWEEN
-		tahun, // renja-spesifik = tahun
+		tahun, tahun, tahun, tahun, // target tahun
+		kodeOpd,
+		tahun,                 // EXISTS
+		tahunAwal, tahunAkhir, // periode renstra
+		tahun, // tahun renja
 	)
 	if err != nil {
 		return nil, err
@@ -466,8 +482,10 @@ func (repository *MatrixRenjaRepositoryImpl) fetchIndikatorRenjaPeriod(
 	defer rows.Close()
 
 	result := make(map[string][]indRowRenja)
+
 	for rows.Next() {
 		var r indRowRenja
+
 		if err := rows.Scan(
 			&r.id, &r.kode, &r.kodeOpd, &r.indikator, &r.tahun,
 			&r.targetRanwalId, &r.targetRanwal, &r.satuanRanwal,
@@ -477,14 +495,16 @@ func (repository *MatrixRenjaRepositoryImpl) fetchIndikatorRenjaPeriod(
 		); err != nil {
 			return nil, err
 		}
-		// Ranwal: boleh fallback ke target renstra tahun ini (baseline ranwal).
-		// Rankhir & penetapan: hanya dari tb_target jenis masing-masing — tanpa fallback renstra.
+
+		// Ranwal: fallback ke target renstra tahun ini.
 		if r.targetRanwal == "" && r.targetRenstra != "" {
 			r.targetRanwal = r.targetRenstra
 			r.satuanRanwal = r.satuanRenstra
 		}
+
 		result[r.kode] = append(result[r.kode], r)
 	}
+
 	return result, rows.Err()
 }
 

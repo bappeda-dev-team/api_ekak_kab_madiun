@@ -8,6 +8,7 @@ import (
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/repository"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -765,14 +766,32 @@ func (service *MatrixRenstraServiceImpl) UpsertTarget(ctx context.Context, reque
 	}
 	defer tx.Rollback()
 
+	// find di indikator renstra
 	ind, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return programkegiatan.TargetResponse{}, fmt.Errorf("indikator %s tidak ditemukan", kodeIndikator)
+		if !errors.Is(err, sql.ErrNoRows) {
+			return programkegiatan.TargetResponse{}, err
 		}
-		return programkegiatan.TargetResponse{}, err
-	}
 
+		indikatorRequest := programkegiatan.IndikatorRenstraCreateRequest{
+			KodeIndikator: request.KodeIndikator,
+			Kode:          request.Kode,
+			KodeOpd:       request.KodeOpd,
+			Indikator:     request.Indikator,
+		}
+		result, err := service.createIndikatorV2(ctx, tx, []programkegiatan.IndikatorRenstraCreateRequest{
+			indikatorRequest,
+		})
+		if err != nil {
+			return programkegiatan.TargetResponse{}, err
+		}
+
+		// Gunakan result untuk memperoleh indikator yang dibuat.
+		kodeIndikator = result[0].KodeIndikator
+	}
+	// jika tidak ditemukan, create new indikator pakai CreateIndikatorV2
+
+	// proses target
 	var before any
 	targetId := strings.TrimSpace(request.Id)
 	existing, findErr := service.MatrixRenstraRepository.FindTargetByIndikatorIdAndTahun(ctx, tx, kodeIndikator, tahun)
@@ -1417,4 +1436,80 @@ func injectIndikator(item domain.SubKegiatanQuery, ind domain.Indikator) domain.
 	}
 	item.IndikatorTahun = ind.Tahun
 	return item
+}
+
+// helper create indikator
+
+func (service *MatrixRenstraServiceImpl) createIndikatorV2(ctx context.Context, tx *sql.Tx, requests []programkegiatan.IndikatorRenstraCreateRequest) ([]programkegiatan.IndikatorV2UpsertResponse, error) {
+	if len(requests) == 0 {
+		return nil, fmt.Errorf("indikator tidak boleh kosong")
+	}
+
+	prefixCounter := make(map[string]int)
+	responses := make([]programkegiatan.IndikatorV2UpsertResponse, 0, len(requests))
+	for _, req := range requests {
+		if strings.TrimSpace(req.Kode) == "" || strings.TrimSpace(req.KodeOpd) == "" {
+			return nil, fmt.Errorf("kode dan kode_opd wajib diisi")
+		}
+		if strings.TrimSpace(req.Indikator) == "" {
+			return nil, fmt.Errorf("nama indikator wajib diisi")
+		}
+
+		kodeIndikator := strings.TrimSpace(req.KodeIndikator)
+		if kodeIndikator == "" {
+			prefix := fmt.Sprintf("RENS-%s", req.KodeOpd)
+			if _, loaded := prefixCounter[prefix]; !loaded {
+				count, err := service.MatrixRenstraRepository.CountKodeIndikatorByPrefix(ctx, tx, prefix)
+				if err != nil {
+					return nil, err
+				}
+				prefixCounter[prefix] = count
+			}
+			prefixCounter[prefix]++
+			rnd, err := randomUint31()
+			if err != nil {
+				return nil, err
+			}
+			kodeIndikator = fmt.Sprintf("%s-%03d-%d", prefix, prefixCounter[prefix], rnd)
+		} else {
+			_, err := service.MatrixRenstraRepository.FindIndikatorByKodeIndikator(ctx, tx, kodeIndikator)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+		}
+
+		ind := domain.Indikator{
+			KodeIndikator: kodeIndikator,
+			Kode:          req.Kode,
+			KodeOpd:       req.KodeOpd,
+			Indikator:     req.Indikator,
+			Tahun:         "",
+			Jenis:         "renstra",
+		}
+		if err := service.MatrixRenstraRepository.UpsertIndikator(ctx, tx, ind); err != nil {
+			return nil, err
+		}
+
+		targetResp := make([]programkegiatan.TargetResponse, 0, len(req.Target))
+
+		responses = append(responses, programkegiatan.IndikatorV2UpsertResponse{
+			KodeIndikator: kodeIndikator,
+			Kode:          req.Kode,
+			KodeOpd:       req.KodeOpd,
+			Indikator:     req.Indikator,
+			Jenis:         "renstra",
+			Target:        targetResp,
+		})
+	}
+
+	helper.PublishAuditAfterCommit(ctx, helper.CreateEventRequest{
+		Action:     "CREATE",
+		EntityType: "indikator_matrix_renstra",
+		EntityID:   responses[0].KodeIndikator,
+		After:      responses,
+		Metadata: map[string]any{
+			"count": len(responses),
+		},
+	})
+	return responses, nil
 }

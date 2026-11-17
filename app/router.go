@@ -352,6 +352,7 @@ func NewRouter(
 	router.PUT("/role/update/:id", roleController.Update)
 	router.GET("/role/detail/:id", roleController.FindById)
 	router.DELETE("/role/delete/:id", roleController.Delete)
+	// TODO: filter role super untuk user biasa
 	router.GET("/role/findall", roleController.FindAll)
 
 	//user
