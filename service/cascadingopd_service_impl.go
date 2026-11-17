@@ -410,6 +410,7 @@ func (service *CascadingOpdServiceImpl) buildStrategicCascadingResponse(
 				NamaRencanaKinerja: rk.NamaRencanaKinerja,
 				Tahun:              strategic.Tahun,
 				PegawaiId:          rk.PegawaiId,
+				Nip:                rk.PegawaiId,
 				NamaPegawai:        rk.NamaPegawai,
 				Indikator:          indikatorResponses,
 			})

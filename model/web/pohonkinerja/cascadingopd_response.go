@@ -100,6 +100,7 @@ type RencanaKinerjaResponse struct {
 	NamaRencanaKinerja string              `json:"nama_rencana_kinerja,omitempty"`
 	Tahun              string              `json:"tahun,omitempty"`
 	PegawaiId          string              `json:"pegawai_id,omitempty"`
+	Nip                string              `json:"nip,omitempty"`
 	NamaPegawai        string              `json:"nama_pegawai,omitempty"`
 	Indikator          []IndikatorResponse `json:"indikator,omitempty"`
 	Program            []ProgramResponse   `json:"program,omitempty"`
