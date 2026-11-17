@@ -163,12 +163,12 @@ func (controller *MatrixRenstraControllerImpl) UpsertTarget(writer http.Response
 	helper.ReadFromRequestBody(request, &req)
 	resp, err := controller.MatrixRenstraService.UpsertTarget(request.Context(), req)
 	if err != nil {
-		helper.WriteToResponseBody(writer, web.WebResponse{
+		helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 			Code: http.StatusBadRequest, Status: "BAD REQUEST", Data: err.Error(),
 		})
 		return
 	}
-	helper.WriteToResponseBody(writer, web.WebResponse{
+	helper.WriteToResponseBodyWstatus(writer, web.WebResponse{
 		Code: http.StatusOK, Status: "success upsert target renstra", Data: resp,
 	})
 }

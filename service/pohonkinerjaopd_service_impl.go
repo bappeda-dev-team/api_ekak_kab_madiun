@@ -1233,6 +1233,7 @@ func (service *PohonKinerjaOpdServiceImpl) FindAll(ctx context.Context, kodeOpd,
 			pelaksanaResponses = append(pelaksanaResponses, pohonkinerja.PelaksanaOpdResponse{
 				Id:          p.Id,
 				PegawaiId:   p.PegawaiId,
+				Nip:         p.Nip,
 				NamaPegawai: p.NamaPegawai,
 			})
 		}
