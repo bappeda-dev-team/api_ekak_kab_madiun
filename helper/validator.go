@@ -23,3 +23,12 @@ func ValidateTahunRange(awalStr, akhirStr string) (int, int, error) {
 
 	return awal, akhir, nil
 }
+
+func IsValidTahun(tahun string) bool {
+	if len(tahun) != 4 {
+		return false
+	}
+
+	_, err := strconv.Atoi(tahun)
+	return err == nil
+}

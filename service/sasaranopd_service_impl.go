@@ -942,7 +942,7 @@ func (s *SasaranOpdServiceImpl) FindByNipAndOpd(
 }
 
 func (s *SasaranOpdServiceImpl) FindSasaranRenstra(
-	ctx context.Context, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode string,
+	ctx context.Context, kodeOpd, tahunAwal, tahunAkhir, jenisPeriode string, tahunAktif string,
 ) ([]sasaranopd.SasaranOpdResponse, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {
@@ -977,7 +977,7 @@ func (s *SasaranOpdServiceImpl) FindSasaranRenstra(
 		}
 	}
 
-	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds, tahunAktif)
 }
 
 func (s *SasaranOpdServiceImpl) FindSasaranRanwal(
@@ -992,7 +992,7 @@ func (s *SasaranOpdServiceImpl) FindSasaranRanwal(
 	if err != nil {
 		return nil, err
 	}
-	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds, tahun)
 }
 func (s *SasaranOpdServiceImpl) FindSasaranRankhir(
 	ctx context.Context, kodeOpd, tahun, jenisPeriode string,
@@ -1006,7 +1006,7 @@ func (s *SasaranOpdServiceImpl) FindSasaranRankhir(
 	if err != nil {
 		return nil, err
 	}
-	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds, tahun)
 }
 
 func (s *SasaranOpdServiceImpl) FindSasaranPenetapan(
@@ -1021,13 +1021,13 @@ func (s *SasaranOpdServiceImpl) FindSasaranPenetapan(
 	if err != nil {
 		return nil, err
 	}
-	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds)
+	return s.buildSasaranResponse(ctx, tx, kodeOpd, sasaranOpds, tahun)
 }
 
 // Helper bersama untuk build response (menghindari duplikasi)
 func (s *SasaranOpdServiceImpl) buildSasaranResponse(
 	ctx context.Context, tx *sql.Tx,
-	kodeOpd string, sasaranOpds []domain.SasaranOpd,
+	kodeOpd string, sasaranOpds []domain.SasaranOpd, tahunAktif string,
 ) ([]sasaranopd.SasaranOpdResponse, error) {
 	if len(sasaranOpds) == 0 {
 		return []sasaranopd.SasaranOpdResponse{}, nil
@@ -1059,14 +1059,17 @@ func (s *SasaranOpdServiceImpl) buildSasaranResponse(
 	if err != nil {
 		isHideMap = make(map[int]bool) // fallback: semua false
 	}
+	tahunAktifValid := helper.IsValidTahun(tahunAktif)
 
 	var responses []sasaranopd.SasaranOpdResponse
 	for _, so := range sasaranOpds {
+		isHideByTahun := tahunAktifValid && so.TahunPohon != tahunAktif
+
 		resp := sasaranopd.SasaranOpdResponse{
 			IdPohon: so.IdPohon, KodeOpd: so.KodeOpd, NamaOpd: opd.NamaOpd,
 			NamaPohon: so.NamaPohon, JenisPohon: so.JenisPohon,
 			LevelPohon: so.LevelPohon, TahunPohon: so.TahunPohon,
-			IsHide:     isHideMap[so.IdPohon],
+			IsHide:     isHideMap[so.IdPohon] || isHideByTahun,
 			Pelaksana:  []sasaranopd.PelaksanaOpdResponse{},
 			SasaranOpd: []sasaranopd.SasaranOpdDetailResponse{},
 		}

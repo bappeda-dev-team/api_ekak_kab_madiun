@@ -348,8 +348,9 @@ func (controller *SasaranOpdControllerImpl) FindSasaranRenstra(writer http.Respo
 	tahunAwal := params.ByName("tahun_awal")
 	tahunAkhir := params.ByName("tahun_akhir")
 	jenisPeriode := params.ByName("jenis_periode")
+	tahunAktif := request.URL.Query().Get("tahun_aktif")
 	sasaranOpdResponses, err := controller.SasaranOpdService.FindSasaranRenstra(
-		request.Context(), kodeOpd, tahunAwal, tahunAkhir, jenisPeriode,
+		request.Context(), kodeOpd, tahunAwal, tahunAkhir, jenisPeriode, tahunAktif,
 	)
 	if err != nil {
 		webResponse := web.WebResponse{
