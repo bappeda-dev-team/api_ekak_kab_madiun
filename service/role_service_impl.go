@@ -7,6 +7,7 @@ import (
 	"ekak_kabupaten_madiun/model/domain"
 	"ekak_kabupaten_madiun/model/web/user"
 	"ekak_kabupaten_madiun/repository"
+	"slices"
 )
 
 type RoleServiceImpl struct {
@@ -107,12 +108,34 @@ func (service *RoleServiceImpl) FindAll(ctx context.Context) ([]user.RoleRespons
 		return []user.RoleResponse{}, err
 	}
 
+	// GUARD, ONLY SUPER ADMIN YANG BISA ASSIGN SUPER_ADMIN
+	currentUser := helper.GetUserInfo(ctx)
+
+	isSuperAdmin := slices.Contains(currentUser.Roles, "super_admin")
+
+	allowedRoles := map[string]bool{
+		"level_1": true,
+		"level_2": true,
+		"level_3": true,
+		"level_4": true,
+	}
+
 	var roleResponses []user.RoleResponse
 	for _, role := range roles {
-		roleResponses = append(roleResponses, user.RoleResponse{
-			Id:   role.Id,
-			Role: role.Role,
-		})
+		if isSuperAdmin {
+			roleResponses = append(roleResponses, user.RoleResponse{
+				Id:   role.Id,
+				Role: role.Role,
+			})
+			continue
+		}
+
+		if allowedRoles[role.Role] {
+			roleResponses = append(roleResponses, user.RoleResponse{
+				Id:   role.Id,
+				Role: role.Role,
+			})
+		}
 	}
 	return roleResponses, nil
 }
