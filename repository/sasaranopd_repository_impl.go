@@ -1228,6 +1228,7 @@ func (repository *SasaranOpdRepositoryImpl) FindByNipAndOpd(
     WHERE pk.level_pohon = 4
       AND pk.parent = 0
       AND pk.kode_opd = ?
+      AND pk.tahun = ?
       AND EXISTS (
           SELECT 1 FROM tb_pelaksana_pokin pp2
           INNER JOIN tb_pegawai p2 ON pp2.pegawai_id = p2.id
@@ -1236,7 +1237,7 @@ func (repository *SasaranOpdRepositoryImpl) FindByNipAndOpd(
       AND CAST(? AS SIGNED) BETWEEN CAST(so.tahun_awal AS SIGNED) AND CAST(so.tahun_akhir AS SIGNED)
     ORDER BY pk.nama_pohon ASC, so.nama_sasaran_opd ASC`
 
-	rows, err := tx.QueryContext(ctx, script, tahun, kodeOpd, nip, tahun)
+	rows, err := tx.QueryContext(ctx, script, tahun, kodeOpd, tahun, nip, tahun)
 	if err != nil {
 		return nil, err
 	}

@@ -651,7 +651,6 @@ func (service *RincianBelanjaServiceImpl) LaporanRincianBelanjaPegawai(ctx conte
 			if err != nil {
 				log.Printf(
 					"Error mengambil PPTK untuk subkegiatan %s: %v",
-					pegawaiId,
 					rb.KodeSubkegiatan,
 					err,
 				)

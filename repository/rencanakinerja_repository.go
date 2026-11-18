@@ -50,4 +50,5 @@ type RencanaKinerjaRepository interface {
 
 	// subkegiatan
 	FindSubkegiatanRekinByIds(ctx context.Context, tx *sql.Tx, rekinIds []string) (map[string]domain.SubKegiatan, error)
+	RekinLevel1AlreadyExistBySasaranOpdTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) (bool, error)
 }

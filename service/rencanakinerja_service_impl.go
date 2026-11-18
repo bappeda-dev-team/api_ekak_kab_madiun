@@ -1223,6 +1223,15 @@ func (service *RencanaKinerjaServiceImpl) CreateRekinLevel1(ctx context.Context,
 	}
 	defer helper.CommitOrRollback(tx)
 
+	// CEGAH DUPLIKAT
+	isRekinExist, err := service.rencanaKinerjaRepository.RekinLevel1AlreadyExistBySasaranOpdTahun(ctx, tx, request.SasaranOpdId, request.Tahun)
+	if err != nil {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("gagal memeriksa sasaran OPD: %v", err)
+	}
+	if isRekinExist {
+		return rencanakinerja.RencanaKinerjaResponse{}, fmt.Errorf("Sasaran OPD sudah digunakan")
+	}
+
 	// Perbaikan pengecekan kode OPD
 	opd, err := service.opdRepository.FindByKodeOpd(ctx, tx, request.KodeOpd)
 	if err != nil {

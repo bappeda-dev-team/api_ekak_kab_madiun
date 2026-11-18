@@ -2139,3 +2139,23 @@ func (repo *RencanaKinerjaRepositoryImpl) FindSubkegiatanRekinByIds(
 
 	return rekinMap, nil
 }
+
+func (repository *RencanaKinerjaRepositoryImpl) RekinLevel1AlreadyExistBySasaranOpdTahun(ctx context.Context, tx *sql.Tx, sasaranOpdId int, tahun string) (bool, error) {
+	query := `SELECT EXISTS (
+		SELECT 1
+		FROM tb_rencana_kinerja rk
+		JOIN tb_pohon_kinerja poh ON rk.id_pohon = poh.id
+		WHERE rk.sasaranopd_id = ? AND rk.tahun = ? AND poh.tahun = ?
+	)
+        `
+	var exists bool
+
+	err := tx.QueryRowContext(ctx, query,
+		sasaranOpdId,
+		tahun, tahun).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
