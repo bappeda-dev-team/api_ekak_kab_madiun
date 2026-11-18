@@ -286,11 +286,12 @@ func (repository *RincianBelanjaRepositoryImpl) FindIndikatorSubkegiatanByKodeAn
             t.indikator_id,
             COALESCE(t.target, '') as target,
             COALESCE(t.satuan, '') as satuan
-        FROM tb_indikator i
-        LEFT JOIN tb_target t ON i.id = t.indikator_id
+        FROM tb_indikator_matrix i
+        LEFT JOIN tb_target t ON i.kode_indikator = t.indikator_id
         WHERE i.kode = ?
         AND i.kode_opd = ?
-        AND i.tahun = ?
+        AND t.tahun = ?
+        AND t.jenis = 'penetapan'
         ORDER BY i.id, i.tahun`
 
 	rows, err := tx.QueryContext(ctx, script, kodeSubkegiatan, kodeOpd, tahun)
