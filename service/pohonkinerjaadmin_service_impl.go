@@ -326,6 +326,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 			pelaksanaId := "PLKS-" + uuid.New().String()[:8]
 			pelaksana := domain.PelaksanaPokin{
 				Id:        pelaksanaId,
+				Nip:       p.PegawaiId,
 				PegawaiId: p.PegawaiId,
 			}
 			pelaksanaList = append(pelaksanaList, pelaksana)
@@ -353,6 +354,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 			pelaksanaResponse := pohonkinerja.PelaksanaOpdResponse{
 				Id:          p.Id,
 				PegawaiId:   pegawai.Id,
+				Nip:         pegawai.Nip,
 				NamaPegawai: pegawai.NamaPegawai,
 			}
 			pelaksanaResponses = append(pelaksanaResponses, pelaksanaResponse)
@@ -498,6 +500,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 				pelaksanaId := "PLKS-" + uuid.New().String()[:8]
 				pelaksana := domain.PelaksanaPokin{
 					Id:        pelaksanaId,
+					Nip:       p.PegawaiId,
 					PegawaiId: p.PegawaiId,
 				}
 				pokinPelaksana = append(pokinPelaksana, pelaksana)
@@ -579,6 +582,7 @@ func (service *PohonKinerjaAdminServiceImpl) Update(ctx context.Context, request
 		pelaksanaResponse := pohonkinerja.PelaksanaOpdResponse{
 			Id:          p.Id,
 			PegawaiId:   pegawai.Id,
+			Nip:         pegawai.Nip,
 			NamaPegawai: pegawai.NamaPegawai,
 		}
 		pelaksanaResponses = append(pelaksanaResponses, pelaksanaResponse)
