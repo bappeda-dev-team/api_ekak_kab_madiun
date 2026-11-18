@@ -291,7 +291,7 @@ func (repository *RincianBelanjaRepositoryImpl) FindIndikatorSubkegiatanByKodeAn
         WHERE i.kode = ?
         AND i.kode_opd = ?
         AND t.tahun = ?
-        AND t.jenis = 'penetapan'
+        AND t.jenis = 'rankhir'
         ORDER BY i.id, i.tahun`
 
 	rows, err := tx.QueryContext(ctx, script, kodeSubkegiatan, kodeOpd, tahun)
