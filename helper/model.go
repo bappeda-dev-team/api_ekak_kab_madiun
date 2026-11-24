@@ -314,24 +314,24 @@ func ToInovasiRekinResponse(inovasiRekin domain.InovasiRekin) inovasirekin.Inova
 		},
 	}
 	return inovasirekin.InovasiRekinResponse{
-		Id:           	 	inovasiRekin.Id,
-		RekinId:      	 	inovasiRekin.RekinId,
-		KodeOpd:      	 	inovasiRekin.KodeOpd,
-		NamaOpd:      	 	inovasiRekin.NamaOpd,
-		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
-		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
-		JenisInovasi:  		inovasiRekin.JenisInovasi,
-		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
-		Instansi:           inovasiRekin.Instansi,
-		Inovator:           inovasiRekin.Inovator,
-		Kebaruan:           inovasiRekin.Kebaruan,
-		AsalInovasi:        inovasiRekin.AsalInovasi,
-		Tahun:              inovasiRekin.Tahun,
-		NipInovator:        inovasiRekin.NipInovator,
-		NamaNipInovator:    inovasiRekin.NamaNipInovator,
-		Level:              inovasiRekin.Level,
-		PegawaiId:          inovasiRekin.PegawaiId,
-		Action:             buttonActions,
+		Id:                inovasiRekin.Id,
+		RekinId:           inovasiRekin.RekinId,
+		KodeOpd:           inovasiRekin.KodeOpd,
+		NamaOpd:           inovasiRekin.NamaOpd,
+		NamaInovasi:       inovasiRekin.NamaInovasi,
+		JenisInovasiId:    inovasiRekin.JenisInovasiId,
+		JenisInovasi:      inovasiRekin.JenisInovasi,
+		WaktuImplementasi: inovasiRekin.WaktuImplementasi,
+		Instansi:          inovasiRekin.Instansi,
+		Inovator:          inovasiRekin.Inovator,
+		Kebaruan:          inovasiRekin.Kebaruan,
+		AsalInovasi:       inovasiRekin.AsalInovasi,
+		Tahun:             inovasiRekin.Tahun,
+		NipInovator:       inovasiRekin.NipInovator,
+		NamaNipInovator:   inovasiRekin.NamaNipInovator,
+		Level:             inovasiRekin.Level,
+		PegawaiId:         inovasiRekin.PegawaiId,
+		Action:            buttonActions,
 	}
 }
 
@@ -344,14 +344,14 @@ func ToInovasiRekinResponses(inovasiRekins []domain.InovasiRekin) []inovasirekin
 }
 func ToInovasiLaporanResponse(inovasiRekin domain.InovasiLaporan) inovasirekin.InovasiLaporanResponse {
 	return inovasirekin.InovasiLaporanResponse{
-		Id:           	 	inovasiRekin.Id,
-		RekinId:      	 	inovasiRekin.RekinId,
+		Id:                 inovasiRekin.Id,
+		RekinId:            inovasiRekin.RekinId,
 		NamaRencanaKinerja: inovasiRekin.NamaRencanaKinerja,
-		KodeOpd:      	 	inovasiRekin.KodeOpd,
-		NamaOpd:      	 	inovasiRekin.NamaOpd,
-		NamaInovasi:  	 	inovasiRekin.NamaInovasi,
-		JenisInovasiId:  	inovasiRekin.JenisInovasiId,
-		JenisInovasi:  		inovasiRekin.JenisInovasi,
+		KodeOpd:            inovasiRekin.KodeOpd,
+		NamaOpd:            inovasiRekin.NamaOpd,
+		NamaInovasi:        inovasiRekin.NamaInovasi,
+		JenisInovasiId:     inovasiRekin.JenisInovasiId,
+		JenisInovasi:       inovasiRekin.JenisInovasi,
 		WaktuImplementasi:  inovasiRekin.WaktuImplementasi,
 		Instansi:           inovasiRekin.Instansi,
 		Inovator:           inovasiRekin.Inovator,
@@ -470,7 +470,11 @@ func ToSubKegiatanResponse(subKegiatan domain.SubKegiatan) subkegiatan.SubKegiat
 
 		indikatorResponses = append(indikatorResponses, subkegiatan.IndikatorResponse{
 			Id:            indikator.Id,
+			IdIndikator:   indikator.IdMaster,
+			KodeIndikator: indikator.KodeIndikator,
+			Kode:          indikator.Kode,
 			NamaIndikator: indikator.Indikator,
+			Indikator:     indikator.Indikator,
 			Target:        targetResponses,
 		})
 	}

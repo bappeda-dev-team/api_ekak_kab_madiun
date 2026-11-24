@@ -7,6 +7,7 @@ import (
 
 type Indikator struct {
 	Id                  string
+	IdMaster            int
 	PokinId             string
 	ProgramId           string
 	RencanaKinerjaId    string

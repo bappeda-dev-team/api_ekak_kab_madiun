@@ -301,27 +301,44 @@ func (service *SubKegiatanServiceImpl) FindAll(
 
 	subKegiatanIds := make([]string, 0, len(subKegiatans))
 	for _, sp := range subKegiatans {
-		subKegiatanIds = append(subKegiatanIds, sp.Id)
+		subKegiatanIds = append(subKegiatanIds, sp.KodeSubKegiatan)
 	}
 
-	indikators, err := service.subKegiatanRepository.FindIndikatorsBySubKegiatanIds(ctx, tx, subKegiatanIds)
+	indikators, err := service.subKegiatanRepository.FindMasterIndikatorProgramKegiatanByKodes(ctx, tx, subKegiatanIds)
 	if err != nil {
-		log.Println("Gagal batch load indikator sub kegiatan:", err)
+		log.Printf("gagal mengambil indikator master: %v", err)
 		return subkegiatan.SubKegiatanPaginatedResponse{}, err
 	}
 
-	indikatorIds := make([]string, 0, len(indikators))
-	for _, ind := range indikators {
-		indikatorIds = append(indikatorIds, ind.Id)
+	for i := range subKegiatans {
+		indSubs := indikators[subKegiatans[i].KodeSubKegiatan]
+		inds := make([]domain.Indikator, 0)
+		for _, ind := range indSubs {
+			inds = append(inds, domain.Indikator{
+				IdMaster:      ind.Id,
+				KodeIndikator: ind.KodeIndikator,
+				Kode:          ind.Kode,
+				Indikator:     ind.Indikator,
+			})
+		}
+		if inds == nil {
+			inds = []domain.Indikator{}
+		}
+		subKegiatans[i].Indikator = inds
 	}
 
-	targets, err := service.subKegiatanRepository.FindTargetsByIndikatorIds(ctx, tx, indikatorIds)
-	if err != nil {
-		log.Println("Gagal batch load target sub kegiatan:", err)
-		return subkegiatan.SubKegiatanPaginatedResponse{}, err
-	}
+	// indikatorIds := make([]string, 0, len(indikators))
+	// for _, ind := range indikators {
+	// 	indikatorIds = append(indikatorIds, ind.Id)
+	// }
 
-	attachIndikatorTargets(subKegiatans, indikators, targets)
+	// targets, err := service.subKegiatanRepository.FindTargetsByIndikatorIds(ctx, tx, indikatorIds)
+	// if err != nil {
+	// 	log.Println("Gagal batch load target sub kegiatan:", err)
+	// 	return subkegiatan.SubKegiatanPaginatedResponse{}, err
+	// }
+
+	// attachIndikatorTargets(subKegiatans, indikators, targets)
 
 	totalPages := total / filter.Limit
 	if total%filter.Limit != 0 {

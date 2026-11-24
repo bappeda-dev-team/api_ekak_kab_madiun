@@ -29,8 +29,12 @@ type SubKegiatanResponse struct {
 }
 
 type IndikatorResponse struct {
+	IdIndikator   int              `json:"id,omitempty"`
 	Id            string           `json:"id_indikator"`
+	KodeIndikator string           `json:"kode_indikator,omitempty"`
+	Kode          string           `json:"kode,omitempty"`
 	NamaIndikator string           `json:"nama_indikator"`
+	Indikator     string           `json:"indikator,omitempty"`
 	Target        []TargetResponse `json:"targets"`
 }
 
