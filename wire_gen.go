@@ -159,7 +159,7 @@ func InitializeServer() *http.Server {
 	misiPemdaControllerImpl := controller.NewMisiPemdaControllerImpl(misiPemdaServiceImpl)
 	matrixRenstraRepositoryImpl := repository.NewMatrixRenstraRepositoryImpl()
 	outcomeMatrixRepositoryImpl := repository.NewOutcomeMatrixRepositoryImpl()
-	matrixRenstraServiceImpl := service.NewMatrixRenstraServiceImpl(matrixRenstraRepositoryImpl, outcomeMatrixRepositoryImpl, periodeRepositoryImpl, pegawaiRepositoryImpl, db)
+	matrixRenstraServiceImpl := service.NewMatrixRenstraServiceImpl(matrixRenstraRepositoryImpl, outcomeMatrixRepositoryImpl, periodeRepositoryImpl, pegawaiRepositoryImpl, db, validate)
 	matrixRenstraControllerImpl := controller.NewMatrixRenstraControllerImpl(matrixRenstraServiceImpl)
 	cascadingOpdControllerImpl := controller.NewCascadingOpdControllerImpl(cascadingOpdServiceImpl)
 	pptkRepositoryImpl := repository.NewPptkRepositoryImpl()

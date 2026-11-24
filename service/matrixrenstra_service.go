@@ -15,4 +15,5 @@ type MatrixRenstraService interface {
 	DeleteIndikator(ctx context.Context, kodeIndikator string) error
 	FindIndikatorByKodeIndikator(ctx context.Context, kodeIndikator string) (programkegiatan.IndikatorResponse, error)
 	UpsertAnggaran(ctx context.Context, request programkegiatan.AnggaranRenstraRequest) (programkegiatan.AnggaranRenstraResponse, error)
+	FindPengampuSubkegiatan(ctx context.Context, request programkegiatan.PengampuSubKegiatanRequest) (programkegiatan.PengampuSubKegiatanResponse, error)
 }

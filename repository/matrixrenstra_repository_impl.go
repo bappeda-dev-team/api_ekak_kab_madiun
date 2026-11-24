@@ -1081,3 +1081,46 @@ func (repository *MatrixRenstraRepositoryImpl) FindIndikatorMasterPeriod(ctx con
 	}
 	return result, nil
 }
+
+func (repository *MatrixRenstraRepositoryImpl) GetPengampuSubkegiatan(ctx context.Context, tx *sql.Tx, kodeSub, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.RencanaKinerja, error) {
+	const op = "matrixrenstra_repository.GetPengampuSubkegiatan"
+
+	query := `
+        SELECT pg.nip,
+               pg.nama,
+               rk.id,
+               rk.nama_rencana_kinerja,
+               rk.tahun
+	FROM tb_subkegiatan_terpilih st
+	JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+	JOIN tb_pegawai pg ON pg.nip = rk.pegawai_id
+	WHERE st.kode_subkegiatan = ?
+        AND rk.kode_opd = ?
+	AND rk.tahun BETWEEN ? AND ?
+    `
+
+	rows, err := tx.QueryContext(ctx, query, kodeSub, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, fmt.Errorf("%s: query failed: %w", op, err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.RencanaKinerja, 0)
+
+	for rows.Next() {
+		var rekin domain.RencanaKinerja
+
+		if err := rows.Scan(
+			&rekin.PegawaiId,
+			&rekin.NamaPegawai,
+			&rekin.Id,
+			&rekin.NamaRencanaKinerja,
+			&rekin.Tahun,
+		); err != nil {
+			return nil, err
+		}
+
+		result = append(result, rekin)
+	}
+	return result, nil
+}

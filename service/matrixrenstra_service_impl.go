@@ -14,6 +14,8 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type MatrixRenstraServiceImpl struct {
@@ -22,6 +24,7 @@ type MatrixRenstraServiceImpl struct {
 	PeriodeRepository       repository.PeriodeRepository
 	PegawaiRepository       repository.PegawaiRepository
 	DB                      *sql.DB
+	Validate                *validator.Validate
 }
 
 func NewMatrixRenstraServiceImpl(
@@ -30,6 +33,7 @@ func NewMatrixRenstraServiceImpl(
 	periodeRepository repository.PeriodeRepository,
 	pegawaiRepository repository.PegawaiRepository,
 	db *sql.DB,
+	validate *validator.Validate,
 ) *MatrixRenstraServiceImpl {
 	return &MatrixRenstraServiceImpl{
 		MatrixRenstraRepository: matrixRenstraRepository,
@@ -37,6 +41,7 @@ func NewMatrixRenstraServiceImpl(
 		PeriodeRepository:       periodeRepository,
 		PegawaiRepository:       pegawaiRepository,
 		DB:                      db,
+		Validate:                validate,
 	}
 }
 
@@ -1512,4 +1517,45 @@ func (service *MatrixRenstraServiceImpl) createIndikatorV2(ctx context.Context, 
 		},
 	})
 	return responses, nil
+}
+
+func (service *MatrixRenstraServiceImpl) FindPengampuSubkegiatan(ctx context.Context, request programkegiatan.PengampuSubKegiatanRequest) (programkegiatan.PengampuSubKegiatanResponse, error) {
+	err := service.Validate.Struct(request)
+	if err != nil {
+		return programkegiatan.PengampuSubKegiatanResponse{}, err
+	}
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.PengampuSubKegiatanResponse{}, err
+	}
+	defer tx.Rollback()
+
+	data, err := service.MatrixRenstraRepository.GetPengampuSubkegiatan(ctx, tx,
+		request.KodeSubKegiatan,
+		request.KodeOpd,
+		request.TahunAwal,
+		request.TahunAkhir,
+	)
+	if err != nil {
+		return programkegiatan.PengampuSubKegiatanResponse{}, err
+	}
+	pengampuResponse := make([]programkegiatan.PengampuResponse, 0)
+	for _, pengampu := range data {
+		pengampuResponse = append(pengampuResponse, programkegiatan.PengampuResponse{
+			Nip:              pengampu.PegawaiId,
+			NamaPegawai:      pengampu.NamaPegawai,
+			RencanaKinerjaId: pengampu.Id,
+			RencanaKinerja:   pengampu.NamaRencanaKinerja,
+			Tahun:            pengampu.Tahun,
+		})
+	}
+	response := programkegiatan.PengampuSubKegiatanResponse{
+		KodeSubKegiatan: request.KodeSubKegiatan,
+		KodeOpd:         request.KodeOpd,
+		TahunAwal:       request.TahunAwal,
+		TahunAkhir:      request.TahunAkhir,
+		Pengampu:        pengampuResponse,
+	}
+
+	return response, nil
 }

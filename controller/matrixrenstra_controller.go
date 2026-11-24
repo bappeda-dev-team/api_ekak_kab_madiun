@@ -15,4 +15,5 @@ type MatrixRenstraController interface {
 	DeleteIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpsertAnggaran(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpsertBatchIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	GetPengampuSubKegiatan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

@@ -352,7 +352,6 @@ func NewRouter(
 	router.PUT("/role/update/:id", roleController.Update)
 	router.GET("/role/detail/:id", roleController.FindById)
 	router.DELETE("/role/delete/:id", roleController.Delete)
-	// TODO: filter role super untuk user biasa
 	router.GET("/role/findall", roleController.FindAll)
 
 	//user
@@ -380,7 +379,7 @@ func NewRouter(
 	router.DELETE("/crosscutting_opd/delete/:crosscuttingId/:nip_pegawai", crosscuttingOpdController.Delete)
 	router.GET("/crosscutting_opd/findall/:parentId", crosscuttingOpdController.FindAll)
 	router.GET("/laporan/crosscutting/findall/:kode_opd/:tahun", crosscuttingOpdController.FindAllLaporanCrosscutting)
-	router.GET("/cetak/laporan/crosscutting/:kode_opd/:tahun/download-pdf",crosscuttingOpdController.CetakLaporanCrosscutting)
+	router.GET("/cetak/laporan/crosscutting/:kode_opd/:tahun/download-pdf", crosscuttingOpdController.CetakLaporanCrosscutting)
 	// INI SAJA
 	router.POST("/crosscutting/:crosscuttingId/permission", crosscuttingOpdController.ApproveOrReject)
 	router.DELETE("/crosscutting/:crosscuttingId/unused", crosscuttingOpdController.DeleteUnused)
@@ -403,7 +402,7 @@ func NewRouter(
 	router.GET("/review_pokin/detail/:id", reviewController.FindById)
 	router.GET("/review_pokin/tematik/:tahun", reviewController.FindAllReviewByTematik)
 	router.GET("/review_pokin/opd/:kode_opd/:tahun", reviewController.FindAllReviewOpd)
-	router.GET("/review_pokin/opd/:kode_opd/:tahun/download-pdf",reviewController.CetakPDFReviewOpd)
+	router.GET("/review_pokin/opd/:kode_opd/:tahun/download-pdf", reviewController.CetakPDFReviewOpd)
 
 	// review tujuan opd
 	router.POST("/review_tujuan_opd/create/:tujuanOpdId", reviewController.CreateTujuanOpd)
@@ -534,6 +533,7 @@ func NewRouter(
 	router.POST("/matrix_renstra/indikator/create", matrixRenstraController.CreateIndikatorV2)
 	router.PUT("/matrix_renstra/indikator/update", matrixRenstraController.UpdateIndikatorRenstra)
 	router.POST("/matrix_renstra/target/upsert", matrixRenstraController.UpsertTarget)
+	router.GET("/matrix-renstra/pengampu-subkegiatan", matrixRenstraController.GetPengampuSubKegiatan)
 
 	// outcome matrix
 	router.GET("/outcome_matrix", outcomeMatrixController.FindAll)

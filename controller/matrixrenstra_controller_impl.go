@@ -5,8 +5,10 @@ import (
 	"ekak_kabupaten_madiun/model/web"
 	"ekak_kabupaten_madiun/model/web/programkegiatan"
 	"ekak_kabupaten_madiun/service"
+	"errors"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -259,4 +261,63 @@ func (controller *MatrixRenstraControllerImpl) UpsertBatchIndikator(writer http.
 	helper.WriteToResponseBody(writer, web.WebResponse{
 		Code: http.StatusOK, Status: "success upsert indikator renstra", Data: resp,
 	})
+}
+
+// @Summary      Pengampu Subkegiatan
+// @Description  Pelaksana Subkegiatan Renstra dalam periode (tahun_awal - tahun_akhir)
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        kode_subkegiatan   path   string  true  "Kode Subkegiatan"   example("2.19.03.2.03.0004")
+// @Param        kode_opd           query  string  true  "Kode OPD"           example("1.01.1.01.0.00.01.0000")
+// @Param        tahun_awal         query  string  true  "Tahun Awal"         example("2025")
+// @Param        tahun_akhir        query  string  true  "Tahun Akhir"        example("2029")
+// @Success      200  {object}  web.WebResponse{data=[]programkegiatan.UrusanDetailV2Response}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix-renstra/pengampu-subkegiatan [get]
+func (controller *MatrixRenstraControllerImpl) GetPengampuSubKegiatan(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeSubKegiatan := request.URL.Query().Get("kode_subkegiatan")
+	kodeOpd := request.URL.Query().Get("kode_opd")
+	tahunAwal := request.URL.Query().Get("tahun_awal")
+	tahunAkhir := request.URL.Query().Get("tahun_akhir")
+
+	pengampuRequest := programkegiatan.PengampuSubKegiatanRequest{
+		KodeSubKegiatan: kodeSubKegiatan,
+		KodeOpd:         kodeOpd,
+		TahunAwal:       tahunAwal,
+		TahunAkhir:      tahunAkhir,
+	}
+
+	pengampuSubkegiatan, err := controller.MatrixRenstraService.FindPengampuSubkegiatan(
+		request.Context(),
+		pengampuRequest,
+	)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		message := "Internal server error"
+
+		var validationErrors validator.ValidationErrors
+
+		if errors.As(err, &validationErrors) {
+			statusCode = http.StatusBadRequest
+			message = err.Error()
+		}
+
+		webResponse := web.WebResponse{
+			Code:   statusCode,
+			Status: http.StatusText(statusCode),
+			Data:   message,
+		}
+
+		helper.WriteToResponseBodyWstatus(writer, webResponse)
+		return
+	}
+
+	webResponse := web.WebResponse{
+		Code:   200,
+		Status: http.StatusText(200),
+		Data:   pengampuSubkegiatan,
+	}
+	helper.WriteToResponseBodyWstatus(writer, webResponse)
 }
