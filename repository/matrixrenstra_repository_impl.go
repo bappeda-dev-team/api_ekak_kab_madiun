@@ -1082,7 +1082,7 @@ func (repository *MatrixRenstraRepositoryImpl) FindIndikatorMasterPeriod(ctx con
 	return result, nil
 }
 
-func (repository *MatrixRenstraRepositoryImpl) GetPengampuSubkegiatan(ctx context.Context, tx *sql.Tx, kodeSub, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.RencanaKinerja, error) {
+func (repository *MatrixRenstraRepositoryImpl) GetPengampuSubkegiatan(ctx context.Context, db *sql.DB, kodeSub, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.RencanaKinerja, error) {
 	const op = "matrixrenstra_repository.GetPengampuSubkegiatan"
 
 	query := `
@@ -1099,7 +1099,7 @@ func (repository *MatrixRenstraRepositoryImpl) GetPengampuSubkegiatan(ctx contex
 	AND rk.tahun BETWEEN ? AND ?
     `
 
-	rows, err := tx.QueryContext(ctx, query, kodeSub, kodeOpd, tahunAwal, tahunAkhir)
+	rows, err := db.QueryContext(ctx, query, kodeSub, kodeOpd, tahunAwal, tahunAkhir)
 	if err != nil {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}

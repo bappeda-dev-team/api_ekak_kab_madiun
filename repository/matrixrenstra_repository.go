@@ -23,5 +23,5 @@ type MatrixRenstraRepository interface {
 	FindIndikatorRenstra(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error)
 	FindIndikatorLama(ctx context.Context, tx *sql.Tx, kodeOpd string, tahunAwal string, tahunAkhir string) ([]domain.Indikator, error)
 	FindIndikatorMasterPeriod(ctx context.Context, tx *sql.Tx, kodes []string) ([]domain.Indikator, error)
-	GetPengampuSubkegiatan(ctx context.Context, tx *sql.Tx, kodeSub, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.RencanaKinerja, error)
+	GetPengampuSubkegiatan(ctx context.Context, db *sql.DB, kodeSub, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.RencanaKinerja, error)
 }

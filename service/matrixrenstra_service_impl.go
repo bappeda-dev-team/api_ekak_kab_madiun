@@ -1524,13 +1524,10 @@ func (service *MatrixRenstraServiceImpl) FindPengampuSubkegiatan(ctx context.Con
 	if err != nil {
 		return programkegiatan.PengampuSubKegiatanResponse{}, err
 	}
-	tx, err := service.DB.Begin()
-	if err != nil {
-		return programkegiatan.PengampuSubKegiatanResponse{}, err
-	}
-	defer tx.Rollback()
 
-	data, err := service.MatrixRenstraRepository.GetPengampuSubkegiatan(ctx, tx,
+	data, err := service.MatrixRenstraRepository.GetPengampuSubkegiatan(
+		ctx,
+		service.DB,
 		request.KodeSubKegiatan,
 		request.KodeOpd,
 		request.TahunAwal,
