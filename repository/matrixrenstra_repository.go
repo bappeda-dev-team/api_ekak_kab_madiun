@@ -10,6 +10,9 @@ type MatrixRenstraRepository interface {
 	GetByKodeSubKegiatan(ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.SubKegiatanQuery, error)
 	GetHierarchyAndPagu(ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.SubKegiatanQuery, error)
 	FindIndikatorRenstraPeriod(ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.Indikator, error)
+	// FindMasterIndikatorProgram — digunakan oleh V3: indikator program dari tb_master_indikator_program_kegiatan
+	// dengan target dari tb_target_program_kegiatan (filter kode_opd + tahun BETWEEN tahunAwal AND tahunAkhir).
+	FindMasterIndikatorProgram(ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir string) ([]domain.Indikator, error)
 	FindTargetByIndikatorIdAndTahun(ctx context.Context, tx *sql.Tx, indikatorId, tahun string) (domain.Target, error)
 	UpsertIndikator(ctx context.Context, tx *sql.Tx, indikator domain.Indikator) error
 	UpdateIndikatorRenstra(ctx context.Context, tx *sql.Tx, kodeIndikator, indikator string) error

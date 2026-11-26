@@ -23,4 +23,9 @@ type MatrixRenjaController interface {
 	UpsertPaguRanwal(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpsertPaguRankhir(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	UpsertPaguPenetapan(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+
+	// V2 — program indikator dari tb_master_indikator_program_kegiatan
+	GetRenjaRanwalV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	GetRenjaRankhirV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	GetRenjaPenetapanV2(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

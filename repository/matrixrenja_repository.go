@@ -23,4 +23,10 @@ type MatrixRenjaRepository interface {
 
 	// CRUD pagu per jenis (ranwal / rankhir / penetapan) — generik
 	UpsertPaguRenjaByJenis(ctx context.Context, tx *sql.Tx, kodeSubkegiatan, kodeOpd, tahun, jenis string, pagu int64) error
+
+	// V2 — sama dengan GetRenja / GetRenjaRankhir / GetRenjaPenetapan tetapi khusus level Program:
+	// indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.
+	GetRenjaV2(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenisPagu string) ([]domain.SubKegiatanQuery, error)
+	GetRenjaRankhirV2(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.SubKegiatanQuery, error)
+	GetRenjaPenetapanV2(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, jenisPagu string) ([]domain.SubKegiatanQuery, error)
 }

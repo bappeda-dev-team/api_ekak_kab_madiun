@@ -8,6 +8,9 @@ import (
 type MatrixRenstraService interface {
 	GetByKodeSubKegiatan(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir string) ([]programkegiatan.UrusanDetailResponse, error)
 	GetByKodeSubKegiatanVersiKedua(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir string) ([]programkegiatan.UrusanDetailV2Response, error)
+	// GetByKodeSubKegiatanVersiKetiga — sama dengan V2 tetapi khusus level Program:
+	// indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.
+	GetByKodeSubKegiatanVersiKetiga(ctx context.Context, kodeOpd, tahunAwal, tahunAkhir string) ([]programkegiatan.UrusanDetailV2Response, error)
 	CreateIndikatorV2(ctx context.Context, requests []programkegiatan.IndikatorRenstraV2CreateRequest) ([]programkegiatan.IndikatorV2UpsertResponse, error)
 	UpdateIndikatorRenstra(ctx context.Context, request programkegiatan.IndikatorRenstraUpdateRequest) (programkegiatan.IndikatorRenstraUpdateResponse, error)
 	UpsertTarget(ctx context.Context, request programkegiatan.TargetRenstraUpsertRequest) (programkegiatan.TargetResponse, error)

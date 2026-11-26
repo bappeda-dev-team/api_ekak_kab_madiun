@@ -718,6 +718,77 @@ func (r *MatrixRenstraRepositoryImpl) FindTargetByIndikatorIdAndTahun(ctx contex
 	return t, nil
 }
 
+// FindMasterIndikatorProgram — V3 Renstra.
+// Mengembalikan semua indikator program dari tb_master_indikator_program_kegiatan
+// beserta target per tahun dari tb_target_program_kegiatan (filter kode_opd + tahun BETWEEN).
+func (r *MatrixRenstraRepositoryImpl) FindMasterIndikatorProgram(
+	ctx context.Context, tx *sql.Tx, kodeOpd, tahunAwal, tahunAkhir string,
+) ([]domain.Indikator, error) {
+	query := `
+		SELECT
+			mip.kode_indikator,
+			mip.kode,
+			mip.indikator,
+			COALESCE(tpk.id, 0)                AS target_id,
+			COALESCE(CAST(tpk.tahun AS CHAR), '') AS target_tahun,
+			COALESCE(tpk.target, '')           AS target,
+			COALESCE(tpk.satuan, '')           AS satuan
+		FROM tb_master_indikator_program_kegiatan mip
+		LEFT JOIN tb_target_program_kegiatan tpk
+			ON  tpk.kode_indikator = mip.kode_indikator
+			AND tpk.kode_opd       = ?
+			AND tpk.jenis          = 'renstra'
+			AND tpk.tahun          BETWEEN ? AND ?
+		ORDER BY mip.kode, mip.kode_indikator, tpk.tahun
+	`
+	rows, err := tx.QueryContext(ctx, query, kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	byID := make(map[string]*domain.Indikator)
+	order := make([]string, 0)
+
+	for rows.Next() {
+		var (
+			kodeInd, kode, indikator string
+			targetId                 int
+			targetTahun, target, satuan string
+		)
+		if err := rows.Scan(&kodeInd, &kode, &indikator, &targetId, &targetTahun, &target, &satuan); err != nil {
+			return nil, err
+		}
+		ind, ok := byID[kodeInd]
+		if !ok {
+			ind = &domain.Indikator{
+				KodeIndikator: kodeInd,
+				Kode:          kode,
+				Indikator:     indikator,
+				Jenis:         "master_program",
+			}
+			byID[kodeInd] = ind
+			order = append(order, kodeInd)
+		}
+		if targetId != 0 && targetTahun != "" {
+			ind.Target = append(ind.Target, domain.Target{
+				IndikatorId: kodeInd,
+				Tahun:       targetTahun,
+				Target:      target,
+				Satuan:      satuan,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	result := make([]domain.Indikator, 0, len(order))
+	for _, id := range order {
+		result = append(result, *byID[id])
+	}
+	return result, nil
+}
+
 func (r *MatrixRenstraRepositoryImpl) DeleteIndikator(ctx context.Context, tx *sql.Tx, kodeIndikator string) error {
 	_, err := tx.ExecContext(ctx, `DELETE FROM tb_indikator_matrix WHERE kode_indikator = ?`, kodeIndikator)
 	return err

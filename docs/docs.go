@@ -1817,6 +1817,192 @@ const docTemplate = `{
                 }
             }
         },
+        "/matrix_renja/v2/penetapan/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "GET matrix renja penetapan V2. Khusus level Program: indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Matrix Renja Penetapan V2",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/renja.PenetapanMatrixResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/v2/rankhir/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "GET matrix renja rankhir V2. Khusus level Program: indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Matrix Renja Rankhir V2",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/renja.RankhirMatrixResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renja/v2/ranwal/{kode_opd}/{tahun}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "GET matrix renja ranwal V2. Khusus level Program: indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan. Level lain tetap dari tb_indikator_matrix.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renja"
+                ],
+                "summary": "Matrix Renja Ranwal V2",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/renja.RanwalMatrixResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/matrix_renstra/anggaran/upsert": {
             "post": {
                 "security": [
@@ -2214,6 +2400,78 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "\"2029\"",
+                        "description": "Tahun Akhir",
+                        "name": "tahun_akhir",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.UrusanDetailV2Response"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/matrix_renstra/v3/opd/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hierarki matrix renstra V3. Indikator level Program menggunakan tb_master_indikator_program_kegiatan",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Matrix Renstra"
+                ],
+                "summary": "Matrix Renstra Versi Ketiga",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun Awal",
+                        "name": "tahun_awal",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
                         "description": "Tahun Akhir",
                         "name": "tahun_akhir",
                         "in": "query",
@@ -5935,6 +6193,644 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menghapus satu target berdasarkan id.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Hapus Target Program Kegiatan",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID target",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/detail/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan satu target berdasarkan id.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Detail Target Program Kegiatan",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID target",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/findall/{kode_indikator}/{kode_opd}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mendapatkan semua target (semua jenis) untuk kombinasi kode_indikator dan kode_opd.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Daftar Target berdasarkan Kode Indikator + Kode OPD",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Kode indikator",
+                        "name": "kode_indikator",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kode OPD",
+                        "name": "kode_opd",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/penetapan/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target program kegiatan untuk fase Penetapan (jenis='penetapan').",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Buat Target Penetapan",
+                "parameters": [
+                    {
+                        "description": "Data target",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/penetapan/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengubah target dan satuan untuk data dengan jenis='penetapan'. Kolom jenis dan tahun tidak dapat diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Update Target Penetapan",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID target",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "target \u0026 satuan baru",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/rankhir/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target program kegiatan untuk fase Rancangan Akhir (jenis='rankhir').",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Buat Target Rancangan Akhir",
+                "parameters": [
+                    {
+                        "description": "Data target",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/rankhir/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengubah target dan satuan untuk data dengan jenis='rankhir'. Kolom jenis dan tahun tidak dapat diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Update Target Rancangan Akhir",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID target",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "target \u0026 satuan baru",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/renja/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target program kegiatan untuk fase Renja (jenis='renja').",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Buat Target Renja",
+                "parameters": [
+                    {
+                        "description": "Data target",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/renja/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengubah target dan satuan untuk data dengan jenis='renja'. Kolom jenis dan tahun tidak dapat diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Update Target Renja",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID target",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "target \u0026 satuan baru",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/renstra/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat target program kegiatan untuk fase Renstra (jenis='renstra').",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Buat Target Renstra",
+                "parameters": [
+                    {
+                        "description": "Data target",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/target_program_kegiatan/renstra/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengubah target dan satuan untuk data dengan jenis='renstra'. Kolom jenis dan tahun tidak dapat diubah.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Target Program Kegiatan"
+                ],
+                "summary": "Update Target Renstra",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID target",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "target \u0026 satuan baru",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.TargetProgramKegiatanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/web.WebResponse"
                         }
@@ -11021,6 +11917,75 @@ const docTemplate = `{
                     }
                 },
                 "pegawai_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.TargetProgramKegiatanCreateRequest": {
+            "type": "object",
+            "required": [
+                "kode_indikator",
+                "kode_opd",
+                "satuan",
+                "tahun",
+                "target"
+            ],
+            "properties": {
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer",
+                    "minimum": 2000
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.TargetProgramKegiatanResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenis": {
+                    "type": "string"
+                },
+                "kode_indikator": {
+                    "type": "string"
+                },
+                "kode_opd": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.TargetProgramKegiatanUpdateRequest": {
+            "type": "object",
+            "required": [
+                "satuan",
+                "target"
+            ],
+            "properties": {
+                "satuan": {
+                    "type": "string"
+                },
+                "target": {
                     "type": "string"
                 }
             }

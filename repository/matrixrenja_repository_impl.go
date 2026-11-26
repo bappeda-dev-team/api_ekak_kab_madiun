@@ -1033,3 +1033,471 @@ func (r *MatrixRenjaRepositoryImpl) UpsertPaguRenjaByJenis(
 	)
 	return err
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V2 helpers — master indikator program
+// ─────────────────────────────────────────────────────────────────────────────
+
+// masterIndRowRenja menyimpan satu baris hasil join master indikator + target program kegiatan.
+type masterIndRowRenja struct {
+	kodeInd, kode, indikator string
+	target, satuan           string
+}
+
+// fetchMasterIndikatorProgramForRenja mengembalikan map[kode_program → []masterIndRowRenja]
+// berisi indikator dari tb_master_indikator_program_kegiatan dengan target dari
+// tb_target_program_kegiatan (kode_opd + tahun + jenis tertentu).
+// Nilai jenis: "renja" / "rankhir" / "penetapan".
+func (r *MatrixRenjaRepositoryImpl) fetchMasterIndikatorProgramForRenja(
+	ctx context.Context, tx *sql.Tx, kodeOpd, tahun, jenis string,
+) (map[string][]masterIndRowRenja, error) {
+	rows, err := tx.QueryContext(ctx, `
+		SELECT
+			mip.kode_indikator,
+			mip.kode,
+			mip.indikator,
+			COALESCE(tpk.target, '') AS target,
+			COALESCE(tpk.satuan, '') AS satuan
+		FROM tb_master_indikator_program_kegiatan mip
+		LEFT JOIN tb_target_program_kegiatan tpk
+			ON  tpk.kode_indikator = mip.kode_indikator
+			AND tpk.kode_opd       = ?
+			AND tpk.jenis          = ?
+			AND tpk.tahun          = ?
+		ORDER BY mip.kode, mip.kode_indikator
+	`, kodeOpd, jenis, tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]masterIndRowRenja)
+	for rows.Next() {
+		var row masterIndRowRenja
+		if err := rows.Scan(&row.kodeInd, &row.kode, &row.indikator, &row.target, &row.satuan); err != nil {
+			return nil, err
+		}
+		result[row.kode] = append(result[row.kode], row)
+	}
+	return result, rows.Err()
+}
+
+// mergeAllV2 — gabungkan baris hierarki dengan DUA sumber indikator:
+//   - indByKode  : indikator NON-program (urusan, bidang, kegiatan, subkegiatan) dari tb_indikator_matrix
+//   - masterByPrg: indikator PROGRAM dari tb_master_indikator_program_kegiatan
+//
+// Untuk setiap baris hierarki:
+//   - Cari indikator non-program dari 4 level (tidak termasuk kode_program)
+//   - Cari indikator program dari masterByPrg[row.KodeProgram]
+//   - Jika tidak ada indikator sama sekali: kembalikan 1 baris tanpa indikator
+func mergeAllV2(
+	rows []domain.SubKegiatanQuery,
+	indByKode map[string][]indRowRenja,
+	masterByPrg map[string][]masterIndRowRenja,
+	applyRenstraFn func(*domain.SubKegiatanQuery, indRowRenja),
+	applyMasterFn func(*domain.SubKegiatanQuery, masterIndRowRenja),
+) []domain.SubKegiatanQuery {
+	result := make([]domain.SubKegiatanQuery, 0, len(rows))
+	for _, h := range rows {
+		// Non-program: urusan, bidang, kegiatan, subkegiatan (4 level, TANPA program)
+		nonPrgKodes := [4]string{h.KodeUrusan, h.KodeBidangUrusan, h.KodeKegiatan, h.KodeSubKegiatan}
+		seenInd := make(map[string]struct{})
+		var renstraMatches []indRowRenja
+		for _, kode := range nonPrgKodes {
+			if kode == "" {
+				continue
+			}
+			for _, ind := range indByKode[kode] {
+				if _, seen := seenInd[ind.id]; seen {
+					continue
+				}
+				seenInd[ind.id] = struct{}{}
+				renstraMatches = append(renstraMatches, ind)
+			}
+		}
+		// Program: master indikator
+		masterMatches := masterByPrg[h.KodeProgram]
+
+		if len(renstraMatches) == 0 && len(masterMatches) == 0 {
+			result = append(result, h)
+			continue
+		}
+		for _, ind := range renstraMatches {
+			row := h
+			row.IndikatorId = ind.id
+			row.IndikatorKode = ind.kode
+			row.Indikator = ind.indikator
+			row.IndikatorTahun = ind.tahun
+			row.IndikatorKodeOpd = ind.kodeOpd
+			applyRenstraFn(&row, ind)
+			result = append(result, row)
+		}
+		for _, ind := range masterMatches {
+			row := h
+			row.IndikatorId = ind.kodeInd
+			row.IndikatorKode = ind.kode
+			row.Indikator = ind.indikator
+			applyMasterFn(&row, ind)
+			result = append(result, row)
+		}
+	}
+	return result
+}
+
+// ── GetRenjaV2 ───────────────────────────────────────────────────────────────
+
+func (repository *MatrixRenjaRepositoryImpl) GetRenjaV2(ctx context.Context, tx *sql.Tx, kodeOpd, tahun, _ string) ([]domain.SubKegiatanQuery, error) {
+	baseResult, err := repository.getHierarchyBase(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	indByKode, err := repository.fetchIndikatorRenjaPeriod(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	masterByPrg, err := repository.fetchMasterIndikatorProgramForRenja(ctx, tx, kodeOpd, tahun, "renja")
+	if err != nil {
+		return nil, err
+	}
+
+	applyRenstra := func(row *domain.SubKegiatanQuery, ind indRowRenja) {
+		row.TargetRanwalId = ind.targetRanwalId
+		row.TargetRanwal = ind.targetRanwal
+		row.SatuanRanwal = ind.satuanRanwal
+		row.TargetId = ind.targetRanwalId
+		row.Target = ind.targetRanwal
+		row.Satuan = ind.satuanRanwal
+	}
+	applyMaster := func(row *domain.SubKegiatanQuery, ind masterIndRowRenja) {
+		row.Target = ind.target
+		row.Satuan = ind.satuan
+		row.TargetRanwal = ind.target
+		row.SatuanRanwal = ind.satuan
+	}
+
+	result := mergeAllV2(baseResult, indByKode, masterByPrg, applyRenstra, applyMaster)
+
+	// Opsi B: synthesis subkegiatan renstra yang tidak ada rekin tahun ini
+	seenSubkeg := make(map[string]bool)
+	for _, row := range result {
+		seenSubkeg[row.KodeSubKegiatan] = true
+	}
+	templates, err := repository.fetchAllSubkegTemplates(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	extraPagu, err := repository.fetchExtraPagu(ctx, tx, kodeOpd, tahun, "renstra")
+	if err != nil {
+		return nil, err
+	}
+	for kodeSub, pagu := range extraPagu {
+		if seenSubkeg[kodeSub] {
+			continue
+		}
+		tmpl, ok := templates[kodeSub]
+		if !ok {
+			continue
+		}
+		synth := tmpl
+		synth.TahunSubKegiatan = tahun
+		synth.PaguRanwal = pagu
+		result = append(result, mergeAllV2([]domain.SubKegiatanQuery{synth}, indByKode, masterByPrg, applyRenstra, applyMaster)...)
+	}
+	return result, nil
+}
+
+// getHierarchyBase — query hierarki + pagu_ranwal (dipakai bersama oleh V2).
+func (repository *MatrixRenjaRepositoryImpl) getHierarchyBase(
+	ctx context.Context, tx *sql.Tx, kodeOpd, tahun string,
+) ([]domain.SubKegiatanQuery, error) {
+	var count int
+	if err := tx.QueryRowContext(ctx, `
+        SELECT COUNT(*) FROM tb_subkegiatan_terpilih st
+        JOIN tb_rencana_kinerja rk ON st.rekin_id = rk.id
+        WHERE rk.kode_opd = ?`, kodeOpd).Scan(&count); err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, fmt.Errorf("subkegiatan belum dipilih untuk opd ini")
+	}
+	rows, err := tx.QueryContext(ctx, `
+    WITH hierarchy AS (
+        SELECT DISTINCT
+            u.kode_urusan, u.nama_urusan,
+            bu.kode_bidang_urusan, bu.nama_bidang_urusan,
+            p.kode_program, p.nama_program,
+            k.kode_kegiatan, k.nama_kegiatan,
+            s.kode_subkegiatan, s.nama_subkegiatan,
+            rk.tahun AS tahun_subkegiatan, rk.pegawai_id
+        FROM tb_subkegiatan_terpilih st
+        JOIN tb_rencana_kinerja rk  ON st.rekin_id = rk.id
+        JOIN tb_subkegiatan s       ON st.kode_subkegiatan = s.kode_subkegiatan
+        JOIN tb_master_kegiatan k   ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+        JOIN tb_master_program p    ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
+        JOIN tb_bidang_urusan bu    ON LEFT(p.kode_program, LENGTH(bu.kode_bidang_urusan)) = bu.kode_bidang_urusan
+        JOIN tb_urusan u            ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
+        WHERE rk.kode_opd = ? AND rk.tahun = ?
+    )
+    SELECT h.kode_urusan, h.nama_urusan, h.kode_bidang_urusan, h.nama_bidang_urusan,
+           h.kode_program, h.nama_program, h.kode_kegiatan, h.nama_kegiatan,
+           h.kode_subkegiatan, h.nama_subkegiatan, h.tahun_subkegiatan, h.pegawai_id,
+           COALESCE(pg.nama, '') AS nama_pegawai,
+           COALESCE(tp_rw.pagu, 0) AS pagu_ranwal
+    FROM hierarchy h
+    LEFT JOIN tb_pegawai pg ON pg.nip = h.pegawai_id
+    LEFT JOIN tb_pagu tp_rw ON tp_rw.kode_subkegiatan = h.kode_subkegiatan
+        AND tp_rw.kode_opd = ? AND tp_rw.jenis = 'renstra' AND tp_rw.tahun = h.tahun_subkegiatan
+    ORDER BY h.kode_urusan, h.kode_bidang_urusan, h.kode_program,
+             h.kode_kegiatan, h.kode_subkegiatan
+    `, kodeOpd, tahun, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.SubKegiatanQuery
+	for rows.Next() {
+		var data domain.SubKegiatanQuery
+		if err := rows.Scan(
+			&data.KodeUrusan, &data.NamaUrusan,
+			&data.KodeBidangUrusan, &data.NamaBidangUrusan,
+			&data.KodeProgram, &data.NamaProgram,
+			&data.KodeKegiatan, &data.NamaKegiatan,
+			&data.KodeSubKegiatan, &data.NamaSubKegiatan,
+			&data.TahunSubKegiatan, &data.PegawaiId,
+			&data.NamaPegawai, &data.PaguRanwal,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, data)
+	}
+	return result, rows.Err()
+}
+
+// ── GetRenjaRankhirV2 ─────────────────────────────────────────────────────────
+
+func (repository *MatrixRenjaRepositoryImpl) GetRenjaRankhirV2(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string) ([]domain.SubKegiatanQuery, error) {
+	baseResult, err := repository.getRankhirBase(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	indByKode, err := repository.fetchIndikatorRenjaPeriod(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	masterByPrg, err := repository.fetchMasterIndikatorProgramForRenja(ctx, tx, kodeOpd, tahun, "rankhir")
+	if err != nil {
+		return nil, err
+	}
+
+	applyRenstra := func(row *domain.SubKegiatanQuery, ind indRowRenja) {
+		row.TargetRanwalId = ind.targetRanwalId
+		row.TargetRanwal = ind.targetRanwal
+		row.SatuanRanwal = ind.satuanRanwal
+		row.TargetRankhirId = ind.targetRankhirId
+		row.TargetRankhir = ind.targetRankhir
+		row.SatuanRankhir = ind.satuanRankhir
+	}
+	applyMaster := func(row *domain.SubKegiatanQuery, ind masterIndRowRenja) {
+		row.Target = ind.target
+		row.Satuan = ind.satuan
+		row.TargetRanwal = ind.target
+		row.SatuanRanwal = ind.satuan
+		row.TargetRankhir = ind.target
+		row.SatuanRankhir = ind.satuan
+	}
+
+	result := mergeAllV2(baseResult, indByKode, masterByPrg, applyRenstra, applyMaster)
+
+	// Opsi B synthesis
+	seenSubkeg := make(map[string]bool)
+	for _, row := range result {
+		seenSubkeg[row.KodeSubKegiatan] = true
+	}
+	templates, _ := repository.fetchAllSubkegTemplates(ctx, tx, kodeOpd, tahun)
+	extraPagu, _ := repository.fetchExtraPagu(ctx, tx, kodeOpd, tahun, "renstra")
+	for kodeSub, pagu := range extraPagu {
+		if seenSubkeg[kodeSub] {
+			continue
+		}
+		tmpl, ok := templates[kodeSub]
+		if !ok {
+			continue
+		}
+		synth := tmpl
+		synth.TahunSubKegiatan = tahun
+		synth.PaguRanwal = pagu
+		synth.PaguRankhir = 0
+		synth.StatusSubkegiatan = "subkegiatan tidak ada di tahun ini"
+		result = append(result, mergeAllV2([]domain.SubKegiatanQuery{synth}, indByKode, masterByPrg, applyRenstra, applyMaster)...)
+	}
+
+	if len(result) == 0 {
+		return []domain.SubKegiatanQuery{}, nil
+	}
+	return result, nil
+}
+
+// getRankhirBase — query hierarki dengan dual pagu (ranwal + rankhir via rincian belanja).
+func (repository *MatrixRenjaRepositoryImpl) getRankhirBase(
+	ctx context.Context, tx *sql.Tx, kodeOpd, tahun string,
+) ([]domain.SubKegiatanQuery, error) {
+	rows, err := tx.QueryContext(ctx, `
+    WITH subkeg_pagu AS (
+        SELECT sub.kode_subkegiatan, rk.pegawai_id, rk.tahun AS tahun_rekin,
+               COALESCE(SUM(rb.anggaran), 0) AS pagu_rankhir
+        FROM tb_subkegiatan_terpilih sub
+        JOIN tb_rencana_kinerja rk ON sub.rekin_id = rk.id
+        LEFT JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rk.id
+        LEFT JOIN tb_rincian_belanja rb ON rb.renaksi_id = ra.id
+        WHERE rk.kode_opd = ? AND rk.tahun = ?
+        GROUP BY sub.kode_subkegiatan, rk.pegawai_id, rk.tahun
+    )
+    SELECT u.kode_urusan, u.nama_urusan,
+           bu.kode_bidang_urusan, bu.nama_bidang_urusan,
+           p.kode_program, p.nama_program,
+           k.kode_kegiatan, k.nama_kegiatan,
+           s.kode_subkegiatan, s.nama_subkegiatan,
+           sp.tahun_rekin, sp.pegawai_id,
+           COALESCE(pg.nama,'') AS nama_pegawai,
+           COALESCE(tp_rw.pagu, 0) AS pagu_ranwal,
+           sp.pagu_rankhir
+    FROM subkeg_pagu sp
+    JOIN tb_subkegiatan s ON sp.kode_subkegiatan = s.kode_subkegiatan
+    JOIN tb_master_kegiatan k   ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+    JOIN tb_master_program p    ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
+    JOIN tb_bidang_urusan bu    ON LEFT(p.kode_program, LENGTH(bu.kode_bidang_urusan)) = bu.kode_bidang_urusan
+    JOIN tb_urusan u            ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
+    LEFT JOIN tb_pegawai pg ON pg.nip = sp.pegawai_id
+    LEFT JOIN tb_pagu tp_rw ON tp_rw.kode_subkegiatan = sp.kode_subkegiatan
+        AND tp_rw.kode_opd = ? AND tp_rw.jenis = 'renstra' AND tp_rw.tahun = sp.tahun_rekin
+    ORDER BY u.kode_urusan, bu.kode_bidang_urusan, p.kode_program,
+             k.kode_kegiatan, s.kode_subkegiatan
+	`, kodeOpd, tahun, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.SubKegiatanQuery
+	for rows.Next() {
+		var row domain.SubKegiatanQuery
+		if err := rows.Scan(
+			&row.KodeUrusan, &row.NamaUrusan,
+			&row.KodeBidangUrusan, &row.NamaBidangUrusan,
+			&row.KodeProgram, &row.NamaProgram,
+			&row.KodeKegiatan, &row.NamaKegiatan,
+			&row.KodeSubKegiatan, &row.NamaSubKegiatan,
+			&row.TahunSubKegiatan, &row.PegawaiId,
+			&row.NamaPegawai, &row.PaguRanwal, &row.PaguRankhir,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, row)
+	}
+	return result, rows.Err()
+}
+
+// ── GetRenjaPenetapanV2 ───────────────────────────────────────────────────────
+
+func (repository *MatrixRenjaRepositoryImpl) GetRenjaPenetapanV2(ctx context.Context, tx *sql.Tx, kodeOpd, tahun string, _ string) ([]domain.SubKegiatanQuery, error) {
+	baseResult, err := repository.getPenetapanBase(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	indByKode, err := repository.fetchIndikatorRenjaPeriod(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	masterByPrg, err := repository.fetchMasterIndikatorProgramForRenja(ctx, tx, kodeOpd, tahun, "penetapan")
+	if err != nil {
+		return nil, err
+	}
+
+	applyRenstra := func(row *domain.SubKegiatanQuery, ind indRowRenja) {
+		row.TargetRankhirId = ind.targetRankhirId
+		row.TargetRankhir = ind.targetRankhir
+		row.SatuanRankhir = ind.satuanRankhir
+		row.TargetPenetapanId = ind.targetPenetapanId
+		row.TargetPenetapan = ind.targetPenetapan
+		row.SatuanPenetapan = ind.satuanPenetapan
+		row.TargetId = ind.targetPenetapanId
+		row.Target = ind.targetPenetapan
+		row.Satuan = ind.satuanPenetapan
+		row.JenisIndikator = ind.tahun
+	}
+	applyMaster := func(row *domain.SubKegiatanQuery, ind masterIndRowRenja) {
+		row.Target = ind.target
+		row.Satuan = ind.satuan
+		row.TargetRankhir = ind.target
+		row.SatuanRankhir = ind.satuan
+		row.TargetPenetapan = ind.target
+		row.SatuanPenetapan = ind.satuan
+	}
+
+	result := mergeAllV2(baseResult, indByKode, masterByPrg, applyRenstra, applyMaster)
+	if len(result) == 0 {
+		return []domain.SubKegiatanQuery{}, nil
+	}
+	return result, nil
+}
+
+// getPenetapanBase — hierarki + pagu rankhir (rincian belanja) + pagu penetapan (tb_pagu jenis=penetapan).
+func (repository *MatrixRenjaRepositoryImpl) getPenetapanBase(
+	ctx context.Context, tx *sql.Tx, kodeOpd, tahun string,
+) ([]domain.SubKegiatanQuery, error) {
+	rows, err := tx.QueryContext(ctx, `
+    WITH subkeg_pagu AS (
+        SELECT sub.kode_subkegiatan, rk.pegawai_id, rk.tahun AS tahun_rekin,
+               COALESCE(SUM(rb.anggaran), 0) AS pagu_rankhir
+        FROM tb_subkegiatan_terpilih sub
+        JOIN tb_rencana_kinerja rk ON sub.rekin_id = rk.id
+        LEFT JOIN tb_rencana_aksi ra ON ra.rencana_kinerja_id = rk.id
+        LEFT JOIN tb_rincian_belanja rb ON rb.renaksi_id = ra.id
+        WHERE rk.kode_opd = ? AND rk.tahun = ?
+        GROUP BY sub.kode_subkegiatan, rk.pegawai_id, rk.tahun
+    )
+    SELECT u.kode_urusan, u.nama_urusan,
+           bu.kode_bidang_urusan, bu.nama_bidang_urusan,
+           p.kode_program, p.nama_program,
+           k.kode_kegiatan, k.nama_kegiatan,
+           s.kode_subkegiatan, s.nama_subkegiatan,
+           sp.tahun_rekin, sp.pegawai_id,
+           COALESCE(pg.nama,'') AS nama_pegawai,
+           sp.pagu_rankhir,
+           COALESCE(tp_pt.pagu, 0) AS pagu_penetapan
+    FROM subkeg_pagu sp
+    JOIN tb_subkegiatan s ON sp.kode_subkegiatan = s.kode_subkegiatan
+    JOIN tb_master_kegiatan k   ON LEFT(s.kode_subkegiatan, LENGTH(k.kode_kegiatan)) = k.kode_kegiatan
+    JOIN tb_master_program p    ON LEFT(k.kode_kegiatan, LENGTH(p.kode_program)) = p.kode_program
+    JOIN tb_bidang_urusan bu    ON LEFT(p.kode_program, LENGTH(bu.kode_bidang_urusan)) = bu.kode_bidang_urusan
+    JOIN tb_urusan u            ON LEFT(bu.kode_bidang_urusan, LENGTH(u.kode_urusan)) = u.kode_urusan
+    LEFT JOIN tb_pegawai pg ON pg.nip = sp.pegawai_id
+    LEFT JOIN tb_pagu tp_pt ON tp_pt.kode_subkegiatan = sp.kode_subkegiatan
+        AND tp_pt.kode_opd = ? AND tp_pt.jenis = 'penetapan' AND tp_pt.tahun = sp.tahun_rekin
+    ORDER BY u.kode_urusan, bu.kode_bidang_urusan, p.kode_program,
+             k.kode_kegiatan, s.kode_subkegiatan
+	`, kodeOpd, tahun, kodeOpd)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.SubKegiatanQuery
+	for rows.Next() {
+		var row domain.SubKegiatanQuery
+		if err := rows.Scan(
+			&row.KodeUrusan, &row.NamaUrusan,
+			&row.KodeBidangUrusan, &row.NamaBidangUrusan,
+			&row.KodeProgram, &row.NamaProgram,
+			&row.KodeKegiatan, &row.NamaKegiatan,
+			&row.KodeSubKegiatan, &row.NamaSubKegiatan,
+			&row.TahunSubKegiatan, &row.PegawaiId,
+			&row.NamaPegawai, &row.PaguRankhir, &row.PaguPenetapan,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, row)
+	}
+	return result, rows.Err()
+}

@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS tb_target_program_kegiatan;

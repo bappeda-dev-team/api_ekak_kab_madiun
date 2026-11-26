@@ -430,3 +430,73 @@ func (c *MatrixRenjaControllerImpl) UpsertPaguPenetapan(w http.ResponseWriter, r
 	}
 	helper.WriteToResponseBody(w, web.WebResponse{Code: 200, Status: "OK", Data: "pagu penetapan berhasil disimpan"})
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V2 — program indikator dari tb_master_indikator_program_kegiatan
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GetRenjaRanwalV2 godoc
+// @Summary      Matrix Renja Ranwal V2
+// @Description  GET matrix renja ranwal V2. Khusus level Program: indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan. Level lain tetap dari tb_indikator_matrix.
+// @Tags         Matrix Renja
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun"
+// @Success      200  {object}  web.WebResponse{data=[]renja.RanwalMatrixResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renja/v2/ranwal/{kode_opd}/{tahun} [get]
+func (c *MatrixRenjaControllerImpl) GetRenjaRanwalV2(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	kodeOpd := p.ByName("kode_opd")
+	tahun := p.ByName("tahun")
+	resp, err := c.MatrixRenjaService.GetRenjaV2(r.Context(), kodeOpd, tahun, "renstra")
+	if err != nil {
+		helper.WriteToResponseBody(w, web.WebResponse{Code: http.StatusBadRequest, Status: "BAD_REQUEST", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(w, web.WebResponse{Code: http.StatusOK, Status: "OK", Data: resp})
+}
+
+// GetRenjaRankhirV2 godoc
+// @Summary      Matrix Renja Rankhir V2
+// @Description  GET matrix renja rankhir V2. Khusus level Program: indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.
+// @Tags         Matrix Renja
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun"
+// @Success      200  {object}  web.WebResponse{data=[]renja.RankhirMatrixResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renja/v2/rankhir/{kode_opd}/{tahun} [get]
+func (c *MatrixRenjaControllerImpl) GetRenjaRankhirV2(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	kodeOpd := p.ByName("kode_opd")
+	tahun := p.ByName("tahun")
+	resp, err := c.MatrixRenjaService.GetRenjaRankhirV2(r.Context(), kodeOpd, tahun)
+	if err != nil {
+		helper.WriteToResponseBody(w, web.WebResponse{Code: http.StatusBadRequest, Status: "BAD_REQUEST", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(w, web.WebResponse{Code: http.StatusOK, Status: "OK", Data: resp})
+}
+
+// GetRenjaPenetapanV2 godoc
+// @Summary      Matrix Renja Penetapan V2
+// @Description  GET matrix renja penetapan V2. Khusus level Program: indikator dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.
+// @Tags         Matrix Renja
+// @Produce      json
+// @Param        kode_opd  path  string  true  "Kode OPD"
+// @Param        tahun     path  string  true  "Tahun"
+// @Success      200  {object}  web.WebResponse{data=[]renja.PenetapanMatrixResponse}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renja/v2/penetapan/{kode_opd}/{tahun} [get]
+func (c *MatrixRenjaControllerImpl) GetRenjaPenetapanV2(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	kodeOpd := p.ByName("kode_opd")
+	tahun := p.ByName("tahun")
+	resp, err := c.MatrixRenjaService.GetRenjaPenetapanV2(r.Context(), kodeOpd, tahun, "")
+	if err != nil {
+		helper.WriteToResponseBody(w, web.WebResponse{Code: http.StatusBadRequest, Status: "BAD_REQUEST", Data: err.Error()})
+		return
+	}
+	helper.WriteToResponseBody(w, web.WebResponse{Code: http.StatusOK, Status: "OK", Data: resp})
+}
