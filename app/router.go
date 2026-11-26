@@ -511,8 +511,8 @@ func NewRouter(
 	//matrix renstra
 	//sudah ditambahkan audited event
 	router.GET("/matrix_renstra/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
-	// router.GET("/matrix_renstra/v2/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKedua)
-	router.GET("/matrix_renstra/v2/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKetiga)
+	router.GET("/matrix_renstra/v2/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKedua)
+	router.GET("/matrix_renstra/v3/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKetiga)
 	router.POST("/matrix_renstra/upsert_anggaran", matrixRenstraController.UpsertAnggaran)
 	router.DELETE("/matrix_renstra/indikator/delete/:kode_indikator", matrixRenstraController.DeleteIndikator)
 	router.POST("/matrix_renstra/indikator/upsert", matrixRenstraController.UpsertBatchIndikator)
