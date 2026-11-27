@@ -3357,6 +3357,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/program_kegiatan/indikator/:program_id": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Menambah, mengubah, atau menghapus indikator (beserta target) untuk satu program dalam satu request.\nAturan:\n- Indikator dengan ` + "`" + `id` + "`" + ` diisi → update indikator tersebut\n- Indikator dengan ` + "`" + `id` + "`" + ` kosong → insert sebagai indikator baru\n- Indikator existing yang TIDAK ada di array → dihapus beserta semua target-nya",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Program Kegiatan"
+                ],
+                "summary": "Upsert Indikator Program",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID Program (contoh: PRGM-X.XX.XX)",
+                        "name": "program_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Array indikator",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/programkegiatan.UpsertIndikatorProgramRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/web.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/programkegiatan.UpsertIndikatorProgramResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/web.WebResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun}": {
             "get": {
                 "security": [
@@ -11327,6 +11397,54 @@ const docTemplate = `{
                 }
             }
         },
+        "programkegiatan.IndikatorProgramUpsertItem": {
+            "type": "object",
+            "required": [
+                "indikator",
+                "tahun"
+            ],
+            "properties": {
+                "id": {
+                    "description": "kosong = insert baru",
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.TargetIndikatorProgramItem"
+                    }
+                }
+            }
+        },
+        "programkegiatan.IndikatorProgramUpsertResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "program_id": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.TargetResponse"
+                    }
+                }
+            }
+        },
         "programkegiatan.IndikatorRenjaCreateRequest": {
             "type": "object",
             "required": [
@@ -11921,6 +12039,29 @@ const docTemplate = `{
                 }
             }
         },
+        "programkegiatan.TargetIndikatorProgramItem": {
+            "type": "object",
+            "required": [
+                "satuan",
+                "tahun",
+                "target"
+            ],
+            "properties": {
+                "id": {
+                    "description": "kosong = insert baru",
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "programkegiatan.TargetProgramKegiatanCreateRequest": {
             "type": "object",
             "required": [
@@ -12052,6 +12193,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "programkegiatan.UpsertIndikatorProgramRequest": {
+            "type": "object",
+            "required": [
+                "indikator"
+            ],
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorProgramUpsertItem"
+                    }
+                }
+            }
+        },
+        "programkegiatan.UpsertIndikatorProgramResponse": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/programkegiatan.IndikatorProgramUpsertResponse"
+                    }
+                },
+                "program_id": {
                     "type": "string"
                 }
             }

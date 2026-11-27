@@ -1272,6 +1272,38 @@ definitions:
           $ref: '#/definitions/programkegiatan.TargetResponse'
         type: array
     type: object
+  programkegiatan.IndikatorProgramUpsertItem:
+    properties:
+      id:
+        description: kosong = insert baru
+        type: string
+      indikator:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetIndikatorProgramItem'
+        type: array
+    required:
+    - indikator
+    - tahun
+    type: object
+  programkegiatan.IndikatorProgramUpsertResponse:
+    properties:
+      id:
+        type: string
+      indikator:
+        type: string
+      program_id:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetResponse'
+        type: array
+    type: object
   programkegiatan.IndikatorRenjaCreateRequest:
     properties:
       indikator:
@@ -1668,6 +1700,22 @@ definitions:
       pegawai_id:
         type: string
     type: object
+  programkegiatan.TargetIndikatorProgramItem:
+    properties:
+      id:
+        description: kosong = insert baru
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    required:
+    - satuan
+    - tahun
+    - target
+    type: object
   programkegiatan.TargetProgramKegiatanCreateRequest:
     properties:
       kode_indikator:
@@ -1757,6 +1805,25 @@ definitions:
       tahun:
         type: string
       target:
+        type: string
+    type: object
+  programkegiatan.UpsertIndikatorProgramRequest:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorProgramUpsertItem'
+        minItems: 1
+        type: array
+    required:
+    - indikator
+    type: object
+  programkegiatan.UpsertIndikatorProgramResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorProgramUpsertResponse'
+        type: array
+      program_id:
         type: string
     type: object
   programkegiatan.UrusanDetailResponse:
@@ -5708,6 +5775,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Daftar Program dengan Indikator Master (V2)
+      tags:
+      - Program Kegiatan
+  /program_kegiatan/indikator/:program_id:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Menambah, mengubah, atau menghapus indikator (beserta target) untuk satu program dalam satu request.
+        Aturan:
+        - Indikator dengan `id` diisi → update indikator tersebut
+        - Indikator dengan `id` kosong → insert sebagai indikator baru
+        - Indikator existing yang TIDAK ada di array → dihapus beserta semua target-nya
+      parameters:
+      - description: 'ID Program (contoh: PRGM-X.XX.XX)'
+        in: path
+        name: program_id
+        required: true
+        type: string
+      - description: Array indikator
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.UpsertIndikatorProgramRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.UpsertIndikatorProgramResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Indikator Program
       tags:
       - Program Kegiatan
   /rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun}:

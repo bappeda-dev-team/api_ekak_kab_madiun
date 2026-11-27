@@ -308,6 +308,8 @@ func NewRouter(
 	router.DELETE("/program_kegiatan/delete/:id", programController.Delete)
 	router.GET("/program_kegiatan/findall", programController.FindAll)
 	router.GET("/program_kegiatan/findall/v2", programController.FindAllWithIndikator)
+	// upsert indikator (create + update + delete dalam 1 request)
+	router.PUT("/program_kegiatan/indikator/:program_id", programController.UpsertIndikator)
 
 	//urusan
 	router.POST("/urusan/create", urusanController.Create)

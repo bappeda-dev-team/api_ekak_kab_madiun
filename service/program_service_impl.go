@@ -382,6 +382,113 @@ func (service *ProgramServiceImpl) FindAll(ctx context.Context) ([]programkegiat
 	return programResponses, nil
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// UpsertIndikator — create/update/delete indikator program dalam 1 request
+// ─────────────────────────────────────────────────────────────────────────────
+
+func (service *ProgramServiceImpl) UpsertIndikator(
+	ctx context.Context,
+	programId string,
+	req programkegiatan.UpsertIndikatorProgramRequest,
+) (programkegiatan.UpsertIndikatorProgramResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return programkegiatan.UpsertIndikatorProgramResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+
+	// 1. Pastikan program ada
+	if _, err := service.programRepository.FindById(ctx, tx, programId); err != nil {
+		return programkegiatan.UpsertIndikatorProgramResponse{}, fmt.Errorf("program '%s' tidak ditemukan", programId)
+	}
+
+	// 2. Ambil semua existing indikator IDs untuk program ini
+	existingIds, err := service.programRepository.FindIndikatorIdsByProgramId(ctx, tx, programId)
+	if err != nil {
+		return programkegiatan.UpsertIndikatorProgramResponse{}, err
+	}
+
+	// 3. Proses tiap indikator dari request
+	requestIdSet := make(map[string]bool)
+	for _, item := range req.Indikator {
+		// Generate ID baru jika tidak ada
+		if item.Id == "" {
+			item.Id = fmt.Sprintf("IND-PRG-%s", uuid.New().String()[:8])
+		}
+		requestIdSet[item.Id] = true
+
+		// Upsert indikator
+		if err := service.programRepository.UpsertIndikator(ctx, tx, domain.Indikator{
+			Id:        item.Id,
+			ProgramId: programId,
+			Indikator: item.Indikator,
+			Tahun:     item.Tahun,
+		}); err != nil {
+			return programkegiatan.UpsertIndikatorProgramResponse{}, err
+		}
+
+		// Replace target untuk indikator ini
+		targets := make([]domain.Target, 0, len(item.Target))
+		for _, t := range item.Target {
+			if t.Id == "" {
+				t.Id = fmt.Sprintf("TRGT-PRG-%s", uuid.New().String()[:8])
+			}
+			targets = append(targets, domain.Target{
+				Id:          t.Id,
+				IndikatorId: item.Id,
+				Target:      t.Target,
+				Satuan:      t.Satuan,
+				Tahun:       t.Tahun,
+			})
+		}
+		if err := service.programRepository.ReplaceTargets(ctx, tx, item.Id, targets); err != nil {
+			return programkegiatan.UpsertIndikatorProgramResponse{}, err
+		}
+	}
+
+	// 4. Hapus indikator existing yang TIDAK ada di request
+	for _, existId := range existingIds {
+		if !requestIdSet[existId] {
+			if err := service.programRepository.DeleteIndikatorWithTargets(ctx, tx, existId); err != nil {
+				return programkegiatan.UpsertIndikatorProgramResponse{}, err
+			}
+		}
+	}
+
+	// 5. Ambil data terbaru untuk response
+	indikators, err := service.programRepository.FindIndikatorWithTargetsByProgramId(ctx, tx, programId)
+	if err != nil {
+		return programkegiatan.UpsertIndikatorProgramResponse{}, err
+	}
+
+	// 6. Bangun response
+	indResp := make([]programkegiatan.IndikatorProgramUpsertResponse, 0, len(indikators))
+	for _, ind := range indikators {
+		targetResp := make([]programkegiatan.TargetResponse, 0, len(ind.Target))
+		for _, t := range ind.Target {
+			targetResp = append(targetResp, programkegiatan.TargetResponse{
+				Id:          t.Id,
+				IndikatorId: t.IndikatorId,
+				Target:      t.Target,
+				Satuan:      t.Satuan,
+				Tahun:       t.Tahun,
+			})
+		}
+		indResp = append(indResp, programkegiatan.IndikatorProgramUpsertResponse{
+			Id:        ind.Id,
+			ProgramId: ind.ProgramId,
+			Indikator: ind.Indikator,
+			Tahun:     ind.Tahun,
+			Target:    targetResp,
+		})
+	}
+
+	return programkegiatan.UpsertIndikatorProgramResponse{
+		ProgramId: programId,
+		Indikator: indResp,
+	}, nil
+}
+
 func (service *ProgramServiceImpl) FindAllWithIndikator(ctx context.Context) ([]programkegiatan.ProgramKegiatanWithIndikatorV2Response, error) {
 	tx, err := service.DB.Begin()
 	if err != nil {
