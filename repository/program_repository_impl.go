@@ -356,3 +356,139 @@ func (repository *ProgramRepositoryImpl) FindMasterIndikatorProgramKegiatanByKod
 ) (map[string][]domainmaster.MasterIndikatorProgramKegiatan, error) {
 	return queryMasterIndikatorProgramKegiatanByKodes(ctx, tx, kodes)
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Upsert indikator program
+// ─────────────────────────────────────────────────────────────────────────────
+
+// FindIndikatorIdsByProgramId — mengambil semua id indikator untuk 1 program.
+// Dipakai untuk diff: indikator existing yang tidak ada di request → dihapus.
+func (r *ProgramRepositoryImpl) FindIndikatorIdsByProgramId(ctx context.Context, tx *sql.Tx, programId string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT id FROM tb_indikator WHERE program_id = ?`, programId)
+	if err != nil {
+		return nil, fmt.Errorf("gagal ambil id indikator program %s: %w", programId, err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// UpsertIndikator — INSERT baru atau UPDATE jika id sudah ada (ON DUPLICATE KEY).
+func (r *ProgramRepositoryImpl) UpsertIndikator(ctx context.Context, tx *sql.Tx, ind domain.Indikator) error {
+	_, err := tx.ExecContext(ctx, `
+		INSERT INTO tb_indikator (id, program_id, indikator, tahun)
+		VALUES (?, ?, ?, ?)
+		ON DUPLICATE KEY UPDATE
+			indikator = VALUES(indikator),
+			tahun     = VALUES(tahun)`,
+		ind.Id, ind.ProgramId, ind.Indikator, ind.Tahun,
+	)
+	if err != nil {
+		return fmt.Errorf("gagal upsert indikator %s: %w", ind.Id, err)
+	}
+	return nil
+}
+
+// DeleteIndikatorWithTargets — hapus target lalu indikator (cascade manual).
+func (r *ProgramRepositoryImpl) DeleteIndikatorWithTargets(ctx context.Context, tx *sql.Tx, indikatorId string) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM tb_target WHERE indikator_id = ?`, indikatorId); err != nil {
+		return fmt.Errorf("gagal hapus target indikator %s: %w", indikatorId, err)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM tb_indikator WHERE id = ?`, indikatorId); err != nil {
+		return fmt.Errorf("gagal hapus indikator %s: %w", indikatorId, err)
+	}
+	return nil
+}
+
+// ReplaceTargets — hapus semua target lama lalu insert target baru.
+func (r *ProgramRepositoryImpl) ReplaceTargets(ctx context.Context, tx *sql.Tx, indikatorId string, targets []domain.Target) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM tb_target WHERE indikator_id = ?`, indikatorId); err != nil {
+		return fmt.Errorf("gagal hapus target lama indikator %s: %w", indikatorId, err)
+	}
+	for _, t := range targets {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO tb_target (id, indikator_id, target, satuan, tahun)
+			VALUES (?, ?, ?, ?, ?)`,
+			t.Id, indikatorId, t.Target, t.Satuan, t.Tahun,
+		)
+		if err != nil {
+			return fmt.Errorf("gagal insert target baru %s: %w", t.Id, err)
+		}
+	}
+	return nil
+}
+
+// FindIndikatorWithTargetsByProgramId — mengambil semua indikator + target untuk 1 program.
+// Dipakai untuk membangun response setelah upsert.
+func (r *ProgramRepositoryImpl) FindIndikatorWithTargetsByProgramId(ctx context.Context, tx *sql.Tx, programId string) ([]domain.Indikator, error) {
+	rows, err := tx.QueryContext(ctx, `
+		SELECT
+			i.id, i.program_id, i.indikator, i.tahun,
+			COALESCE(t.id, '')     AS target_id,
+			COALESCE(t.target, '') AS target,
+			COALESCE(t.satuan, '') AS satuan,
+			COALESCE(t.tahun, '')  AS target_tahun
+		FROM tb_indikator i
+		LEFT JOIN tb_target t ON t.indikator_id = i.id
+		WHERE i.program_id = ?
+		ORDER BY i.id, t.id`,
+		programId,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("gagal query indikator program %s: %w", programId, err)
+	}
+	defer rows.Close()
+
+	// Map indikatorId → *domain.Indikator untuk dedup
+	indMap := make(map[string]*domain.Indikator)
+	var order []string // pertahankan urutan insert
+
+	for rows.Next() {
+		var (
+			indId, progId, indikator, tahunInd string
+			targetId, target, satuan, tahunTgt string
+		)
+		if err := rows.Scan(&indId, &progId, &indikator, &tahunInd,
+			&targetId, &target, &satuan, &tahunTgt); err != nil {
+			return nil, err
+		}
+
+		if indMap[indId] == nil {
+			indMap[indId] = &domain.Indikator{
+				Id:        indId,
+				ProgramId: progId,
+				Indikator: indikator,
+				Tahun:     tahunInd,
+				Target:    []domain.Target{},
+			}
+			order = append(order, indId)
+		}
+
+		if targetId != "" {
+			indMap[indId].Target = append(indMap[indId].Target, domain.Target{
+				Id:          targetId,
+				IndikatorId: indId,
+				Target:      target,
+				Satuan:      satuan,
+				Tahun:       tahunTgt,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.Indikator, 0, len(order))
+	for _, id := range order {
+		result = append(result, *indMap[id])
+	}
+	return result, nil
+}

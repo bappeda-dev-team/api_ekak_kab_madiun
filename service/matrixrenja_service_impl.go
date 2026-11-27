@@ -1532,3 +1532,58 @@ func (s *MatrixRenjaServiceImpl) UpsertPaguRenjaByJenis(ctx context.Context, jen
 	}
 	return tx.Commit()
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V2 — program indikator dari tb_master_indikator_program_kegiatan
+// ─────────────────────────────────────────────────────────────────────────────
+
+func (service *MatrixRenjaServiceImpl) GetRenjaV2(ctx context.Context, kodeOpd, tahun, jenisPagu string) ([]renja.RanwalMatrixResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	data, err := service.MatrixRenjaRepository.GetRenjaV2(ctx, tx, kodeOpd, tahun, jenisPagu)
+	if err != nil {
+		return nil, err
+	}
+	result := service.transformToResponse(data, kodeOpd, tahun)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (service *MatrixRenjaServiceImpl) GetRenjaRankhirV2(ctx context.Context, kodeOpd, tahun string) ([]renja.RankhirMatrixResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	data, err := service.MatrixRenjaRepository.GetRenjaRankhirV2(ctx, tx, kodeOpd, tahun)
+	if err != nil {
+		return nil, err
+	}
+	result := service.transformToResponseRankhir(data, kodeOpd, tahun)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (service *MatrixRenjaServiceImpl) GetRenjaPenetapanV2(ctx context.Context, kodeOpd, tahun, jenisPagu string) ([]renja.PenetapanMatrixResponse, error) {
+	tx, err := service.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	data, err := service.MatrixRenjaRepository.GetRenjaPenetapanV2(ctx, tx, kodeOpd, tahun, jenisPagu)
+	if err != nil {
+		return nil, err
+	}
+	result := service.transformToResponsePenetapan(data, kodeOpd, tahun)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}

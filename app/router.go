@@ -59,6 +59,7 @@ func NewRouter(
 	programUnggulanController controller.ProgramUnggulanController,
 	programPrioritasPusatController controller.ProgramPrioritasPusatController,
 	matrixRenjaController controller.MatrixRenjaController,
+	targetProgramKegiatanController controller.TargetProgramKegiatanController,
 	dataMasterController controller.DataMasterController,
 	pkController controller.PkController,
 	rencanaAksiOpdController controller.RencanaAksiOpdController,
@@ -307,6 +308,8 @@ func NewRouter(
 	router.DELETE("/program_kegiatan/delete/:id", programController.Delete)
 	router.GET("/program_kegiatan/findall", programController.FindAll)
 	router.GET("/program_kegiatan/findall/v2", programController.FindAllWithIndikator)
+	// upsert indikator (create + update + delete dalam 1 request)
+	router.PUT("/program_kegiatan/indikator/:program_id", programController.UpsertIndikator)
 
 	//urusan
 	router.POST("/urusan/create", urusanController.Create)
@@ -511,6 +514,7 @@ func NewRouter(
 	//sudah ditambahkan audited event
 	router.GET("/matrix_renstra/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatan)
 	router.GET("/matrix_renstra/v2/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKedua)
+	router.GET("/matrix_renstra/v3/opd/:kode_opd", matrixRenstraController.GetByKodeSubKegiatanVersiKetiga)
 	router.POST("/matrix_renstra/upsert_anggaran", matrixRenstraController.UpsertAnggaran)
 	router.DELETE("/matrix_renstra/indikator/delete/:kode_indikator", matrixRenstraController.DeleteIndikator)
 	router.POST("/matrix_renstra/indikator/upsert", matrixRenstraController.UpsertBatchIndikator)
@@ -663,6 +667,24 @@ func NewRouter(
 	router.POST("/matrix_renja/pagu/ranwal", matrixRenjaController.UpsertPaguRanwal)
 	router.POST("/matrix_renja/pagu/rankhir", matrixRenjaController.UpsertPaguRankhir)
 	router.POST("/matrix_renja/pagu/penetapan", matrixRenjaController.UpsertPaguPenetapan)
+
+	// matrix renja v2 — program indikator dari master table
+	router.GET("/matrix_renja/v2/ranwal/:kode_opd/:tahun", matrixRenjaController.GetRenjaRanwalV2)
+	router.GET("/matrix_renja/v2/rankhir/:kode_opd/:tahun", matrixRenjaController.GetRenjaRankhirV2)
+	router.GET("/matrix_renja/v2/penetapan/:kode_opd/:tahun", matrixRenjaController.GetRenjaPenetapanV2)
+
+	// CRUD target program kegiatan (tb_target_program_kegiatan) — per jenis
+	router.POST("/target_program_kegiatan/renstra/create", targetProgramKegiatanController.CreateRenstra)
+	router.POST("/target_program_kegiatan/renja/create", targetProgramKegiatanController.CreateRenja)
+	router.POST("/target_program_kegiatan/rankhir/create", targetProgramKegiatanController.CreateRankhir)
+	router.POST("/target_program_kegiatan/penetapan/create", targetProgramKegiatanController.CreatePenetapan)
+	router.PUT("/target_program_kegiatan/renstra/update/:id", targetProgramKegiatanController.UpdateRenstra)
+	router.PUT("/target_program_kegiatan/renja/update/:id", targetProgramKegiatanController.UpdateRenja)
+	router.PUT("/target_program_kegiatan/rankhir/update/:id", targetProgramKegiatanController.UpdateRankhir)
+	router.PUT("/target_program_kegiatan/penetapan/update/:id", targetProgramKegiatanController.UpdatePenetapan)
+	router.DELETE("/target_program_kegiatan/delete/:id", targetProgramKegiatanController.Delete)
+	router.GET("/target_program_kegiatan/detail/:id", targetProgramKegiatanController.FindById)
+	router.GET("/target_program_kegiatan/findall/:kode_indikator/:kode_opd", targetProgramKegiatanController.FindByKodeIndikatorAndKodeOpd)
 
 	//Api Internal Consume
 	router.GET("/api/pokin_opd/findall/:kode_opd/:tahun", pohonKinerjaOpdController.FindAll)

@@ -19,4 +19,11 @@ type ProgramRepository interface {
 	FindByKodeProgram(ctx context.Context, tx *sql.Tx, kodeProgram string) (domainmaster.ProgramKegiatan, error)
 	FindIndikatorTargetByKodeRelasiBatch(ctx context.Context, tx *sql.Tx, kodeRelasis []string) (map[string][]domain.Indikator, error)
 	FindMasterIndikatorProgramKegiatanByKodes(ctx context.Context, tx *sql.Tx, kodes []string) (map[string][]domainmaster.MasterIndikatorProgramKegiatan, error)
+
+	// Upsert indikator program (create/update/delete dalam 1 request)
+	FindIndikatorIdsByProgramId(ctx context.Context, tx *sql.Tx, programId string) ([]string, error)
+	UpsertIndikator(ctx context.Context, tx *sql.Tx, ind domain.Indikator) error
+	DeleteIndikatorWithTargets(ctx context.Context, tx *sql.Tx, indikatorId string) error
+	ReplaceTargets(ctx context.Context, tx *sql.Tx, indikatorId string, targets []domain.Target) error
+	FindIndikatorWithTargetsByProgramId(ctx context.Context, tx *sql.Tx, programId string) ([]domain.Indikator, error)
 }

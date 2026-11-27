@@ -1272,6 +1272,38 @@ definitions:
           $ref: '#/definitions/programkegiatan.TargetResponse'
         type: array
     type: object
+  programkegiatan.IndikatorProgramUpsertItem:
+    properties:
+      id:
+        description: kosong = insert baru
+        type: string
+      indikator:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetIndikatorProgramItem'
+        type: array
+    required:
+    - indikator
+    - tahun
+    type: object
+  programkegiatan.IndikatorProgramUpsertResponse:
+    properties:
+      id:
+        type: string
+      indikator:
+        type: string
+      program_id:
+        type: string
+      tahun:
+        type: string
+      target:
+        items:
+          $ref: '#/definitions/programkegiatan.TargetResponse'
+        type: array
+    type: object
   programkegiatan.IndikatorRenjaCreateRequest:
     properties:
       indikator:
@@ -1668,6 +1700,69 @@ definitions:
       pegawai_id:
         type: string
     type: object
+  programkegiatan.TargetIndikatorProgramItem:
+    properties:
+      id:
+        description: kosong = insert baru
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: string
+      target:
+        type: string
+    required:
+    - satuan
+    - tahun
+    - target
+    type: object
+  programkegiatan.TargetProgramKegiatanCreateRequest:
+    properties:
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        minimum: 2000
+        type: integer
+      target:
+        type: string
+    required:
+    - kode_indikator
+    - kode_opd
+    - satuan
+    - tahun
+    - target
+    type: object
+  programkegiatan.TargetProgramKegiatanResponse:
+    properties:
+      id:
+        type: integer
+      jenis:
+        type: string
+      kode_indikator:
+        type: string
+      kode_opd:
+        type: string
+      satuan:
+        type: string
+      tahun:
+        type: integer
+      target:
+        type: string
+    type: object
+  programkegiatan.TargetProgramKegiatanUpdateRequest:
+    properties:
+      satuan:
+        type: string
+      target:
+        type: string
+    required:
+    - satuan
+    - target
+    type: object
   programkegiatan.TargetRenjaLayerRequest:
     properties:
       kode_indikator:
@@ -1710,6 +1805,25 @@ definitions:
       tahun:
         type: string
       target:
+        type: string
+    type: object
+  programkegiatan.UpsertIndikatorProgramRequest:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorProgramUpsertItem'
+        minItems: 1
+        type: array
+    required:
+    - indikator
+    type: object
+  programkegiatan.UpsertIndikatorProgramResponse:
+    properties:
+      indikator:
+        items:
+          $ref: '#/definitions/programkegiatan.IndikatorProgramUpsertResponse'
+        type: array
+      program_id:
         type: string
     type: object
   programkegiatan.UrusanDetailResponse:
@@ -4727,6 +4841,121 @@ paths:
       summary: Delete Target Rankhir
       tags:
       - Matrix Renja
+  /matrix_renja/v2/penetapan/{kode_opd}/{tahun}:
+    get:
+      description: 'GET matrix renja penetapan V2. Khusus level Program: indikator
+        dari tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.'
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/renja.PenetapanMatrixResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renja Penetapan V2
+      tags:
+      - Matrix Renja
+  /matrix_renja/v2/rankhir/{kode_opd}/{tahun}:
+    get:
+      description: 'GET matrix renja rankhir V2. Khusus level Program: indikator dari
+        tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.'
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/renja.RankhirMatrixResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renja Rankhir V2
+      tags:
+      - Matrix Renja
+  /matrix_renja/v2/ranwal/{kode_opd}/{tahun}:
+    get:
+      description: 'GET matrix renja ranwal V2. Khusus level Program: indikator dari
+        tb_master_indikator_program_kegiatan, target dari tb_target_program_kegiatan.
+        Level lain tetap dari tb_indikator_matrix.'
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun
+        in: path
+        name: tahun
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/renja.RanwalMatrixResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renja Ranwal V2
+      tags:
+      - Matrix Renja
   /matrix_renstra/anggaran/upsert:
     post:
       consumes:
@@ -4989,6 +5218,51 @@ paths:
       security:
       - BearerAuth: []
       summary: Matrix Renstra Versi Kedua
+      tags:
+      - Matrix Renstra
+  /matrix_renstra/v3/opd/{kode_opd}:
+    get:
+      consumes:
+      - application/json
+      description: Hierarki matrix renstra V3. Indikator level Program menggunakan
+        tb_master_indikator_program_kegiatan
+      parameters:
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      - description: Tahun Awal
+        in: query
+        name: tahun_awal
+        required: true
+        type: string
+      - description: Tahun Akhir
+        in: query
+        name: tahun_akhir
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.UrusanDetailV2Response'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Matrix Renstra Versi Ketiga
       tags:
       - Matrix Renstra
   /outcome_matrix:
@@ -5501,6 +5775,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Daftar Program dengan Indikator Master (V2)
+      tags:
+      - Program Kegiatan
+  /program_kegiatan/indikator/:program_id:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Menambah, mengubah, atau menghapus indikator (beserta target) untuk satu program dalam satu request.
+        Aturan:
+        - Indikator dengan `id` diisi → update indikator tersebut
+        - Indikator dengan `id` kosong → insert sebagai indikator baru
+        - Indikator existing yang TIDAK ada di array → dihapus beserta semua target-nya
+      parameters:
+      - description: 'ID Program (contoh: PRGM-X.XX.XX)'
+        in: path
+        name: program_id
+        required: true
+        type: string
+      - description: Array indikator
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.UpsertIndikatorProgramRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.UpsertIndikatorProgramResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert Indikator Program
       tags:
       - Program Kegiatan
   /rencana_aksi/pegawai/{nip}/{kode_opd}/{tahun}:
@@ -7242,6 +7563,387 @@ paths:
       summary: Daftar Sub Kegiatan dengan Indikator Master (V2)
       tags:
       - Sub Kegiatan
+  /target_program_kegiatan/delete/{id}:
+    delete:
+      description: Menghapus satu target berdasarkan id.
+      parameters:
+      - description: ID target
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Hapus Target Program Kegiatan
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/detail/{id}:
+    get:
+      description: Mendapatkan satu target berdasarkan id.
+      parameters:
+      - description: ID target
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Detail Target Program Kegiatan
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/findall/{kode_indikator}/{kode_opd}:
+    get:
+      description: Mendapatkan semua target (semua jenis) untuk kombinasi kode_indikator
+        dan kode_opd.
+      parameters:
+      - description: Kode indikator
+        in: path
+        name: kode_indikator
+        required: true
+        type: string
+      - description: Kode OPD
+        in: path
+        name: kode_opd
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar Target berdasarkan Kode Indikator + Kode OPD
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/penetapan/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target program kegiatan untuk fase Penetapan (jenis='penetapan').
+      parameters:
+      - description: Data target
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat Target Penetapan
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/penetapan/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah target dan satuan untuk data dengan jenis='penetapan'.
+        Kolom jenis dan tahun tidak dapat diubah.
+      parameters:
+      - description: ID target
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: target & satuan baru
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Penetapan
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/rankhir/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target program kegiatan untuk fase Rancangan Akhir (jenis='rankhir').
+      parameters:
+      - description: Data target
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat Target Rancangan Akhir
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/rankhir/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah target dan satuan untuk data dengan jenis='rankhir'. Kolom
+        jenis dan tahun tidak dapat diubah.
+      parameters:
+      - description: ID target
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: target & satuan baru
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Rancangan Akhir
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/renja/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target program kegiatan untuk fase Renja (jenis='renja').
+      parameters:
+      - description: Data target
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat Target Renja
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/renja/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah target dan satuan untuk data dengan jenis='renja'. Kolom
+        jenis dan tahun tidak dapat diubah.
+      parameters:
+      - description: ID target
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: target & satuan baru
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Renja
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/renstra/create:
+    post:
+      consumes:
+      - application/json
+      description: Membuat target program kegiatan untuk fase Renstra (jenis='renstra').
+      parameters:
+      - description: Data target
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat Target Renstra
+      tags:
+      - Target Program Kegiatan
+  /target_program_kegiatan/renstra/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah target dan satuan untuk data dengan jenis='renstra'. Kolom
+        jenis dan tahun tidak dapat diubah.
+      parameters:
+      - description: ID target
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: target & satuan baru
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/programkegiatan.TargetProgramKegiatanUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/programkegiatan.TargetProgramKegiatanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.WebResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Target Renstra
+      tags:
+      - Target Program Kegiatan
   /tujuan_opd/detail/{tujuanOpdId}:
     get:
       consumes:

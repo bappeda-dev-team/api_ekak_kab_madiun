@@ -99,6 +99,25 @@ type IndikatorBaselineResponse struct {
 	TargetBaseline []TargetResponse `json:"target_baseline"`
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Response upsert indikator program
+// ─────────────────────────────────────────────────────────────────────────────
+
+type UpsertIndikatorProgramResponse struct {
+	ProgramId string                           `json:"program_id"`
+	Indikator []IndikatorProgramUpsertResponse `json:"indikator"`
+}
+
+type IndikatorProgramUpsertResponse struct {
+	Id        string           `json:"id"`
+	ProgramId string           `json:"program_id"`
+	Indikator string           `json:"indikator"`
+	Tahun     string           `json:"tahun"`
+	Target    []TargetResponse `json:"target"`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 type UrusanDetailResponse struct {
 	KodeOpd           string                      `json:"kode_opd"`
 	TahunAwal         string                      `json:"tahun_awal"`

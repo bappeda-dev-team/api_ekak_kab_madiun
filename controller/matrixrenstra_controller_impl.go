@@ -91,6 +91,36 @@ func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatanVersiKedua(wr
 	helper.WriteToResponseBody(writer, webResponse)
 }
 
+// @Summary      Matrix Renstra Versi Ketiga
+// @Description  Hierarki matrix renstra V3. Indikator level Program menggunakan tb_master_indikator_program_kegiatan
+// dan target dari tb_target_program_kegiatan (filter kode_opd + tahun). Level lain tetap dari tb_indikator_matrix.
+// @Tags         Matrix Renstra
+// @Accept       json
+// @Produce      json
+// @Param        kode_opd    path   string  true  "Kode OPD"
+// @Param        tahun_awal  query  string  true  "Tahun Awal"
+// @Param        tahun_akhir query  string  true  "Tahun Akhir"
+// @Success      200  {object}  web.WebResponse{data=[]programkegiatan.UrusanDetailV2Response}
+// @Failure      400  {object}  web.WebResponse
+// @Security     BearerAuth
+// @Router       /matrix_renstra/v3/opd/{kode_opd} [get]
+func (controller *MatrixRenstraControllerImpl) GetByKodeSubKegiatanVersiKetiga(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	kodeOpd := params.ByName("kode_opd")
+	tahunAwal := request.URL.Query().Get("tahun_awal")
+	tahunAkhir := request.URL.Query().Get("tahun_akhir")
+
+	resp, err := controller.MatrixRenstraService.GetByKodeSubKegiatanVersiKetiga(request.Context(), kodeOpd, tahunAwal, tahunAkhir)
+	if err != nil {
+		helper.WriteToResponseBody(writer, web.WebResponse{
+			Code:   http.StatusBadRequest,
+			Status: "BAD_REQUEST",
+			Data:   err.Error(),
+		})
+		return
+	}
+	helper.WriteToResponseBody(writer, web.WebResponse{Code: http.StatusOK, Status: "OK", Data: resp})
+}
+
 // @Summary      Create Indikator Renstra (multi target)
 // @Description  Membuat satu atau lebih indikator. Setiap indikator boleh punya banyak target dengan tahun yang berbeda.
 // @Tags         Matrix Renstra

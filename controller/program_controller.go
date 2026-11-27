@@ -13,4 +13,6 @@ type ProgramController interface {
 	FindById(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAll(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 	FindAllWithIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
+	// UpsertIndikator — create/update/delete indikator untuk 1 program dalam 1 request
+	UpsertIndikator(writer http.ResponseWriter, request *http.Request, params httprouter.Params)
 }

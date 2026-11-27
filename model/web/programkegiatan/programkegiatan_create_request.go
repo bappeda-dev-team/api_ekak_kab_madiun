@@ -28,6 +28,36 @@ type TargetCreateRequest struct {
 	Jenis string `json:"-"`
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Upsert Indikator Program (PUT /program_kegiatan/:program_id/indikator)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// UpsertIndikatorProgramRequest — satu request untuk create/update/delete indikator
+// dalam satu kode program sekaligus. Array indikator bisa lebih dari 1.
+// Aturan:
+//   - Id diisi   → update indikator yang bersangkutan
+//   - Id kosong  → insert indikator baru
+//   - Indikator existing yang TIDAK ada di array → dihapus beserta target-nya
+type UpsertIndikatorProgramRequest struct {
+	Indikator []IndikatorProgramUpsertItem `json:"indikator" validate:"required,min=1"`
+}
+
+type IndikatorProgramUpsertItem struct {
+	Id        string                        `json:"id"`                                // kosong = insert baru
+	Indikator string                        `json:"indikator" validate:"required"`
+	Tahun     string                        `json:"tahun"     validate:"required"`
+	Target    []TargetIndikatorProgramItem  `json:"target"`
+}
+
+type TargetIndikatorProgramItem struct {
+	Id     string `json:"id"`                            // kosong = insert baru
+	Target string `json:"target" validate:"required"`
+	Satuan string `json:"satuan" validate:"required"`
+	Tahun  string `json:"tahun"  validate:"required"`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 type BatchIndikatorRenstraCreateRequest struct {
 	Indikator []IndikatorRenstraCreateRequest `json:"indikator" validate:"required,min=1"`
 }
