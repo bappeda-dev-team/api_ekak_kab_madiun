@@ -17,4 +17,5 @@ type PegawaiRepository interface {
 	FindPegawaiByNipsBatch(ctx context.Context, tx *sql.Tx, nips []string) (map[string]*domainmaster.Pegawai, error)
 	FindRolePegawaiByNipsBatch(ctx context.Context, tx *sql.Tx, nips []string) (map[string][]string, error)
 	FindByKodeOpdLevel(ctx context.Context, tx *sql.Tx, kodeOpd string, level int) ([]domainmaster.Pegawai, error)
+	FindByNipKodeOpd(ctx context.Context, tx *sql.Tx, nip, kodeOpd string) (domainmaster.Pegawai, error)
 }

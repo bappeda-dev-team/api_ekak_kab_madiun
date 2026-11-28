@@ -2,6 +2,8 @@ package controller
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 
 	"ekak_kabupaten_madiun/helper"
 	"ekak_kabupaten_madiun/model/web"
@@ -25,6 +27,8 @@ func NewPkControllerImpl(pkOpdService service.PkService) *PkControllerImpl {
 func (controller *PkControllerImpl) FindAllPkOpdTahunan(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	kodeOpd := params.ByName("kode_opd")
 	tahunStr := params.ByName("tahun")
+	query := r.URL.Query()
+	mode := query.Get("mode")
 
 	if kodeOpd == "" {
 		webResponse := web.WebResponse{
@@ -47,14 +51,70 @@ func (controller *PkControllerImpl) FindAllPkOpdTahunan(w http.ResponseWriter, r
 		return
 	}
 
-	response, err := controller.pkOpdService.FindByKodeOpdTahun(r.Context(), kodeOpd, tahun)
+	claims := helper.GetUserInfo(r.Context())
+	roleIndividu := []string{
+		"level_1",
+		"level_2",
+		"level_3",
+		"level_4",
+	}
+
+	roleAdmin := []string{
+		"super_admin",
+		"admin_opd",
+		"admin_kecamatan",
+		"reviewer",
+	}
+
+	isIndividu := slices.ContainsFunc(claims.Roles, func(role string) bool {
+		return slices.Contains(roleIndividu, role)
+	})
+
+	isAdmin := slices.ContainsFunc(claims.Roles, func(role string) bool {
+		return slices.Contains(roleAdmin, role)
+	})
+	idPegawai := claims.Nip
+
+	var response pkopd.PkOpdResponse
+	var filterMode pkopd.PkFilterMode
+
+	switch strings.ToUpper(strings.TrimSpace(mode)) {
+	case "SELF":
+		filterMode = pkopd.PkFilterSelf
+
+	case "DIRECT_SUPERVISOR":
+		filterMode = pkopd.PkFilterDirectSupervisor
+
+	default:
+		filterMode = pkopd.PkFilterAllCandidates
+	}
+
+	switch {
+	case isAdmin:
+		response, err = controller.pkOpdService.FindByKodeOpdTahun(
+			r.Context(), kodeOpd, tahun,
+		)
+
+	case isIndividu:
+		response, err = controller.pkOpdService.FindByPegawaiTahun(
+			r.Context(), idPegawai, kodeOpd, tahun, filterMode,
+		)
+
+	default:
+		helper.WriteToResponseBody(w, web.WebResponse{
+			Code:   http.StatusForbidden,
+			Status: "[ERROR] Tidak memiliki hak akses",
+			Data:   nil,
+		})
+		return
+	}
+
 	if err != nil {
-		webResponse := web.WebResponse{
+		helper.WriteToResponseBody(w, web.WebResponse{
 			Code:   http.StatusInternalServerError,
 			Status: "[ERROR] PK OPD sedang tidak dapat diakses",
 			Data:   nil,
-		}
-		helper.WriteToResponseBody(w, webResponse)
+		})
 		return
 	}
 

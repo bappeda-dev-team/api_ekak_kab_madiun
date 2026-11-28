@@ -26,6 +26,7 @@ type PkServiceImpl struct {
 	pegawaiService               PegawaiService
 	rekinService                 RencanaKinerjaService
 	opdService                   OpdService
+	pegawaiRepository            repository.PegawaiRepository
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository
 	penetapanClient              internal.PenetapanClient
 	Validate                     *validator.Validate
@@ -37,6 +38,7 @@ func NewPkServiceImpl(
 	pegawaiService PegawaiService,
 	rekinService RencanaKinerjaService,
 	opdService OpdService,
+	pegawaiRepository repository.PegawaiRepository,
 	strukturOrganisasiRepository repository.StrukturOrganisasiRepository,
 	penetapanClient internal.PenetapanClient,
 	validate *validator.Validate,
@@ -47,6 +49,7 @@ func NewPkServiceImpl(
 		pegawaiService:               pegawaiService,
 		rekinService:                 rekinService,
 		opdService:                   opdService,
+		pegawaiRepository:            pegawaiRepository,
 		strukturOrganisasiRepository: strukturOrganisasiRepository,
 		penetapanClient:              penetapanClient,
 		Validate:                     validate,
@@ -1428,4 +1431,99 @@ func findRekinPegawai(
 	}
 
 	return rencanakinerja.RencanaKinerjaResponse{}
+}
+
+func (service *PkServiceImpl) FindByPegawaiTahun(ctx context.Context, idPegawai, kodeOpd string, tahun int, mode pkopd.PkFilterMode) (pkopd.PkOpdResponse, error) {
+	log.Printf("[INFO] PK OPD FIND BY KODE OPD TAHUN")
+	tx, err := service.DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		return pkopd.PkOpdResponse{}, err
+	}
+	defer helper.CommitOrRollback(tx)
+	// cek pegawai dulu
+	pegawai, err := service.pegawaiRepository.FindByNipKodeOpd(ctx, tx, idPegawai, kodeOpd)
+	if err != nil {
+		log.Printf("[ERROR] Find Pegawai: %v", err)
+		return pkopd.PkOpdResponse{}, fmt.Errorf("PEGAWAI TIDAK DITEMUKAN")
+	}
+	// panggil service lama
+	pkOpds, err := service.FindByKodeOpdTahun(ctx, kodeOpd, tahun)
+	if err != nil {
+		log.Printf("[ERROR] Find Pegawai: %v", err)
+		return pkopd.PkOpdResponse{}, err
+	}
+	allowedNips := resolveAllowedNips(pkOpds, pegawai.Nip, mode)
+
+	pkOpds.PkItem = filterPkItems(pkOpds.PkItem, allowedNips)
+
+	return pkOpds, nil
+}
+
+func resolveAllowedNips(
+	pkOpds pkopd.PkOpdResponse,
+	nip string,
+	mode pkopd.PkFilterMode,
+) map[string]struct{} {
+
+	allowedNips := map[string]struct{}{
+		nip: {},
+	}
+
+	if mode == pkopd.PkFilterSelf {
+		return allowedNips
+	}
+
+	for _, pk := range pkOpds.PkItem {
+		for _, peg := range pk.Pegawais {
+			if peg.Nip != nip {
+				continue
+			}
+
+			switch mode {
+			case pkopd.PkFilterDirectSupervisor:
+				if peg.NipAtasan != "" {
+					allowedNips[peg.NipAtasan] = struct{}{}
+				}
+
+			case pkopd.PkFilterAllCandidates:
+				for _, atasan := range peg.AtasanCandidates {
+					if atasan.IdPegawai != "" {
+						allowedNips[atasan.IdPegawai] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	return allowedNips
+}
+
+func filterPkItems(
+	items []pkopd.PkOpdByLevel,
+	allowedNips map[string]struct{},
+) []pkopd.PkOpdByLevel {
+
+	filtered := make([]pkopd.PkOpdByLevel, 0)
+
+	for _, pk := range items {
+		pegawais := make([]pkopd.PkPegawai, 0)
+
+		for _, peg := range pk.Pegawais {
+			if _, allowed := allowedNips[peg.Nip]; allowed {
+				pegawais = append(pegawais, peg)
+			}
+		}
+
+		if len(pegawais) == 0 {
+			continue
+		}
+
+		filtered = append(filtered, pkopd.PkOpdByLevel{
+			LevelPk:  pk.LevelPk,
+			Pegawais: pegawais,
+		})
+	}
+
+	return filtered
 }

@@ -7,6 +7,7 @@ import (
 
 type PkService interface {
 	FindByKodeOpdTahun(ctx context.Context, kodeOpd string, tahun int) (pkopd.PkOpdResponse, error)
+	FindByPegawaiTahun(ctx context.Context, idPegawai, kodeOpd string, tahun int, mode pkopd.PkFilterMode) (pkopd.PkOpdResponse, error)
 	HubungkanRekin(ctx context.Context, request pkopd.PkOpdRequest) (pkopd.PkOpdResponse, error)
 	HubungkanAtasan(ctx context.Context, request pkopd.HubungkanAtasanRequest) (pkopd.PkOpdResponse, error)
 	KunciPK(ctx context.Context, request pkopd.KunciPkRequest) (pkopd.KunciPKResponse, error)

@@ -1,5 +1,13 @@
 package pkopd
 
+type PkFilterMode string
+
+const (
+	PkFilterSelf             PkFilterMode = "SELF"
+	PkFilterDirectSupervisor PkFilterMode = "DIRECT_SUPERVISOR"
+	PkFilterAllCandidates    PkFilterMode = "ALL_CANDIDATES"
+)
+
 type PkOpdResponse struct {
 	KodeOpd       string           `json:"kode_opd"`
 	NamaOpd       string           `json:"nama_opd"`

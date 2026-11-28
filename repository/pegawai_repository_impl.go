@@ -365,3 +365,13 @@ func (repository *PegawaiRepositoryImpl) FindByKodeOpdLevel(ctx context.Context,
 	}
 	return pegawais, nil
 }
+
+func (repository *PegawaiRepositoryImpl) FindByNipKodeOpd(ctx context.Context, tx *sql.Tx, nip, kodeOpd string) (domainmaster.Pegawai, error) {
+	script := "SELECT id, nama, nip, kode_opd FROM tb_pegawai WHERE nip = ? AND kode_opd = ?"
+	var pegawai domainmaster.Pegawai
+	err := tx.QueryRowContext(ctx, script, nip, kodeOpd).Scan(&pegawai.Id, &pegawai.NamaPegawai, &pegawai.Nip, &pegawai.KodeOpd)
+	if err != nil {
+		return domainmaster.Pegawai{}, err
+	}
+	return pegawai, nil
+}
